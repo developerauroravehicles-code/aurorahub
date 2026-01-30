@@ -1,0 +1,128 @@
+'use server'
+
+import { revalidatePath } from 'next/cache'
+import { createClient } from '@supabase/supabase-js'
+
+// Helper to get a fresh admin client every time with explicit schema
+function getAdminClient() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL!
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY!
+  
+  return createClient(url, key, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false
+    },
+    db: {
+      schema: 'public',
+    }
+  })
+}
+
+export async function getSystemData() {
+  const supabase = getAdminClient()
+  
+  // Fetch dealers
+  const { data: dealers, error: dealersError } = await supabase
+    .from('dealers')
+    .select('*')
+    .order('created_at', { ascending: false })
+
+  // Fetch profiles
+  const { data: profiles, error: profilesError } = await supabase
+    .from('profiles')
+    .select('*')
+    .order('created_at', { ascending: false })
+  
+  return {
+    dealers: dealers || [],
+    profiles: profiles || [],
+    projectUrl: process.env.NEXT_PUBLIC_SUPABASE_URL,
+    errors: {
+      dealers: dealersError?.message,
+      profiles: profilesError?.message
+    }
+  }
+}
+
+export async function createDealer(prevState: any, formData: FormData) {
+  const supabaseAdmin = getAdminClient()
+
+  if (!formData) return { error: 'Invalid form data received.' }
+  
+  const name = formData.get('name') as string
+  const code = formData.get('code') as string
+  const address = formData.get('address') as string
+
+  if (!name || !code) return { error: 'Name and Code are required' }
+
+  const { error } = await supabaseAdmin.from('dealers').insert({
+    name,
+    code,
+    address
+  })
+
+  if (error) return { error: error.message }
+  
+  revalidatePath('/admin')
+  return { success: `Dealer created successfully in project: ${process.env.NEXT_PUBLIC_SUPABASE_URL}` }
+}
+
+export async function createUser(prevState: any, formData: FormData) {
+  const supabaseAdmin = getAdminClient()
+
+  if (!formData) return { error: 'Invalid form data received.' }
+
+  const email = formData.get('email') as string
+  const password = formData.get('password') as string
+  const fullName = formData.get('fullName') as string
+  const role = formData.get('role') as string
+  const dealerCode = formData.get('dealerCode') as string
+  const phone = formData.get('phone') as string
+
+  if (!email || !password || !role) return { error: 'Missing required fields' }
+
+  // 1. Create Auth User
+  const { data: userData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+    email,
+    password,
+    email_confirm: true,
+    user_metadata: { full_name: fullName }
+  })
+
+  if (authError) return { error: authError.message }
+  if (!userData.user) return { error: 'Failed to create user' }
+
+  // 2. Find Dealer ID
+  let dealerId = null
+  if (dealerCode) {
+      const { data: dealer } = await supabaseAdmin
+        .from('dealers')
+        .select('id')
+        .eq('code', dealerCode)
+        .single()
+      
+      if (dealer) dealerId = dealer.id
+      else {
+          await supabaseAdmin.auth.admin.deleteUser(userData.user.id)
+          return { error: 'Dealer code not found. User created but rolled back.' }
+      }
+  }
+
+  // 3. Create Profile
+  const { error: profileError } = await (supabaseAdmin.from('profiles') as any).insert({
+    id: userData.user.id,
+    role: role,
+    dealer_id: dealerId,
+    full_name: fullName,
+    phone: phone
+  })
+
+  if (profileError) {
+      await supabaseAdmin.auth.admin.deleteUser(userData.user.id)
+      return { error: 'User created but profile failed: ' + profileError.message }
+  }
+
+  revalidatePath('/admin')
+  return { success: 'User created successfully!' }
+}

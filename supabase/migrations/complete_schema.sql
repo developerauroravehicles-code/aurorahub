@@ -1,0 +1,328 @@
+-- ============================================
+-- AURORA HUB - COMPLETE DATABASE SCHEMA
+-- ============================================
+-- This file consolidates all migration files into a single schema
+-- Run this entire file in Supabase SQL Editor to set up the complete database
+-- ============================================
+
+-- ============================================
+-- 1. EXTENSIONS
+-- ============================================
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
+-- ============================================
+-- 2. ENUMS
+-- ============================================
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'user_role') THEN
+    CREATE TYPE user_role AS ENUM ('sales', 'finance', 'specialist', 'aurora_manager', 'general_manager');
+  END IF;
+  
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'demand_status') THEN
+    CREATE TYPE demand_status AS ENUM ('pending_finance', 'approved', 'completed', 'cancelled');
+  END IF;
+END $$;
+
+-- ============================================
+-- 3. TABLES
+-- ============================================
+
+-- Dealers Table
+CREATE TABLE IF NOT EXISTS dealers (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  code text UNIQUE NOT NULL,
+  name text NOT NULL,
+  address text,
+  logo_url text,
+  created_at timestamptz DEFAULT now()
+);
+
+-- Profiles Table (extends auth.users)
+CREATE TABLE IF NOT EXISTS profiles (
+  id uuid PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  dealer_id uuid REFERENCES dealers(id),
+  role user_role DEFAULT 'sales',
+  full_name text,
+  avatar_url text,
+  phone text,
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
+
+-- Demands Table (Appointments)
+CREATE TABLE IF NOT EXISTS demands (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  created_by uuid REFERENCES profiles(id),
+  dealer_id uuid REFERENCES dealers(id),
+  
+  -- Customer Info
+  customer_firstname text NOT NULL,
+  customer_lastname text NOT NULL,
+  customer_phone text NOT NULL,
+  customer_address text,
+  
+  -- Vehicle Info
+  vehicle_make text NOT NULL,
+  vehicle_model text NOT NULL,
+  vehicle_year int NOT NULL,
+  camera_model text NOT NULL,
+  
+  -- Appointment Info
+  appointment_date timestamptz NOT NULL,
+  status demand_status DEFAULT 'pending_finance',
+  
+  -- Specialist Assignment
+  assigned_specialist_id uuid REFERENCES profiles(id),
+  
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
+
+-- Add assigned_specialist_id column if table exists but column doesn't
+DO $$
+BEGIN
+  IF EXISTS (SELECT FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'demands') THEN
+    IF NOT EXISTS (
+      SELECT FROM information_schema.columns 
+      WHERE table_schema = 'public' 
+      AND table_name = 'demands' 
+      AND column_name = 'assigned_specialist_id'
+    ) THEN
+      ALTER TABLE demands ADD COLUMN assigned_specialist_id uuid REFERENCES profiles(id);
+    END IF;
+  END IF;
+END $$;
+
+-- Demand Logs Table (Audit Trail)
+CREATE TABLE IF NOT EXISTS demand_logs (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  demand_id uuid REFERENCES demands(id) ON DELETE CASCADE,
+  actor_id uuid REFERENCES profiles(id),
+  previous_status demand_status,
+  new_status demand_status,
+  notes text,
+  created_at timestamptz DEFAULT now()
+);
+
+-- System Settings Table
+CREATE TABLE IF NOT EXISTS system_settings (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  key text UNIQUE NOT NULL,
+  value text,
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
+
+-- ============================================
+-- 4. ROW LEVEL SECURITY (RLS)
+-- ============================================
+ALTER TABLE dealers ENABLE ROW LEVEL SECURITY;
+ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE demands ENABLE ROW LEVEL SECURITY;
+ALTER TABLE demand_logs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE system_settings ENABLE ROW LEVEL SECURITY;
+
+-- ============================================
+-- 5. DROP EXISTING POLICIES (Clean Slate)
+-- ============================================
+DROP POLICY IF EXISTS "Dealers are viewable by everyone" ON dealers;
+DROP POLICY IF EXISTS "Profiles are viewable by everyone" ON profiles;
+DROP POLICY IF EXISTS "Users can update own profile" ON profiles;
+DROP POLICY IF EXISTS "Sales can create demands" ON demands;
+DROP POLICY IF EXISTS "Users can view demands from their dealer" ON demands;
+DROP POLICY IF EXISTS "Users can view demands" ON demands;
+DROP POLICY IF EXISTS "Finance and Managers can update demands" ON demands;
+DROP POLICY IF EXISTS "Specialists can update assigned demands" ON demands;
+DROP POLICY IF EXISTS "Authenticated users can manage system settings" ON system_settings;
+DROP POLICY IF EXISTS "Aurora Managers can manage system settings" ON system_settings;
+
+-- ============================================
+-- 6. CREATE POLICIES
+-- ============================================
+
+-- Dealers: Viewable by all authenticated users
+CREATE POLICY "Dealers are viewable by everyone" 
+ON dealers FOR SELECT 
+TO authenticated 
+USING (true);
+
+-- Profiles: Viewable by all authenticated users
+CREATE POLICY "Profiles are viewable by everyone" 
+ON profiles FOR SELECT 
+TO authenticated 
+USING (true);
+
+-- Profiles: Users can update their own profile
+CREATE POLICY "Users can update own profile" 
+ON profiles FOR UPDATE 
+TO authenticated 
+USING (auth.uid() = id);
+
+-- Demands: Sales can CREATE demands
+-- IMPORTANT: This policy allows sales users to create demands
+-- Frontend sends: created_by = profile.id (which equals auth.uid())
+-- This policy ONLY checks role, NOT created_by or dealer_id
+-- This makes the policy more flexible and avoids RLS errors
+CREATE POLICY "Sales can create demands" 
+ON demands FOR INSERT 
+TO authenticated 
+WITH CHECK (
+  EXISTS (
+    SELECT 1 FROM profiles
+    WHERE profiles.id = auth.uid()
+    AND profiles.role = 'sales'
+  )
+);
+
+-- Demands: Users can VIEW demands from their dealer or managers can view all
+CREATE POLICY "Users can view demands from their dealer" 
+ON demands FOR SELECT 
+TO authenticated 
+USING (
+  dealer_id IN (
+    SELECT dealer_id FROM profiles WHERE id = auth.uid()
+  )
+  OR
+  EXISTS (
+    SELECT 1 FROM profiles 
+    WHERE id = auth.uid() 
+    AND role IN ('finance', 'specialist', 'aurora_manager', 'general_manager')
+  )
+);
+
+-- Demands: Finance and Managers can UPDATE demands
+CREATE POLICY "Finance and Managers can update demands" 
+ON demands FOR UPDATE 
+TO authenticated 
+USING (
+  EXISTS (
+    SELECT 1 FROM profiles 
+    WHERE id = auth.uid() 
+    AND role IN ('finance', 'aurora_manager', 'general_manager')
+  )
+);
+
+-- Demands: Specialists can UPDATE assigned demands
+CREATE POLICY "Specialists can update assigned demands" 
+ON demands FOR UPDATE 
+TO authenticated 
+USING (
+  assigned_specialist_id = auth.uid() 
+  OR 
+  EXISTS (
+    SELECT 1 FROM profiles 
+    WHERE id = auth.uid() 
+    AND role = 'specialist'
+  )
+);
+
+-- System Settings: All authenticated users can manage (admin page uses service role anyway)
+CREATE POLICY "Authenticated users can manage system settings"
+ON system_settings FOR ALL
+TO authenticated
+USING (true);
+
+-- ============================================
+-- 7. FUNCTIONS
+-- ============================================
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = now();
+    RETURN NEW;
+END;
+$$ LANGUAGE 'plpgsql';
+
+-- ============================================
+-- 8. TRIGGERS
+-- ============================================
+DROP TRIGGER IF EXISTS update_profiles_updated_at ON profiles;
+CREATE TRIGGER update_profiles_updated_at 
+BEFORE UPDATE ON profiles
+FOR EACH ROW 
+EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_demands_updated_at ON demands;
+CREATE TRIGGER update_demands_updated_at 
+BEFORE UPDATE ON demands
+FOR EACH ROW 
+EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_system_settings_updated_at ON system_settings;
+CREATE TRIGGER update_system_settings_updated_at
+BEFORE UPDATE ON system_settings
+FOR EACH ROW
+EXECUTE FUNCTION update_updated_at_column();
+
+-- ============================================
+-- SUCCESS MESSAGE
+-- ============================================
+SELECT '✅ Schema created successfully! Tables: dealers, profiles, demands, demand_logs, system_settings' as status;
+
+-- ============================================
+-- DEBUG/UTILITY QUERIES (Optional - Commented out)
+-- ============================================
+-- Uncomment below sections if you need to debug or check the database state
+
+/*
+-- Check current authenticated user and profile
+SELECT 
+  'Current User Info' as check_type,
+  auth.uid() as user_id,
+  p.id as profile_id,
+  p.full_name,
+  p.role,
+  p.dealer_id,
+  CASE 
+    WHEN p.id IS NULL THEN '❌ NO PROFILE - Create user in /admin page'
+    WHEN p.role != 'sales' THEN '❌ WRONG ROLE - Role is: ' || p.role::text
+    ELSE '✅ OK - User has sales role'
+  END as status
+FROM profiles p
+WHERE p.id = auth.uid();
+
+-- Check all policies on demands table
+SELECT 
+  'Demands Policies' as check_type,
+  policyname,
+  cmd,
+  CASE 
+    WHEN cmd = 'INSERT' THEN '✅ INSERT policy exists'
+    WHEN cmd = 'SELECT' THEN '✅ SELECT policy exists'
+    WHEN cmd = 'UPDATE' THEN '✅ UPDATE policy exists'
+    ELSE '❓ Unknown'
+  END as status
+FROM pg_policies 
+WHERE tablename = 'demands'
+ORDER BY cmd, policyname;
+
+-- Check if profiles table has any sales users
+SELECT 
+  'Sales Users Check' as check_type,
+  COUNT(*) as total_sales_users,
+  CASE 
+    WHEN COUNT(*) = 0 THEN '❌ NO SALES USERS - Create one in /admin page'
+    ELSE '✅ Found ' || COUNT(*)::text || ' sales user(s)'
+  END as status
+FROM profiles
+WHERE role = 'sales';
+
+-- Test policy condition for current user
+SELECT 
+  'Policy Condition Test' as check_step,
+  EXISTS (
+    SELECT 1 FROM profiles
+    WHERE profiles.id = auth.uid()
+    AND profiles.role = 'sales'
+  ) as policy_condition_passes,
+  CASE 
+    WHEN EXISTS (
+      SELECT 1 FROM profiles
+      WHERE profiles.id = auth.uid()
+      AND profiles.role = 'sales'
+    ) THEN '✅ Policy condition PASSES - INSERT should work'
+    ELSE '❌ Policy condition FAILS - Cannot INSERT'
+  END as status;
+*/
+
