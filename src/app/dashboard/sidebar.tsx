@@ -6,7 +6,6 @@ import { clsx } from 'clsx'
 import { LogOut, LayoutDashboard, FileText, Users, Settings } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
-import { SidebarLogo } from '@/components/sidebar-logo'
 
 export function Sidebar({ profile }: { profile: any }) {
   const pathname = usePathname()
@@ -46,7 +45,6 @@ export function Sidebar({ profile }: { profile: any }) {
 
   return (
     <div className="flex w-64 flex-col bg-black text-white border-r border-gray-800">
-      <SidebarLogo />
       <div className="flex flex-1 flex-col overflow-y-auto">
         <nav className="flex-1 space-y-1 px-4 py-6">
           {links.map((link) => {

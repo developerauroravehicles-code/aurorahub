@@ -171,7 +171,7 @@ function UserList({ profiles, errors }: { profiles: any[], errors: any }) {
               <th className="px-4 py-2 text-left">Name</th>
               <th className="px-4 py-2 text-left">Role</th>
               <th className="px-4 py-2 text-left">Phone</th>
-              <th className="px-4 py-2 text-left">Dealer ID</th>
+              <th className="px-4 py-2 text-left">Dealer</th>
               <th className="px-4 py-2 text-right">Actions</th>
             </tr>
           </thead>
@@ -181,7 +181,13 @@ function UserList({ profiles, errors }: { profiles: any[], errors: any }) {
                 <td className="px-4 py-2 font-medium text-white">{profile.full_name}</td>
                 <td className="px-4 py-2 capitalize">{profile.role?.replace('_', ' ')}</td>
                 <td className="px-4 py-2">{profile.phone || '-'}</td>
-                <td className="px-4 py-2 text-gray-500 text-xs font-mono">{profile.dealer_id || '-'}</td>
+                <td className="px-4 py-2">
+                  {profile.dealers ? (
+                    <span className="text-white">{profile.dealers.name}</span>
+                  ) : (
+                    <span className="text-gray-500">-</span>
+                  )}
+                </td>
                 <td className="px-4 py-2 text-right">
                   <ResetPasswordButton userId={profile.id} userName={profile.full_name} />
                 </td>
@@ -277,7 +283,7 @@ function DatabaseManagement({ dealers, profiles, errors }: { dealers: any[], pro
                 <th className="px-4 py-2 text-left">Name</th>
                 <th className="px-4 py-2 text-left">Role</th>
                 <th className="px-4 py-2 text-left">Phone</th>
-                <th className="px-4 py-2 text-left">Dealer ID</th>
+                <th className="px-4 py-2 text-left">Dealer</th>
                 <th className="px-4 py-2 text-right">Actions</th>
               </tr>
             </thead>
@@ -287,7 +293,13 @@ function DatabaseManagement({ dealers, profiles, errors }: { dealers: any[], pro
                   <td className="px-4 py-2 font-medium text-white">{profile.full_name}</td>
                   <td className="px-4 py-2 capitalize">{profile.role?.replace('_', ' ')}</td>
                   <td className="px-4 py-2">{profile.phone || '-'}</td>
-                  <td className="px-4 py-2 text-gray-500 text-xs font-mono">{profile.dealer_id || '-'}</td>
+                  <td className="px-4 py-2">
+                    {profile.dealers ? (
+                      <span className="text-white">{profile.dealers.name}</span>
+                    ) : (
+                      <span className="text-gray-500">-</span>
+                    )}
+                  </td>
                   <td className="px-4 py-2 text-right">
                     <ResetPasswordButton userId={profile.id} userName={profile.full_name} />
                   </td>

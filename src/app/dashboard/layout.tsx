@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { Sidebar } from './sidebar'
 import { ErrorSignOut } from './error-signout'
+import { BackgroundLogo } from '@/components/background-logo'
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
@@ -29,11 +30,12 @@ export default async function DashboardLayout({ children }: { children: React.Re
   }
 
   return (
-    <div className="flex h-screen bg-black text-white">
+    <div className="flex h-screen bg-black text-white relative overflow-hidden">
       <Sidebar profile={profile} />
-      <main className="flex-1 overflow-y-auto p-8 bg-black">
+      <main className="flex-1 overflow-y-auto p-8 bg-black relative z-10">
         {children}
       </main>
+      <BackgroundLogo />
     </div>
   )
 }

@@ -28,10 +28,10 @@ export async function getSystemData() {
     .select('*')
     .order('created_at', { ascending: false })
 
-  // Fetch profiles
+  // Fetch profiles with dealer info
   const { data: profiles, error: profilesError } = await supabase
     .from('profiles')
-    .select('*')
+    .select('*, dealers(name, code)')
     .order('created_at', { ascending: false })
   
   return {
