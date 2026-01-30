@@ -5,9 +5,13 @@ export async function SystemLogo() {
   
   if (!logoUrl) {
     return (
-      <div className="text-center">
-        <h1 className="text-5xl font-bold mb-4">Aurora Vehicles</h1>
-        <p className="text-xl text-gray-400">Auto Dashcam & Accessories</p>
+      <div className="flex flex-col items-center justify-center">
+        <div className="text-9xl font-bold tracking-wider text-white mb-6" style={{
+          fontFamily: 'system-ui, -apple-system, sans-serif',
+          fontWeight: 700,
+          letterSpacing: '0.05em'
+        }}>A</div>
+        <p className="text-2xl font-semibold text-white tracking-wider uppercase">AURORA VEHICLES</p>
       </div>
     )
   }
@@ -17,8 +21,9 @@ export async function SystemLogo() {
       <img
         src={logoUrl}
         alt="Aurora Vehicles Logo"
-        className="max-w-xs max-h-48 object-contain mb-4"
+        className="max-w-md max-h-96 object-contain mb-6 brightness-0 invert"
       />
+      <p className="text-2xl font-semibold text-white tracking-wider uppercase">AURORA VEHICLES</p>
     </div>
   )
 }
