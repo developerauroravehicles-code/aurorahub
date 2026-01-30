@@ -5,10 +5,8 @@ export default async function LoginPage() {
   return (
     <div className="flex min-h-screen w-full">
       {/* Left Side - Black Background */}
-      <div className="hidden lg:flex w-1/2 bg-black flex-col justify-between items-center text-white p-12">
-        <div></div>
+      <div className="hidden lg:flex w-1/2 bg-black flex-col justify-center items-center text-white p-12">
         <SystemLogo />
-        <p className="text-xl font-medium text-gray-300 tracking-wide">Auto Dash Cam & Accessories</p>
       </div>
 
       {/* Right Side - Login Form */}

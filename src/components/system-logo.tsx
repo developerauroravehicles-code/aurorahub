@@ -6,12 +6,11 @@ export async function SystemLogo() {
   if (!logoUrl) {
     return (
       <div className="flex flex-col items-center justify-center">
-        <div className="text-9xl font-bold tracking-wider text-white mb-3" style={{
+        <div className="text-9xl font-bold tracking-wider text-white" style={{
           fontFamily: 'system-ui, -apple-system, sans-serif',
           fontWeight: 700,
           letterSpacing: '0.05em'
         }}>A</div>
-        <p className="text-2xl font-semibold text-white tracking-wider uppercase">AURORA VEHICLES</p>
       </div>
     )
   }
@@ -21,9 +20,8 @@ export async function SystemLogo() {
       <img
         src={logoUrl}
         alt="Aurora Vehicles Logo"
-        className="max-w-md max-h-96 object-contain mb-3 brightness-0 invert"
+        className="max-w-md max-h-96 object-contain brightness-0 invert"
       />
-      <p className="text-2xl font-semibold text-white tracking-wider uppercase">AURORA VEHICLES</p>
     </div>
   )
 }
