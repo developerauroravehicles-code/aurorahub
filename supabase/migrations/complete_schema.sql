@@ -114,6 +114,16 @@ CREATE TABLE IF NOT EXISTS system_settings (
   updated_at timestamptz DEFAULT now()
 );
 
+-- Camera Models Table
+CREATE TABLE IF NOT EXISTS camera_models (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  name text UNIQUE NOT NULL,
+  description text,
+  is_active boolean DEFAULT true,
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
+
 -- ============================================
 -- 4. ROW LEVEL SECURITY (RLS)
 -- ============================================
@@ -122,6 +132,7 @@ ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE demands ENABLE ROW LEVEL SECURITY;
 ALTER TABLE demand_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE system_settings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE camera_models ENABLE ROW LEVEL SECURITY;
 
 -- ============================================
 -- 5. DROP EXISTING POLICIES (Clean Slate)
@@ -136,6 +147,8 @@ DROP POLICY IF EXISTS "Finance and Managers can update demands" ON demands;
 DROP POLICY IF EXISTS "Specialists can update assigned demands" ON demands;
 DROP POLICY IF EXISTS "Authenticated users can manage system settings" ON system_settings;
 DROP POLICY IF EXISTS "Aurora Managers can manage system settings" ON system_settings;
+DROP POLICY IF EXISTS "Camera models are viewable by everyone" ON camera_models;
+DROP POLICY IF EXISTS "Aurora Managers can manage camera models" ON camera_models;
 
 -- ============================================
 -- 6. CREATE POLICIES
@@ -223,6 +236,24 @@ ON system_settings FOR ALL
 TO authenticated
 USING (true);
 
+-- Camera Models: Viewable by all authenticated users (only active ones)
+CREATE POLICY "Camera models are viewable by everyone"
+ON camera_models FOR SELECT
+TO authenticated
+USING (is_active = true);
+
+-- Camera Models: Aurora Managers can manage
+CREATE POLICY "Aurora Managers can manage camera models"
+ON camera_models FOR ALL
+TO authenticated
+USING (
+  EXISTS (
+    SELECT 1 FROM profiles
+    WHERE id = auth.uid()
+    AND role = 'aurora_manager'
+  )
+);
+
 -- ============================================
 -- 7. FUNCTIONS
 -- ============================================
@@ -255,10 +286,16 @@ BEFORE UPDATE ON system_settings
 FOR EACH ROW
 EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_camera_models_updated_at ON camera_models;
+CREATE TRIGGER update_camera_models_updated_at
+BEFORE UPDATE ON camera_models
+FOR EACH ROW
+EXECUTE FUNCTION update_updated_at_column();
+
 -- ============================================
 -- SUCCESS MESSAGE
 -- ============================================
-SELECT '✅ Schema created successfully! Tables: dealers, profiles, demands, demand_logs, system_settings' as status;
+SELECT '✅ Schema created successfully! Tables: dealers, profiles, demands, demand_logs, system_settings, camera_models' as status;
 
 -- ============================================
 -- DEBUG/UTILITY QUERIES (Optional - Commented out)

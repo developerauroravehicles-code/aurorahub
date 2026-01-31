@@ -4,12 +4,19 @@ import { useActionState, useState, useEffect } from 'react'
 import { createDemand, getTakenSlots } from './actions'
 import { format, addMinutes, setHours, setMinutes, isSunday, isSaturday } from 'date-fns'
 
-export function DemandForm() {
+interface CameraModel {
+  id: string
+  name: string
+}
+
+export function DemandForm({ cameraModels }: { cameraModels: CameraModel[] }) {
   const [state, formAction, isPending] = useActionState(createDemand, null)
   const [selectedDate, setSelectedDate] = useState<string>('')
   const [availableSlots, setAvailableSlots] = useState<string[]>([])
   const [takenSlots, setTakenSlots] = useState<string[]>([])
   const [selectedSlot, setSelectedSlot] = useState<string>('')
+  const [selectedCamera, setSelectedCamera] = useState<string>('')
+  const [customCamera, setCustomCamera] = useState<string>('')
 
   useEffect(() => {
     if (selectedDate) {
@@ -113,7 +120,59 @@ export function DemandForm() {
 
         <div>
           <label className="block text-sm font-medium text-gray-300">Camera Model</label>
-          <input name="cameraModel" required className="mt-1 block w-full rounded-md border border-gray-700 bg-black/50 py-2 px-3 shadow-sm focus:border-[#C27E00] focus:outline-none focus:ring-[#C27E00] sm:text-sm text-white" />
+          {cameraModels.length > 0 ? (
+            <div className="space-y-2">
+              <select
+                name="cameraModel"
+                value={selectedCamera}
+                onChange={(e) => {
+                  setSelectedCamera(e.target.value)
+                  setCustomCamera('')
+                }}
+                required
+                className="mt-1 block w-full rounded-md border border-gray-700 bg-black/50 py-2 px-3 shadow-sm focus:border-[#C27E00] focus:outline-none focus:ring-[#C27E00] sm:text-sm text-white"
+              >
+                <option value="">Select a camera model</option>
+                {cameraModels.map((camera) => (
+                  <option key={camera.id} value={camera.name} className="bg-black text-white">
+                    {camera.name}
+                  </option>
+                ))}
+                <option value="__custom__" className="bg-black text-white">Other (Custom)</option>
+              </select>
+              {selectedCamera === '__custom__' && (
+                <input
+                  type="text"
+                  value={customCamera}
+                  onChange={(e) => setCustomCamera(e.target.value)}
+                  placeholder="Enter custom camera model"
+                  required={selectedCamera === '__custom__'}
+                  className="block w-full rounded-md border border-gray-700 bg-black/50 py-2 px-3 shadow-sm focus:border-[#C27E00] focus:outline-none focus:ring-[#C27E00] sm:text-sm text-white"
+                />
+              )}
+              {selectedCamera && selectedCamera !== '__custom__' && (
+                <input
+                  type="hidden"
+                  name="cameraModel"
+                  value={selectedCamera}
+                />
+              )}
+              {selectedCamera === '__custom__' && customCamera && (
+                <input
+                  type="hidden"
+                  name="cameraModel"
+                  value={customCamera}
+                />
+              )}
+            </div>
+          ) : (
+            <input
+              name="cameraModel"
+              required
+              className="mt-1 block w-full rounded-md border border-gray-700 bg-black/50 py-2 px-3 shadow-sm focus:border-[#C27E00] focus:outline-none focus:ring-[#C27E00] sm:text-sm text-white"
+              placeholder="Enter camera model"
+            />
+          )}
         </div>
       </div>
 
@@ -165,7 +224,7 @@ export function DemandForm() {
         <div className="flex justify-end">
           <button
             type="submit"
-            disabled={isPending || !selectedSlot}
+            disabled={isPending || !selectedSlot || !selectedCamera || (selectedCamera === '__custom__' && !customCamera)}
             className="ml-3 inline-flex justify-center rounded-md border border-transparent bg-[#C27E00] py-2 px-4 text-sm font-medium text-white shadow-sm hover:bg-[#a06900] focus:outline-none focus:ring-2 focus:ring-[#C27E00] focus:ring-offset-2 disabled:opacity-50 transition-colors"
           >
             {isPending ? 'Submitting...' : 'Create Demand'}

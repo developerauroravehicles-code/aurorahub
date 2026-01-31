@@ -2,7 +2,7 @@
 
 import { usePathname } from 'next/navigation'
 import { clsx } from 'clsx'
-import { Image } from 'lucide-react'
+import { Image, Camera } from 'lucide-react'
 import Link from 'next/link'
 
 export function SystemManagementTabs({ activeTab }: { activeTab: string }) {
@@ -10,6 +10,7 @@ export function SystemManagementTabs({ activeTab }: { activeTab: string }) {
 
   const tabs = [
     { id: 'logo', name: 'Logo Management', href: '/dashboard/admin/system-management', icon: Image },
+    { id: 'cameras', name: 'Camera Models', href: '/dashboard/admin/system-management/cameras', icon: Camera },
   ]
 
   return (
