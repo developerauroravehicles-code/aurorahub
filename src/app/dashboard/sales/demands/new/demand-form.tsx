@@ -92,8 +92,16 @@ export function DemandForm({ cameraModels }: { cameraModels: CameraModel[] }) {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-300">Phone Number</label>
-          <input name="phone" type="tel" required className="mt-1 block w-full rounded-md border border-gray-700 bg-black/50 py-2 px-3 shadow-sm focus:border-[#C27E00] focus:outline-none focus:ring-[#C27E00] sm:text-sm text-white" />
+          <label className="block text-sm font-medium text-gray-300">
+            Phone Number <span className="text-xs text-gray-500">(e.g., 0555 123 45 67 or +90 555 123 45 67)</span>
+          </label>
+          <input 
+            name="phone" 
+            type="tel" 
+            required 
+            placeholder="0555 123 45 67"
+            className="mt-1 block w-full rounded-md border border-gray-700 bg-black/50 py-2 px-3 shadow-sm focus:border-[#C27E00] focus:outline-none focus:ring-[#C27E00] sm:text-sm text-white" 
+          />
         </div>
 
         <div>
