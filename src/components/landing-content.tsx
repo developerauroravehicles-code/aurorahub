@@ -9,8 +9,8 @@ export function LandingContent() {
       <div className="w-full max-w-7xl mx-auto px-8 py-16">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-20 lg:gap-24 items-center">
           {/* Left: Logo */}
-          <div className="flex items-center justify-center lg:justify-start">
-            <div className="scale-90 lg:scale-100 animate-fade-in-scale">
+          <div className="flex items-center justify-center lg:justify-start w-full lg:w-auto">
+            <div className="w-full max-w-md lg:max-w-lg animate-fade-in-scale">
               <LandingLogo />
             </div>
           </div>
