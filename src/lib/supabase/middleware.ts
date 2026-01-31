@@ -28,9 +28,15 @@ export async function updateSession(request: NextRequest) {
             supabaseResponse = NextResponse.next({
               request,
             })
-            cookiesToSet.forEach(({ name, value, options }) =>
-              supabaseResponse.cookies.set(name, value, options)
-            )
+            cookiesToSet.forEach(({ name, value, options }) => {
+              // Ensure each user has isolated cookies
+              supabaseResponse.cookies.set(name, value, {
+                ...options,
+                sameSite: 'lax' as const,
+                path: '/',
+                // Don't set httpOnly here - let Supabase handle it
+              })
+            })
           },
         },
       }
