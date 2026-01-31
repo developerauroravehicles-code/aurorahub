@@ -119,11 +119,12 @@ export function DemandForm({ cameraModels }: { cameraModels: CameraModel[] }) {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-300">Camera Model</label>
+          <label className="block text-sm font-medium text-gray-300">
+            Camera Model <span className="text-red-400">*</span>
+          </label>
           {cameraModels.length > 0 ? (
             <div className="space-y-2">
               <select
-                name="cameraModel"
                 value={selectedCamera}
                 onChange={(e) => {
                   setSelectedCamera(e.target.value)
@@ -132,7 +133,7 @@ export function DemandForm({ cameraModels }: { cameraModels: CameraModel[] }) {
                 required
                 className="mt-1 block w-full rounded-md border border-gray-700 bg-black/50 py-2 px-3 shadow-sm focus:border-[#C27E00] focus:outline-none focus:ring-[#C27E00] sm:text-sm text-white"
               >
-                <option value="">Select a camera model</option>
+                <option value="">-- Select a camera model --</option>
                 {cameraModels.map((camera) => (
                   <option key={camera.id} value={camera.name} className="bg-black text-white">
                     {camera.name}
@@ -150,11 +151,15 @@ export function DemandForm({ cameraModels }: { cameraModels: CameraModel[] }) {
                   className="block w-full rounded-md border border-gray-700 bg-black/50 py-2 px-3 shadow-sm focus:border-[#C27E00] focus:outline-none focus:ring-[#C27E00] sm:text-sm text-white"
                 />
               )}
+              {!selectedCamera && (
+                <p className="text-xs text-gray-500">Please select a camera model</p>
+              )}
               {selectedCamera && selectedCamera !== '__custom__' && (
                 <input
                   type="hidden"
                   name="cameraModel"
                   value={selectedCamera}
+                  required
                 />
               )}
               {selectedCamera === '__custom__' && customCamera && (
@@ -162,16 +167,20 @@ export function DemandForm({ cameraModels }: { cameraModels: CameraModel[] }) {
                   type="hidden"
                   name="cameraModel"
                   value={customCamera}
+                  required
                 />
               )}
             </div>
           ) : (
-            <input
-              name="cameraModel"
-              required
-              className="mt-1 block w-full rounded-md border border-gray-700 bg-black/50 py-2 px-3 shadow-sm focus:border-[#C27E00] focus:outline-none focus:ring-[#C27E00] sm:text-sm text-white"
-              placeholder="Enter camera model"
-            />
+            <div>
+              <input
+                name="cameraModel"
+                required
+                className="mt-1 block w-full rounded-md border border-gray-700 bg-black/50 py-2 px-3 shadow-sm focus:border-[#C27E00] focus:outline-none focus:ring-[#C27E00] sm:text-sm text-white"
+                placeholder="Enter camera model"
+              />
+              <p className="text-xs text-gray-500 mt-1">No camera models available. Enter manually.</p>
+            </div>
           )}
         </div>
       </div>
@@ -224,7 +233,11 @@ export function DemandForm({ cameraModels }: { cameraModels: CameraModel[] }) {
         <div className="flex justify-end">
           <button
             type="submit"
-            disabled={isPending || !selectedSlot || !selectedCamera || (selectedCamera === '__custom__' && !customCamera)}
+            disabled={
+              isPending || 
+              !selectedSlot || 
+              (cameraModels.length > 0 && (!selectedCamera || (selectedCamera === '__custom__' && !customCamera)))
+            }
             className="ml-3 inline-flex justify-center rounded-md border border-transparent bg-[#C27E00] py-2 px-4 text-sm font-medium text-white shadow-sm hover:bg-[#a06900] focus:outline-none focus:ring-2 focus:ring-[#C27E00] focus:ring-offset-2 disabled:opacity-50 transition-colors"
           >
             {isPending ? 'Submitting...' : 'Create Demand'}
