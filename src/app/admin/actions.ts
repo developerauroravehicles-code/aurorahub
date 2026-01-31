@@ -33,14 +33,28 @@ export async function getSystemData() {
     .from('profiles')
     .select('*, dealers(name, code)')
     .order('created_at', { ascending: false })
+
+  // Fetch camera models with dealer assignments
+  const { data: cameras, error: camerasError } = await supabase
+    .from('camera_models')
+    .select(`
+      *,
+      dealer_cameras(
+        dealer_id,
+        dealers(id, name, code)
+      )
+    `)
+    .order('name', { ascending: true })
   
   return {
     dealers: dealers || [],
     profiles: profiles || [],
+    cameras: cameras || [],
     projectUrl: process.env.NEXT_PUBLIC_SUPABASE_URL,
     errors: {
       dealers: dealersError?.message,
-      profiles: profilesError?.message
+      profiles: profilesError?.message,
+      cameras: camerasError?.message
     }
   }
 }
@@ -125,4 +139,139 @@ export async function createUser(prevState: any, formData: FormData) {
 
   revalidatePath('/admin')
   return { success: 'User created successfully!' }
+}
+
+export async function createCameraModel(prevState: any, formData: FormData) {
+  const supabaseAdmin = getAdminClient()
+
+  if (!formData) return { error: 'Invalid form data received.' }
+
+  const name = formData.get('name') as string
+  const description = formData.get('description') as string
+  const stockQuantity = formData.get('stockQuantity') as string
+
+  if (!name) return { error: 'Camera model name is required' }
+
+  const { error } = await supabaseAdmin.from('camera_models').insert({
+    name: name.trim(),
+    description: description?.trim() || null,
+    stock_quantity: stockQuantity ? parseInt(stockQuantity) : 0,
+    is_active: true
+  })
+
+  if (error) return { error: error.message }
+  
+  revalidatePath('/admin')
+  return { success: 'Camera model created successfully!' }
+}
+
+export async function updateCameraModel(prevState: any, formData: FormData) {
+  const supabaseAdmin = getAdminClient()
+
+  if (!formData) return { error: 'Invalid form data received.' }
+
+  const id = formData.get('id') as string
+  const name = formData.get('name') as string
+  const description = formData.get('description') as string
+  const stockQuantity = formData.get('stockQuantity') as string
+
+  if (!id || !name) return { error: 'ID and name are required' }
+
+  const { error } = await supabaseAdmin
+    .from('camera_models')
+    .update({
+      name: name.trim(),
+      description: description?.trim() || null,
+      stock_quantity: stockQuantity ? parseInt(stockQuantity) : 0
+    })
+    .eq('id', id)
+
+  if (error) return { error: error.message }
+  
+  revalidatePath('/admin')
+  return { success: 'Camera model updated successfully!' }
+}
+
+export async function updateCameraStock(cameraId: string, stockQuantity: number) {
+  const supabaseAdmin = getAdminClient()
+
+  const { error } = await supabaseAdmin
+    .from('camera_models')
+    .update({ stock_quantity: stockQuantity })
+    .eq('id', cameraId)
+
+  if (error) {
+    return { error: error.message }
+  }
+  
+  revalidatePath('/admin')
+  return { success: 'Stock updated successfully!' }
+}
+
+export async function assignCameraToDealer(cameraId: string, dealerId: string) {
+  const supabaseAdmin = getAdminClient()
+
+  const { error } = await supabaseAdmin
+    .from('dealer_cameras')
+    .insert({ camera_model_id: cameraId, dealer_id: dealerId })
+
+  if (error) {
+    // If already exists, ignore
+    if (error.code === '23505') {
+      return { success: 'Camera already assigned to this dealer' }
+    }
+    return { error: error.message }
+  }
+  
+  revalidatePath('/admin')
+  return { success: 'Camera assigned to dealer successfully!' }
+}
+
+export async function removeCameraFromDealer(cameraId: string, dealerId: string) {
+  const supabaseAdmin = getAdminClient()
+
+  const { error } = await supabaseAdmin
+    .from('dealer_cameras')
+    .delete()
+    .eq('camera_model_id', cameraId)
+    .eq('dealer_id', dealerId)
+
+  if (error) {
+    return { error: error.message }
+  }
+  
+  revalidatePath('/admin')
+  return { success: 'Camera removed from dealer successfully!' }
+}
+
+export async function deleteCameraModel(id: string) {
+  const supabaseAdmin = getAdminClient()
+
+  const { error } = await supabaseAdmin
+    .from('camera_models')
+    .delete()
+    .eq('id', id)
+
+  if (error) {
+    return { error: error.message }
+  }
+  
+  revalidatePath('/admin')
+  return { success: 'Camera model deleted successfully!' }
+}
+
+export async function toggleCameraModelStatus(id: string, isActive: boolean) {
+  const supabaseAdmin = getAdminClient()
+
+  const { error } = await supabaseAdmin
+    .from('camera_models')
+    .update({ is_active: isActive })
+    .eq('id', id)
+
+  if (error) {
+    return { error: error.message }
+  }
+  
+  revalidatePath('/admin')
+  return { success: `Camera model ${isActive ? 'activated' : 'deactivated'} successfully!` }
 }

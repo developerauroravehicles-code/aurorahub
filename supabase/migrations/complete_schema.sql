@@ -119,9 +119,34 @@ CREATE TABLE IF NOT EXISTS camera_models (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   name text UNIQUE NOT NULL,
   description text,
+  stock_quantity int DEFAULT 0,
   is_active boolean DEFAULT true,
   created_at timestamptz DEFAULT now(),
   updated_at timestamptz DEFAULT now()
+);
+
+-- Add stock_quantity column if table exists but column doesn't
+DO $$
+BEGIN
+  IF EXISTS (SELECT FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'camera_models') THEN
+    IF NOT EXISTS (
+      SELECT FROM information_schema.columns 
+      WHERE table_schema = 'public' 
+      AND table_name = 'camera_models' 
+      AND column_name = 'stock_quantity'
+    ) THEN
+      ALTER TABLE camera_models ADD COLUMN stock_quantity int DEFAULT 0;
+    END IF;
+  END IF;
+END $$;
+
+-- Dealer Cameras Junction Table (Many-to-Many)
+CREATE TABLE IF NOT EXISTS dealer_cameras (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  dealer_id uuid NOT NULL REFERENCES dealers(id) ON DELETE CASCADE,
+  camera_model_id uuid NOT NULL REFERENCES camera_models(id) ON DELETE CASCADE,
+  created_at timestamptz DEFAULT now(),
+  UNIQUE(dealer_id, camera_model_id)
 );
 
 -- ============================================
@@ -133,6 +158,7 @@ ALTER TABLE demands ENABLE ROW LEVEL SECURITY;
 ALTER TABLE demand_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE system_settings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE camera_models ENABLE ROW LEVEL SECURITY;
+ALTER TABLE dealer_cameras ENABLE ROW LEVEL SECURITY;
 
 -- ============================================
 -- 5. DROP EXISTING POLICIES (Clean Slate)
@@ -149,6 +175,8 @@ DROP POLICY IF EXISTS "Authenticated users can manage system settings" ON system
 DROP POLICY IF EXISTS "Aurora Managers can manage system settings" ON system_settings;
 DROP POLICY IF EXISTS "Camera models are viewable by everyone" ON camera_models;
 DROP POLICY IF EXISTS "Aurora Managers can manage camera models" ON camera_models;
+DROP POLICY IF EXISTS "Dealer cameras are viewable by everyone" ON dealer_cameras;
+DROP POLICY IF EXISTS "Aurora Managers can manage dealer cameras" ON dealer_cameras;
 
 -- ============================================
 -- 6. CREATE POLICIES
@@ -254,6 +282,24 @@ USING (
   )
 );
 
+-- Dealer Cameras: Viewable by all authenticated users
+CREATE POLICY "Dealer cameras are viewable by everyone"
+ON dealer_cameras FOR SELECT
+TO authenticated
+USING (true);
+
+-- Dealer Cameras: Aurora Managers can manage
+CREATE POLICY "Aurora Managers can manage dealer cameras"
+ON dealer_cameras FOR ALL
+TO authenticated
+USING (
+  EXISTS (
+    SELECT 1 FROM profiles
+    WHERE id = auth.uid()
+    AND role = 'aurora_manager'
+  )
+);
+
 -- ============================================
 -- 7. FUNCTIONS
 -- ============================================
@@ -295,7 +341,7 @@ EXECUTE FUNCTION update_updated_at_column();
 -- ============================================
 -- SUCCESS MESSAGE
 -- ============================================
-SELECT '✅ Schema created successfully! Tables: dealers, profiles, demands, demand_logs, system_settings, camera_models' as status;
+SELECT '✅ Schema created successfully! Tables: dealers, profiles, demands, demand_logs, system_settings, camera_models, dealer_cameras' as status;
 
 -- ============================================
 -- DEBUG/UTILITY QUERIES (Optional - Commented out)

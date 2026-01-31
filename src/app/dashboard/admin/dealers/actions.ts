@@ -20,3 +20,33 @@ export async function createDealer(formData: FormData): Promise<void> {
   revalidatePath('/dashboard/admin/dealers')
 }
 
+export async function addCameraToDealer(dealerId: string, cameraModelId: string): Promise<void> {
+  const supabase = await createClient()
+  
+  const { error } = await supabase
+    .from('dealer_cameras')
+    .insert({ dealer_id: dealerId, camera_model_id: cameraModelId })
+  
+  if (error) {
+    throw new Error(error.message)
+  }
+  
+  revalidatePath('/dashboard/admin/dealers')
+}
+
+export async function removeCameraFromDealer(dealerId: string, cameraModelId: string): Promise<void> {
+  const supabase = await createClient()
+  
+  const { error } = await supabase
+    .from('dealer_cameras')
+    .delete()
+    .eq('dealer_id', dealerId)
+    .eq('camera_model_id', cameraModelId)
+  
+  if (error) {
+    throw new Error(error.message)
+  }
+  
+  revalidatePath('/dashboard/admin/dealers')
+}
+

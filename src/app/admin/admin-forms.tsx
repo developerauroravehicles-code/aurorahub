@@ -4,8 +4,8 @@ import { useState } from 'react'
 import React from 'react'
 import { AdminTabsContent } from './admin-tabs-content'
 
-export function AdminForms({ dealers, profiles, errors }: { dealers: any[], profiles: any[], errors: any }) {
-  const [activeTab, setActiveTab] = useState<'user' | 'dealer' | 'database' | 'api' | 'logo'>('user')
+export function AdminForms({ dealers, profiles, cameras, errors }: { dealers: any[], profiles: any[], cameras?: any[], errors: any }) {
+  const [activeTab, setActiveTab] = useState<'user' | 'dealer' | 'database' | 'api' | 'logo' | 'camera'>('user')
 
   return (
     <div>
@@ -60,9 +60,19 @@ export function AdminForms({ dealers, profiles, errors }: { dealers: any[], prof
         >
           Logo Management
         </button>
+        <button
+          onClick={() => setActiveTab('camera')}
+          className={`pb-2 text-sm font-medium transition-colors ${
+            activeTab === 'camera'
+              ? 'border-b-2 border-[#C27E00] text-[#C27E00]'
+              : 'text-gray-500 hover:text-gray-300'
+          }`}
+        >
+          Camera Models
+        </button>
       </div>
 
-      <AdminTabsContent activeTab={activeTab} dealers={dealers} profiles={profiles} errors={errors} />
+      <AdminTabsContent activeTab={activeTab} dealers={dealers} profiles={profiles} cameras={cameras} errors={errors} />
     </div>
   )
 }

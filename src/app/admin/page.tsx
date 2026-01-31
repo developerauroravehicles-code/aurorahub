@@ -5,7 +5,7 @@ import { AdminTabsContent } from './admin-tabs-content'
 export const dynamic = 'force-dynamic'
 
 export default async function AdminPage() {
-  const { dealers, profiles, projectUrl, errors } = await getSystemData()
+  const { dealers, profiles, cameras, projectUrl, errors } = await getSystemData()
 
   return (
     <div className="flex min-h-screen w-full">
@@ -29,7 +29,7 @@ export default async function AdminPage() {
               <h2 className="text-2xl font-bold text-white">Admin Console</h2>
               <p className="mt-2 text-sm text-gray-400">Manage initial configuration</p>
             </div>
-            <AdminForms dealers={dealers} profiles={profiles} errors={errors} />
+            <AdminForms dealers={dealers} profiles={profiles} cameras={cameras} errors={errors} />
           </div>
         </div>
       </div>
