@@ -18,6 +18,7 @@
    TWILIO_ACCOUNT_SID=your-sid
    TWILIO_AUTH_TOKEN=your-token
    TWILIO_PHONE_NUMBER=your-twilio-number
+   TWILIO_DEFAULT_COUNTRY_CODE=1  # Optional: Default country code for phone formatting (1 for Canada/USA, 90 for Turkey, etc.)
    ```
 
 3. **Database Setup**
