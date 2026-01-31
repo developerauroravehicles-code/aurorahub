@@ -3,7 +3,8 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { z } from 'zod'
-import { startOfDay, endOfDay } from 'date-fns'
+import { startOfDay, endOfDay, format } from 'date-fns'
+import { sendSMS } from '@/lib/twilio'
 
 const schema = z.object({
   firstName: z.string().min(1),
@@ -46,7 +47,7 @@ export async function createDemand(prevState: any, formData: FormData) {
 
   const data = result.data
 
-  const { error } = await supabase.from('demands').insert({
+  const { data: demand, error } = await supabase.from('demands').insert({
       created_by: profile.id,
       dealer_id: profile.dealer_id,
       customer_firstname: data.firstName,
@@ -59,11 +60,29 @@ export async function createDemand(prevState: any, formData: FormData) {
       camera_model: data.cameraModel,
       appointment_date: data.appointmentDate,
       status: 'pending_finance'
-  })
+  }).select().single()
 
   if (error) {
       console.error('Demand creation error:', error)
       return { error: error.message || 'Failed to create demand. Please check your permissions.' }
+  }
+
+  // Send SMS notification to customer
+  if (demand && data.phone && data.address && data.address.trim().length > 0) {
+    try {
+      // Format the appointment date
+      const appointmentDate = new Date(data.appointmentDate)
+      const formattedDate = format(appointmentDate, 'MMMM dd, yyyy \'at\' HH:mm')
+      
+      // Create the SMS message in English
+      const message = `An appointment has been created for ${formattedDate} at ${data.address.trim()}. Aurora Vehicles.`
+      
+      // Send SMS (non-blocking - don't fail demand creation if SMS fails)
+      await sendSMS(data.phone, message)
+    } catch (smsError) {
+      // Log SMS error but don't fail the demand creation
+      console.error('Failed to send SMS notification:', smsError)
+    }
   }
 
   redirect('/dashboard/sales/demands')
