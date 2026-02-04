@@ -38,7 +38,6 @@ export function Sidebar({ profile }: { profile: any }) {
     links.push({ name: 'Employees', href: '/dashboard/admin/employees', icon: Users })
     
     if (role === 'aurora_manager') {
-      links.push({ name: 'Dealers', href: '/dashboard/admin/dealers', icon: Settings })
       links.push({ name: 'System Management', href: '/dashboard/admin/system-management', icon: Settings })
     }
   }
