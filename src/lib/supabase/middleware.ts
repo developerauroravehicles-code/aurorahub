@@ -54,7 +54,6 @@ export async function updateSession(request: NextRequest) {
     !user &&
     !request.nextUrl.pathname.startsWith('/login') &&
     !request.nextUrl.pathname.startsWith('/auth') &&
-      !request.nextUrl.pathname.startsWith('/admin') && // Allow access to admin page without login
       request.nextUrl.pathname !== '/' // Allow access to landing page
   ) {
     // no user, potentially redirect to login

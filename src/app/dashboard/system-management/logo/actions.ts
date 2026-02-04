@@ -38,7 +38,6 @@ export async function uploadLogo(prevState: any, formData: FormData) {
 
   revalidatePath('/dashboard/system-management')
   revalidatePath('/dashboard/system-management/logo')
-  revalidatePath('/admin')
   return { success: 'Logo uploaded successfully!' }
 }
 

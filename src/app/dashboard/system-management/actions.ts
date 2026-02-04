@@ -20,22 +20,41 @@ function getAdminClient() {
 }
 
 export async function getSystemData() {
-  const supabase = getAdminClient()
+  // Verify user is Aurora Manager
+  const { createClient } = await import('@/lib/supabase/server')
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  
+  if (!user) {
+    throw new Error('Unauthorized')
+  }
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single()
+
+  if (profile?.role !== 'aurora_manager') {
+    throw new Error('Unauthorized: Only Aurora Manager can access System Management')
+  }
+
+  const supabaseAdmin = getAdminClient()
   
   // Fetch dealers
-  const { data: dealers, error: dealersError } = await supabase
+  const { data: dealers, error: dealersError } = await supabaseAdmin
     .from('dealers')
     .select('*')
     .order('created_at', { ascending: false })
 
   // Fetch profiles with dealer info
-  const { data: profiles, error: profilesError } = await supabase
+  const { data: profiles, error: profilesError } = await supabaseAdmin
     .from('profiles')
     .select('*, dealers(name, code)')
     .order('created_at', { ascending: false })
 
   // Fetch camera models with dealer assignments
-  const { data: cameras, error: camerasError } = await supabase
+  const { data: cameras, error: camerasError } = await supabaseAdmin
     .from('camera_models')
     .select(`
       *,

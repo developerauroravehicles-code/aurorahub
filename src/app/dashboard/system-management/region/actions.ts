@@ -2,7 +2,27 @@
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 
+async function verifyAuroraManager() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  
+  if (!user) {
+    throw new Error('Unauthorized')
+  }
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single()
+
+  if (profile?.role !== 'aurora_manager') {
+    throw new Error('Unauthorized: Only Aurora Manager can access System Management')
+  }
+}
+
 export async function createDealer(formData: FormData): Promise<void> {
+  await verifyAuroraManager()
   const supabase = await createClient()
   const name = formData.get('name') as string
   const code = formData.get('code') as string
@@ -27,6 +47,7 @@ export async function createDealer(formData: FormData): Promise<void> {
 }
 
 export async function createRegionCode(formData: FormData): Promise<void> {
+  await verifyAuroraManager()
   const supabase = await createClient()
   const code = formData.get('code') as string
   const name = formData.get('name') as string
@@ -50,6 +71,7 @@ export async function createRegionCode(formData: FormData): Promise<void> {
 }
 
 export async function updateDealerRegionCode(dealerId: string, regionCodeId: string | null): Promise<{ success: boolean; error?: string }> {
+  await verifyAuroraManager()
   const supabase = await createClient()
   
   const updateData: any = {}
@@ -74,6 +96,7 @@ export async function updateDealerRegionCode(dealerId: string, regionCodeId: str
 }
 
 export async function updateRegionCode(regionCodeId: string, code: string, name: string, description: string | null): Promise<void> {
+  await verifyAuroraManager()
   const supabase = await createClient()
   
   const { error } = await supabase
@@ -94,6 +117,7 @@ export async function updateRegionCode(regionCodeId: string, code: string, name:
 }
 
 export async function deleteRegionCode(regionCodeId: string): Promise<void> {
+  await verifyAuroraManager()
   const supabase = await createClient()
   
   // First, remove region_code_id from all dealers using this region code
@@ -116,6 +140,7 @@ export async function deleteRegionCode(regionCodeId: string): Promise<void> {
 }
 
 export async function addCameraToDealer(dealerId: string, cameraModelId: string): Promise<void> {
+  await verifyAuroraManager()
   const supabase = await createClient()
   
   const { error } = await supabase
@@ -130,6 +155,7 @@ export async function addCameraToDealer(dealerId: string, cameraModelId: string)
 }
 
 export async function removeCameraFromDealer(dealerId: string, cameraModelId: string): Promise<void> {
+  await verifyAuroraManager()
   const supabase = await createClient()
   
   const { error } = await supabase
@@ -146,6 +172,7 @@ export async function removeCameraFromDealer(dealerId: string, cameraModelId: st
 }
 
 export async function updateDealer(formData: FormData): Promise<void> {
+  await verifyAuroraManager()
   const supabase = await createClient()
   const dealerId = formData.get('dealerId') as string
   const name = formData.get('name') as string
@@ -177,6 +204,7 @@ export async function updateDealer(formData: FormData): Promise<void> {
 }
 
 export async function deleteDealer(dealerId: string): Promise<void> {
+  await verifyAuroraManager()
   const supabase = await createClient()
   
   // First, remove all camera assignments for this dealer
