@@ -71,6 +71,48 @@ export async function updateDealerRegionCode(dealerId: string, regionCodeId: str
   revalidatePath('/dashboard/admin/dealers')
 }
 
+export async function updateRegionCode(regionCodeId: string, code: string, name: string, description: string | null): Promise<void> {
+  const supabase = await createClient()
+  
+  const { error } = await supabase
+    .from('region_codes')
+    .update({ 
+      code, 
+      name, 
+      description: description || null,
+      updated_at: new Date().toISOString()
+    })
+    .eq('id', regionCodeId)
+  
+  if (error) {
+    throw new Error(error.message)
+  }
+  
+  revalidatePath('/dashboard/admin/dealers')
+}
+
+export async function deleteRegionCode(regionCodeId: string): Promise<void> {
+  const supabase = await createClient()
+  
+  // First, remove region_code_id from all dealers using this region code
+  await supabase
+    .from('dealers')
+    .update({ region_code_id: null })
+    .eq('region_code_id', regionCodeId)
+  
+  // Then delete the region code
+  const { error } = await supabase
+    .from('region_codes')
+    .delete()
+    .eq('id', regionCodeId)
+  
+  if (error) {
+    throw new Error(error.message)
+  }
+  
+  revalidatePath('/dashboard/admin/dealers')
+}
+
 export async function addCameraToDealer(dealerId: string, cameraModelId: string): Promise<void> {
   const supabase = await createClient()
   
