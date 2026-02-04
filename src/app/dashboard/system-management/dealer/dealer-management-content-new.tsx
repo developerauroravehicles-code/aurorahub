@@ -96,7 +96,11 @@ export function DealerManagementContent({
               </thead>
               <tbody className="divide-y divide-gray-800">
             {dealers.map(d => {
-              const regionCode = d.region_codes || (d.region_code_id ? regionCodes.find(rc => rc.id === d.region_code_id) : null)
+              // Find region code - check both merged region_codes and region_code_id
+              let regionCode = d.region_codes || null
+              if (!regionCode && d.region_code_id) {
+                regionCode = regionCodes.find(rc => rc.id === d.region_code_id) || null
+              }
               const isEditing = editingDealerId === d.id
               const isDeleting = deletingDealerId === d.id
               
