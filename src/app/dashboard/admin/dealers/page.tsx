@@ -46,15 +46,24 @@ export default async function DealersPage() {
                     <li key={d.id} className="px-4 py-4 hover:bg-white/5 transition-colors">
                         <div className="flex justify-between items-start">
                           <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-1">
+                            <div className="flex items-center gap-2 mb-2">
                               <p className="font-bold text-white">{d.name} <span className="text-sm font-normal text-gray-400">({d.code})</span></p>
-                              {d.region_codes && (
-                                <span className="text-xs px-2 py-1 bg-blue-900/50 text-blue-300 rounded border border-blue-800">
-                                  Region: {(d.region_codes as any)?.code} - {(d.region_codes as any)?.name}
-                                </span>
-                              )}
                             </div>
-                            <p className="text-sm text-gray-500">{d.address}</p>
+                            {d.region_codes ? (
+                              <div className="mb-2">
+                                <p className="text-xs text-gray-400 mb-1">Region Code:</p>
+                                <span className="inline-flex items-center px-3 py-1.5 bg-blue-900/50 text-blue-300 rounded border border-blue-800 font-medium">
+                                  {(d.region_codes as any)?.code} - {(d.region_codes as any)?.name}
+                                </span>
+                              </div>
+                            ) : (
+                              <div className="mb-2">
+                                <p className="text-xs text-gray-500 italic">No region code assigned</p>
+                              </div>
+                            )}
+                            {d.address && (
+                              <p className="text-sm text-gray-500 mb-2">{d.address}</p>
+                            )}
                             {d.dealer_cameras && d.dealer_cameras.length > 0 && (
                               <div className="mt-2">
                                 <p className="text-xs text-gray-400 mb-1">Assigned Cameras:</p>
