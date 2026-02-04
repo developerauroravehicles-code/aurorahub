@@ -23,7 +23,7 @@ export async function createDealer(formData: FormData): Promise<void> {
     throw new Error(error.message)
   }
   
-  revalidatePath('/dashboard/admin/system-management/region')
+  revalidatePath('/dashboard/system-management/region')
 }
 
 export async function createRegionCode(formData: FormData): Promise<void> {
@@ -46,7 +46,7 @@ export async function createRegionCode(formData: FormData): Promise<void> {
     throw new Error(error.message)
   }
   
-  revalidatePath('/dashboard/admin/system-management/region')
+  revalidatePath('/dashboard/system-management/region')
 }
 
 export async function updateDealerRegionCode(dealerId: string, regionCodeId: string | null): Promise<{ success: boolean; error?: string }> {
@@ -69,7 +69,7 @@ export async function updateDealerRegionCode(dealerId: string, regionCodeId: str
     return { success: false, error: error.message }
   }
   
-  revalidatePath('/dashboard/admin/system-management/region')
+  revalidatePath('/dashboard/system-management/region')
   return { success: true }
 }
 
@@ -90,7 +90,7 @@ export async function updateRegionCode(regionCodeId: string, code: string, name:
     throw new Error(error.message)
   }
   
-  revalidatePath('/dashboard/admin/system-management/region')
+  revalidatePath('/dashboard/system-management/region')
 }
 
 export async function deleteRegionCode(regionCodeId: string): Promise<void> {
@@ -112,7 +112,7 @@ export async function deleteRegionCode(regionCodeId: string): Promise<void> {
     throw new Error(error.message)
   }
   
-  revalidatePath('/dashboard/admin/system-management/region')
+  revalidatePath('/dashboard/system-management/region')
 }
 
 export async function addCameraToDealer(dealerId: string, cameraModelId: string): Promise<void> {
@@ -126,7 +126,7 @@ export async function addCameraToDealer(dealerId: string, cameraModelId: string)
     throw new Error(error.message)
   }
   
-  revalidatePath('/dashboard/admin/system-management/region')
+  revalidatePath('/dashboard/system-management/region')
 }
 
 export async function removeCameraFromDealer(dealerId: string, cameraModelId: string): Promise<void> {
@@ -142,7 +142,7 @@ export async function removeCameraFromDealer(dealerId: string, cameraModelId: st
     throw new Error(error.message)
   }
   
-  revalidatePath('/dashboard/admin/system-management/region')
+  revalidatePath('/dashboard/system-management/region')
 }
 
 export async function updateDealer(formData: FormData): Promise<void> {
@@ -173,7 +173,7 @@ export async function updateDealer(formData: FormData): Promise<void> {
     throw new Error(error.message)
   }
   
-  revalidatePath('/dashboard/admin/system-management/region')
+  revalidatePath('/dashboard/system-management/region')
 }
 
 export async function deleteDealer(dealerId: string): Promise<void> {
@@ -195,6 +195,6 @@ export async function deleteDealer(dealerId: string): Promise<void> {
     throw new Error(error.message)
   }
   
-  revalidatePath('/dashboard/admin/system-management/region')
+  revalidatePath('/dashboard/system-management/region')
 }
 

@@ -9,13 +9,13 @@ export function SystemManagementTabs({ activeTab }: { activeTab: string }) {
   const pathname = usePathname()
 
   const tabs = [
-    { id: 'user', name: 'User', href: '/dashboard/admin/system-management/user', icon: Users },
-    { id: 'dealer', name: 'Dealer', href: '/dashboard/admin/system-management/dealer', icon: Building2 },
-    { id: 'region', name: 'Region', href: '/dashboard/admin/system-management/region', icon: MapPin },
-    { id: 'database', name: 'Database Management', href: '/dashboard/admin/system-management/database', icon: Database },
-    { id: 'api', name: 'API Management', href: '/dashboard/admin/system-management/api', icon: Settings },
-    { id: 'logo', name: 'Logo Management', href: '/dashboard/admin/system-management/logo', icon: Image },
-    { id: 'cameras', name: 'Camera Models', href: '/dashboard/admin/system-management/cameras', icon: Camera },
+    { id: 'user', name: 'User', href: '/dashboard/system-management/user', icon: Users },
+    { id: 'dealer', name: 'Dealer', href: '/dashboard/system-management/dealer', icon: Building2 },
+    { id: 'region', name: 'Region', href: '/dashboard/system-management/region', icon: MapPin },
+    { id: 'database', name: 'Database Management', href: '/dashboard/system-management/database', icon: Database },
+    { id: 'api', name: 'API Management', href: '/dashboard/system-management/api', icon: Settings },
+    { id: 'logo', name: 'Logo Management', href: '/dashboard/system-management/logo', icon: Image },
+    { id: 'cameras', name: 'Camera Models', href: '/dashboard/system-management/cameras', icon: Camera },
   ]
 
   return (

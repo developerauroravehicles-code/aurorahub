@@ -78,7 +78,7 @@ export async function createDealer(prevState: any, formData: FormData) {
 
   if (error) return { error: error.message }
   
-  revalidatePath('/dashboard/admin/system-management/dealer')
+  revalidatePath('/dashboard/system-management/dealer')
   return { success: `Dealer created successfully` }
 }
 
@@ -137,7 +137,7 @@ export async function createUser(prevState: any, formData: FormData) {
       return { error: 'User created but profile failed: ' + profileError.message }
   }
 
-  revalidatePath('/dashboard/admin/system-management/user')
+  revalidatePath('/dashboard/system-management/user')
   return { success: 'User created successfully!' }
 }
 
@@ -161,7 +161,7 @@ export async function createCameraModel(prevState: any, formData: FormData) {
 
   if (error) return { error: error.message }
   
-  revalidatePath('/dashboard/admin/system-management/cameras')
+  revalidatePath('/dashboard/system-management/cameras')
   return { success: 'Camera model created successfully!' }
 }
 
@@ -188,7 +188,7 @@ export async function updateCameraModel(prevState: any, formData: FormData) {
 
   if (error) return { error: error.message }
   
-  revalidatePath('/dashboard/admin/system-management/cameras')
+  revalidatePath('/dashboard/system-management/cameras')
   return { success: 'Camera model updated successfully!' }
 }
 
@@ -204,7 +204,7 @@ export async function updateCameraStock(cameraId: string, stockQuantity: number)
     return { error: error.message }
   }
   
-  revalidatePath('/dashboard/admin/system-management/cameras')
+  revalidatePath('/dashboard/system-management/cameras')
   return { success: 'Stock updated successfully!' }
 }
 
@@ -223,7 +223,7 @@ export async function assignCameraToDealer(cameraId: string, dealerId: string) {
     return { error: error.message }
   }
   
-  revalidatePath('/dashboard/admin/system-management/cameras')
+  revalidatePath('/dashboard/system-management/cameras')
   return { success: 'Camera assigned to dealer successfully!' }
 }
 
@@ -240,7 +240,7 @@ export async function removeCameraFromDealer(cameraId: string, dealerId: string)
     return { error: error.message }
   }
   
-  revalidatePath('/dashboard/admin/system-management/cameras')
+  revalidatePath('/dashboard/system-management/cameras')
   return { success: 'Camera removed from dealer successfully!' }
 }
 
@@ -256,7 +256,7 @@ export async function deleteCameraModel(id: string) {
     return { error: error.message }
   }
   
-  revalidatePath('/dashboard/admin/system-management/cameras')
+  revalidatePath('/dashboard/system-management/cameras')
   return { success: 'Camera model deleted successfully!' }
 }
 
@@ -272,7 +272,7 @@ export async function toggleCameraModelStatus(id: string, isActive: boolean) {
     return { error: error.message }
   }
   
-  revalidatePath('/dashboard/admin/system-management/cameras')
+  revalidatePath('/dashboard/system-management/cameras')
   return { success: `Camera model ${isActive ? 'activated' : 'deactivated'} successfully!` }
 }
 

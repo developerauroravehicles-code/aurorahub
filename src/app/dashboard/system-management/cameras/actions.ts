@@ -55,7 +55,7 @@ export async function createCameraModel(formData: FormData): Promise<void> {
     throw new Error(error.message)
   }
   
-  revalidatePath('/dashboard/admin/system-management/cameras')
+  revalidatePath('/dashboard/system-management/cameras')
 }
 
 export async function deleteCameraModel(id: string): Promise<void> {
@@ -70,7 +70,7 @@ export async function deleteCameraModel(id: string): Promise<void> {
     throw new Error(error.message)
   }
   
-  revalidatePath('/dashboard/admin/system-management/cameras')
+  revalidatePath('/dashboard/system-management/cameras')
 }
 
 export async function toggleCameraModelStatus(id: string, isActive: boolean): Promise<void> {
@@ -85,6 +85,6 @@ export async function toggleCameraModelStatus(id: string, isActive: boolean): Pr
     throw new Error(error.message)
   }
   
-  revalidatePath('/dashboard/admin/system-management/cameras')
+  revalidatePath('/dashboard/system-management/cameras')
 }
 

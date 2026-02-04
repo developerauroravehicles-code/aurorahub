@@ -36,8 +36,8 @@ export async function uploadLogo(prevState: any, formData: FormData) {
     return { error: 'Failed to save logo: ' + error.message }
   }
 
-  revalidatePath('/dashboard/admin/system-management')
-  revalidatePath('/dashboard/admin/system-management/logo')
+  revalidatePath('/dashboard/system-management')
+  revalidatePath('/dashboard/system-management/logo')
   revalidatePath('/admin')
   return { success: 'Logo uploaded successfully!' }
 }

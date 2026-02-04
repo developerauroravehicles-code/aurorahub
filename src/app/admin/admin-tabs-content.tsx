@@ -3,7 +3,7 @@
 import { useState, useEffect, useTransition } from 'react'
 import { createDealer, createUser, createCameraModel, deleteCameraModel, toggleCameraModelStatus, updateCameraModel, updateCameraStock, assignCameraToDealer, removeCameraFromDealer } from './actions'
 import { useActionState } from 'react'
-import { LogoUploadForm } from '@/app/dashboard/admin/system-management/logo/logo-upload-form'
+import { LogoUploadForm } from '@/app/dashboard/system-management/logo/logo-upload-form'
 import { createClient } from '@/lib/supabase/client'
 import { createClient as createServerClient } from '@/lib/supabase/server'
 import { ResetPasswordButton } from '@/app/dashboard/admin/employees/reset-password-button'
