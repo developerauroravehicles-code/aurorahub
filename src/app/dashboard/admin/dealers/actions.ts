@@ -7,12 +7,63 @@ export async function createDealer(formData: FormData): Promise<void> {
   const name = formData.get('name') as string
   const code = formData.get('code') as string
   const address = formData.get('address') as string
+  const regionCodeId = formData.get('region_code_id') as string
 
   if (!name || !code) {
     throw new Error('Missing fields')
   }
 
-  const { error } = await supabase.from('dealers').insert({ name, code, address })
+  const dealerData: any = { name, code, address }
+  if (regionCodeId && regionCodeId !== 'none') {
+    dealerData.region_code_id = regionCodeId
+  }
+
+  const { error } = await supabase.from('dealers').insert(dealerData)
+  if (error) {
+    throw new Error(error.message)
+  }
+  
+  revalidatePath('/dashboard/admin/dealers')
+}
+
+export async function createRegionCode(formData: FormData): Promise<void> {
+  const supabase = await createClient()
+  const code = formData.get('code') as string
+  const name = formData.get('name') as string
+  const description = formData.get('description') as string
+
+  if (!code || !name) {
+    throw new Error('Code and name are required')
+  }
+
+  const { error } = await supabase.from('region_codes').insert({ 
+    code, 
+    name, 
+    description: description || null 
+  })
+  
+  if (error) {
+    throw new Error(error.message)
+  }
+  
+  revalidatePath('/dashboard/admin/dealers')
+}
+
+export async function updateDealerRegionCode(dealerId: string, regionCodeId: string | null): Promise<void> {
+  const supabase = await createClient()
+  
+  const updateData: any = {}
+  if (regionCodeId && regionCodeId !== 'none') {
+    updateData.region_code_id = regionCodeId
+  } else {
+    updateData.region_code_id = null
+  }
+
+  const { error } = await supabase
+    .from('dealers')
+    .update(updateData)
+    .eq('id', dealerId)
+  
   if (error) {
     throw new Error(error.message)
   }
