@@ -176,3 +176,25 @@ export async function updateDealer(formData: FormData): Promise<void> {
   revalidatePath('/dashboard/admin/system-management/region')
 }
 
+export async function deleteDealer(dealerId: string): Promise<void> {
+  const supabase = await createClient()
+  
+  // First, remove all camera assignments for this dealer
+  await supabase
+    .from('dealer_cameras')
+    .delete()
+    .eq('dealer_id', dealerId)
+  
+  // Then delete the dealer
+  const { error } = await supabase
+    .from('dealers')
+    .delete()
+    .eq('id', dealerId)
+  
+  if (error) {
+    throw new Error(error.message)
+  }
+  
+  revalidatePath('/dashboard/admin/system-management/region')
+}
+

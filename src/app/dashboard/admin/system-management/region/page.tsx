@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { SystemManagementTabs } from '../system-management-tabs'
 import { RegionManagementContent } from './region-management-content'
-import { createDealer, createRegionCode, updateDealerRegionCode, updateRegionCode, deleteRegionCode, addCameraToDealer, removeCameraFromDealer, updateDealer } from './actions'
+import { createDealer, createRegionCode, updateDealerRegionCode, updateRegionCode, deleteRegionCode, addCameraToDealer, removeCameraFromDealer, updateDealer, deleteDealer } from './actions'
 
 export const dynamic = 'force-dynamic'
 
@@ -63,6 +63,7 @@ export default async function RegionManagementPage() {
             addCameraToDealer={addCameraToDealer}
             removeCameraFromDealer={removeCameraFromDealer}
             updateDealer={updateDealer}
+            deleteDealer={deleteDealer}
           />
         </div>
       </div>
