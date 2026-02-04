@@ -27,12 +27,13 @@ export function RegionCodeManagement({
   const handleCreate = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     setLoading(true)
+    const form = e.currentTarget
     try {
-      const formData = new FormData(e.currentTarget)
+      const formData = new FormData(form)
       await createRegionCode(formData)
+      form.reset()
       setShowForm(false)
       router.refresh()
-      e.currentTarget.reset()
     } catch (error) {
       alert(error instanceof Error ? error.message : 'Failed to create region code')
     } finally {
