@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
-import { CompleteButton } from './complete-button'
+import { WorkActions } from './work-actions'
 import { format } from 'date-fns'
 
 export default async function SpecialistWorkPage() {
@@ -10,34 +10,182 @@ export default async function SpecialistWorkPage() {
 
     const { data: profile } = await supabase.from('profiles').select('dealer_id').eq('id', user.id).single()
     
-    if (!profile) return <div>Profile error</div>
+    if (!profile) return <div className="text-white">Profile error</div>
 
-    const { data: demands } = await supabase
+    // Get unassigned work (work pool)
+    const { data: unassignedWork } = await supabase
         .from('demands')
-        .select('*')
+        .select('*, profiles!demands_assigned_specialist_id_fkey(full_name)')
         .eq('dealer_id', profile.dealer_id)
+        .eq('status', 'approved')
+        .is('assigned_specialist_id', null)
+        .order('appointment_date', { ascending: true })
+
+    // Get assigned work for current user
+    const { data: myAssignedWork } = await supabase
+        .from('demands')
+        .select('*, profiles!demands_assigned_specialist_id_fkey(full_name)')
+        .eq('assigned_specialist_id', user.id)
         .eq('status', 'approved')
         .order('appointment_date', { ascending: true })
 
+    // Get all assigned work (for reference)
+    const { data: allAssignedWork } = await supabase
+        .from('demands')
+        .select('*, profiles!demands_assigned_specialist_id_fkey(full_name)')
+        .eq('dealer_id', profile.dealer_id)
+        .eq('status', 'approved')
+        .not('assigned_specialist_id', 'is', null)
+        .order('appointment_date', { ascending: true })
+
     return (
-        <div>
-           <h1 className="text-2xl font-semibold mb-6 text-white">Work List</h1>
-           <div className="space-y-4">
-                {(!demands || demands.length === 0) && <p className="text-gray-500">No active jobs.</p>}
-                {demands?.map(demand => (
-                    <div key={demand.id} className="bg-white/5 border border-gray-800 p-6 rounded-lg shadow flex flex-col sm:flex-row justify-between items-start sm:items-center hover:bg-white/10 transition-colors">
-                        <div className="mb-4 sm:mb-0">
-                            <h3 className="text-lg font-medium text-white">{demand.vehicle_year} {demand.vehicle_make} {demand.vehicle_model}</h3>
-                            <p className="text-gray-400">{demand.camera_model}</p>
-                            <p className="mt-1 font-semibold text-[#C27E00]">
-                                {format(new Date(demand.appointment_date), 'PPP p')}
-                            </p>
-                            <p className="text-sm text-gray-500 mt-1">Customer: {demand.customer_firstname} {demand.customer_lastname} ({demand.customer_phone})</p>
-                        </div>
-                        <CompleteButton demandId={demand.id} />
+        <div className="space-y-8">
+            <div>
+                <h1 className="text-2xl font-semibold text-white mb-2">Work Management</h1>
+                <p className="text-gray-400">Assign work to yourself from the pool or manage your assigned work.</p>
+            </div>
+
+            {/* My Assigned Work */}
+            {myAssignedWork && myAssignedWork.length > 0 && (
+                <div>
+                    <h2 className="text-xl font-semibold text-white mb-4">My Assigned Work ({myAssignedWork.length})</h2>
+                    <div className="bg-white/5 rounded-lg border border-gray-800 shadow overflow-hidden">
+                        <ul className="divide-y divide-gray-800">
+                            {myAssignedWork.map(demand => (
+                                <li key={demand.id} className="p-4 sm:px-6 hover:bg-white/5 transition-colors">
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex-1">
+                                            <div className="flex items-center gap-2 mb-2">
+                                                <p className="text-lg font-medium text-[#C27E00]">
+                                                    {demand.customer_firstname} {demand.customer_lastname}
+                                                </p>
+                                                <span className="px-2 py-1 rounded text-xs font-medium bg-blue-900/50 text-blue-300 border border-blue-800">
+                                                    ASSIGNED TO ME
+                                                </span>
+                                            </div>
+                                            <p className="text-sm text-gray-400">
+                                                {demand.vehicle_year} {demand.vehicle_make} {demand.vehicle_model}
+                                            </p>
+                                            <p className="text-sm text-gray-400">
+                                                Camera: {demand.camera_model}
+                                            </p>
+                                            <p className="text-sm text-gray-400">
+                                                Appointment: <span className="font-semibold text-white">{format(new Date(demand.appointment_date), 'PPP p')}</span>
+                                            </p>
+                                            {demand.address && (
+                                                <p className="text-sm text-gray-500 mt-1">
+                                                    Address: {demand.address}
+                                                </p>
+                                            )}
+                                            <p className="text-sm text-gray-500 mt-1">
+                                                Customer: {demand.customer_phone}
+                                            </p>
+                                        </div>
+                                        <WorkActions demandId={demand.id} isAssigned={true} />
+                                    </div>
+                                </li>
+                            ))}
+                        </ul>
                     </div>
-                ))}
-           </div>
+                </div>
+            )}
+
+            {/* Work Pool - Unassigned Work */}
+            <div>
+                <h2 className="text-xl font-semibold text-white mb-4">
+                    Work Pool - Unassigned ({unassignedWork?.length || 0})
+                </h2>
+                <div className="bg-white/5 rounded-lg border border-gray-800 shadow overflow-hidden">
+                    {(!unassignedWork || unassignedWork.length === 0) ? (
+                        <p className="p-4 text-gray-400 text-center">No unassigned work in the pool.</p>
+                    ) : (
+                        <ul className="divide-y divide-gray-800">
+                            {unassignedWork.map(demand => (
+                                <li key={demand.id} className="p-4 sm:px-6 hover:bg-white/5 transition-colors">
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex-1">
+                                            <div className="flex items-center gap-2 mb-2">
+                                                <p className="text-lg font-medium text-white">
+                                                    {demand.customer_firstname} {demand.customer_lastname}
+                                                </p>
+                                                <span className="px-2 py-1 rounded text-xs font-medium bg-gray-900/50 text-gray-300 border border-gray-800">
+                                                    UNASSIGNED
+                                                </span>
+                                            </div>
+                                            <p className="text-sm text-gray-400">
+                                                {demand.vehicle_year} {demand.vehicle_make} {demand.vehicle_model}
+                                            </p>
+                                            <p className="text-sm text-gray-400">
+                                                Camera: {demand.camera_model}
+                                            </p>
+                                            <p className="text-sm text-gray-400">
+                                                Appointment: <span className="font-semibold text-white">{format(new Date(demand.appointment_date), 'PPP p')}</span>
+                                            </p>
+                                            {demand.address && (
+                                                <p className="text-sm text-gray-500 mt-1">
+                                                    Address: {demand.address}
+                                                </p>
+                                            )}
+                                            <p className="text-sm text-gray-500 mt-1">
+                                                Customer: {demand.customer_phone}
+                                            </p>
+                                            <p className="text-xs text-gray-600 mt-1">
+                                                Created: {format(new Date(demand.created_at), 'PPP p')}
+                                            </p>
+                                        </div>
+                                        <WorkActions demandId={demand.id} isAssigned={false} />
+                                    </div>
+                                </li>
+                            ))}
+                        </ul>
+                    )}
+                </div>
+            </div>
+
+            {/* Other Assigned Work (for reference) */}
+            {allAssignedWork && allAssignedWork.length > 0 && (
+                <div>
+                    <h2 className="text-xl font-semibold text-white mb-4">
+                        Assigned to Others ({allAssignedWork.filter(w => w.assigned_specialist_id !== user.id).length})
+                    </h2>
+                    <div className="bg-white/5 rounded-lg border border-gray-800 shadow overflow-hidden">
+                        <ul className="divide-y divide-gray-800">
+                            {allAssignedWork
+                                .filter(w => w.assigned_specialist_id !== user.id)
+                                .map(demand => (
+                                <li key={demand.id} className="p-4 sm:px-6 hover:bg-white/5 transition-colors">
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex-1">
+                                            <div className="flex items-center gap-2 mb-2">
+                                                <p className="text-lg font-medium text-gray-500">
+                                                    {demand.customer_firstname} {demand.customer_lastname}
+                                                </p>
+                                                <span className="px-2 py-1 rounded text-xs font-medium bg-purple-900/50 text-purple-300 border border-purple-800">
+                                                    ASSIGNED TO: {(demand.profiles as any)?.full_name || 'Unknown'}
+                                                </span>
+                                            </div>
+                                            <p className="text-sm text-gray-500">
+                                                {demand.vehicle_year} {demand.vehicle_make} {demand.vehicle_model}
+                                            </p>
+                                            <p className="text-sm text-gray-500">
+                                                Camera: {demand.camera_model}
+                                            </p>
+                                            <p className="text-sm text-gray-500">
+                                                Appointment: {format(new Date(demand.appointment_date), 'PPP p')}
+                                            </p>
+                                            {demand.address && (
+                                                <p className="text-sm text-gray-600 mt-1">
+                                                    Address: {demand.address}
+                                                </p>
+                                            )}
+                                        </div>
+                                    </div>
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
+                </div>
+            )}
         </div>
     )
 }
