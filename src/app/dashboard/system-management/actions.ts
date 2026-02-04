@@ -78,7 +78,28 @@ export async function getSystemData() {
   }
 }
 
+async function verifyAuroraManager() {
+  const { createClient } = await import('@/lib/supabase/server')
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  
+  if (!user) {
+    throw new Error('Unauthorized')
+  }
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single()
+
+  if (profile?.role !== 'aurora_manager') {
+    throw new Error('Unauthorized: Only Aurora Manager can access System Management')
+  }
+}
+
 export async function createDealer(prevState: any, formData: FormData) {
+  await verifyAuroraManager()
   const supabaseAdmin = getAdminClient()
 
   if (!formData) return { error: 'Invalid form data received.' }
@@ -102,6 +123,7 @@ export async function createDealer(prevState: any, formData: FormData) {
 }
 
 export async function createUser(prevState: any, formData: FormData) {
+  await verifyAuroraManager()
   const supabaseAdmin = getAdminClient()
 
   if (!formData) return { error: 'Invalid form data received.' }
@@ -161,6 +183,7 @@ export async function createUser(prevState: any, formData: FormData) {
 }
 
 export async function createCameraModel(prevState: any, formData: FormData) {
+  await verifyAuroraManager()
   const supabaseAdmin = getAdminClient()
 
   if (!formData) return { error: 'Invalid form data received.' }
@@ -185,6 +208,7 @@ export async function createCameraModel(prevState: any, formData: FormData) {
 }
 
 export async function updateCameraModel(prevState: any, formData: FormData) {
+  await verifyAuroraManager()
   const supabaseAdmin = getAdminClient()
 
   if (!formData) return { error: 'Invalid form data received.' }
@@ -212,6 +236,7 @@ export async function updateCameraModel(prevState: any, formData: FormData) {
 }
 
 export async function updateCameraStock(cameraId: string, stockQuantity: number) {
+  await verifyAuroraManager()
   const supabaseAdmin = getAdminClient()
 
   const { error } = await supabaseAdmin
@@ -228,6 +253,7 @@ export async function updateCameraStock(cameraId: string, stockQuantity: number)
 }
 
 export async function assignCameraToDealer(cameraId: string, dealerId: string) {
+  await verifyAuroraManager()
   const supabaseAdmin = getAdminClient()
 
   const { error } = await supabaseAdmin
@@ -247,6 +273,7 @@ export async function assignCameraToDealer(cameraId: string, dealerId: string) {
 }
 
 export async function removeCameraFromDealer(cameraId: string, dealerId: string) {
+  await verifyAuroraManager()
   const supabaseAdmin = getAdminClient()
 
   const { error } = await supabaseAdmin
@@ -264,6 +291,7 @@ export async function removeCameraFromDealer(cameraId: string, dealerId: string)
 }
 
 export async function deleteCameraModel(id: string) {
+  await verifyAuroraManager()
   const supabaseAdmin = getAdminClient()
 
   const { error } = await supabaseAdmin
@@ -280,6 +308,7 @@ export async function deleteCameraModel(id: string) {
 }
 
 export async function toggleCameraModelStatus(id: string, isActive: boolean) {
+  await verifyAuroraManager()
   const supabaseAdmin = getAdminClient()
 
   const { error } = await supabaseAdmin

@@ -1,9 +1,30 @@
 'use server'
 
 import { createAdminClient } from '@/lib/supabase/admin'
+import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 
+async function verifyAuroraManager() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  
+  if (!user) {
+    throw new Error('Unauthorized')
+  }
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single()
+
+  if (profile?.role !== 'aurora_manager') {
+    throw new Error('Unauthorized: Only Aurora Manager can access System Management')
+  }
+}
+
 export async function uploadLogo(prevState: any, formData: FormData) {
+  await verifyAuroraManager()
   const supabaseAdmin = createAdminClient()
   const file = formData.get('logo') as File
 
