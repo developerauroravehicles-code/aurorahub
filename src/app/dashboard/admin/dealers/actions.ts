@@ -49,7 +49,7 @@ export async function createRegionCode(formData: FormData): Promise<void> {
   revalidatePath('/dashboard/admin/dealers')
 }
 
-export async function updateDealerRegionCode(dealerId: string, regionCodeId: string | null): Promise<void> {
+export async function updateDealerRegionCode(dealerId: string, regionCodeId: string | null): Promise<{ success: boolean; error?: string }> {
   const supabase = await createClient()
   
   const updateData: any = {}
@@ -65,10 +65,12 @@ export async function updateDealerRegionCode(dealerId: string, regionCodeId: str
     .eq('id', dealerId)
   
   if (error) {
-    throw new Error(error.message)
+    console.error('Error updating dealer region code:', error)
+    return { success: false, error: error.message }
   }
   
   revalidatePath('/dashboard/admin/dealers')
+  return { success: true }
 }
 
 export async function updateRegionCode(regionCodeId: string, code: string, name: string, description: string | null): Promise<void> {

@@ -6,6 +6,14 @@ import { DealerRegionCodeAssignment } from './dealer-region-code-assignment'
 
 export default async function DealersPage() {
   const supabase = await createClient()
+  
+  // Fetch region codes first (needed for merging)
+  const { data: regionCodes } = await supabase
+    .from('region_codes')
+    .select('*')
+    .order('code')
+  
+  // Fetch dealers
   const { data: dealers } = await supabase
     .from('dealers')
     .select(`
@@ -13,8 +21,7 @@ export default async function DealersPage() {
       dealer_cameras(
         camera_model_id,
         camera_models(id, name, is_active)
-      ),
-      region_codes(id, code, name)
+      )
     `)
     .order('created_at')
   
@@ -24,10 +31,14 @@ export default async function DealersPage() {
     .eq('is_active', true)
     .order('name')
 
-  const { data: regionCodes } = await supabase
-    .from('region_codes')
-    .select('*')
-    .order('code')
+  // Merge region codes with dealers manually (in case join doesn't work)
+  const dealersWithRegionCodes = dealers?.map(dealer => {
+    if (dealer.region_code_id) {
+      const regionCode = regionCodes?.find(rc => rc.id === dealer.region_code_id)
+      return { ...dealer, region_codes: regionCode || null }
+    }
+    return { ...dealer, region_codes: null }
+  })
 
   return (
     <div className="space-y-8">
@@ -42,18 +53,20 @@ export default async function DealersPage() {
         <h1 className="text-2xl font-semibold mb-4 text-white">Dealers</h1>
         <div className="bg-white/5 rounded-lg border border-gray-800 shadow overflow-hidden">
             <ul className="divide-y divide-gray-800">
-                {dealers?.map(d => (
+                {(dealersWithRegionCodes || dealers)?.map(d => {
+                  const regionCode = d.region_codes || (d.region_code_id ? regionCodes?.find(rc => rc.id === d.region_code_id) : null)
+                  return (
                     <li key={d.id} className="px-4 py-4 hover:bg-white/5 transition-colors">
                         <div className="flex justify-between items-start">
                           <div className="flex-1">
                             <div className="flex items-center gap-2 mb-2">
                               <p className="font-bold text-white">{d.name} <span className="text-sm font-normal text-gray-400">({d.code})</span></p>
                             </div>
-                            {d.region_codes ? (
+                            {regionCode ? (
                               <div className="mb-2">
                                 <p className="text-xs text-gray-400 mb-1">Region Code:</p>
                                 <span className="inline-flex items-center px-3 py-1.5 bg-blue-900/50 text-blue-300 rounded border border-blue-800 font-medium">
-                                  {(d.region_codes as any)?.code} - {(d.region_codes as any)?.name}
+                                  {regionCode.code} - {regionCode.name}
                                 </span>
                               </div>
                             ) : (
@@ -84,7 +97,7 @@ export default async function DealersPage() {
                             <DealerRegionCodeAssignment 
                               dealerId={d.id}
                               dealerName={d.name}
-                              currentRegionCodeId={(d.region_codes as any)?.id || null}
+                              currentRegionCodeId={regionCode?.id || null}
                               regionCodes={regionCodes || []}
                               updateDealerRegionCode={updateDealerRegionCode}
                             />
@@ -97,7 +110,8 @@ export default async function DealersPage() {
                           </div>
                         </div>
                     </li>
-                ))}
+                  )
+                })}
             </ul>
         </div>
       </div>

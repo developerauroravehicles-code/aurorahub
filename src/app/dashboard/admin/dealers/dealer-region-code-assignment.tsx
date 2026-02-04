@@ -33,9 +33,13 @@ export function DealerRegionCodeAssignment({
     try {
       const formData = new FormData(e.currentTarget)
       const regionCodeId = formData.get('region_code_id') as string
-      await updateDealerRegionCode(dealerId, regionCodeId === 'none' ? null : regionCodeId)
-      setShowModal(false)
-      router.refresh()
+      const result = await updateDealerRegionCode(dealerId, regionCodeId === 'none' ? null : regionCodeId)
+      if (result.success) {
+        setShowModal(false)
+        router.refresh()
+      } else {
+        alert(result.error || 'Failed to update region code')
+      }
     } catch (error) {
       alert(error instanceof Error ? error.message : 'Failed to update region code')
     } finally {
