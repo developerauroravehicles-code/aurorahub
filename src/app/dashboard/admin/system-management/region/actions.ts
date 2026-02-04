@@ -145,3 +145,34 @@ export async function removeCameraFromDealer(dealerId: string, cameraModelId: st
   revalidatePath('/dashboard/admin/system-management/region')
 }
 
+export async function updateDealer(formData: FormData): Promise<void> {
+  const supabase = await createClient()
+  const dealerId = formData.get('dealerId') as string
+  const name = formData.get('name') as string
+  const code = formData.get('code') as string
+  const address = formData.get('address') as string
+  const regionCodeId = formData.get('region_code_id') as string
+
+  if (!dealerId || !name || !code) {
+    throw new Error('Missing required fields')
+  }
+
+  const updateData: any = { name, code, address: address || null }
+  if (regionCodeId && regionCodeId !== 'none') {
+    updateData.region_code_id = regionCodeId
+  } else {
+    updateData.region_code_id = null
+  }
+
+  const { error } = await supabase
+    .from('dealers')
+    .update(updateData)
+    .eq('id', dealerId)
+  
+  if (error) {
+    throw new Error(error.message)
+  }
+  
+  revalidatePath('/dashboard/admin/system-management/region')
+}
+
