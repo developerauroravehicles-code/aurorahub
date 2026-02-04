@@ -21,7 +21,7 @@ export function DealerRegionCodeAssignment({
   dealerName: string
   currentRegionCodeId: string | null
   regionCodes: RegionCode[]
-  updateDealerRegionCode: (dealerId: string, regionCodeId: string | null) => Promise<void>
+  updateDealerRegionCode: (dealerId: string, regionCodeId: string | null) => Promise<{ success: boolean; error?: string }>
 }) {
   const [loading, setLoading] = useState(false)
   const [showModal, setShowModal] = useState(false)
