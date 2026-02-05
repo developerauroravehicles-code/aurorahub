@@ -36,16 +36,24 @@ export default async function DealerManagementPage() {
 
   // Merge region codes with dealers manually (in case join doesn't work)
   const dealersWithRegionCodes: Dealer[] = dealers?.map(dealer => {
+    // Transform dealer_cameras to match DealerCamera type
+    const transformedDealerCameras = (dealer.dealer_cameras || []).map((dc: any) => ({
+      dealer_id: dealer.id,
+      camera_model_id: dc.camera_model_id,
+      camera_models: Array.isArray(dc.camera_models) ? dc.camera_models[0] : dc.camera_models,
+      dealers: undefined
+    }))
+    
     // First try to use the joined region_codes
     if (dealer.region_codes && Array.isArray(dealer.region_codes) && dealer.region_codes.length > 0) {
-      return { ...dealer, region_codes: dealer.region_codes[0] } as Dealer
+      return { ...dealer, region_codes: dealer.region_codes[0], dealer_cameras: transformedDealerCameras } as Dealer
     }
     // If join didn't work, manually find it
     if (dealer.region_code_id) {
       const regionCode = regionCodes?.find(rc => rc.id === dealer.region_code_id)
-      return { ...dealer, region_codes: regionCode || null } as Dealer
+      return { ...dealer, region_codes: regionCode || null, dealer_cameras: transformedDealerCameras } as Dealer
     }
-    return { ...dealer, region_codes: null } as Dealer
+    return { ...dealer, region_codes: null, dealer_cameras: transformedDealerCameras } as Dealer
   }) || []
 
   return (
