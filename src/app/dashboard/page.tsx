@@ -21,7 +21,7 @@ export default async function DashboardPage() {
   if (profile.role === 'sales') {
     const { data: demands } = await supabase
       .from('demands')
-      .select('id, status, created_at, camera_model, vehicle_make')
+      .select('id, status, created_at, camera_model, vehicle_make, vehicle_model, vehicle_year, appointment_date, customer_firstname, customer_lastname')
       .eq('created_by', user.id)
       .order('created_at', { ascending: false })
 
@@ -267,7 +267,7 @@ export default async function DashboardPage() {
     // Get demands assigned to this specialist
     const { data: assignedWork } = await supabase
       .from('demands')
-      .select('id, status, appointment_date, customer_firstname, customer_lastname, vehicle_make, vehicle_model, vehicle_year, customer_address')
+      .select('id, status, appointment_date, customer_firstname, customer_lastname, vehicle_make, vehicle_model, vehicle_year, camera_model, customer_address')
       .eq('assigned_specialist_id', user.id)
       .eq('status', 'approved')
       .order('appointment_date', { ascending: true })
@@ -275,7 +275,7 @@ export default async function DashboardPage() {
     // Get completed demands by this specialist
     const { data: completedWork } = await supabase
       .from('demands')
-      .select('id, status, updated_at, customer_firstname, customer_lastname, vehicle_make, vehicle_model, vehicle_year, appointment_date')
+      .select('id, status, updated_at, customer_firstname, customer_lastname, vehicle_make, vehicle_model, vehicle_year, camera_model, appointment_date')
       .eq('assigned_specialist_id', user.id)
       .eq('status', 'completed')
       .order('updated_at', { ascending: false })
@@ -288,7 +288,7 @@ export default async function DashboardPage() {
 
     const { data: todayAppointments } = await supabase
       .from('demands')
-      .select('*')
+      .select('id, status, appointment_date, customer_firstname, customer_lastname, vehicle_make, vehicle_model, vehicle_year, camera_model, address')
       .eq('dealer_id', profile.dealer_id)
       .eq('status', 'approved')
       .gte('appointment_date', today.toISOString())
@@ -513,7 +513,7 @@ export default async function DashboardPage() {
     // Get all demands for statistics
     const { data: allDemands } = await supabase
       .from('demands')
-      .select('id, status, created_at')
+      .select('id, status, created_at, customer_firstname, customer_lastname, vehicle_make, vehicle_model, vehicle_year, camera_model, appointment_date')
       .order('created_at', { ascending: false })
 
     // Calculate demand statistics
