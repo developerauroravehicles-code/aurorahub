@@ -46,9 +46,11 @@ export async function login(prevState: ActionState, formData: FormData) {
     .single()
 
   // Type-safe dealer code check
+  // Supabase returns dealers as an array from the join
   type DealerInfo = { code: string }
-  const dealers = profile?.dealers as DealerInfo | null
-  const dealerMatch = dealers && dealers.code === dealerCode
+  const dealersArray = profile?.dealers as DealerInfo[] | null | undefined
+  const dealer = Array.isArray(dealersArray) && dealersArray.length > 0 ? dealersArray[0] : null
+  const dealerMatch = dealer && dealer.code === dealerCode
 
   if (!profile || !dealerMatch) {
     await supabase.auth.signOut()
