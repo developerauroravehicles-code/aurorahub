@@ -16,9 +16,9 @@ export function RegionManagementContent({
   deleteRegionCode
 }: {
   regionCodes: RegionCode[]
-  createRegionCode: (formData: FormData) => Promise<void>
-  updateRegionCode: (regionCodeId: string, code: string, name: string, description: string | null) => Promise<void>
-  deleteRegionCode: (regionCodeId: string) => Promise<void>
+  createRegionCode: (formData: FormData) => Promise<{ success: boolean; error?: string }>
+  updateRegionCode: (regionCodeId: string, code: string, name: string, description: string | null) => Promise<{ success: boolean; error?: string }>
+  deleteRegionCode: (regionCodeId: string) => Promise<{ success: boolean; error?: string }>
 }) {
   return (
     <div className="space-y-8">

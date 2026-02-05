@@ -18,9 +18,9 @@ export function RegionCodeManagement({
   deleteRegionCode
 }: { 
   regionCodes: RegionCode[]
-  createRegionCode: (formData: FormData) => Promise<void>
-  updateRegionCode: (regionCodeId: string, code: string, name: string, description: string | null) => Promise<void>
-  deleteRegionCode: (regionCodeId: string) => Promise<void>
+  createRegionCode: (formData: FormData) => Promise<{ success: boolean; error?: string }>
+  updateRegionCode: (regionCodeId: string, code: string, name: string, description: string | null) => Promise<{ success: boolean; error?: string }>
+  deleteRegionCode: (regionCodeId: string) => Promise<{ success: boolean; error?: string }>
 }) {
   const [showForm, setShowForm] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -31,35 +31,33 @@ export function RegionCodeManagement({
     e.preventDefault()
     setLoading(true)
     const form = e.currentTarget
-    try {
-      const formData = new FormData(form)
-      await createRegionCode(formData)
+    const formData = new FormData(form)
+    const result = await createRegionCode(formData)
+    if (result.error) {
+      alert(result.error)
+    } else {
       form.reset()
       setShowForm(false)
       router.refresh()
-    } catch (error) {
-      alert(error instanceof Error ? error.message : 'Failed to create region code')
-    } finally {
-      setLoading(false)
     }
+    setLoading(false)
   }
 
   const handleUpdate = async (e: React.FormEvent<HTMLFormElement>, regionCodeId: string) => {
     e.preventDefault()
     setLoading(true)
-    try {
-      const formData = new FormData(e.currentTarget)
-      const code = formData.get('code') as string
-      const name = formData.get('name') as string
-      const description = formData.get('description') as string
-      await updateRegionCode(regionCodeId, code, name, description || null)
+    const formData = new FormData(e.currentTarget)
+    const code = formData.get('code') as string
+    const name = formData.get('name') as string
+    const description = formData.get('description') as string
+    const result = await updateRegionCode(regionCodeId, code, name, description || null)
+    if (result.error) {
+      alert(result.error)
+    } else {
       setEditingId(null)
       router.refresh()
-    } catch (error) {
-      alert(error instanceof Error ? error.message : 'Failed to update region code')
-    } finally {
-      setLoading(false)
     }
+    setLoading(false)
   }
 
   const handleDelete = async (regionCodeId: string) => {
@@ -67,14 +65,13 @@ export function RegionCodeManagement({
       return
     }
     setLoading(true)
-    try {
-      await deleteRegionCode(regionCodeId)
+    const result = await deleteRegionCode(regionCodeId)
+    if (result.error) {
+      alert(result.error)
+    } else {
       router.refresh()
-    } catch (error) {
-      alert(error instanceof Error ? error.message : 'Failed to delete region code')
-    } finally {
-      setLoading(false)
     }
+    setLoading(false)
   }
 
   return (
