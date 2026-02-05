@@ -36,7 +36,7 @@ export default function SalesReportsPage() {
 
       const { data: demandsData, error } = await supabase
         .from('demands')
-        .select('id, status, created_at, camera_model, vehicle_make, appointment_date')
+        .select('id, status, created_at, camera_model, vehicle_make, vehicle_model, vehicle_year, appointment_date, customer_firstname, customer_lastname')
         .eq('created_by', user.id)
         .gte('created_at', `${startDate}T00:00:00`)
         .lte('created_at', `${endDate}T23:59:59`)
