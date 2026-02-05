@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
-import { createEmployee } from './actions'
 import Link from 'next/link'
 import { ResetPasswordButton } from './reset-password-button'
+import { CreateEmployeeForm } from './create-employee-form'
 
 export default async function EmployeesPage() {
   const supabase = await createClient()
@@ -81,53 +81,7 @@ export default async function EmployeesPage() {
         </div>
       </div>
 
-      <div className="bg-white/5 p-6 rounded-lg border border-gray-800 shadow max-w-2xl">
-          <h2 className="text-lg font-medium mb-4 text-white">Add New Employee</h2>
-          <form action={createEmployee} className="space-y-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="col-span-2 sm:col-span-1">
-                  <label className="block text-sm font-medium text-gray-300">Full Name</label>
-                  <input name="fullName" required className="border border-gray-700 bg-white/5 p-2 w-full rounded text-white focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]" />
-              </div>
-              <div className="col-span-2 sm:col-span-1">
-                  <label className="block text-sm font-medium text-gray-300">Phone</label>
-                  <input name="phone" className="border border-gray-700 bg-white/5 p-2 w-full rounded text-white focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]" />
-              </div>
-              
-              <div className="col-span-2 sm:col-span-1">
-                  <label className="block text-sm font-medium text-gray-300">Email</label>
-                  <input name="email" type="email" required className="border border-gray-700 bg-white/5 p-2 w-full rounded text-white focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]" />
-              </div>
-              <div className="col-span-2 sm:col-span-1">
-                  <label className="block text-sm font-medium text-gray-300">Password</label>
-                  <input name="password" type="password" required className="border border-gray-700 bg-white/5 p-2 w-full rounded text-white focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]" />
-              </div>
-
-              <div className="col-span-2 sm:col-span-1">
-                  <label className="block text-sm font-medium text-gray-300">Role</label>
-                  <select name="role" required className="border border-gray-700 bg-white/5 p-2 w-full rounded text-white focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]">
-                      <option value="sales" className="bg-black text-white">Sales</option>
-                      <option value="finance" className="bg-black text-white">Finance</option>
-                      <option value="specialist" className="bg-black text-white">Specialist</option>
-                      <option value="aurora_manager" className="bg-black text-white">Aurora Manager</option>
-                      <option value="general_manager" className="bg-black text-white">General Manager</option>
-                  </select>
-              </div>
-
-              <div className="col-span-2 sm:col-span-1">
-                  <label className="block text-sm font-medium text-gray-300">Dealer</label>
-                  <select name="dealerId" className="border border-gray-700 bg-white/5 p-2 w-full rounded text-white focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]">
-                      <option value="" className="bg-black text-white">None (HQ)</option>
-                      {dealers?.map(d => (
-                          <option key={d.id} value={d.id} className="bg-black text-white">{d.name}</option>
-                      ))}
-                  </select>
-              </div>
-
-              <div className="col-span-2">
-                  <button className="bg-[#C27E00] text-white px-4 py-2 rounded w-full sm:w-auto hover:bg-[#a06900] transition-colors">Create Employee</button>
-              </div>
-          </form>
-      </div>
+      <CreateEmployeeForm dealers={dealers || []} />
     </div>
   )
 }

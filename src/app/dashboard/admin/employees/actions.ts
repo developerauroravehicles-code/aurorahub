@@ -4,7 +4,9 @@ import { revalidatePath } from 'next/cache'
 
 type UserRole = 'sales' | 'finance' | 'specialist' | 'aurora_manager' | 'general_manager'
 
-export async function createEmployee(formData: FormData): Promise<{ success: boolean; error?: string }> {
+type ActionState = { error?: string; success?: boolean } | null
+
+export async function createEmployee(prevState: ActionState, formData: FormData): Promise<ActionState> {
   try {
     const supabaseAdmin = createAdminClient()
     
@@ -16,13 +18,13 @@ export async function createEmployee(formData: FormData): Promise<{ success: boo
     const phone = formData.get('phone') as string
 
     if (!email || !password || !role) {
-      return { success: false, error: 'Missing required fields' }
+      return { error: 'Missing required fields' }
     }
 
     // Validate role
     const validRoles: UserRole[] = ['sales', 'finance', 'specialist', 'aurora_manager', 'general_manager']
     if (!validRoles.includes(role as UserRole)) {
-      return { success: false, error: 'Invalid role' }
+      return { error: 'Invalid role' }
     }
 
     // 1. Create Auth User
@@ -34,10 +36,10 @@ export async function createEmployee(formData: FormData): Promise<{ success: boo
     })
 
     if (authError) {
-      return { success: false, error: authError.message }
+      return { error: authError.message }
     }
     if (!user.user) {
-      return { success: false, error: 'Failed to create user' }
+      return { error: 'Failed to create user' }
     }
 
     // 2. Create Profile
@@ -53,13 +55,13 @@ export async function createEmployee(formData: FormData): Promise<{ success: boo
     if (profileError) {
         // Rollback user creation
         await supabaseAdmin.auth.admin.deleteUser(user.user.id)
-        return { success: false, error: 'Failed to create profile: ' + profileError.message }
+        return { error: 'Failed to create profile: ' + profileError.message }
     }
 
     revalidatePath('/dashboard/admin/employees')
     return { success: true }
   } catch (error) {
-    return { success: false, error: error instanceof Error ? error.message : 'Failed to create employee' }
+    return { error: error instanceof Error ? error.message : 'Failed to create employee' }
   }
 }
 
