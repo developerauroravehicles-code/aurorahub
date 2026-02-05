@@ -17,6 +17,8 @@ interface Demand {
   created_at: string
   dealer_id: string
   assigned_specialist_id: string | null
+  assigned_finance_id: string | null
+  created_by: string | null
 }
 
 interface Dealer {
@@ -24,21 +26,22 @@ interface Dealer {
   name: string
 }
 
-interface Specialist {
+interface Employee {
   id: string
   full_name: string
   dealer_id: string
+  role: string
 }
 
 export default function AdminReportsPage() {
   const [demands, setDemands] = useState<Demand[]>([])
   const [dealers, setDealers] = useState<Dealer[]>([])
-  const [specialists, setSpecialists] = useState<Specialist[]>([])
+  const [employees, setEmployees] = useState<Employee[]>([])
   const [loading, setLoading] = useState(true)
   const [startDate, setStartDate] = useState(format(startOfMonth(new Date()), 'yyyy-MM-dd'))
   const [endDate, setEndDate] = useState(format(endOfMonth(new Date()), 'yyyy-MM-dd'))
   const [selectedDealerId, setSelectedDealerId] = useState<string>('all')
-  const [selectedSpecialistId, setSelectedSpecialistId] = useState<string>('all')
+  const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>('all')
   const supabase = createClient()
 
   useEffect(() => {
@@ -47,7 +50,7 @@ export default function AdminReportsPage() {
 
   useEffect(() => {
     fetchDemands()
-  }, [startDate, endDate, selectedDealerId, selectedSpecialistId])
+  }, [startDate, endDate, selectedDealerId, selectedEmployeeId])
 
   const fetchInitialData = async () => {
     try {
@@ -61,15 +64,16 @@ export default function AdminReportsPage() {
         setDealers(dealersData)
       }
 
-      // Fetch specialists
-      const { data: specialistsData } = await supabase
+      // Fetch all employees (sales, finance, specialist)
+      const { data: employeesData } = await supabase
         .from('profiles')
-        .select('id, full_name, dealer_id')
-        .eq('role', 'specialist')
+        .select('id, full_name, dealer_id, role')
+        .in('role', ['sales', 'finance', 'specialist'])
+        .order('role')
         .order('full_name')
 
-      if (specialistsData) {
-        setSpecialists(specialistsData)
+      if (employeesData) {
+        setEmployees(employeesData)
       }
 
       await fetchDemands()
@@ -85,7 +89,7 @@ export default function AdminReportsPage() {
     try {
       let query = supabase
         .from('demands')
-        .select('id, status, created_at, camera_model, vehicle_make, vehicle_model, vehicle_year, appointment_date, dealer_id, assigned_specialist_id, customer_firstname, customer_lastname')
+        .select('id, status, created_at, camera_model, vehicle_make, vehicle_model, vehicle_year, appointment_date, dealer_id, assigned_specialist_id, assigned_finance_id, created_by, customer_firstname, customer_lastname')
         .gte('created_at', `${startDate}T00:00:00`)
         .lte('created_at', `${endDate}T23:59:59`)
 
@@ -94,9 +98,18 @@ export default function AdminReportsPage() {
         query = query.eq('dealer_id', selectedDealerId)
       }
 
-      // Filter by specialist
-      if (selectedSpecialistId !== 'all') {
-        query = query.eq('assigned_specialist_id', selectedSpecialistId)
+      // Filter by employee (based on role)
+      if (selectedEmployeeId !== 'all') {
+        const selectedEmployee = employees.find(e => e.id === selectedEmployeeId)
+        if (selectedEmployee) {
+          if (selectedEmployee.role === 'specialist') {
+            query = query.eq('assigned_specialist_id', selectedEmployeeId)
+          } else if (selectedEmployee.role === 'sales') {
+            query = query.eq('created_by', selectedEmployeeId)
+          } else if (selectedEmployee.role === 'finance') {
+            query = query.eq('assigned_finance_id', selectedEmployeeId)
+          }
+        }
       }
 
       const { data: demandsData, error } = await query
@@ -142,20 +155,35 @@ export default function AdminReportsPage() {
     setEndDate(format(endOfMonth(end), 'yyyy-MM-dd'))
   }
 
-  // Update specialists when dealer changes
+  // Update employees when dealer changes
   useEffect(() => {
     if (selectedDealerId !== 'all') {
-      const filteredSpecialists = specialists.filter(s => s.dealer_id === selectedDealerId)
-      // If current specialist is not in filtered list, reset to 'all'
-      if (selectedSpecialistId !== 'all' && !filteredSpecialists.find(s => s.id === selectedSpecialistId)) {
-        setSelectedSpecialistId('all')
+      const filteredEmployees = employees.filter(e => e.dealer_id === selectedDealerId)
+      // If current employee is not in filtered list, reset to 'all'
+      if (selectedEmployeeId !== 'all' && !filteredEmployees.find(e => e.id === selectedEmployeeId)) {
+        setSelectedEmployeeId('all')
       }
     }
-  }, [selectedDealerId, specialists, selectedSpecialistId])
+  }, [selectedDealerId, employees, selectedEmployeeId])
 
-  const filteredSpecialists = selectedDealerId !== 'all' 
-    ? specialists.filter(s => s.dealer_id === selectedDealerId)
-    : specialists
+  const filteredEmployees = selectedDealerId !== 'all' 
+    ? employees.filter(e => e.dealer_id === selectedDealerId)
+    : employees
+
+  // Group employees by role
+  const employeesByRole = filteredEmployees.reduce((acc, employee) => {
+    if (!acc[employee.role]) {
+      acc[employee.role] = []
+    }
+    acc[employee.role].push(employee)
+    return acc
+  }, {} as Record<string, Employee[]>)
+
+  const roleLabels: Record<string, string> = {
+    sales: 'Sales',
+    finance: 'Finance',
+    specialist: 'Specialist'
+  }
 
   return (
     <div className="space-y-8">
@@ -185,20 +213,24 @@ export default function AdminReportsPage() {
             </select>
           </div>
 
-          {/* Specialist Filter */}
+          {/* Employee Filter - Categorized by Role */}
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">Specialist</label>
+            <label className="block text-sm font-medium text-gray-300 mb-2">Personel</label>
             <select
-              value={selectedSpecialistId}
-              onChange={(e) => setSelectedSpecialistId(e.target.value)}
-              disabled={filteredSpecialists.length === 0}
+              value={selectedEmployeeId}
+              onChange={(e) => setSelectedEmployeeId(e.target.value)}
+              disabled={filteredEmployees.length === 0}
               className="w-full border border-gray-700 bg-white/5 p-2 rounded text-white focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00] disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <option value="all" className="bg-black text-white">All Specialists</option>
-              {filteredSpecialists.map(specialist => (
-                <option key={specialist.id} value={specialist.id} className="bg-black text-white">
-                  {specialist.full_name || 'Unknown'}
-                </option>
+              <option value="all" className="bg-black text-white">All Personnel</option>
+              {Object.entries(employeesByRole).map(([role, roleEmployees]) => (
+                <optgroup key={role} label={roleLabels[role] || role} className="bg-black">
+                  {roleEmployees.map(employee => (
+                    <option key={employee.id} value={employee.id} className="bg-black text-white pl-4">
+                      {employee.full_name || 'Unknown'}
+                    </option>
+                  ))}
+                </optgroup>
               ))}
             </select>
           </div>
@@ -427,3 +459,4 @@ export default function AdminReportsPage() {
     </div>
   )
 }
+
