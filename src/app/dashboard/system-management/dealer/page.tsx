@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { SystemManagementTabs } from '../system-management-tabs'
 import { DealerManagementContent } from './dealer-management-content-new'
 import { updateDealerRegionCode, addCameraToDealer, removeCameraFromDealer } from '../region/actions'
+import type { Dealer } from '@/types/system-management'
 
 export const dynamic = 'force-dynamic'
 
@@ -34,18 +35,18 @@ export default async function DealerManagementPage() {
     .order('name')
 
   // Merge region codes with dealers manually (in case join doesn't work)
-  const dealersWithRegionCodes = dealers?.map(dealer => {
+  const dealersWithRegionCodes: Dealer[] = dealers?.map(dealer => {
     // First try to use the joined region_codes
     if (dealer.region_codes && Array.isArray(dealer.region_codes) && dealer.region_codes.length > 0) {
-      return { ...dealer, region_codes: dealer.region_codes[0] }
+      return { ...dealer, region_codes: dealer.region_codes[0] } as Dealer
     }
     // If join didn't work, manually find it
     if (dealer.region_code_id) {
       const regionCode = regionCodes?.find(rc => rc.id === dealer.region_code_id)
-      return { ...dealer, region_codes: regionCode || null }
+      return { ...dealer, region_codes: regionCode || null } as Dealer
     }
-    return { ...dealer, region_codes: null }
-  })
+    return { ...dealer, region_codes: null } as Dealer
+  }) || []
 
   return (
     <div className="space-y-8">
@@ -57,7 +58,7 @@ export default async function DealerManagementPage() {
         {/* Tab Content */}
         <div className="bg-white/5 rounded-lg border border-gray-800 p-6">
           <DealerManagementContent 
-            dealers={dealersWithRegionCodes || dealers || []}
+            dealers={dealersWithRegionCodes}
             regionCodes={regionCodes || []}
             cameraModels={cameraModels || []}
             updateDealerRegionCode={updateDealerRegionCode}
