@@ -41,7 +41,7 @@ export async function login(prevState: ActionState, formData: FormData) {
   // Verify Dealer Code
   const { data: profile } = await supabase
     .from('profiles')
-    .select('dealer_id, dealers(code)')
+    .select('dealer_id')
     .eq('id', user.user.id)
     .single()
 
@@ -53,14 +53,13 @@ export async function login(prevState: ActionState, formData: FormData) {
   // Normalize dealer code (trim and uppercase for comparison)
   const normalizedDealerCode = dealerCode.trim().toUpperCase()
   
-  // Type-safe dealer code check
-  // Supabase returns dealers as an array from the join
-  type DealerInfo = { code: string }
-  const dealersArray = profile.dealers as DealerInfo[] | null | undefined
-  
-  // If user has a dealer_id, check dealer code
+  // If user has a dealer_id, fetch dealer and check dealer code
   if (profile.dealer_id) {
-    const dealer = Array.isArray(dealersArray) && dealersArray.length > 0 ? dealersArray[0] : null
+    const { data: dealer } = await supabase
+      .from('dealers')
+      .select('code')
+      .eq('id', profile.dealer_id)
+      .single()
     
     if (!dealer) {
       await supabase.auth.signOut()
