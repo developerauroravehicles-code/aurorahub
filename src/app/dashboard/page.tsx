@@ -658,6 +658,240 @@ export default async function DashboardPage() {
     )
   }
 
+  // If general_manager user, fetch dealer-specific statistics
+  if (profile.role === 'general_manager' && profile.dealer_id) {
+    // Get dealer information
+    const { data: dealer } = await supabase
+      .from('dealers')
+      .select('name, code')
+      .eq('id', profile.dealer_id)
+      .single()
+
+    // Get all demands for this dealer
+    const { data: allDemands } = await supabase
+      .from('demands')
+      .select('id, status, created_at, customer_firstname, customer_lastname, vehicle_make, vehicle_model, vehicle_year, camera_model, appointment_date')
+      .eq('dealer_id', profile.dealer_id)
+      .order('created_at', { ascending: false })
+
+    // Get employees for this dealer
+    const { data: employees } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('dealer_id', profile.dealer_id)
+
+    // Get today's appointments
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    const tomorrow = new Date(today)
+    tomorrow.setDate(tomorrow.getDate() + 1)
+
+    const { data: todayAppointments } = await supabase
+      .from('demands')
+      .select('id, status, appointment_date, customer_firstname, customer_lastname, vehicle_make, vehicle_model, vehicle_year, camera_model')
+      .eq('dealer_id', profile.dealer_id)
+      .eq('status', 'approved')
+      .gte('appointment_date', today.toISOString())
+      .lt('appointment_date', tomorrow.toISOString())
+      .order('appointment_date', { ascending: true })
+
+    // Calculate demand statistics
+    const totalDemands = allDemands?.length || 0
+    const pendingFinance = allDemands?.filter(d => d.status === 'pending_finance').length || 0
+    const approved = allDemands?.filter(d => d.status === 'approved').length || 0
+    const completed = allDemands?.filter(d => d.status === 'completed').length || 0
+    const cancelled = allDemands?.filter(d => d.status === 'cancelled').length || 0
+
+    // Calculate employee statistics
+    const totalEmployees = employees?.length || 0
+    const salesCount = employees?.filter(e => e.role === 'sales').length || 0
+    const financeCount = employees?.filter(e => e.role === 'finance').length || 0
+    const specialistCount = employees?.filter(e => e.role === 'specialist').length || 0
+    const todayCount = todayAppointments?.length || 0
+
+    // Get recent demands (last 10)
+    const recentDemands = allDemands?.slice(0, 10) || []
+
+    return (
+      <div className="space-y-8">
+        <div>
+          <h1 className="text-2xl font-semibold text-white mb-2">General Manager Dashboard</h1>
+          <p className="text-gray-400">
+            {dealer ? `Overview for ${dealer.name} (${dealer.code})` : 'Dealer overview'}
+          </p>
+        </div>
+
+        {/* Main Statistics Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="bg-white/5 border border-gray-800 p-6 rounded-lg">
+            <h3 className="text-sm font-medium text-gray-400 mb-2">Total Employees</h3>
+            <p className="text-3xl font-bold text-white">{totalEmployees}</p>
+            <p className="text-xs text-gray-500 mt-1">
+              {salesCount} Sales, {financeCount} Finance, {specialistCount} Specialist
+            </p>
+          </div>
+          <div className="bg-white/5 border border-gray-800 p-6 rounded-lg">
+            <h3 className="text-sm font-medium text-gray-400 mb-2">Total Demands</h3>
+            <p className="text-3xl font-bold text-blue-500">{totalDemands}</p>
+            <p className="text-xs text-gray-500 mt-1">All time demands</p>
+          </div>
+          <div className="bg-white/5 border border-gray-800 p-6 rounded-lg">
+            <h3 className="text-sm font-medium text-gray-400 mb-2">Today's Appointments</h3>
+            <p className="text-3xl font-bold text-[#C27E00]">{todayCount}</p>
+            <p className="text-xs text-gray-500 mt-1">Scheduled for today</p>
+          </div>
+          <div className="bg-white/5 border border-gray-800 p-6 rounded-lg">
+            <h3 className="text-sm font-medium text-gray-400 mb-2">Completed</h3>
+            <p className="text-3xl font-bold text-green-500">{completed}</p>
+            <p className="text-xs text-gray-500 mt-1">
+              {totalDemands > 0 ? Math.round((completed / totalDemands) * 100) : 0}% completion rate
+            </p>
+          </div>
+        </div>
+
+        {/* Demand Status Breakdown */}
+        <div className="bg-white/5 border border-gray-800 p-6 rounded-lg">
+          <h2 className="text-lg font-semibold text-white mb-4">Demand Status Breakdown</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="p-4 rounded-lg border bg-yellow-900/50 text-yellow-300 border-yellow-800">
+              <p className="text-sm font-medium mb-1">PENDING FINANCE</p>
+              <p className="text-2xl font-bold">{pendingFinance}</p>
+              <p className="text-xs mt-1 opacity-75">
+                {totalDemands > 0 ? Math.round((pendingFinance / totalDemands) * 100) : 0}% of total
+              </p>
+            </div>
+            <div className="p-4 rounded-lg border bg-blue-900/50 text-blue-300 border-blue-800">
+              <p className="text-sm font-medium mb-1">APPROVED</p>
+              <p className="text-2xl font-bold">{approved}</p>
+              <p className="text-xs mt-1 opacity-75">
+                {totalDemands > 0 ? Math.round((approved / totalDemands) * 100) : 0}% of total
+              </p>
+            </div>
+            <div className="p-4 rounded-lg border bg-green-900/50 text-green-300 border-green-800">
+              <p className="text-sm font-medium mb-1">COMPLETED</p>
+              <p className="text-2xl font-bold">{completed}</p>
+              <p className="text-xs mt-1 opacity-75">
+                {totalDemands > 0 ? Math.round((completed / totalDemands) * 100) : 0}% of total
+              </p>
+            </div>
+            <div className="p-4 rounded-lg border bg-red-900/50 text-red-300 border-red-800">
+              <p className="text-sm font-medium mb-1">CANCELLED</p>
+              <p className="text-2xl font-bold">{cancelled}</p>
+              <p className="text-xs mt-1 opacity-75">
+                {totalDemands > 0 ? Math.round((cancelled / totalDemands) * 100) : 0}% of total
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Today's Appointments */}
+        {todayCount > 0 && (
+          <div>
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-semibold text-white">Today's Appointments</h2>
+              <Link 
+                href="/dashboard/admin/demands" 
+                className="text-sm text-[#C27E00] hover:text-[#a06900] transition-colors"
+              >
+                View All Demands →
+              </Link>
+            </div>
+            
+            <div className="bg-white/5 rounded-lg border border-gray-800 shadow overflow-hidden">
+              <ul className="divide-y divide-gray-800">
+                {todayAppointments?.slice(0, 5).map(demand => (
+                  <li key={demand.id} className="p-4 hover:bg-white/5 transition-colors">
+                    <div className="flex justify-between items-start">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-3 mb-2">
+                          <p className="font-semibold text-white">
+                            {demand.customer_firstname} {demand.customer_lastname}
+                          </p>
+                        </div>
+                        <p className="text-sm text-gray-400">
+                          {demand.vehicle_year} {demand.vehicle_make} {demand.vehicle_model}
+                        </p>
+                        <p className="text-sm text-gray-400 mt-1">
+                          {demand.camera_model}
+                        </p>
+                        <p className="text-xs text-[#C27E00] mt-1 font-semibold">
+                          {format(new Date(demand.appointment_date), 'PPP p')}
+                        </p>
+                      </div>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        )}
+
+        {/* Recent Demands */}
+        <div>
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-semibold text-white">Recent Demands</h2>
+            <Link 
+              href="/dashboard/admin/demands" 
+              className="text-sm text-[#C27E00] hover:text-[#a06900] transition-colors"
+            >
+              View All →
+            </Link>
+          </div>
+          
+          <div className="bg-white/5 rounded-lg border border-gray-800 shadow overflow-hidden">
+            {recentDemands.length === 0 ? (
+              <div className="p-8 text-center">
+                <p className="text-gray-400">No demands found for your dealer.</p>
+              </div>
+            ) : (
+              <ul className="divide-y divide-gray-800">
+                {recentDemands.map(demand => {
+                  const statusColors = {
+                    pending_finance: 'bg-yellow-900/50 text-yellow-300 border-yellow-800',
+                    approved: 'bg-blue-900/50 text-blue-300 border-blue-800',
+                    completed: 'bg-green-900/50 text-green-300 border-green-800',
+                    cancelled: 'bg-red-900/50 text-red-300 border-red-800'
+                  }
+                  
+                  return (
+                    <li key={demand.id} className="p-4 hover:bg-white/5 transition-colors">
+                      <div className="flex justify-between items-start">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-3 mb-2">
+                            <p className="font-semibold text-white">
+                              {demand.customer_firstname} {demand.customer_lastname}
+                            </p>
+                            <span className={`px-2 py-1 rounded text-xs font-medium border ${statusColors[demand.status as keyof typeof statusColors] || 'bg-gray-900/50 text-gray-300 border-gray-800'}`}>
+                              {demand.status.replace('_', ' ').toUpperCase()}
+                            </span>
+                          </div>
+                          <p className="text-sm text-gray-400">
+                            {demand.vehicle_year} {demand.vehicle_make} {demand.vehicle_model}
+                          </p>
+                          <p className="text-sm text-gray-400">
+                            Camera: {demand.camera_model}
+                          </p>
+                          <p className="text-xs text-gray-500 mt-1">
+                            Appointment: {format(new Date(demand.appointment_date), 'PPP p')}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-xs text-gray-500">
+                            {format(new Date(demand.created_at), 'MMM d, yyyy')}
+                          </p>
+                        </div>
+                      </div>
+                    </li>
+                  )
+                })}
+              </ul>
+            )}
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   // For other roles, show default dashboard
   return (
     <div>
