@@ -288,7 +288,7 @@ export default async function DashboardPage() {
 
     const { data: todayAppointments } = await supabase
       .from('demands')
-      .select('id, status, appointment_date, customer_firstname, customer_lastname, vehicle_make, vehicle_model, vehicle_year, camera_model, address')
+      .select('id, status, appointment_date, customer_firstname, customer_lastname, vehicle_make, vehicle_model, vehicle_year, camera_model, customer_address')
       .eq('dealer_id', profile.dealer_id)
       .eq('status', 'approved')
       .gte('appointment_date', today.toISOString())
@@ -368,7 +368,7 @@ export default async function DashboardPage() {
                       </div>
                       <div className="text-right">
                         <p className="text-xs text-gray-500">
-                          {demand.address || 'No address'}
+                          {demand.customer_address || 'No address'}
                         </p>
                       </div>
                     </div>
@@ -425,9 +425,9 @@ export default async function DashboardPage() {
                         <p className="text-xs text-[#C27E00] mt-1 font-semibold">
                           Appointment: {format(new Date(demand.appointment_date), 'PPP p')}
                         </p>
-                        {demand.address && (
+                        {demand.customer_address && (
                           <p className="text-xs text-gray-500 mt-1">
-                            Address: {demand.address}
+                            Address: {demand.customer_address}
                           </p>
                         )}
                       </div>
