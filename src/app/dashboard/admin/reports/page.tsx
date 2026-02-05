@@ -38,6 +38,8 @@ export default function AdminReportsPage() {
   const [dealers, setDealers] = useState<Dealer[]>([])
   const [employees, setEmployees] = useState<Employee[]>([])
   const [loading, setLoading] = useState(true)
+  const [userRole, setUserRole] = useState<string>('')
+  const [userDealerId, setUserDealerId] = useState<string | null>(null)
   const [startDate, setStartDate] = useState(format(startOfMonth(new Date()), 'yyyy-MM-dd'))
   const [endDate, setEndDate] = useState(format(endOfMonth(new Date()), 'yyyy-MM-dd'))
   const [selectedDealerId, setSelectedDealerId] = useState<string>('all')
@@ -54,11 +56,42 @@ export default function AdminReportsPage() {
 
   const fetchInitialData = async () => {
     try {
-      // Fetch dealers
-      const { data: dealersData } = await supabase
+      // Get current user profile to check role and dealer_id
+      const { data: { user } } = await supabase.auth.getUser()
+      let currentUserRole = ''
+      let currentUserDealerId: string | null = null
+
+      if (user) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('role, dealer_id')
+          .eq('id', user.id)
+          .single()
+
+        if (profile) {
+          currentUserRole = profile.role
+          currentUserDealerId = profile.dealer_id
+          setUserRole(profile.role)
+          setUserDealerId(profile.dealer_id)
+
+          // If General Manager, set selected dealer to their dealer
+          if (profile.role === 'general_manager' && profile.dealer_id) {
+            setSelectedDealerId(profile.dealer_id)
+          }
+        }
+      }
+
+      // Fetch dealers - filter by user's dealer if General Manager
+      let dealersQuery = supabase
         .from('dealers')
         .select('id, name')
         .order('name')
+
+      if (currentUserRole === 'general_manager' && currentUserDealerId) {
+        dealersQuery = dealersQuery.eq('id', currentUserDealerId)
+      }
+
+      const { data: dealersData } = await dealersQuery
 
       if (dealersData) {
         setDealers(dealersData)
@@ -87,6 +120,28 @@ export default function AdminReportsPage() {
   const fetchDemands = async () => {
     setLoading(true)
     try {
+      // Get user role and dealer_id if not already set
+      let currentUserRole = userRole
+      let currentUserDealerId = userDealerId
+
+      if (!currentUserRole) {
+        const { data: { user } } = await supabase.auth.getUser()
+        if (user) {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('role, dealer_id')
+            .eq('id', user.id)
+            .single()
+
+          if (profile) {
+            currentUserRole = profile.role
+            currentUserDealerId = profile.dealer_id
+            setUserRole(profile.role)
+            setUserDealerId(profile.dealer_id)
+          }
+        }
+      }
+
       let query = supabase
         .from('demands')
         .select('id, status, created_at, camera_model, vehicle_make, vehicle_model, vehicle_year, appointment_date, dealer_id, assigned_specialist_id, assigned_finance_id, created_by, customer_firstname, customer_lastname')
@@ -94,7 +149,10 @@ export default function AdminReportsPage() {
         .lte('created_at', `${endDate}T23:59:59`)
 
       // Filter by dealer
-      if (selectedDealerId !== 'all') {
+      // If General Manager, always filter by their dealer
+      if (currentUserRole === 'general_manager' && currentUserDealerId) {
+        query = query.eq('dealer_id', currentUserDealerId)
+      } else if (selectedDealerId !== 'all') {
         query = query.eq('dealer_id', selectedDealerId)
       }
 
@@ -202,14 +260,25 @@ export default function AdminReportsPage() {
             <select
               value={selectedDealerId}
               onChange={(e) => setSelectedDealerId(e.target.value)}
-              className="w-full border border-gray-700 bg-white/5 p-2 rounded text-white focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]"
+              disabled={userRole === 'general_manager'}
+              className="w-full border border-gray-700 bg-white/5 p-2 rounded text-white focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00] disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <option value="all" className="bg-black text-white">All Dealers</option>
-              {dealers.map(dealer => (
-                <option key={dealer.id} value={dealer.id} className="bg-black text-white">
-                  {dealer.name}
-                </option>
-              ))}
+              {userRole === 'general_manager' ? (
+                dealers.map(dealer => (
+                  <option key={dealer.id} value={dealer.id} className="bg-black text-white">
+                    {dealer.name}
+                  </option>
+                ))
+              ) : (
+                <>
+                  <option value="all" className="bg-black text-white">All Dealers</option>
+                  {dealers.map(dealer => (
+                    <option key={dealer.id} value={dealer.id} className="bg-black text-white">
+                      {dealer.name}
+                    </option>
+                  ))}
+                </>
+              )}
             </select>
           </div>
 
