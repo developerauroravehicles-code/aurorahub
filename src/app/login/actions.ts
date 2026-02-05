@@ -45,16 +45,31 @@ export async function login(prevState: ActionState, formData: FormData) {
     .eq('id', user.user.id)
     .single()
 
+  if (!profile) {
+    await supabase.auth.signOut()
+    return { error: 'Profile not found.' }
+  }
+
   // Type-safe dealer code check
   // Supabase returns dealers as an array from the join
   type DealerInfo = { code: string }
-  const dealersArray = profile?.dealers as DealerInfo[] | null | undefined
-  const dealer = Array.isArray(dealersArray) && dealersArray.length > 0 ? dealersArray[0] : null
-  const dealerMatch = dealer && dealer.code === dealerCode
-
-  if (!profile || !dealerMatch) {
-    await supabase.auth.signOut()
-    return { error: 'Dealer code does not match your account.' }
+  const dealersArray = profile.dealers as DealerInfo[] | null | undefined
+  
+  // If user has a dealer_id, check dealer code
+  if (profile.dealer_id) {
+    const dealer = Array.isArray(dealersArray) && dealersArray.length > 0 ? dealersArray[0] : null
+    const dealerMatch = dealer && dealer.code === dealerCode
+    
+    if (!dealerMatch) {
+      await supabase.auth.signOut()
+      return { error: 'Dealer code does not match your account.' }
+    }
+  } else {
+    // For users without dealer_id (HQ staff), accept "HQ" as dealer code
+    if (dealerCode.toUpperCase() !== 'HQ') {
+      await supabase.auth.signOut()
+      return { error: 'Dealer code does not match your account.' }
+    }
   }
 
   revalidatePath('/', 'layout')
