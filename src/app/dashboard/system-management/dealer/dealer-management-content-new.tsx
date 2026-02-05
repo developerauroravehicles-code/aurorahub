@@ -218,7 +218,10 @@ export const DealerManagementContent = memo(function DealerManagementContent({
                       <DealerCameraManagement 
                         dealerId={d.id} 
                         dealerName={d.name}
-                        assignedCameras={d.dealer_cameras || []}
+                        assignedCameras={(d.dealer_cameras || []).map(dc => ({
+                          camera_model_id: dc.camera_model_id,
+                          camera_models: dc.camera_models ?? null
+                        }))}
                         allCameras={cameraModels}
                         addCameraToDealer={addCameraToDealer}
                         removeCameraFromDealer={removeCameraFromDealer}
