@@ -275,7 +275,7 @@ export default async function DashboardPage() {
     // Get completed demands by this specialist
     const { data: completedWork } = await supabase
       .from('demands')
-      .select('id, status, updated_at, customer_firstname, customer_lastname, vehicle_make, vehicle_model, vehicle_year, camera_model, appointment_date')
+      .select('id, status, updated_at, created_at, customer_firstname, customer_lastname, vehicle_make, vehicle_model, vehicle_year, camera_model, appointment_date')
       .eq('assigned_specialist_id', user.id)
       .eq('status', 'completed')
       .order('updated_at', { ascending: false })
