@@ -50,6 +50,9 @@ export async function login(prevState: ActionState, formData: FormData) {
     return { error: 'Profile not found.' }
   }
 
+  // Normalize dealer code (trim and uppercase for comparison)
+  const normalizedDealerCode = dealerCode.trim().toUpperCase()
+  
   // Type-safe dealer code check
   // Supabase returns dealers as an array from the join
   type DealerInfo = { code: string }
@@ -58,7 +61,14 @@ export async function login(prevState: ActionState, formData: FormData) {
   // If user has a dealer_id, check dealer code
   if (profile.dealer_id) {
     const dealer = Array.isArray(dealersArray) && dealersArray.length > 0 ? dealersArray[0] : null
-    const dealerMatch = dealer && dealer.code === dealerCode
+    
+    if (!dealer) {
+      await supabase.auth.signOut()
+      return { error: 'Dealer information not found. Please contact support.' }
+    }
+    
+    // Case-insensitive comparison
+    const dealerMatch = dealer.code.trim().toUpperCase() === normalizedDealerCode
     
     if (!dealerMatch) {
       await supabase.auth.signOut()
@@ -66,7 +76,7 @@ export async function login(prevState: ActionState, formData: FormData) {
     }
   } else {
     // For users without dealer_id (HQ staff), accept "HQ" as dealer code
-    if (dealerCode.toUpperCase() !== 'HQ') {
+    if (normalizedDealerCode !== 'HQ') {
       await supabase.auth.signOut()
       return { error: 'Dealer code does not match your account.' }
     }
