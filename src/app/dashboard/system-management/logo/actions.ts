@@ -23,7 +23,9 @@ async function verifyAuroraManager() {
   }
 }
 
-export async function uploadLogo(prevState: any, formData: FormData) {
+type ActionState = { error?: string; success?: string } | null
+
+export async function uploadLogo(prevState: ActionState, formData: FormData) {
   await verifyAuroraManager()
   const supabaseAdmin = createAdminClient()
   const file = formData.get('logo') as File

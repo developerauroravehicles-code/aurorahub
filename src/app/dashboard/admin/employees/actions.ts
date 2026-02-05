@@ -2,52 +2,65 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { revalidatePath } from 'next/cache'
 
-export async function createEmployee(formData: FormData): Promise<void> {
-  const supabaseAdmin = createAdminClient()
-  
-  const email = formData.get('email') as string
-  const password = formData.get('password') as string
-  const role = formData.get('role') as string
-  const fullName = formData.get('fullName') as string
-  const dealerId = formData.get('dealerId') as string
-  const phone = formData.get('phone') as string
+type UserRole = 'sales' | 'finance' | 'specialist' | 'aurora_manager' | 'general_manager'
 
-  if (!email || !password || !role) {
-    throw new Error('Missing required fields')
+export async function createEmployee(formData: FormData): Promise<{ success: boolean; error?: string }> {
+  try {
+    const supabaseAdmin = createAdminClient()
+    
+    const email = formData.get('email') as string
+    const password = formData.get('password') as string
+    const role = formData.get('role') as string
+    const fullName = formData.get('fullName') as string
+    const dealerId = formData.get('dealerId') as string
+    const phone = formData.get('phone') as string
+
+    if (!email || !password || !role) {
+      return { success: false, error: 'Missing required fields' }
+    }
+
+    // Validate role
+    const validRoles: UserRole[] = ['sales', 'finance', 'specialist', 'aurora_manager', 'general_manager']
+    if (!validRoles.includes(role as UserRole)) {
+      return { success: false, error: 'Invalid role' }
+    }
+
+    // 1. Create Auth User
+    const { data: user, error: authError } = await supabaseAdmin.auth.admin.createUser({
+      email,
+      password,
+      email_confirm: true,
+      user_metadata: { full_name: fullName }
+    })
+
+    if (authError) {
+      return { success: false, error: authError.message }
+    }
+    if (!user.user) {
+      return { success: false, error: 'Failed to create user' }
+    }
+
+    // 2. Create Profile
+    // dealerId might be empty string -> null
+    const { error: profileError } = await supabaseAdmin.from('profiles').insert({
+      id: user.user.id,
+      role: role as UserRole,
+      dealer_id: dealerId || null,
+      full_name: fullName,
+      phone: phone
+    })
+
+    if (profileError) {
+        // Rollback user creation
+        await supabaseAdmin.auth.admin.deleteUser(user.user.id)
+        return { success: false, error: 'Failed to create profile: ' + profileError.message }
+    }
+
+    revalidatePath('/dashboard/admin/employees')
+    return { success: true }
+  } catch (error) {
+    return { success: false, error: error instanceof Error ? error.message : 'Failed to create employee' }
   }
-
-  // 1. Create Auth User
-  const { data: user, error: authError } = await supabaseAdmin.auth.admin.createUser({
-    email,
-    password,
-    email_confirm: true,
-    user_metadata: { full_name: fullName }
-  })
-
-  if (authError) {
-    throw new Error(authError.message)
-  }
-  if (!user.user) {
-    throw new Error('Failed to create user')
-  }
-
-  // 2. Create Profile
-  // dealerId might be empty string -> null
-  const { error: profileError } = await supabaseAdmin.from('profiles').insert({
-    id: user.user.id,
-    role: role as any,
-    dealer_id: dealerId || null,
-    full_name: fullName,
-    phone: phone
-  })
-
-  if (profileError) {
-      // Rollback user creation
-      await supabaseAdmin.auth.admin.deleteUser(user.user.id)
-      throw new Error('Failed to create profile: ' + profileError.message)
-  }
-
-  revalidatePath('/dashboard/admin/employees')
 }
 
 export async function resetEmployeePassword(userId: string, newPassword: string) {

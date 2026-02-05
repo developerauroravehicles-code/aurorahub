@@ -7,7 +7,13 @@ import { LogOut, LayoutDashboard, FileText, Users, Settings } from 'lucide-react
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 
-export function Sidebar({ profile }: { profile: any }) {
+interface Profile {
+  role: string
+  full_name?: string | null
+  dealer_id?: string | null
+}
+
+export function Sidebar({ profile }: { profile: Profile }) {
   const pathname = usePathname()
   const router = useRouter()
   const supabase = createClient()

@@ -18,7 +18,9 @@ const schema = z.object({
   appointmentDate: z.string().min(1, 'Please select a time slot'),
 })
 
-export async function createDemand(prevState: any, formData: FormData) {
+type ActionState = { error?: string; fieldErrors?: Record<string, string[]> } | null
+
+export async function createDemand(prevState: ActionState, formData: FormData) {
   const supabase = await createClient()
   
   const { data: { user } } = await supabase.auth.getUser()

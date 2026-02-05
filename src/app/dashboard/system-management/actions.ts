@@ -114,7 +114,9 @@ async function verifyAuroraManager() {
   }
 }
 
-export async function createDealer(prevState: any, formData: FormData) {
+type ActionState = { error?: string; success?: string } | null
+
+export async function createDealer(prevState: ActionState, formData: FormData) {
   await verifyAuroraManager()
   const supabaseAdmin = getAdminClient()
 
@@ -138,7 +140,7 @@ export async function createDealer(prevState: any, formData: FormData) {
   return { success: `Dealer created successfully` }
 }
 
-export async function createUser(prevState: any, formData: FormData) {
+export async function createUser(prevState: ActionState, formData: FormData) {
   await verifyAuroraManager()
   const supabaseAdmin = getAdminClient()
 
@@ -181,9 +183,10 @@ export async function createUser(prevState: any, formData: FormData) {
   }
 
   // 3. Create Profile
-  const { error: profileError } = await (supabaseAdmin.from('profiles') as any).insert({
+  type UserRole = 'sales' | 'finance' | 'specialist' | 'aurora_manager' | 'general_manager'
+  const { error: profileError } = await supabaseAdmin.from('profiles').insert({
     id: userData.user.id,
-    role: role,
+    role: role as UserRole,
     dealer_id: dealerId,
     full_name: fullName,
     phone: phone
@@ -198,7 +201,7 @@ export async function createUser(prevState: any, formData: FormData) {
   return { success: 'User created successfully!' }
 }
 
-export async function createCameraModel(prevState: any, formData: FormData) {
+export async function createCameraModel(prevState: ActionState, formData: FormData) {
   await verifyAuroraManager()
   const supabaseAdmin = getAdminClient()
 
@@ -223,7 +226,7 @@ export async function createCameraModel(prevState: any, formData: FormData) {
   return { success: 'Camera model created successfully!' }
 }
 
-export async function updateCameraModel(prevState: any, formData: FormData) {
+export async function updateCameraModel(prevState: ActionState, formData: FormData) {
   await verifyAuroraManager()
   const supabaseAdmin = getAdminClient()
 

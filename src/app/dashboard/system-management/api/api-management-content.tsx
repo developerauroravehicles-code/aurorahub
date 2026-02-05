@@ -63,8 +63,9 @@ export function APIManagementContent() {
 
       if (error) throw error
       setMessage({ type: 'success', text: 'Twilio settings saved successfully!' })
-    } catch (error: any) {
-      setMessage({ type: 'error', text: error.message || 'Failed to save Twilio settings' })
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to save Twilio settings'
+      setMessage({ type: 'error', text: errorMessage })
     } finally {
       setLoading(false)
     }
@@ -86,8 +87,9 @@ export function APIManagementContent() {
 
       if (error) throw error
       setMessage({ type: 'success', text: 'WhatsApp settings saved successfully!' })
-    } catch (error: any) {
-      setMessage({ type: 'error', text: error.message || 'Failed to save WhatsApp settings' })
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to save WhatsApp settings'
+      setMessage({ type: 'error', text: errorMessage })
     } finally {
       setLoading(false)
     }

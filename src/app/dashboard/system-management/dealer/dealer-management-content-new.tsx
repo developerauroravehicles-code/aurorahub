@@ -6,6 +6,7 @@ import { DealerRegionCodeAssignment } from '../region/dealer-region-code-assignm
 import { DealerCameraManagement } from '../region/dealer-camera-management'
 import { Edit2, Trash2, MapPin } from 'lucide-react'
 import { updateDealer, deleteDealer } from '../region/actions'
+import type { DealerCamera } from '@/types/system-management'
 
 interface RegionCode {
   id: string
@@ -21,7 +22,7 @@ interface Dealer {
   address?: string
   region_code_id?: string | null
   region_codes?: RegionCode | null
-  dealer_cameras?: any[]
+  dealer_cameras?: DealerCamera[]
 }
 
 interface CameraModel {

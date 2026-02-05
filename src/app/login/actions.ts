@@ -11,7 +11,9 @@ const loginSchema = z.object({
   password: z.string().min(1, 'Password is required'),
 })
 
-export async function login(prevState: any, formData: FormData) {
+type ActionState = { error?: string } | null
+
+export async function login(prevState: ActionState, formData: FormData) {
   const data = Object.fromEntries(formData)
   const result = loginSchema.safeParse(data)
 
@@ -43,8 +45,10 @@ export async function login(prevState: any, formData: FormData) {
     .eq('id', user.user.id)
     .single()
 
-  // Types might be unknown here, treating as any/inferred
-  const dealerMatch = profile?.dealers && (profile.dealers as any).code === dealerCode
+  // Type-safe dealer code check
+  type DealerInfo = { code: string }
+  const dealers = profile?.dealers as DealerInfo | null
+  const dealerMatch = dealers && dealers.code === dealerCode
 
   if (!profile || !dealerMatch) {
     await supabase.auth.signOut()
