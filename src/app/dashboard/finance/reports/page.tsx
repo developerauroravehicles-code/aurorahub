@@ -37,7 +37,7 @@ export default function FinanceReportsPage() {
       // Fetch demands assigned to this finance user
       const { data: demandsData, error } = await supabase
         .from('demands')
-        .select('*')
+        .select('id, status, created_at, camera_model, vehicle_make, appointment_date')
         .eq('assigned_finance_id', user.id)
         .gte('created_at', `${startDate}T00:00:00`)
         .lte('created_at', `${endDate}T23:59:59`)

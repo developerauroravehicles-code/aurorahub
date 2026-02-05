@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, memo, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 
 interface CameraModel {
@@ -14,7 +14,7 @@ interface AssignedCamera {
   camera_models: CameraModel | null
 }
 
-export function DealerCameraManagement({ 
+export const DealerCameraManagement = memo(function DealerCameraManagement({ 
   dealerId, 
   dealerName,
   assignedCameras,
@@ -26,8 +26,8 @@ export function DealerCameraManagement({
   dealerName: string
   assignedCameras: AssignedCamera[]
   allCameras: CameraModel[]
-  addCameraToDealer: (dealerId: string, cameraModelId: string) => Promise<void>
-  removeCameraFromDealer: (dealerId: string, cameraModelId: string) => Promise<void>
+  addCameraToDealer: (dealerId: string, cameraModelId: string) => Promise<{ success: boolean; error?: string }>
+  removeCameraFromDealer: (dealerId: string, cameraModelId: string) => Promise<{ success: boolean; error?: string }>
 }) {
   const [isOpen, setIsOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
@@ -57,8 +57,14 @@ export function DealerCameraManagement({
   const handleAddCamera = async (cameraId: string) => {
     setIsLoading(true)
     try {
-      await addCameraToDealer(dealerId, cameraId)
-      router.refresh()
+      const result = await addCameraToDealer(dealerId, cameraId)
+      if (result.success) {
+        router.refresh()
+      } else {
+        if (result.error && !result.error.includes('already assigned')) {
+          alert(result.error || 'Failed to add camera. Please try again.')
+        }
+      }
     } catch (error) {
       console.error('Error adding camera:', error)
       alert('Failed to add camera. Please try again.')
@@ -70,8 +76,12 @@ export function DealerCameraManagement({
   const handleRemoveCamera = async (cameraId: string) => {
     setIsLoading(true)
     try {
-      await removeCameraFromDealer(dealerId, cameraId)
-      router.refresh()
+      const result = await removeCameraFromDealer(dealerId, cameraId)
+      if (result.success) {
+        router.refresh()
+      } else {
+        alert(result.error || 'Failed to remove camera. Please try again.')
+      }
     } catch (error) {
       console.error('Error removing camera:', error)
       alert('Failed to remove camera. Please try again.')
@@ -154,5 +164,5 @@ export function DealerCameraManagement({
       )}
     </div>
   )
-}
+})
 

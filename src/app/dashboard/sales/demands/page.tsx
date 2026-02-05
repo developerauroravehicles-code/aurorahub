@@ -17,7 +17,7 @@ export default async function DemandsPage() {
   // Fetch demands for this dealer
   const { data: demands } = await supabase
     .from('demands')
-    .select('*')
+    .select('id, status, created_at, customer_firstname, customer_lastname, vehicle_year, vehicle_make, vehicle_model, appointment_date')
     .eq('dealer_id', profile.dealer_id)
     .order('created_at', { ascending: false })
 

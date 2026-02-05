@@ -11,7 +11,7 @@ export default async function RegionManagementPage() {
   // Fetch region codes
   const { data: regionCodes } = await supabase
     .from('region_codes')
-    .select('*')
+    .select('id, code, name, description, created_at, updated_at')
     .order('code')
 
   return (

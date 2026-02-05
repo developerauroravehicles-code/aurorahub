@@ -85,7 +85,7 @@ export default function AdminReportsPage() {
     try {
       let query = supabase
         .from('demands')
-        .select('*')
+        .select('id, status, created_at, camera_model, vehicle_make, appointment_date, dealer_id, assigned_specialist_id')
         .gte('created_at', `${startDate}T00:00:00`)
         .lte('created_at', `${endDate}T23:59:59`)
 

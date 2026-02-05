@@ -12,8 +12,7 @@ export function AdminTabs() {
     { name: 'Demands', href: '/dashboard/admin/demands', icon: FileText },
     { name: 'Reports', href: '/dashboard/admin/reports', icon: BarChart3 },
     { name: 'Employees', href: '/dashboard/admin/employees', icon: Users },
-    { name: 'Dealers', href: '/dashboard/admin/dealers', icon: Settings },
-    { name: 'System Management', href: '/dashboard/admin/system-management', icon: Cog },
+    { name: 'System Management', href: '/dashboard/system-management', icon: Cog },
   ]
 
   return (

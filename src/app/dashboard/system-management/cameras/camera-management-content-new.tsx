@@ -1,13 +1,14 @@
 'use client'
 
-import { useState, useEffect, useTransition } from 'react'
+import { useState, useEffect, useTransition, memo, useCallback } from 'react'
 import { createCameraModel, deleteCameraModel, toggleCameraModelStatus, updateCameraModel, updateCameraStock, assignCameraToDealer, removeCameraFromDealer } from '../actions'
 import { useActionState } from 'react'
 import { Trash2, Power, PowerOff, Edit2, Package, Building2, X } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import type { CameraModel, Dealer, SystemDataErrors } from '@/types/system-management'
 
-export function CameraManagementContent({ cameras, dealers, errors }: { cameras: any[], dealers: any[], errors: any }) {
+export const CameraManagementContent = memo(function CameraManagementContent({ cameras, dealers, errors }: { cameras: CameraModel[], dealers: Dealer[], errors: SystemDataErrors }) {
   const [state, formAction, isPending] = useActionState(createCameraModel, null)
   const [editState, editFormAction, isEditPending] = useActionState(updateCameraModel, null)
   const [isDeleting, startDeleteTransition] = useTransition()
@@ -15,7 +16,10 @@ export function CameraManagementContent({ cameras, dealers, errors }: { cameras:
   const [editingId, setEditingId] = useState<string | null>(null)
   const [stockEditingId, setStockEditingId] = useState<string | null>(null)
   const [stockValue, setStockValue] = useState<number>(0)
+  const [stockUpdating, setStockUpdating] = useState(false)
   const [dealerAssigningId, setDealerAssigningId] = useState<string | null>(null)
+  const [assigningDealerId, setAssigningDealerId] = useState<string | null>(null)
+  const [removingDealerId, setRemovingDealerId] = useState<string | null>(null)
   const router = useRouter()
 
   useEffect(() => {
@@ -29,18 +33,30 @@ export function CameraManagementContent({ cameras, dealers, errors }: { cameras:
     if (!confirm('Are you sure you want to delete this camera model?')) return
 
     startDeleteTransition(async () => {
-      const result = await deleteCameraModel(id)
-      if (result?.success) {
-        router.refresh()
+      try {
+        const result = await deleteCameraModel(id)
+        if (result?.success) {
+          router.refresh()
+        } else {
+          alert(result?.error || 'Failed to delete camera model')
+        }
+      } catch (error) {
+        alert(error instanceof Error ? error.message : 'Failed to delete camera model')
       }
     })
   }
 
   const handleToggleStatus = async (id: string, currentStatus: boolean) => {
     startToggleTransition(async () => {
-      const result = await toggleCameraModelStatus(id, !currentStatus)
-      if (result?.success) {
-        router.refresh()
+      try {
+        const result = await toggleCameraModelStatus(id, !currentStatus)
+        if (result?.success) {
+          router.refresh()
+        } else {
+          alert(result?.error || 'Failed to update camera model status')
+        }
+      } catch (error) {
+        alert(error instanceof Error ? error.message : 'Failed to update camera model status')
       }
     })
   }
@@ -102,6 +118,7 @@ export function CameraManagementContent({ cameras, dealers, errors }: { cameras:
               type="number"
               name="stockQuantity"
               min="0"
+              max="999999"
               defaultValue="0"
               required
               className="block w-full rounded-md border border-gray-700 bg-white/5 px-3 py-2 text-white placeholder-gray-500 focus:border-[#C27E00] focus:outline-none focus:ring-1 focus:ring-[#C27E00] sm:text-sm"
@@ -207,7 +224,7 @@ export function CameraManagementContent({ cameras, dealers, errors }: { cameras:
                         <div className="mt-2">
                           <p className="text-xs text-gray-500 mb-1">Assigned to {camera.dealer_cameras.length} dealer{camera.dealer_cameras.length !== 1 ? 's' : ''}:</p>
                           <div className="flex flex-wrap gap-1">
-                            {camera.dealer_cameras.slice(0, 3).map((dc: any) => (
+                            {camera.dealer_cameras?.slice(0, 3).map((dc) => (
                               <span
                                 key={dc.dealer_id}
                                 className="text-xs px-2 py-0.5 bg-[#C27E00]/20 text-[#C27E00] rounded border border-[#C27E00]/30"
@@ -324,20 +341,28 @@ export function CameraManagementContent({ cameras, dealers, errors }: { cameras:
               <div className="flex gap-2">
                 <button
                   onClick={async () => {
-                    const camera = cameras.find(c => c.id === stockEditingId)
-                    if (camera) {
-                      const result = await updateCameraStock(stockEditingId, stockValue)
-                      if (result?.success) {
-                        setStockEditingId(null)
-                        router.refresh()
-                      } else {
-                        alert(result?.error || 'Failed to update stock')
+                    try {
+                      setStockUpdating(true)
+                      const camera = cameras.find(c => c.id === stockEditingId)
+                      if (camera) {
+                        const result = await updateCameraStock(stockEditingId, stockValue)
+                        if (result?.success) {
+                          setStockEditingId(null)
+                          router.refresh()
+                        } else {
+                          alert(result?.error || 'Failed to update stock')
+                        }
                       }
+                    } catch (error) {
+                      alert(error instanceof Error ? error.message : 'Failed to update stock')
+                    } finally {
+                      setStockUpdating(false)
                     }
                   }}
-                  className="bg-[#C27E00] hover:bg-[#a06900] text-white px-4 py-2 rounded-md font-medium transition-colors"
+                  disabled={stockUpdating}
+                  className="bg-[#C27E00] hover:bg-[#a06900] text-white px-4 py-2 rounded-md font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Update Stock
+                  {stockUpdating ? 'Updating...' : 'Update Stock'}
                 </button>
                 <button
                   onClick={() => setStockEditingId(null)}
@@ -353,18 +378,30 @@ export function CameraManagementContent({ cameras, dealers, errors }: { cameras:
 
       {/* Dealer Assignment Modal */}
       {dealerAssigningId && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+        <div 
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="dealer-assignment-title"
+          aria-describedby="dealer-assignment-description"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setDealerAssigningId(null)
+            }
+          }}
+        >
           <div className="bg-black border border-gray-800 rounded-lg p-6 w-full max-w-2xl max-h-[80vh] overflow-y-auto shadow-2xl">
             <div className="flex justify-between items-center mb-4">
               <div>
-                <h3 className="text-white font-semibold text-lg">Assign to Dealers</h3>
-                <p className="text-sm text-gray-400 mt-1">
+                <h3 id="dealer-assignment-title" className="text-white font-semibold text-lg">Assign to Dealers</h3>
+                <p id="dealer-assignment-description" className="text-sm text-gray-400 mt-1">
                   Select multiple dealers to assign this camera model to
                 </p>
               </div>
               <button
                 onClick={() => setDealerAssigningId(null)}
                 className="text-gray-400 hover:text-white transition-colors"
+                aria-label="Close modal"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -377,23 +414,39 @@ export function CameraManagementContent({ cameras, dealers, errors }: { cameras:
                     dealer={dealer}
                     cameraId={dealerAssigningId}
                     onAssign={async () => {
-                      const result = await assignCameraToDealer(dealerAssigningId, dealer.id)
-                      if (result?.success) {
-                        router.refresh()
-                      } else {
-                        if (result?.error && !result.error.includes('already assigned')) {
-                          alert(result.error || 'Failed to assign camera')
+                      try {
+                        setAssigningDealerId(dealer.id)
+                        const result = await assignCameraToDealer(dealerAssigningId, dealer.id)
+                        if (result?.success) {
+                          router.refresh()
+                        } else {
+                          if (result?.error && !result.error.includes('already assigned')) {
+                            alert(result.error || 'Failed to assign camera')
+                          }
                         }
+                      } catch (error) {
+                        alert(error instanceof Error ? error.message : 'Failed to assign camera')
+                      } finally {
+                        setAssigningDealerId(null)
                       }
                     }}
                     onRemove={async () => {
-                      const result = await removeCameraFromDealer(dealerAssigningId, dealer.id)
-                      if (result?.success) {
-                        router.refresh()
-                      } else {
-                        alert(result?.error || 'Failed to remove camera')
+                      try {
+                        setRemovingDealerId(dealer.id)
+                        const result = await removeCameraFromDealer(dealerAssigningId, dealer.id)
+                        if (result?.success) {
+                          router.refresh()
+                        } else {
+                          alert(result?.error || 'Failed to remove camera')
+                        }
+                      } catch (error) {
+                        alert(error instanceof Error ? error.message : 'Failed to remove camera')
+                      } finally {
+                        setRemovingDealerId(null)
                       }
                     }}
+                    isAssigning={assigningDealerId === dealer.id}
+                    isRemoving={removingDealerId === dealer.id}
                   />
                 ))}
               </div>
@@ -411,13 +464,15 @@ export function CameraManagementContent({ cameras, dealers, errors }: { cameras:
       )}
     </div>
   )
-}
+})
 
-function DealerAssignmentItem({ dealer, cameraId, onAssign, onRemove }: { 
-  dealer: any
+const DealerAssignmentItem = memo(function DealerAssignmentItem({ dealer, cameraId, onAssign, onRemove, isAssigning, isRemoving }: { 
+  dealer: Dealer
   cameraId: string
   onAssign: () => Promise<void>
   onRemove: () => Promise<void>
+  isAssigning?: boolean
+  isRemoving?: boolean
 }) {
   const [isAssigned, setIsAssigned] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
@@ -475,7 +530,7 @@ function DealerAssignmentItem({ dealer, cameraId, onAssign, onRemove }: {
       </div>
       <button
         onClick={handleToggle}
-        disabled={isLoading}
+        disabled={isLoading || isAssigning || isRemoving}
         className={`flex-shrink-0 px-4 py-1.5 rounded-md text-sm font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
           isAssigned
             ? 'bg-red-900/60 text-red-200 hover:bg-red-900/80 border border-red-800/50'
@@ -490,5 +545,5 @@ function DealerAssignmentItem({ dealer, cameraId, onAssign, onRemove }: {
       </button>
     </div>
   )
-}
+})
 

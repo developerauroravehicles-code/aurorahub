@@ -2,11 +2,16 @@
 
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@supabase/supabase-js'
+import type { SystemData } from '@/types/system-management'
 
 // Helper to get a fresh admin client every time with explicit schema
 function getAdminClient() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL!
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY!
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY
+  
+  if (!url || !key) {
+    throw new Error('Missing required environment variables: NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must be set')
+  }
   
   return createClient(url, key, {
     auth: {
@@ -19,7 +24,7 @@ function getAdminClient() {
   })
 }
 
-export async function getSystemData() {
+export async function getSystemData(): Promise<SystemData> {
   // Verify user is Aurora Manager
   const { createClient } = await import('@/lib/supabase/server')
   const supabase = await createClient()
@@ -44,7 +49,7 @@ export async function getSystemData() {
   // Fetch dealers
   const { data: dealers, error: dealersError } = await supabaseAdmin
     .from('dealers')
-    .select('*')
+    .select('id, name, code, address, region_code_id, created_at')
     .order('created_at', { ascending: false })
 
   // Fetch profiles with dealer info
@@ -65,6 +70,17 @@ export async function getSystemData() {
     `)
     .order('name', { ascending: true })
   
+  // Log errors if they occur
+  if (dealersError) {
+    console.error('Error fetching dealers:', dealersError)
+  }
+  if (profilesError) {
+    console.error('Error fetching profiles:', profilesError)
+  }
+  if (camerasError) {
+    console.error('Error fetching cameras:', camerasError)
+  }
+
   return {
     dealers: dealers || [],
     profiles: profiles || [],

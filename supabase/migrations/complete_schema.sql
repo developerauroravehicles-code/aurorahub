@@ -164,6 +164,31 @@ CREATE TABLE IF NOT EXISTS dealer_cameras (
   UNIQUE(dealer_id, camera_model_id)
 );
 
+-- Region Codes Table
+CREATE TABLE IF NOT EXISTS region_codes (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  code text UNIQUE NOT NULL,
+  name text NOT NULL,
+  description text,
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
+
+-- Add region_code_id column to dealers table if it doesn't exist
+DO $$
+BEGIN
+  IF EXISTS (SELECT FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'dealers') THEN
+    IF NOT EXISTS (
+      SELECT FROM information_schema.columns 
+      WHERE table_schema = 'public' 
+      AND table_name = 'dealers' 
+      AND column_name = 'region_code_id'
+    ) THEN
+      ALTER TABLE dealers ADD COLUMN region_code_id uuid REFERENCES region_codes(id);
+    END IF;
+  END IF;
+END $$;
+
 -- ============================================
 -- 4. ROW LEVEL SECURITY (RLS)
 -- ============================================
@@ -174,11 +199,13 @@ ALTER TABLE demand_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE system_settings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE camera_models ENABLE ROW LEVEL SECURITY;
 ALTER TABLE dealer_cameras ENABLE ROW LEVEL SECURITY;
+ALTER TABLE region_codes ENABLE ROW LEVEL SECURITY;
 
 -- ============================================
 -- 5. DROP EXISTING POLICIES (Clean Slate)
 -- ============================================
 DROP POLICY IF EXISTS "Dealers are viewable by everyone" ON dealers;
+DROP POLICY IF EXISTS "Aurora Managers can manage dealers" ON dealers;
 DROP POLICY IF EXISTS "Profiles are viewable by everyone" ON profiles;
 DROP POLICY IF EXISTS "Users can update own profile" ON profiles;
 DROP POLICY IF EXISTS "Sales can create demands" ON demands;
@@ -192,6 +219,8 @@ DROP POLICY IF EXISTS "Camera models are viewable by everyone" ON camera_models;
 DROP POLICY IF EXISTS "Aurora Managers can manage camera models" ON camera_models;
 DROP POLICY IF EXISTS "Dealer cameras are viewable by everyone" ON dealer_cameras;
 DROP POLICY IF EXISTS "Aurora Managers can manage dealer cameras" ON dealer_cameras;
+DROP POLICY IF EXISTS "Region codes are viewable by everyone" ON region_codes;
+DROP POLICY IF EXISTS "Aurora Managers can manage region codes" ON region_codes;
 
 -- ============================================
 -- 6. CREATE POLICIES
@@ -202,6 +231,25 @@ CREATE POLICY "Dealers are viewable by everyone"
 ON dealers FOR SELECT 
 TO authenticated 
 USING (true);
+
+-- Dealers: Aurora Managers can manage (INSERT, UPDATE, DELETE)
+CREATE POLICY "Aurora Managers can manage dealers"
+ON dealers FOR ALL
+TO authenticated
+USING (
+  EXISTS (
+    SELECT 1 FROM profiles
+    WHERE id = auth.uid()
+    AND role = 'aurora_manager'
+  )
+)
+WITH CHECK (
+  EXISTS (
+    SELECT 1 FROM profiles
+    WHERE id = auth.uid()
+    AND role = 'aurora_manager'
+  )
+);
 
 -- Profiles: Viewable by all authenticated users
 CREATE POLICY "Profiles are viewable by everyone" 
@@ -315,6 +363,31 @@ USING (
   )
 );
 
+-- Region Codes: Viewable by all authenticated users
+CREATE POLICY "Region codes are viewable by everyone" 
+ON region_codes FOR SELECT 
+TO authenticated 
+USING (true);
+
+-- Region Codes: Aurora Managers can manage
+CREATE POLICY "Aurora Managers can manage region codes"
+ON region_codes FOR ALL
+TO authenticated
+USING (
+  EXISTS (
+    SELECT 1 FROM profiles
+    WHERE id = auth.uid()
+    AND role = 'aurora_manager'
+  )
+)
+WITH CHECK (
+  EXISTS (
+    SELECT 1 FROM profiles
+    WHERE id = auth.uid()
+    AND role = 'aurora_manager'
+  )
+);
+
 -- ============================================
 -- 7. FUNCTIONS
 -- ============================================
@@ -356,7 +429,7 @@ EXECUTE FUNCTION update_updated_at_column();
 -- ============================================
 -- SUCCESS MESSAGE
 -- ============================================
-SELECT '✅ Schema created successfully! Tables: dealers, profiles, demands, demand_logs, system_settings, camera_models, dealer_cameras' as status;
+SELECT '✅ Schema created successfully! Tables: dealers, profiles, demands, demand_logs, system_settings, camera_models, dealer_cameras, region_codes' as status;
 
 -- ============================================
 -- DEBUG/UTILITY QUERIES (Optional - Commented out)

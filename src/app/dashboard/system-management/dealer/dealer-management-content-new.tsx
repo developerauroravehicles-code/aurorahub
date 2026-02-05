@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, memo } from 'react'
 import { useRouter } from 'next/navigation'
 import { DealerRegionCodeAssignment } from '../region/dealer-region-code-assignment'
 import { DealerCameraManagement } from '../region/dealer-camera-management'
@@ -30,7 +30,7 @@ interface CameraModel {
   is_active: boolean
 }
 
-export function DealerManagementContent({
+export const DealerManagementContent = memo(function DealerManagementContent({
   dealers,
   regionCodes,
   cameraModels,
@@ -42,8 +42,8 @@ export function DealerManagementContent({
   regionCodes: RegionCode[]
   cameraModels: CameraModel[]
   updateDealerRegionCode: (dealerId: string, regionCodeId: string | null) => Promise<{ success: boolean; error?: string }>
-  addCameraToDealer: (dealerId: string, cameraModelId: string) => Promise<void>
-  removeCameraFromDealer: (dealerId: string, cameraModelId: string) => Promise<void>
+  addCameraToDealer: (dealerId: string, cameraModelId: string) => Promise<{ success: boolean; error?: string }>
+  removeCameraFromDealer: (dealerId: string, cameraModelId: string) => Promise<{ success: boolean; error?: string }>
 }) {
   const router = useRouter()
   const [editingDealerId, setEditingDealerId] = useState<string | null>(null)
@@ -284,5 +284,5 @@ export function DealerManagementContent({
       </div>
     </div>
   )
-}
+})
 

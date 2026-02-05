@@ -11,14 +11,14 @@ export default async function DealerManagementPage() {
   // Fetch region codes first (needed for merging)
   const { data: regionCodes } = await supabase
     .from('region_codes')
-    .select('*')
+    .select('id, code, name, description, created_at, updated_at')
     .order('code')
   
   // Fetch dealers with region codes join
   const { data: dealers } = await supabase
     .from('dealers')
     .select(`
-      *,
+      id, name, code, address, region_code_id, created_at,
       region_codes(id, code, name, description),
       dealer_cameras(
         camera_model_id,
@@ -29,7 +29,7 @@ export default async function DealerManagementPage() {
   
   const { data: cameraModels } = await supabase
     .from('camera_models')
-    .select('*')
+    .select('id, name, is_active, stock_quantity, description')
     .eq('is_active', true)
     .order('name')
 

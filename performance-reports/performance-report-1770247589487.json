@@ -1,0 +1,168 @@
+{
+  "timestamp": "2026-02-04T23:26:29.454Z",
+  "tests": [
+    {
+      "name": "Database Query Optimization",
+      "status": "warning",
+      "details": {
+        "totalFilesWithSelectAll": 2,
+        "files": [
+          {
+            "file": "\\src\\app\\dashboard\\page.tsx",
+            "count": 1
+          },
+          {
+            "file": "\\src\\app\\dashboard\\system-management\\region\\page.tsx",
+            "count": 1
+          }
+        ]
+      }
+    },
+    {
+      "name": "Client Component Size Analysis",
+      "status": "warning",
+      "details": {
+        "totalClientComponents": 27,
+        "largeComponents": [
+          {
+            "file": "\\src\\app\\dashboard\\system-management\\cameras\\camera-management-content-new.tsx",
+            "lines": 548,
+            "size": 24146
+          }
+        ]
+      }
+    },
+    {
+      "name": "React.memo Optimization",
+      "status": "warning",
+      "details": {
+        "componentsWithoutMemo": 19,
+        "files": [
+          {
+            "file": "\\src\\app\\dashboard\\admin\\admin-tabs.tsx"
+          },
+          {
+            "file": "\\src\\app\\dashboard\\admin\\employees\\reset-password-button.tsx"
+          },
+          {
+            "file": "\\src\\app\\dashboard\\error-signout.tsx"
+          },
+          {
+            "file": "\\src\\app\\dashboard\\finance\\demands\\demand-actions.tsx"
+          },
+          {
+            "file": "\\src\\app\\dashboard\\sales\\demands\\new\\demand-form.tsx"
+          },
+          {
+            "file": "\\src\\app\\dashboard\\sidebar.tsx"
+          },
+          {
+            "file": "\\src\\app\\dashboard\\specialist\\work\\work-actions.tsx"
+          },
+          {
+            "file": "\\src\\app\\dashboard\\system-management\\api\\api-management-content.tsx"
+          },
+          {
+            "file": "\\src\\app\\dashboard\\system-management\\database\\database-management-content.tsx"
+          },
+          {
+            "file": "\\src\\app\\dashboard\\system-management\\dealer\\dealer-management-content.tsx"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Dynamic Import Optimization",
+      "status": "warning",
+      "details": {
+        "filesWithHeavyImports": 24,
+        "files": [
+          {
+            "file": "\\src\\app\\dashboard\\admin\\admin-tabs.tsx",
+            "pattern": "/import.*from.*['\"]lucide-react['\"]/"
+          },
+          {
+            "file": "\\src\\app\\dashboard\\admin\\demands\\page.tsx",
+            "pattern": "/import.*from.*['\"]date-fns['\"]/"
+          },
+          {
+            "file": "\\src\\app\\dashboard\\admin\\demands\\[id]\\page.tsx",
+            "pattern": "/import.*from.*['\"]lucide-react['\"]/"
+          },
+          {
+            "file": "\\src\\app\\dashboard\\admin\\demands\\[id]\\page.tsx",
+            "pattern": "/import.*from.*['\"]date-fns['\"]/"
+          },
+          {
+            "file": "\\src\\app\\dashboard\\admin\\employees\\reset-password-button.tsx",
+            "pattern": "/import.*from.*['\"]lucide-react['\"]/"
+          },
+          {
+            "file": "\\src\\app\\dashboard\\admin\\employees\\[id]\\page.tsx",
+            "pattern": "/import.*from.*['\"]lucide-react['\"]/"
+          },
+          {
+            "file": "\\src\\app\\dashboard\\admin\\employees\\[id]\\page.tsx",
+            "pattern": "/import.*from.*['\"]date-fns['\"]/"
+          },
+          {
+            "file": "\\src\\app\\dashboard\\admin\\reports\\page.tsx",
+            "pattern": "/import.*from.*['\"]date-fns['\"]/"
+          },
+          {
+            "file": "\\src\\app\\dashboard\\finance\\demands\\actions.ts",
+            "pattern": "/import.*from.*['\"]date-fns['\"]/"
+          },
+          {
+            "file": "\\src\\app\\dashboard\\finance\\demands\\page.tsx",
+            "pattern": "/import.*from.*['\"]date-fns['\"]/"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Next.js Configuration",
+      "status": "passed",
+      "details": {
+        "compress": true,
+        "images": true,
+        "optimizePackageImports": true
+      }
+    }
+  ],
+  "summary": {
+    "totalTests": 5,
+    "passed": 1,
+    "failed": 0,
+    "warnings": 4
+  },
+  "recommendations": [
+    {
+      "type": "optimization",
+      "priority": "medium",
+      "message": "Found 2 files using select('*'). Consider selecting only required columns for better performance.",
+      "files": [
+        "\\src\\app\\dashboard\\page.tsx",
+        "\\src\\app\\dashboard\\system-management\\region\\page.tsx"
+      ]
+    },
+    {
+      "type": "optimization",
+      "priority": "medium",
+      "message": "Found 1 large client components (>500 lines or >50KB). Consider code splitting.",
+      "files": [
+        "\\src\\app\\dashboard\\system-management\\cameras\\camera-management-content-new.tsx"
+      ]
+    },
+    {
+      "type": "optimization",
+      "priority": "low",
+      "message": "Found 19 client components that could benefit from React.memo for re-render optimization."
+    },
+    {
+      "type": "optimization",
+      "priority": "low",
+      "message": "Found 24 files with heavy imports that could benefit from dynamic imports."
+    }
+  ]
+}

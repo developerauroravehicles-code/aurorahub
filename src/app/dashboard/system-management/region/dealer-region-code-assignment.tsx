@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, memo } from 'react'
 import { useRouter } from 'next/navigation'
 
 interface RegionCode {
@@ -9,7 +9,7 @@ interface RegionCode {
   name: string
 }
 
-export function DealerRegionCodeAssignment({
+export const DealerRegionCodeAssignment = memo(function DealerRegionCodeAssignment({
   dealerId,
   dealerName,
   currentRegionCodeId,
@@ -58,19 +58,32 @@ export function DealerRegionCodeAssignment({
       </button>
 
       {showModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+        <div 
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="region-assignment-title"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setShowModal(false)
+            }
+          }}
+        >
           <div className="bg-black border border-gray-800 rounded-lg p-6 max-w-md w-full mx-4 shadow-2xl">
-            <h3 className="text-lg font-semibold text-white mb-4">
+            <h3 id="region-assignment-title" className="text-lg font-semibold text-white mb-4">
               Assign Region Code to {dealerName}
             </h3>
             <form onSubmit={handleUpdate} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
+                <label htmlFor="region_code_id" className="block text-sm font-medium text-gray-300 mb-2">
                   Select Region Code
                 </label>
                 <select
+                  id="region_code_id"
                   name="region_code_id"
                   defaultValue={currentRegionCodeId || 'none'}
+                  required
+                  aria-required="true"
                   className="w-full border border-gray-700 bg-white/5 p-2 rounded text-white focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]"
                 >
                   <option value="none" className="bg-black text-white">No Region Code</option>
@@ -103,5 +116,5 @@ export function DealerRegionCodeAssignment({
       )}
     </>
   )
-}
+})
 

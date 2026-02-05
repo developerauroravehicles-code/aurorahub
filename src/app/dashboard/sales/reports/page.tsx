@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { format, startOfMonth, endOfMonth, subMonths } from 'date-fns'
 
@@ -36,7 +36,7 @@ export default function SalesReportsPage() {
 
       const { data: demandsData, error } = await supabase
         .from('demands')
-        .select('*')
+        .select('id, status, created_at, camera_model, vehicle_make, appointment_date')
         .eq('created_by', user.id)
         .gte('created_at', `${startDate}T00:00:00`)
         .lte('created_at', `${endDate}T23:59:59`)
@@ -54,26 +54,35 @@ export default function SalesReportsPage() {
     }
   }
 
-  // Calculate statistics
-  const totalDemands = demands.length
-  const totalAppointments = demands.length
-  const cameraCounts = demands.reduce((acc, demand) => {
-    const camera = demand.camera_model || 'Unknown'
-    acc[camera] = (acc[camera] || 0) + 1
-    return acc
-  }, {} as Record<string, number>)
+  // Calculate statistics with useMemo for performance
+  const { totalDemands, totalAppointments, cameraCounts, statusCounts, vehicleMakeCounts } = useMemo(() => {
+    const total = demands.length
+    const cameras = demands.reduce((acc, demand) => {
+      const camera = demand.camera_model || 'Unknown'
+      acc[camera] = (acc[camera] || 0) + 1
+      return acc
+    }, {} as Record<string, number>)
 
-  const statusCounts = demands.reduce((acc, demand) => {
-    const status = demand.status || 'unknown'
-    acc[status] = (acc[status] || 0) + 1
-    return acc
-  }, {} as Record<string, number>)
+    const status = demands.reduce((acc, demand) => {
+      const stat = demand.status || 'unknown'
+      acc[stat] = (acc[stat] || 0) + 1
+      return acc
+    }, {} as Record<string, number>)
 
-  const vehicleMakeCounts = demands.reduce((acc, demand) => {
-    const make = demand.vehicle_make || 'Unknown'
-    acc[make] = (acc[make] || 0) + 1
-    return acc
-  }, {} as Record<string, number>)
+    const makes = demands.reduce((acc, demand) => {
+      const make = demand.vehicle_make || 'Unknown'
+      acc[make] = (acc[make] || 0) + 1
+      return acc
+    }, {} as Record<string, number>)
+
+    return {
+      totalDemands: total,
+      totalAppointments: total,
+      cameraCounts: cameras,
+      statusCounts: status,
+      vehicleMakeCounts: makes,
+    }
+  }, [demands])
 
   const setDateRange = (months: number) => {
     const end = new Date()

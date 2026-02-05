@@ -43,7 +43,7 @@ export async function createDealer(formData: FormData): Promise<void> {
     throw new Error(error.message)
   }
   
-  revalidatePath('/dashboard/system-management/region')
+  revalidatePath('/dashboard/system-management/dealer')
 }
 
 export async function createRegionCode(formData: FormData): Promise<void> {
@@ -91,7 +91,7 @@ export async function updateDealerRegionCode(dealerId: string, regionCodeId: str
     return { success: false, error: error.message }
   }
   
-  revalidatePath('/dashboard/system-management/region')
+  revalidatePath('/dashboard/system-management/dealer')
   return { success: true }
 }
 
@@ -139,36 +139,50 @@ export async function deleteRegionCode(regionCodeId: string): Promise<void> {
   revalidatePath('/dashboard/system-management/region')
 }
 
-export async function addCameraToDealer(dealerId: string, cameraModelId: string): Promise<void> {
-  await verifyAuroraManager()
-  const supabase = await createClient()
-  
-  const { error } = await supabase
-    .from('dealer_cameras')
-    .insert({ dealer_id: dealerId, camera_model_id: cameraModelId })
-  
-  if (error) {
-    throw new Error(error.message)
+export async function addCameraToDealer(dealerId: string, cameraModelId: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    await verifyAuroraManager()
+    const supabase = await createClient()
+    
+    const { error } = await supabase
+      .from('dealer_cameras')
+      .insert({ dealer_id: dealerId, camera_model_id: cameraModelId })
+    
+    if (error) {
+      // If already exists, return success (idempotent)
+      if (error.code === '23505') {
+        return { success: true }
+      }
+      return { success: false, error: error.message }
+    }
+    
+    revalidatePath('/dashboard/system-management/dealer')
+    return { success: true }
+  } catch (error) {
+    return { success: false, error: error instanceof Error ? error.message : 'Failed to add camera to dealer' }
   }
-  
-  revalidatePath('/dashboard/system-management/region')
 }
 
-export async function removeCameraFromDealer(dealerId: string, cameraModelId: string): Promise<void> {
-  await verifyAuroraManager()
-  const supabase = await createClient()
-  
-  const { error } = await supabase
-    .from('dealer_cameras')
-    .delete()
-    .eq('dealer_id', dealerId)
-    .eq('camera_model_id', cameraModelId)
-  
-  if (error) {
-    throw new Error(error.message)
+export async function removeCameraFromDealer(dealerId: string, cameraModelId: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    await verifyAuroraManager()
+    const supabase = await createClient()
+    
+    const { error } = await supabase
+      .from('dealer_cameras')
+      .delete()
+      .eq('dealer_id', dealerId)
+      .eq('camera_model_id', cameraModelId)
+    
+    if (error) {
+      return { success: false, error: error.message }
+    }
+    
+    revalidatePath('/dashboard/system-management/dealer')
+    return { success: true }
+  } catch (error) {
+    return { success: false, error: error instanceof Error ? error.message : 'Failed to remove camera from dealer' }
   }
-  
-  revalidatePath('/dashboard/system-management/region')
 }
 
 export async function updateDealer(formData: FormData): Promise<void> {
@@ -200,7 +214,7 @@ export async function updateDealer(formData: FormData): Promise<void> {
     throw new Error(error.message)
   }
   
-  revalidatePath('/dashboard/system-management/region')
+  revalidatePath('/dashboard/system-management/dealer')
 }
 
 export async function deleteDealer(dealerId: string): Promise<void> {
@@ -223,6 +237,6 @@ export async function deleteDealer(dealerId: string): Promise<void> {
     throw new Error(error.message)
   }
   
-  revalidatePath('/dashboard/system-management/region')
+  revalidatePath('/dashboard/system-management/dealer')
 }
 

@@ -34,7 +34,7 @@ export default async function SpecialistDetailsPage({ params }: { params: Promis
   // Fetch Completed Jobs
   const { data: completedJobs } = await supabase
     .from('demands')
-    .select('*')
+    .select('id, status, created_at, updated_at, customer_firstname, customer_lastname, vehicle_make, vehicle_model, vehicle_year, appointment_date')
     .eq('status', 'completed')
     .eq('dealer_id', profile.dealer_id) // Assuming they work for their dealer
     // Ideally we filter by who completed it. For now, let's show all completed in their dealer if we can't distinguish,
@@ -45,7 +45,7 @@ export default async function SpecialistDetailsPage({ params }: { params: Promis
   // Fetch Pending Jobs (Approved but not completed)
   const { data: pendingJobs } = await supabase
     .from('demands')
-    .select('*')
+    .select('id, status, created_at, customer_firstname, customer_lastname, vehicle_make, vehicle_model, vehicle_year, appointment_date')
     .eq('status', 'approved')
     .eq('dealer_id', profile.dealer_id)
 
