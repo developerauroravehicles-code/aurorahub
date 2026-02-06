@@ -1,4 +1,4 @@
-import { format } from 'date-fns'
+import { format, formatInTimeZone } from 'date-fns-tz'
 
 /**
  * SMS Message Templates
@@ -10,12 +10,21 @@ export type SMSMessageType = 'appointment_created' | 'cancellation_notice' | 'fo
 /**
  * Appointment Created Message
  * Sent when a demand is approved by finance
+ * @param appointmentDate - The appointment date (UTC)
+ * @param address - The appointment address
+ * @param timezoneName - Optional timezone name (e.g., 'America/Vancouver'). If not provided, uses local timezone
  */
 export function getAppointmentCreatedMessage(
   appointmentDate: Date,
-  address: string
+  address: string,
+  timezoneName?: string
 ): string {
-  const formattedDate = format(appointmentDate, 'MMMM dd, yyyy \'at\' HH:mm')
+  let formattedDate: string
+  if (timezoneName) {
+    formattedDate = formatInTimeZone(appointmentDate, timezoneName, 'MMMM dd, yyyy \'at\' HH:mm')
+  } else {
+    formattedDate = format(appointmentDate, 'MMMM dd, yyyy \'at\' HH:mm')
+  }
   
   return `Appointment Created
 
@@ -37,8 +46,11 @@ For cancellation or rescheduling requests within the last 24 hours prior to your
 /**
  * 4-Hour Reminder Message
  * Sent 4 hours before the appointment
+ * @param address - The appointment address
+ * @param timezoneName - Optional timezone name (e.g., 'America/Vancouver'). If not provided, uses local timezone
  */
-export function getFourHourReminderMessage(address: string): string {
+export function getFourHourReminderMessage(address: string, timezoneName?: string): string {
+  // Note: This message doesn't include a date, but if we add one in the future, use timezoneName
   return `4-Hour Reminder
 
 This is a reminder that your dashcam installation appointment is scheduled to take place in 4 hours at ${address}.

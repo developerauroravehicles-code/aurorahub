@@ -120,18 +120,21 @@ export async function approveDemand(demandId: string, sendSMSToCustomer: boolean
   // Send SMS if requested
   if (sendSMSToCustomer) {
     try {
-      // Fetch dealer info for message
+      // Fetch dealer info with timezone
       const { data: dealer } = await supabase
         .from('dealers')
-        .select('name, address')
+        .select('name, address, region_codes(timezone_id, timezones(name))')
         .eq('id', demand.dealer_id)
         .single()
       
       const appointmentDate = new Date(demand.appointment_date)
       const location = demand.customer_address || dealer?.address || dealer?.name || 'Authorized Dealer'
       
-      // Use new Appointment Created message format
-      const message = getAppointmentCreatedMessage(appointmentDate, location)
+      // Get timezone name from dealer > region > timezone
+      const timezoneName = (dealer?.region_codes as any)?.timezones?.name || undefined
+      
+      // Use new Appointment Created message format with timezone
+      const message = getAppointmentCreatedMessage(appointmentDate, location, timezoneName)
       
       // Send SMS to customer
       if (demand.customer_phone) {

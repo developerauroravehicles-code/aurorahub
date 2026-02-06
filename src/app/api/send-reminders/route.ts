@@ -24,7 +24,7 @@ export async function GET(request: Request) {
     
     const { data: demands, error } = await supabase
       .from('demands')
-      .select('id, appointment_date, customer_phone, customer_address, status')
+      .select('id, appointment_date, customer_phone, customer_address, status, dealer_id, dealers(region_codes(timezone_id, timezones(name)))')
       .eq('status', 'approved')
       .gte('appointment_date', now.toISOString())
       .lte('appointment_date', fourHoursFromNow.toISOString())
@@ -54,7 +54,9 @@ export async function GET(request: Request) {
       if (isWithin4Hours(appointmentDate) && demand.customer_phone) {
         try {
           const address = demand.customer_address || 'the specified location'
-          const message = getFourHourReminderMessage(address)
+          // Get timezone from dealer > region > timezone
+          const timezoneName = (demand.dealers as any)?.region_codes?.timezones?.name || undefined
+          const message = getFourHourReminderMessage(address, timezoneName)
           
           const result = await sendSMS(demand.customer_phone, message)
           

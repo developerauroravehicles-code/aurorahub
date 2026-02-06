@@ -58,16 +58,25 @@ export async function createRegionCode(formData: FormData): Promise<{ success: b
     const code = formData.get('code') as string
     const name = formData.get('name') as string
     const description = formData.get('description') as string
+    const timezoneId = formData.get('timezone_id') as string
 
     if (!code || !name) {
       return { success: false, error: 'Code and name are required' }
     }
 
-    const { error } = await supabase.from('region_codes').insert({ 
+    const insertData: { code: string; name: string; description: string | null; timezone_id?: string | null } = { 
       code, 
       name, 
       description: description || null 
-    })
+    }
+
+    if (timezoneId && timezoneId !== 'none') {
+      insertData.timezone_id = timezoneId
+    } else {
+      insertData.timezone_id = null
+    }
+
+    const { error } = await supabase.from('region_codes').insert(insertData)
     
     if (error) {
       return { success: false, error: error.message }
@@ -103,19 +112,22 @@ export async function updateDealerRegionCode(dealerId: string, regionCodeId: str
   return { success: true }
 }
 
-export async function updateRegionCode(regionCodeId: string, code: string, name: string, description: string | null): Promise<{ success: boolean; error?: string }> {
+export async function updateRegionCode(regionCodeId: string, code: string, name: string, description: string | null, timezoneId: string | null): Promise<{ success: boolean; error?: string }> {
   try {
     await verifyAuroraManager()
     const supabase = await createClient()
     
+    const updateData: { code: string; name: string; description: string | null; timezone_id: string | null; updated_at: string } = { 
+      code, 
+      name, 
+      description: description || null,
+      timezone_id: timezoneId || null,
+      updated_at: new Date().toISOString()
+    }
+    
     const { error } = await supabase
       .from('region_codes')
-      .update({ 
-        code, 
-        name, 
-        description: description || null,
-        updated_at: new Date().toISOString()
-      })
+      .update(updateData)
       .eq('id', regionCodeId)
     
     if (error) {

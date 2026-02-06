@@ -9,17 +9,33 @@ interface RegionCode {
   code: string
   name: string
   description: string | null
+  timezone_id: string | null
+  timezones?: {
+    id: string
+    name: string
+    display_name: string
+    utc_offset: string
+  } | null
+}
+
+interface Timezone {
+  id: string
+  name: string
+  display_name: string
+  utc_offset: string
 }
 
 export function RegionCodeManagement({ 
-  regionCodes, 
+  regionCodes,
+  timezones,
   createRegionCode,
   updateRegionCode,
   deleteRegionCode
 }: { 
   regionCodes: RegionCode[]
+  timezones: Timezone[]
   createRegionCode: (formData: FormData) => Promise<{ success: boolean; error?: string }>
-  updateRegionCode: (regionCodeId: string, code: string, name: string, description: string | null) => Promise<{ success: boolean; error?: string }>
+  updateRegionCode: (regionCodeId: string, code: string, name: string, description: string | null, timezoneId: string | null) => Promise<{ success: boolean; error?: string }>
   deleteRegionCode: (regionCodeId: string) => Promise<{ success: boolean; error?: string }>
 }) {
   const [showForm, setShowForm] = useState(false)
@@ -50,7 +66,8 @@ export function RegionCodeManagement({
     const code = formData.get('code') as string
     const name = formData.get('name') as string
     const description = formData.get('description') as string
-    const result = await updateRegionCode(regionCodeId, code, name, description || null)
+    const timezoneId = formData.get('timezone_id') as string
+    const result = await updateRegionCode(regionCodeId, code, name, description || null, timezoneId && timezoneId !== 'none' ? timezoneId : null)
     if (result.error) {
       alert(result.error)
     } else {
@@ -109,6 +126,20 @@ export function RegionCodeManagement({
                       placeholder="Description (optional)"
                     />
                   </div>
+                  <div>
+                    <select
+                      name="timezone_id"
+                      defaultValue={rc.timezone_id || 'none'}
+                      className="border border-gray-700 bg-white/5 p-1.5 w-full rounded text-white focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00] text-sm"
+                    >
+                      <option value="none">No Timezone</option>
+                      {timezones.map(tz => (
+                        <option key={tz.id} value={tz.id}>
+                          {tz.display_name} ({tz.utc_offset})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                   <div className="flex gap-2">
                     <button 
                       type="submit"
@@ -135,6 +166,11 @@ export function RegionCodeManagement({
                       </p>
                       {rc.description && (
                         <p className="text-xs text-gray-400 mt-1">{rc.description}</p>
+                      )}
+                      {rc.timezones && (
+                        <p className="text-xs text-[#C27E00] mt-1">
+                          Timezone: {rc.timezones.display_name} ({rc.timezones.utc_offset})
+                        </p>
                       )}
                     </div>
                     <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -197,6 +233,21 @@ export function RegionCodeManagement({
               className="border border-gray-700 bg-white/5 p-2 w-full rounded text-white focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00] text-sm"
               placeholder="Optional description"
             />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-1">Timezone</label>
+            <select
+              name="timezone_id"
+              defaultValue="none"
+              className="border border-gray-700 bg-white/5 p-2 w-full rounded text-white focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00] text-sm"
+            >
+              <option value="none">No Timezone</option>
+              {timezones.map(tz => (
+                <option key={tz.id} value={tz.id}>
+                  {tz.display_name} ({tz.utc_offset})
+                </option>
+              ))}
+            </select>
           </div>
           <div className="flex gap-2">
             <button 

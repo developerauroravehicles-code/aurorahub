@@ -180,12 +180,23 @@ CREATE TABLE IF NOT EXISTS dealer_cameras (
   UNIQUE(dealer_id, camera_model_id)
 );
 
+-- Timezones Table
+CREATE TABLE IF NOT EXISTS timezones (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  name text NOT NULL UNIQUE, -- e.g., "America/Vancouver", "America/Toronto"
+  display_name text NOT NULL, -- e.g., "Pacific Time (PT)", "Eastern Time (ET)"
+  utc_offset text NOT NULL, -- e.g., "-08:00", "-05:00"
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
+
 -- Region Codes Table
 CREATE TABLE IF NOT EXISTS region_codes (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   code text UNIQUE NOT NULL,
   name text NOT NULL,
   description text,
+  timezone_id uuid REFERENCES timezones(id),
   created_at timestamptz DEFAULT now(),
   updated_at timestamptz DEFAULT now()
 );
@@ -216,6 +227,7 @@ ALTER TABLE system_settings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE camera_models ENABLE ROW LEVEL SECURITY;
 ALTER TABLE dealer_cameras ENABLE ROW LEVEL SECURITY;
 ALTER TABLE region_codes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE timezones ENABLE ROW LEVEL SECURITY;
 
 -- ============================================
 -- 5. DROP EXISTING POLICIES (Clean Slate)
@@ -392,6 +404,31 @@ TO authenticated
 USING (
   EXISTS (
     SELECT 1 FROM profiles
+    WHERE profiles.id = auth.uid()
+    AND profiles.role = 'aurora_manager'
+  )
+)
+WITH CHECK (
+  EXISTS (
+    SELECT 1 FROM profiles
+    WHERE profiles.id = auth.uid()
+    AND profiles.role = 'aurora_manager'
+  )
+);
+
+-- Timezones: Viewable by everyone
+CREATE POLICY "Timezones are viewable by everyone"
+ON timezones FOR SELECT
+TO authenticated
+USING (true);
+
+-- Timezones: Aurora Managers can manage
+CREATE POLICY "Aurora Managers can manage timezones"
+ON timezones FOR ALL
+TO authenticated
+USING (
+  EXISTS (
+    SELECT 1 FROM profiles
     WHERE id = auth.uid()
     AND role = 'aurora_manager'
   )
@@ -445,7 +482,21 @@ EXECUTE FUNCTION update_updated_at_column();
 -- ============================================
 -- SUCCESS MESSAGE
 -- ============================================
-SELECT '✅ Schema created successfully! Tables: dealers, profiles, demands, demand_logs, system_settings, camera_models, dealer_cameras, region_codes' as status;
+-- Insert default timezones
+INSERT INTO timezones (name, display_name, utc_offset) VALUES
+  ('America/Vancouver', 'Pacific Time (PT)', '-08:00'),
+  ('America/Edmonton', 'Mountain Time (MT)', '-07:00'),
+  ('America/Winnipeg', 'Central Time (CT)', '-06:00'),
+  ('America/Toronto', 'Eastern Time (ET)', '-05:00'),
+  ('America/Halifax', 'Atlantic Time (AT)', '-04:00'),
+  ('America/St_Johns', 'Newfoundland Time (NT)', '-03:30')
+ON CONFLICT (name) DO NOTHING;
+
+-- Create indexes for better performance
+CREATE INDEX IF NOT EXISTS idx_region_codes_timezone_id ON region_codes(timezone_id);
+CREATE INDEX IF NOT EXISTS idx_timezones_name ON timezones(name);
+
+SELECT '✅ Schema created successfully! Tables: dealers, profiles, demands, demand_logs, system_settings, camera_models, dealer_cameras, region_codes, timezones' as status;
 
 -- ============================================
 -- DEBUG/UTILITY QUERIES (Optional - Commented out)

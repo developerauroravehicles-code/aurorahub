@@ -8,11 +8,17 @@ export const dynamic = 'force-dynamic'
 export default async function RegionManagementPage() {
   const supabase = await createClient()
   
-  // Fetch region codes
+  // Fetch region codes with timezone
   const { data: regionCodes } = await supabase
     .from('region_codes')
-    .select('id, code, name, description, created_at, updated_at')
+    .select('id, code, name, description, timezone_id, timezones(id, name, display_name, utc_offset), created_at, updated_at')
     .order('code')
+
+  // Fetch all timezones for selection
+  const { data: timezones } = await supabase
+    .from('timezones')
+    .select('id, name, display_name, utc_offset')
+    .order('display_name')
 
   return (
     <div className="space-y-8">
@@ -25,6 +31,7 @@ export default async function RegionManagementPage() {
         <div className="bg-white/5 rounded-lg border border-gray-800 p-6">
           <RegionManagementContent 
             regionCodes={regionCodes || []}
+            timezones={timezones || []}
             createRegionCode={createRegionCode}
             updateRegionCode={updateRegionCode}
             deleteRegionCode={deleteRegionCode}
