@@ -83,10 +83,36 @@ export async function approveDemand(demandId: string, sendSMSToCustomer: boolean
       .eq('id', demandId)
   }
   
-  // Update status
+  // Auto-assign to dealer's specialist if not already assigned
+  let assignedSpecialistId = demand.assigned_specialist_id
+  
+  if (!assignedSpecialistId) {
+    // Find specialist assigned to this dealer
+    const { data: dealerSpecialist } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('dealer_id', demand.dealer_id)
+      .eq('role', 'specialist')
+      .limit(1)
+      .single()
+    
+    if (dealerSpecialist) {
+      assignedSpecialistId = dealerSpecialist.id
+    }
+  }
+
+  // Update status and assign specialist if found
+  const updateData: { status: string; assigned_specialist_id?: string } = { 
+    status: 'approved' 
+  }
+  
+  if (assignedSpecialistId) {
+    updateData.assigned_specialist_id = assignedSpecialistId
+  }
+
   const { error: updateError } = await supabase
     .from('demands')
-    .update({ status: 'approved' })
+    .update(updateData)
     .eq('id', demandId)
 
   if (updateError) return { error: updateError.message }
@@ -114,11 +140,14 @@ export async function approveDemand(demandId: string, sendSMSToCustomer: boolean
       }
       
       // Send SMS to assigned specialist if requested and exists
-      if (sendSMSToSpecialist && demand.assigned_specialist_id) {
+      // Use the newly assigned specialist ID if auto-assigned
+      const specialistIdToNotify = assignedSpecialistId || demand.assigned_specialist_id
+      
+      if (sendSMSToSpecialist && specialistIdToNotify) {
         const { data: specialist } = await supabase
           .from('profiles')
           .select('phone')
-          .eq('id', demand.assigned_specialist_id)
+          .eq('id', specialistIdToNotify)
           .single()
         
         if (specialist?.phone) {
