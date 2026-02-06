@@ -113,7 +113,7 @@ export default async function SpecialistDetailsPage({ params }: { params: Promis
           {profile.role.replace('_', ' ')}
           {isAuroraManager && assignedDealers && assignedDealers.length > 0 ? (
             <span className="text-[#C27E00]">
-              {' '}at {assignedDealers.map(ad => ad.dealers.name).join(', ')}
+              {' '}at {assignedDealers.map(ad => (ad.dealers as any)?.name).join(', ')}
             </span>
           ) : isAuroraManager && profile.dealers?.name ? (
             <span className="text-[#C27E00]"> at {profile.dealers.name}</span>
