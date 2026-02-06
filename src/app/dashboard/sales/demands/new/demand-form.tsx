@@ -17,7 +17,6 @@ export function DemandForm({ cameraModels, defaultAddress = '' }: { cameraModels
   const [selectedSlot, setSelectedSlot] = useState<string>('')
   const [selectedCamera, setSelectedCamera] = useState<string>('')
   const [customCamera, setCustomCamera] = useState<string>('')
-  const [address, setAddress] = useState<string>(defaultAddress)
 
   useEffect(() => {
     if (selectedDate) {
@@ -109,11 +108,12 @@ export function DemandForm({ cameraModels, defaultAddress = '' }: { cameraModels
           <label className="block text-sm font-medium text-gray-300">Customer Address</label>
           <input 
             name="address" 
-            value={address}
-            onChange={(e) => setAddress(e.target.value)}
-            className="mt-1 block w-full rounded-md border border-gray-700 bg-black/50 py-2 px-3 shadow-sm focus:border-[#C27E00] focus:outline-none focus:ring-[#C27E00] sm:text-sm text-white" 
+            value={defaultAddress}
+            readOnly
+            className="mt-1 block w-full rounded-md border border-gray-700 bg-black/50 py-2 px-3 shadow-sm sm:text-sm text-white opacity-75 cursor-not-allowed" 
             placeholder="Address will be auto-filled with dealer name"
           />
+          <p className="mt-1 text-xs text-gray-500">Address is automatically set to your dealer name and cannot be edited.</p>
         </div>
 
         <h3 className="col-span-full text-lg font-medium leading-6 text-white border-b border-gray-800 pb-2 mt-4">Vehicle Information</h3>
