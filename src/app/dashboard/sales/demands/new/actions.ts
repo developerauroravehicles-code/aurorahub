@@ -14,6 +14,7 @@ const schema = z.object({
   vehicleMake: z.string().min(1),
   vehicleModel: z.string().min(1),
   vehicleYear: z.coerce.number().min(1900),
+  stockNumber: z.string().min(1, 'Stock number is required'),
   cameraModel: z.string().min(1),
   appointmentDate: z.string().min(1, 'Please select a time slot'),
 })
@@ -38,6 +39,7 @@ export async function createDemand(prevState: ActionState, formData: FormData) {
     vehicleMake: formData.get('vehicleMake'),
     vehicleModel: formData.get('vehicleModel'),
     vehicleYear: formData.get('vehicleYear'),
+    stockNumber: formData.get('stockNumber'),
     cameraModel: formData.get('cameraModel'),
     appointmentDate: formData.get('appointmentDate'),
   }
@@ -59,6 +61,7 @@ export async function createDemand(prevState: ActionState, formData: FormData) {
       vehicle_make: data.vehicleMake,
       vehicle_model: data.vehicleModel,
       vehicle_year: data.vehicleYear,
+      stock_number: data.stockNumber,
       camera_model: data.cameraModel,
       appointment_date: data.appointmentDate,
       status: 'pending_finance'

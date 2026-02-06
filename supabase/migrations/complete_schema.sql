@@ -66,6 +66,7 @@ CREATE TABLE IF NOT EXISTS demands (
   vehicle_make text NOT NULL,
   vehicle_model text NOT NULL,
   vehicle_year int NOT NULL,
+  stock_number text,
   camera_model text NOT NULL,
   
   -- Appointment Info
@@ -105,6 +106,21 @@ BEGIN
       AND column_name = 'assigned_finance_id'
     ) THEN
       ALTER TABLE demands ADD COLUMN assigned_finance_id uuid REFERENCES profiles(id);
+    END IF;
+  END IF;
+END $$;
+
+-- Add stock_number column if table exists but column doesn't
+DO $$
+BEGIN
+  IF EXISTS (SELECT FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'demands') THEN
+    IF NOT EXISTS (
+      SELECT FROM information_schema.columns 
+      WHERE table_schema = 'public' 
+      AND table_name = 'demands' 
+      AND column_name = 'stock_number'
+    ) THEN
+      ALTER TABLE demands ADD COLUMN stock_number text;
     END IF;
   END IF;
 END $$;
