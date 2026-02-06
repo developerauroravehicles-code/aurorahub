@@ -32,13 +32,22 @@ export default async function SpecialistDetailsPage({ params }: { params: Promis
   if (!profile) return <div className="text-white">Specialist not found</div>
 
   // Fetch assigned dealers for this specialist (only if Aurora Manager)
-  const { data: assignedDealers } = isAuroraManager
+  const { data: assignedDealersRaw } = isAuroraManager
     ? await supabase
         .from('specialist_dealers')
         .select('id, dealer_id, dealers(name)')
         .eq('specialist_id', id)
         .order('created_at', { ascending: true })
     : { data: null }
+  
+  // Transform data to match component's expected type
+  const assignedDealers = assignedDealersRaw?.map((ad: any) => ({
+    id: ad.id,
+    dealer_id: ad.dealer_id,
+    dealers: {
+      name: (ad.dealers as any)?.name || ''
+    }
+  })) || null
 
   // Fetch all dealers for assignment dropdown (only if Aurora Manager)
   const { data: allDealers } = isAuroraManager
