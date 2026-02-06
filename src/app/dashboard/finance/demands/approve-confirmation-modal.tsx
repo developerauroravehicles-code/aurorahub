@@ -17,7 +17,7 @@ export function ApproveConfirmationModal({ demandId, isOpen, onClose, hasAssigne
   const [error, setError] = useState<string | null>(null)
   const [confirmApprove, setConfirmApprove] = useState(false)
   const [sendSMSToCustomer, setSendSMSToCustomer] = useState(true)
-  const [sendSMSToSpecialist, setSendSMSToSpecialist] = useState(true)
+  const [sendSMSToSpecialist, setSendSMSToSpecialist] = useState(hasAssignedSpecialist)
 
   const handleApprove = async () => {
     if (!confirmApprove) {
@@ -83,20 +83,25 @@ export function ApproveConfirmationModal({ demandId, isOpen, onClose, hasAssigne
             </div>
 
             {/* Specialist SMS Confirmation */}
-            {hasAssignedSpecialist && (
-              <div className="flex items-start gap-3">
-                <input
-                  type="checkbox"
-                  id="sendSMSToSpecialist"
-                  checked={sendSMSToSpecialist}
-                  onChange={(e) => setSendSMSToSpecialist(e.target.checked)}
-                  className="mt-1 w-5 h-5 rounded border-gray-700 bg-black/50 text-[#C27E00] focus:ring-[#C27E00] focus:ring-offset-gray-900"
-                />
-                <label htmlFor="sendSMSToSpecialist" className="text-white cursor-pointer">
-                  Send information to Specialist
-                </label>
-              </div>
-            )}
+            <div className="flex items-start gap-3">
+              <input
+                type="checkbox"
+                id="sendSMSToSpecialist"
+                checked={sendSMSToSpecialist}
+                onChange={(e) => setSendSMSToSpecialist(e.target.checked)}
+                disabled={!hasAssignedSpecialist}
+                className="mt-1 w-5 h-5 rounded border-gray-700 bg-black/50 text-[#C27E00] focus:ring-[#C27E00] focus:ring-offset-gray-900 disabled:opacity-50 disabled:cursor-not-allowed"
+              />
+              <label 
+                htmlFor="sendSMSToSpecialist" 
+                className={`cursor-pointer ${!hasAssignedSpecialist ? 'text-gray-500' : 'text-white'}`}
+              >
+                Send information to Specialist
+                {!hasAssignedSpecialist && (
+                  <span className="text-xs text-gray-600 ml-2">(No specialist assigned)</span>
+                )}
+              </label>
+            </div>
           </div>
 
           <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-gray-800">
