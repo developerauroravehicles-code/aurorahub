@@ -49,16 +49,12 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   return (
     <div className="flex h-screen bg-black text-white relative overflow-hidden">
-      <Sidebar profile={profile} />
+      <Sidebar 
+        profile={profile} 
+        timezoneName={timezoneName}
+        timezoneDisplayName={timezoneDisplayName}
+      />
       <main className="flex-1 overflow-y-auto p-8 bg-black relative z-10">
-        {/* Dealer Clock - Top Right */}
-        {timezoneName && (
-          <div className="fixed top-4 right-4 z-50 pointer-events-none">
-            <div className="pointer-events-auto">
-              <DealerClock timezoneName={timezoneName} timezoneDisplayName={timezoneDisplayName} />
-            </div>
-          </div>
-        )}
         {children}
       </main>
       <BackgroundLogo />

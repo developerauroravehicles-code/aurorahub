@@ -6,6 +6,7 @@ import { clsx } from 'clsx'
 import { LogOut, LayoutDashboard, FileText, Users, Settings } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
+import { DealerClock } from '@/components/dealer-clock'
 
 interface Profile {
   role: string
@@ -13,7 +14,15 @@ interface Profile {
   dealer_id?: string | null
 }
 
-export function Sidebar({ profile }: { profile: Profile }) {
+export function Sidebar({ 
+  profile, 
+  timezoneName = null, 
+  timezoneDisplayName 
+}: { 
+  profile: Profile
+  timezoneName?: string | null
+  timezoneDisplayName?: string
+}) {
   const pathname = usePathname()
   const router = useRouter()
   const supabase = createClient()
@@ -76,6 +85,13 @@ export function Sidebar({ profile }: { profile: Profile }) {
         </nav>
       </div>
       <div className="border-t border-gray-800 p-6">
+        {/* Dealer Clock */}
+        {timezoneName && (
+          <div className="mb-6">
+            <DealerClock timezoneName={timezoneName} timezoneDisplayName={timezoneDisplayName} />
+          </div>
+        )}
+        
         <div className="flex items-center mb-6">
           <div className="ml-0">
             <p className="text-sm font-medium text-white">{profile.full_name || 'User'}</p>
