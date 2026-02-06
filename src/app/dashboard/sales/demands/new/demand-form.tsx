@@ -37,24 +37,22 @@ export function DemandForm({ cameraModels, defaultAddress = '', timezoneName = n
     
     // Appointment rules:
     // - Each appointment is 1 hour 15 minutes (75 minutes)
-    // - There must be 1.5 hours (90 minutes) gap between appointment start times
-    // - Total slot interval: 75 minutes (appointment) + 90 minutes (gap) = 165 minutes (2h 45m)
+    // - Slots are created with 1.5 hours (90 minutes) gap between start times
     // - Monday - Saturday: 09:00-18:00 (last slot must end by 18:00)
     // - Sunday: 11:00-17:00 (last slot must end by 17:00)
     
-    let startHour = 9
+    let startHour = 9 // Start at 09:00 AM
     let endHour = 18 // Working hours end time
     const appointmentDuration = 75 // 1 hour 15 minutes in minutes
-    const gapBetweenAppointments = 90 // 1.5 hours gap between appointment start times
-    const slotInterval = appointmentDuration + gapBetweenAppointments // 165 minutes total
+    const slotInterval = 90 // 1.5 hours (90 minutes) gap between slot start times
     
     if (isSunday(date)) {
         startHour = 11
         endHour = 17
     }
 
-    // Generate slots
-    // Start from the beginning hour
+    // Generate slots with 90-minute intervals
+    // Start from 09:00 AM (or 11:00 AM on Sunday)
     let current = setMinutes(setHours(date, startHour), 0)
     
     // Calculate the latest possible start time (so the appointment ends by endHour)
@@ -64,7 +62,7 @@ export function DemandForm({ cameraModels, defaultAddress = '', timezoneName = n
 
     while (current <= latestAllowedStart) {
         slots.push(current.toISOString())
-        current = addMinutes(current, slotInterval) // 165 minutes intervals (75 min appointment + 90 min gap)
+        current = addMinutes(current, slotInterval) // 90 minutes intervals (1.5 hours)
     }
     
     setAvailableSlots(slots)
