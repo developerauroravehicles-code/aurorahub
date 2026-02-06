@@ -91,20 +91,23 @@ export async function getTakenSlots(dateStr: string) {
     const start = startOfDay(date).toISOString()
     const end = endOfDay(date).toISOString()
 
+    // Get all appointments for this date across ALL dealers (not filtered by dealer_id)
     const { data } = await supabase
         .from('demands')
         .select('appointment_date')
         .gte('appointment_date', start)
         .lte('appointment_date', end)
         .neq('status', 'cancelled')
+    // Note: No dealer_id filter - this checks all dealers globally
 
     return data?.map(d => d.appointment_date) || []
 }
 
 /**
  * Check if a specific time slot is already taken
- * This ensures only one appointment per time slot
+ * This ensures only one appointment per time slot across ALL dealers
  * Appointments are 75 minutes long, so we check for any overlap
+ * This is a global check - if any dealer has an appointment at this time, the slot is taken
  */
 export async function isTimeSlotTaken(appointmentDate: string): Promise<boolean> {
     const supabase = await createClient()
@@ -114,10 +117,17 @@ export async function isTimeSlotTaken(appointmentDate: string): Promise<boolean>
     const requestedStart = new Date(requestedTime)
     const requestedEnd = new Date(requestedTime.getTime() + 75 * 60 * 1000) // 75 minutes
     
-    // Get all non-cancelled appointments
+    // Get the same day range for optimization
+    const dayStart = startOfDay(requestedTime).toISOString()
+    const dayEnd = endOfDay(requestedTime).toISOString()
+    
+    // Get all non-cancelled appointments for the same day across ALL dealers
+    // No dealer_id filter - this checks globally across all dealers
     const { data, error } = await supabase
         .from('demands')
         .select('appointment_date')
+        .gte('appointment_date', dayStart)
+        .lte('appointment_date', dayEnd)
         .neq('status', 'cancelled')
     
     if (error) {
@@ -130,17 +140,20 @@ export async function isTimeSlotTaken(appointmentDate: string): Promise<boolean>
     }
     
     // Check for any overlap with existing appointments
+    // Since appointments are 75 minutes, we need to check if any existing appointment
+    // overlaps with the requested time slot
     for (const demand of data) {
         const existingStart = new Date(demand.appointment_date)
         const existingEnd = new Date(existingStart.getTime() + 75 * 60 * 1000) // 75 minutes
         
         // Check if there's any overlap between the requested slot and existing slot
         // Overlap occurs if: requestedStart < existingEnd && requestedEnd > existingStart
+        // This means the slots overlap in time
         if (requestedStart < existingEnd && requestedEnd > existingStart) {
-            return true // Slot is taken (overlap detected)
+            return true // Slot is taken (overlap detected) - applies to ALL dealers
         }
     }
     
-    return false // Slot is available
+    return false // Slot is available for all dealers
 }
 
