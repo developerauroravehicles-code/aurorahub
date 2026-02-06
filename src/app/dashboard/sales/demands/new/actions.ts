@@ -72,23 +72,8 @@ export async function createDemand(prevState: ActionState, formData: FormData) {
       return { error: error.message || 'Failed to create demand. Please check your permissions.' }
   }
 
-  // Send SMS notification to customer
-  if (demand && data.phone && data.address && data.address.trim().length > 0) {
-    try {
-      // Format the appointment date
-      const appointmentDate = new Date(data.appointmentDate)
-      const formattedDate = format(appointmentDate, 'MMMM dd, yyyy \'at\' HH:mm')
-      
-      // Create the SMS message in English
-      const message = `An appointment has been created for ${formattedDate} at ${data.address.trim()}. Aurora Vehicles.`
-      
-      // Send SMS (non-blocking - don't fail demand creation if SMS fails)
-      await sendSMS(data.phone, message)
-    } catch (smsError) {
-      // Log SMS error but don't fail the demand creation
-      console.error('Failed to send SMS notification:', smsError)
-    }
-  }
+  // SMS will be sent when finance approves the demand
+  // Removed SMS sending from demand creation
 
   redirect('/dashboard/sales/demands')
 }

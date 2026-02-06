@@ -51,7 +51,7 @@ export async function assignDemandToMe(demandId: string) {
   return { success: true }
 }
 
-export async function approveDemand(demandId: string) {
+export async function approveDemand(demandId: string, sendSMSToCustomer: boolean = false) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   
@@ -60,7 +60,7 @@ export async function approveDemand(demandId: string) {
   // Check if user is finance and demand is assigned to them
   const { data: demand } = await supabase
     .from('demands')
-    .select('assigned_finance_id, status, dealer_id, customer_phone, appointment_date')
+    .select('assigned_finance_id, status, dealer_id, customer_phone, appointment_date, customer_address')
     .eq('id', demandId)
     .single()
 
@@ -91,20 +91,28 @@ export async function approveDemand(demandId: string) {
 
   if (updateError) return { error: updateError.message }
 
-  // Fetch dealer info for message
-  const { data: dealer } = await supabase
-    .from('dealers')
-    .select('name, address')
-    .eq('id', demand.dealer_id)
-    .single()
-  
-  const dateStr = format(new Date(demand.appointment_date), 'MMMM dd, yyyy \'at\' HH:mm')
-  const location = dealer?.address || dealer?.name || 'Authorized Dealer'
-  
-  const message = `An appointment has been created for ${dateStr} at ${location}. Aurora Vehicles.`
-  
-  // Send SMS
-  await sendSMS(demand.customer_phone, message)
+  // Send SMS if requested
+  if (sendSMSToCustomer && demand.customer_phone) {
+    try {
+      // Fetch dealer info for message
+      const { data: dealer } = await supabase
+        .from('dealers')
+        .select('name, address')
+        .eq('id', demand.dealer_id)
+        .single()
+      
+      const dateStr = format(new Date(demand.appointment_date), 'MMMM dd, yyyy \'at\' HH:mm')
+      const location = demand.customer_address || dealer?.address || dealer?.name || 'Authorized Dealer'
+      
+      const message = `An appointment has been created for ${dateStr} at ${location}. Aurora Vehicles.`
+      
+      // Send SMS (non-blocking - don't fail approval if SMS fails)
+      await sendSMS(demand.customer_phone, message)
+    } catch (smsError) {
+      // Log SMS error but don't fail the approval
+      console.error('Failed to send SMS notification:', smsError)
+    }
+  }
 
   revalidatePath('/dashboard/finance/demands')
   revalidatePath('/dashboard')

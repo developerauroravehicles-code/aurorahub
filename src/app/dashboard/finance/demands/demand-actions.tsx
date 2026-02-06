@@ -1,8 +1,9 @@
 'use client'
-import { approveDemand, cancelDemand, assignDemandToMe } from './actions'
+import { cancelDemand, assignDemandToMe } from './actions'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { EditDemandModal } from './edit-demand-modal'
+import { ApproveConfirmationModal } from './approve-confirmation-modal'
 
 interface Demand {
   id: string
@@ -26,6 +27,7 @@ export function DemandActions({ demandId, isAssigned, status, demand }: {
 }) {
     const [loading, setLoading] = useState(false)
     const [showEditModal, setShowEditModal] = useState(false)
+    const [showApproveModal, setShowApproveModal] = useState(false)
     const router = useRouter()
 
     const handleAssign = async () => {
@@ -39,15 +41,8 @@ export function DemandActions({ demandId, isAssigned, status, demand }: {
         setLoading(false)
     }
 
-    const handleApprove = async () => {
-        setLoading(true)
-        const result = await approveDemand(demandId)
-        if (result?.error) {
-            alert(result.error)
-        } else {
-            router.refresh()
-        }
-        setLoading(false)
+    const handleApprove = () => {
+        setShowApproveModal(true)
     }
 
     const handleCancel = async () => {
@@ -106,22 +101,29 @@ export function DemandActions({ demandId, isAssigned, status, demand }: {
     }
 
     return (
-        <div className="space-x-2 flex">
-            <button 
-                onClick={handleApprove} 
-                disabled={loading} 
-                className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-sm disabled:opacity-50 transition-colors"
-            >
-                {loading ? '...' : 'Approve'}
-            </button>
-            <button 
-                onClick={handleCancel} 
-                disabled={loading} 
-                className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded text-sm disabled:opacity-50 transition-colors"
-            >
-                {loading ? '...' : 'Cancel'}
-            </button>
-        </div>
+        <>
+            <div className="space-x-2 flex">
+                <button 
+                    onClick={handleApprove} 
+                    disabled={loading} 
+                    className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-sm disabled:opacity-50 transition-colors"
+                >
+                    {loading ? '...' : 'Approve'}
+                </button>
+                <button 
+                    onClick={handleCancel} 
+                    disabled={loading} 
+                    className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded text-sm disabled:opacity-50 transition-colors"
+                >
+                    {loading ? '...' : 'Cancel'}
+                </button>
+            </div>
+            <ApproveConfirmationModal
+                demandId={demandId}
+                isOpen={showApproveModal}
+                onClose={() => setShowApproveModal(false)}
+            />
+        </>
     )
 }
 
