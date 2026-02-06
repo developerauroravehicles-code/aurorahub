@@ -143,3 +143,83 @@ export async function cancelDemand(demandId: string) {
   return { success: true }
 }
 
+export async function updateDemand(demandId: string, formData: FormData) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  
+  if (!user) return { error: 'Unauthorized' }
+
+  // Check if user is finance
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single()
+
+  if (!profile || profile.role !== 'finance') {
+    return { error: 'Only finance users can update demands' }
+  }
+
+  // Check if demand is assigned to current user
+  const { data: demand } = await supabase
+    .from('demands')
+    .select('assigned_finance_id, status')
+    .eq('id', demandId)
+    .single()
+
+  if (!demand) return { error: 'Demand not found' }
+
+  if (demand.assigned_finance_id && demand.assigned_finance_id !== user.id) {
+    return { error: 'You can only edit demands assigned to you' }
+  }
+
+  if (demand.status !== 'approved') {
+    return { error: 'Only approved demands can be edited' }
+  }
+
+  // Get form data
+  const customerFirstname = formData.get('customer_firstname') as string
+  const customerLastname = formData.get('customer_lastname') as string
+  const customerPhone = formData.get('customer_phone') as string
+  const customerAddress = formData.get('customer_address') as string | null
+  const vehicleMake = formData.get('vehicle_make') as string
+  const vehicleModel = formData.get('vehicle_model') as string
+  const vehicleYear = parseInt(formData.get('vehicle_year') as string)
+  const stockNumber = formData.get('stock_number') as string | null
+  const cameraModel = formData.get('camera_model') as string
+  const appointmentDate = formData.get('appointment_date') as string
+
+  // Validate required fields
+  if (!customerFirstname || !customerLastname || !customerPhone || !vehicleMake || !vehicleModel || !cameraModel || !appointmentDate) {
+    return { error: 'All required fields must be filled' }
+  }
+
+  if (isNaN(vehicleYear) || vehicleYear < 1900) {
+    return { error: 'Invalid vehicle year' }
+  }
+
+  // Update demand
+  const { error: updateError } = await supabase
+    .from('demands')
+    .update({
+      customer_firstname: customerFirstname,
+      customer_lastname: customerLastname,
+      customer_phone: customerPhone,
+      customer_address: customerAddress,
+      vehicle_make: vehicleMake,
+      vehicle_model: vehicleModel,
+      vehicle_year: vehicleYear,
+      stock_number: stockNumber,
+      camera_model: cameraModel,
+      appointment_date: appointmentDate,
+      updated_at: new Date().toISOString()
+    })
+    .eq('id', demandId)
+
+  if (updateError) return { error: updateError.message }
+
+  revalidatePath('/dashboard/finance/demands')
+  revalidatePath('/dashboard')
+  return { success: true }
+}
+

@@ -2,9 +2,30 @@
 import { approveDemand, cancelDemand, assignDemandToMe } from './actions'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { EditDemandModal } from './edit-demand-modal'
 
-export function DemandActions({ demandId, isAssigned }: { demandId: string, isAssigned: boolean }) {
+interface Demand {
+  id: string
+  customer_firstname: string
+  customer_lastname: string
+  customer_phone: string
+  customer_address: string | null
+  vehicle_make: string
+  vehicle_model: string
+  vehicle_year: number
+  stock_number: string | null
+  camera_model: string
+  appointment_date: string
+}
+
+export function DemandActions({ demandId, isAssigned, status, demand }: { 
+  demandId: string
+  isAssigned: boolean
+  status?: string
+  demand?: Demand
+}) {
     const [loading, setLoading] = useState(false)
+    const [showEditModal, setShowEditModal] = useState(false)
     const router = useRouter()
 
     const handleAssign = async () => {
@@ -50,6 +71,37 @@ export function DemandActions({ demandId, isAssigned }: { demandId: string, isAs
             >
                 {loading ? 'Assigning...' : 'Assign to Me'}
             </button>
+        )
+    }
+
+    // If approved, show Edit button instead of Approve
+    if (status === 'approved') {
+        return (
+            <>
+                <div className="space-x-2 flex">
+                    <button 
+                        onClick={() => setShowEditModal(true)} 
+                        disabled={loading} 
+                        className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm disabled:opacity-50 transition-colors"
+                    >
+                        Edit
+                    </button>
+                    <button 
+                        onClick={handleCancel} 
+                        disabled={loading} 
+                        className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded text-sm disabled:opacity-50 transition-colors"
+                    >
+                        {loading ? '...' : 'Cancel'}
+                    </button>
+                </div>
+                {demand && (
+                    <EditDemandModal
+                        demand={demand}
+                        isOpen={showEditModal}
+                        onClose={() => setShowEditModal(false)}
+                    />
+                )}
+            </>
         )
     }
 

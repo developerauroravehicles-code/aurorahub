@@ -11,9 +11,13 @@ interface Demand {
   created_at: string
   customer_firstname: string
   customer_lastname: string
+  customer_phone: string
+  customer_address: string | null
   vehicle_year: number
   vehicle_make: string
   vehicle_model: string
+  stock_number: string | null
+  camera_model: string
   appointment_date: string
   dealers?: { name: string } | null
   profiles?: { full_name: string } | null
@@ -209,7 +213,12 @@ export function FinanceDemandsList({ myAssignedDemands, unassignedDemands, allAs
                         Dealer: {(demand.dealers as any)?.name}
                       </p>
                     </div>
-                    <DemandActions demandId={demand.id} isAssigned={true} />
+                    <DemandActions 
+                      demandId={demand.id} 
+                      isAssigned={true} 
+                      status={demand.status}
+                      demand={demand}
+                    />
                   </div>
                 </li>
               ))}
