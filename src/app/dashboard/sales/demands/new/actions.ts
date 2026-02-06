@@ -75,6 +75,10 @@ export async function createDemand(prevState: ActionState, formData: FormData) {
 
   if (error) {
       console.error('Demand creation error:', error)
+      // Check if error is related to overlapping appointments
+      if (error.message && error.message.includes('time slot is already booked')) {
+          return { error: 'This time slot is already booked. Please select another time.' }
+      }
       return { error: error.message || 'Failed to create demand. Please check your permissions.' }
   }
 
