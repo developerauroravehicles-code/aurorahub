@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { format } from 'date-fns'
 import Link from 'next/link'
+import { AppointmentAlerts } from './specialist/appointment-alerts'
 
 export default async function DashboardPage() {
   const supabase = await createClient()
@@ -267,7 +268,7 @@ export default async function DashboardPage() {
     // Get demands assigned to this specialist
     const { data: assignedWork } = await supabase
       .from('demands')
-      .select('id, status, appointment_date, customer_firstname, customer_lastname, vehicle_make, vehicle_model, vehicle_year, camera_model, customer_address')
+      .select('id, status, appointment_date, customer_firstname, customer_lastname, vehicle_make, vehicle_model, vehicle_year, camera_model, customer_address, stock_number')
       .eq('assigned_specialist_id', user.id)
       .eq('status', 'approved')
       .order('appointment_date', { ascending: true })
@@ -331,6 +332,11 @@ export default async function DashboardPage() {
             <p className="text-xs text-gray-500 mt-1">Scheduled for today</p>
           </div>
         </div>
+
+        {/* Appointment Alerts */}
+        {assignedWork && assignedWork.length > 0 && (
+          <AppointmentAlerts appointments={assignedWork} />
+        )}
 
         {/* Today's Appointments */}
         {todayCount > 0 && (
