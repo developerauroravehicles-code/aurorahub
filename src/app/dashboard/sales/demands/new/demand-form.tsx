@@ -3,13 +3,14 @@
 import { useActionState, useState, useEffect } from 'react'
 import { createDemand, getTakenSlots } from './actions'
 import { format, addMinutes, setHours, setMinutes, isSunday, isSaturday } from 'date-fns'
+import { AppointmentCalendar } from '@/components/appointment-calendar'
 
 interface CameraModel {
   id: string
   name: string
 }
 
-export function DemandForm({ cameraModels, defaultAddress = '' }: { cameraModels: CameraModel[]; defaultAddress?: string }) {
+export function DemandForm({ cameraModels, defaultAddress = '', timezoneName = null }: { cameraModels: CameraModel[]; defaultAddress?: string; timezoneName?: string | null }) {
   const [state, formAction, isPending] = useActionState(createDemand, null)
   const [selectedDate, setSelectedDate] = useState<string>('')
   const [availableSlots, setAvailableSlots] = useState<string[]>([])
@@ -213,10 +214,26 @@ export function DemandForm({ cameraModels, defaultAddress = '' }: { cameraModels
       <div className="pt-6">
         <h3 className="text-lg font-medium leading-6 text-white border-b border-gray-800 pb-2 mb-4">Appointment</h3>
         
+        {/* Calendar View */}
+        <div className="mb-6">
+          <AppointmentCalendar
+            timezoneName={timezoneName}
+            onDateSelect={(date) => {
+              const dateStr = format(date, 'yyyy-MM-dd')
+              setSelectedDate(dateStr)
+              setSelectedSlot('')
+            }}
+            selectedDate={selectedDate ? new Date(selectedDate + 'T00:00:00') : null}
+            getTakenSlots={getTakenSlots}
+          />
+        </div>
+
+        {/* Date Input (Alternative) */}
         <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-300 mb-1">Select Date</label>
+            <label className="block text-sm font-medium text-gray-300 mb-1">Or Select Date Manually</label>
             <input 
                 type="date" 
+                value={selectedDate}
                 required 
                 onChange={e => {
                     setSelectedDate(e.target.value)

@@ -51,6 +51,12 @@ export async function createDemand(prevState: ActionState, formData: FormData) {
 
   const data = result.data
 
+  // Check if the time slot is already taken
+  const slotTaken = await isTimeSlotTaken(data.appointmentDate)
+  if (slotTaken) {
+      return { error: 'This time slot is already booked. Please select another time.' }
+  }
+
   const { data: demand, error } = await supabase.from('demands').insert({
       created_by: profile.id,
       dealer_id: profile.dealer_id,
@@ -93,5 +99,48 @@ export async function getTakenSlots(dateStr: string) {
         .neq('status', 'cancelled')
 
     return data?.map(d => d.appointment_date) || []
+}
+
+/**
+ * Check if a specific time slot is already taken
+ * This ensures only one appointment per time slot
+ * Appointments are 75 minutes long, so we check for any overlap
+ */
+export async function isTimeSlotTaken(appointmentDate: string): Promise<boolean> {
+    const supabase = await createClient()
+    
+    // Parse the appointment date
+    const requestedTime = new Date(appointmentDate)
+    const requestedStart = new Date(requestedTime)
+    const requestedEnd = new Date(requestedTime.getTime() + 75 * 60 * 1000) // 75 minutes
+    
+    // Get all non-cancelled appointments
+    const { data, error } = await supabase
+        .from('demands')
+        .select('appointment_date')
+        .neq('status', 'cancelled')
+    
+    if (error) {
+        console.error('Error checking time slot:', error)
+        return false // If error, allow creation (fail open)
+    }
+    
+    if (!data || data.length === 0) {
+        return false // No appointments, slot is available
+    }
+    
+    // Check for any overlap with existing appointments
+    for (const demand of data) {
+        const existingStart = new Date(demand.appointment_date)
+        const existingEnd = new Date(existingStart.getTime() + 75 * 60 * 1000) // 75 minutes
+        
+        // Check if there's any overlap between the requested slot and existing slot
+        // Overlap occurs if: requestedStart < existingEnd && requestedEnd > existingStart
+        if (requestedStart < existingEnd && requestedEnd > existingStart) {
+            return true // Slot is taken (overlap detected)
+        }
+    }
+    
+    return false // Slot is available
 }
 
