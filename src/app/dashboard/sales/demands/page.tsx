@@ -14,6 +14,20 @@ export default async function DemandsPage() {
   
   if (!profile) return <div>Profile error</div>
 
+  // Get dealer timezone
+  let timezoneName: string | null = null
+  if (profile.dealer_id) {
+    const { data: dealer } = await supabase
+      .from('dealers')
+      .select('region_codes(timezones(name))')
+      .eq('id', profile.dealer_id)
+      .single()
+    
+    if (dealer?.region_codes && (dealer.region_codes as any).timezones) {
+      timezoneName = (dealer.region_codes as any).timezones.name
+    }
+  }
+
   // Fetch demands for this dealer
   const { data: demands } = await supabase
     .from('demands')
@@ -31,7 +45,7 @@ export default async function DemandsPage() {
         </Link>
       </div>
 
-      <DemandsList demands={demands || []} />
+      <DemandsList demands={demands || []} timezoneName={timezoneName} />
     </div>
   )
 }

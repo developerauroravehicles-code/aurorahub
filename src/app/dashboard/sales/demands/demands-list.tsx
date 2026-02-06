@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from 'react'
 import { format } from 'date-fns'
+import { formatInTimeZone } from 'date-fns-tz'
 import { Filter, X } from 'lucide-react'
 
 interface Demand {
@@ -18,9 +19,10 @@ interface Demand {
 
 interface DemandsListProps {
   demands: Demand[]
+  timezoneName?: string | null
 }
 
-export function DemandsList({ demands }: DemandsListProps) {
+export function DemandsList({ demands, timezoneName = null }: DemandsListProps) {
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [dateFilter, setDateFilter] = useState<string>('all')
   const [searchQuery, setSearchQuery] = useState<string>('')
@@ -205,7 +207,9 @@ export function DemandsList({ demands }: DemandsListProps) {
                       </div>
                       <div className="mt-2 flex items-center text-sm text-gray-400 sm:mt-0">
                         <p>
-                          Appointment: {format(new Date(demand.appointment_date), 'PPP p')}
+                          Appointment: {timezoneName 
+                            ? formatInTimeZone(new Date(demand.appointment_date), timezoneName, 'PPP p')
+                            : format(new Date(demand.appointment_date), 'PPP p')}
                         </p>
                       </div>
                     </div>
