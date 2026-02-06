@@ -223,3 +223,53 @@ export async function updateDemand(demandId: string, formData: FormData) {
   return { success: true }
 }
 
+export async function revertDemandToPending(demandId: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  
+  if (!user) return { error: 'Unauthorized' }
+
+  // Check if user is finance
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single()
+
+  if (!profile || profile.role !== 'finance') {
+    return { error: 'Only finance users can revert demands' }
+  }
+
+  // Check if demand is assigned to current user
+  const { data: demand } = await supabase
+    .from('demands')
+    .select('assigned_finance_id, status')
+    .eq('id', demandId)
+    .single()
+
+  if (!demand) return { error: 'Demand not found' }
+
+  if (demand.assigned_finance_id && demand.assigned_finance_id !== user.id) {
+    return { error: 'You can only revert demands assigned to you' }
+  }
+
+  if (demand.status !== 'approved') {
+    return { error: 'Only approved demands can be reverted to pending' }
+  }
+
+  // Revert status to pending_finance
+  const { error: updateError } = await supabase
+    .from('demands')
+    .update({ 
+      status: 'pending_finance',
+      updated_at: new Date().toISOString()
+    })
+    .eq('id', demandId)
+
+  if (updateError) return { error: updateError.message }
+
+  revalidatePath('/dashboard/finance/demands')
+  revalidatePath('/dashboard')
+  return { success: true }
+}
+

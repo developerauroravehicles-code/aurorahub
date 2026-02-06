@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { updateDemand } from './actions'
+import { updateDemand, revertDemandToPending } from './actions'
 import { useRouter } from 'next/navigation'
 import { format } from 'date-fns'
 
@@ -28,6 +28,7 @@ interface EditDemandModalProps {
 export function EditDemandModal({ demand, isOpen, onClose }: EditDemandModalProps) {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
+  const [reverting, setReverting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [formData, setFormData] = useState({
     customer_firstname: demand.customer_firstname,
@@ -75,6 +76,25 @@ export function EditDemandModal({ demand, isOpen, onClose }: EditDemandModalProp
     if (result?.error) {
       setError(result.error)
       setLoading(false)
+    } else {
+      router.refresh()
+      onClose()
+    }
+  }
+
+  const handleRevertToPending = async () => {
+    if (!confirm('Are you sure you want to revert this demand to pending status? This will undo the approval.')) {
+      return
+    }
+
+    setReverting(true)
+    setError(null)
+
+    const result = await revertDemandToPending(demand.id)
+    
+    if (result?.error) {
+      setError(result.error)
+      setReverting(false)
     } else {
       router.refresh()
       onClose()
@@ -218,21 +238,31 @@ export function EditDemandModal({ demand, isOpen, onClose }: EditDemandModalProp
               </div>
             </div>
 
-            <div className="flex justify-end gap-3 pt-4 border-t border-gray-800">
+            <div className="flex justify-between items-center pt-4 border-t border-gray-800">
               <button
                 type="button"
-                onClick={onClose}
-                className="px-4 py-2 text-gray-300 hover:text-white transition-colors"
+                onClick={handleRevertToPending}
+                disabled={loading || reverting}
+                className="px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white rounded disabled:opacity-50 transition-colors text-sm"
               >
-                Cancel
+                {reverting ? 'Reverting...' : 'Revert to Pending'}
               </button>
-              <button
-                type="submit"
-                disabled={loading}
-                className="px-4 py-2 bg-[#C27E00] hover:bg-[#a06900] text-white rounded disabled:opacity-50 transition-colors"
-              >
-                {loading ? 'Saving...' : 'Save Changes'}
-              </button>
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="px-4 py-2 text-gray-300 hover:text-white transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={loading || reverting}
+                  className="px-4 py-2 bg-[#C27E00] hover:bg-[#a06900] text-white rounded disabled:opacity-50 transition-colors"
+                >
+                  {loading ? 'Saving...' : 'Save Changes'}
+                </button>
+              </div>
             </div>
           </form>
         </div>
