@@ -236,8 +236,13 @@ export function DemandForm({ cameraModels, defaultAddress = '', timezoneName = n
                 value={selectedDate}
                 required 
                 onChange={e => {
-                    setSelectedDate(e.target.value)
-                    setSelectedSlot('')
+                    const selected = e.target.value
+                    const today = new Date().toISOString().split('T')[0]
+                    // Prevent selecting past dates
+                    if (selected >= today) {
+                      setSelectedDate(selected)
+                      setSelectedSlot('')
+                    }
                 }}
                 min={new Date().toISOString().split('T')[0]}
                 className="block w-full max-w-xs rounded-md border border-gray-700 bg-black/50 py-2 px-3 shadow-sm focus:border-[#C27E00] focus:outline-none focus:ring-[#C27E00] sm:text-sm text-white [color-scheme:dark]"

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, startOfWeek, endOfWeek } from 'date-fns'
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, startOfWeek, endOfWeek, isBefore, startOfDay } from 'date-fns'
 import { formatInTimeZone } from 'date-fns-tz'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 
@@ -72,10 +72,19 @@ export function AppointmentCalendar({
   }, [currentMonth])
 
   const handleDateClick = (date: Date) => {
-    // Only allow selecting dates in the current month
-    if (isSameMonth(date, currentMonth)) {
+    // Only allow selecting dates in the current month and not in the past
+    const today = startOfDay(new Date())
+    const selectedDay = startOfDay(date)
+    
+    if (isSameMonth(date, currentMonth) && !isBefore(selectedDay, today)) {
       onDateSelect(date)
     }
+  }
+
+  const isPastDate = (date: Date) => {
+    const today = startOfDay(new Date())
+    const selectedDay = startOfDay(date)
+    return isBefore(selectedDay, today)
   }
 
   const formatDateForDisplay = (date: Date) => {
@@ -147,17 +156,20 @@ export function AppointmentCalendar({
           const dayIsSelected = isSelected(day)
           const dayIsTaken = isTaken(day)
           const dayIsLoading = isLoading(day)
+          const dayIsPast = isPastDate(day)
 
           return (
             <button
               key={idx}
               type="button"
               onClick={() => handleDateClick(day)}
-              disabled={!isCurrentMonth || dayIsLoading}
+              disabled={!isCurrentMonth || dayIsLoading || dayIsPast}
               className={`
                 aspect-square p-2 rounded text-sm font-medium transition-colors
                 ${!isCurrentMonth 
                   ? 'text-gray-600 cursor-not-allowed' 
+                  : dayIsPast
+                  ? 'text-gray-600 bg-white/5 cursor-not-allowed opacity-50'
                   : dayIsSelected
                   ? 'bg-[#C27E00] text-white'
                   : dayIsToday
@@ -168,7 +180,13 @@ export function AppointmentCalendar({
                 }
                 ${dayIsLoading ? 'opacity-50 cursor-wait' : ''}
               `}
-              title={dayIsTaken ? 'Has appointments' : format(day, 'yyyy-MM-dd')}
+              title={
+                dayIsPast 
+                  ? 'Past dates cannot be selected' 
+                  : dayIsTaken 
+                  ? 'Has appointments' 
+                  : format(day, 'yyyy-MM-dd')
+              }
             >
               {formatDateForDisplay(day)}
               {dayIsTaken && (
