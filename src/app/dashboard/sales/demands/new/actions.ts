@@ -150,7 +150,7 @@ export async function isSlotBlocked(slotDate: string): Promise<boolean> {
 /**
  * Check if a specific time slot is already taken
  * This ensures only one appointment per time slot across ALL dealers
- * Appointments are 75 minutes long, and there must be 90 minutes gap between appointments
+ * Appointments are 75 minutes long
  * This is a global check - if any dealer has an appointment at this time, the slot is taken
  */
 export async function isTimeSlotTaken(appointmentDate: string): Promise<boolean> {
@@ -160,8 +160,6 @@ export async function isTimeSlotTaken(appointmentDate: string): Promise<boolean>
     const requestedTime = new Date(appointmentDate)
     const requestedStart = new Date(requestedTime)
     const requestedEnd = new Date(requestedTime.getTime() + 75 * 60 * 1000) // 75 minutes
-    const appointmentDuration = 75 * 60 * 1000 // 75 minutes in milliseconds
-    const requiredGap = 90 * 60 * 1000 // 90 minutes gap in milliseconds
     
     // Get the same day range for optimization
     const dayStart = startOfDay(requestedTime).toISOString()
@@ -185,24 +183,15 @@ export async function isTimeSlotTaken(appointmentDate: string): Promise<boolean>
         return false // No appointments, slot is available
     }
     
-    // Check for any overlap or gap violation with existing appointments
+    // Check for any overlap with existing appointments
     for (const demand of data) {
         const existingStart = new Date(demand.appointment_date)
-        const existingEnd = new Date(existingStart.getTime() + appointmentDuration) // 75 minutes
+        const existingEnd = new Date(existingStart.getTime() + 75 * 60 * 1000) // 75 minutes
         
         // Check if there's any overlap between the requested slot and existing slot
         // Overlap occurs if: requestedStart < existingEnd && requestedEnd > existingStart
-        const overlaps = requestedStart < existingEnd && requestedEnd > existingStart
-        
-        // Check for gap violation: appointments must be at least 90 minutes apart
-        // Gap before: existingStart - requestedEnd (gap between requested end and existing start)
-        // Gap after: requestedStart - existingEnd (gap between existing end and requested start)
-        const gapBefore = existingStart.getTime() - requestedEnd.getTime()
-        const gapAfter = requestedStart.getTime() - existingEnd.getTime()
-        const violatesGap = (gapBefore >= 0 && gapBefore < requiredGap) || (gapAfter >= 0 && gapAfter < requiredGap)
-        
-        if (overlaps || violatesGap) {
-            return true // Slot is taken (overlap or gap violation detected) - applies to ALL dealers
+        if (requestedStart < existingEnd && requestedEnd > existingStart) {
+            return true // Slot is taken (overlap detected) - applies to ALL dealers
         }
     }
     

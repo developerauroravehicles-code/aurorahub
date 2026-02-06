@@ -255,28 +255,20 @@ export function DemandForm({ cameraModels, defaultAddress = '', timezoneName = n
 
         {selectedDate && (() => {
             // Filter out blocked slots - only show available slots
-            // A slot is blocked if it overlaps with an existing appointment OR violates the 90-minute gap rule
+            // A slot is blocked only if it overlaps with an existing appointment
             const availableOnlySlots = availableSlots.filter(slot => {
                 const slotTime = new Date(slot)
                 const slotStart = slotTime.getTime()
                 const slotEnd = slotStart + 75 * 60 * 1000 // 75 minutes (appointment duration)
                 
-                // Check if this slot overlaps with any taken appointment or violates gap rule
+                // Check if this slot overlaps with any taken appointment
                 const isBlocked = takenSlots.some(takenSlot => {
                     const takenTime = new Date(takenSlot)
                     const takenStart = takenTime.getTime()
                     const takenEnd = takenStart + 75 * 60 * 1000 // 75 minutes (appointment duration)
                     
                     // Check for overlap: slotStart < takenEnd && slotEnd > takenStart
-                    const overlaps = slotStart < takenEnd && slotEnd > takenStart
-                    
-                    // Check for gap violation: slots must be at least 90 minutes apart
-                    // If slot is within 90 minutes before or after an existing appointment, it's blocked
-                    const gapBefore = takenStart - slotEnd // Gap between slot end and taken start
-                    const gapAfter = slotStart - takenEnd // Gap between taken end and slot start
-                    const violatesGap = (gapBefore >= 0 && gapBefore < 90 * 60 * 1000) || (gapAfter >= 0 && gapAfter < 90 * 60 * 1000)
-                    
-                    return overlaps || violatesGap
+                    return slotStart < takenEnd && slotEnd > takenStart
                 })
                 
                 return !isBlocked // Only include non-blocked slots
