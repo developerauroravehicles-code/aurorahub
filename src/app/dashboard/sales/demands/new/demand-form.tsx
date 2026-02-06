@@ -3,6 +3,7 @@
 import { useActionState, useState, useEffect } from 'react'
 import { createDemand, getTakenSlots } from './actions'
 import { format, addMinutes, setHours, setMinutes, isSunday, isSaturday } from 'date-fns'
+import { formatInTimeZone, zonedTimeToUtc } from 'date-fns-tz'
 import { AppointmentCalendar } from '@/components/appointment-calendar'
 
 interface CameraModel {
@@ -31,8 +32,8 @@ export function DemandForm({ cameraModels, defaultAddress = '', timezoneName = n
   useEffect(() => {
     if (!selectedDate) return
     
-    // Create date in local time
-    const date = new Date(selectedDate + 'T00:00:00')
+    // Create date in dealer's timezone (or local time if no timezone)
+    const dateStr = selectedDate // Format: YYYY-MM-DD
     const slots = []
     
     // Appointment rules:
@@ -46,27 +47,45 @@ export function DemandForm({ cameraModels, defaultAddress = '', timezoneName = n
     const appointmentDuration = 75 // 1 hour 15 minutes in minutes
     const slotInterval = 90 // 1.5 hours (90 minutes) gap between slot start times
     
-    if (isSunday(date)) {
+    // Create a date object for the selected date
+    // Parse the date string as local date (YYYY-MM-DD)
+    const [year, month, day] = dateStr.split('-').map(Number)
+    const dateInTimezone = new Date(year, month - 1, day, 0, 0, 0) // Local date at midnight
+    
+    // Check if it's Sunday
+    const isSundayCheck = isSunday(dateInTimezone)
+    if (isSundayCheck) {
         startHour = 11
         endHour = 17
     }
 
-    // Generate slots with 90-minute intervals
-    // Start from 09:00 AM (or 11:00 AM on Sunday)
-    let current = setMinutes(setHours(date, startHour), 0)
+    // Generate slots in dealer's timezone, then convert to UTC
+    // Start from 09:00 AM (or 11:00 AM on Sunday) in dealer's timezone
+    let current = setMinutes(setHours(dateInTimezone, startHour), 0)
     
     // Calculate the latest possible start time (so the appointment ends by endHour)
     // If endHour is 18:00 and appointment is 1h 15m, last start time is 16:45 (18:00 - 1h 15m = 16:45)
-    const latestStartTime = setMinutes(setHours(date, endHour), 0)
+    const latestStartTime = setMinutes(setHours(dateInTimezone, endHour), 0)
     const latestAllowedStart = addMinutes(latestStartTime, -appointmentDuration)
 
     while (current <= latestAllowedStart) {
-        slots.push(current.toISOString())
+        // Convert to UTC for storage in database
+        // If timezone is provided, treat the local time as if it's in dealer's timezone, then convert to UTC
+        if (timezoneName) {
+          // Create datetime string in dealer's timezone format: YYYY-MM-DDTHH:mm:ss
+          const dateTimeStr = `${dateStr}T${format(current, 'HH:mm:ss')}`
+          // Convert from dealer's timezone to UTC
+          const utcDate = zonedTimeToUtc(dateTimeStr, timezoneName)
+          slots.push(utcDate.toISOString())
+        } else {
+          // No timezone, use local time (treat as UTC)
+          slots.push(current.toISOString())
+        }
         current = addMinutes(current, slotInterval) // 90 minutes intervals (1.5 hours)
     }
     
     setAvailableSlots(slots)
-  }, [selectedDate])
+  }, [selectedDate, timezoneName])
 
   return (
     <form action={formAction} className="space-y-6 max-w-4xl bg-white/5 p-8 rounded-lg shadow border border-gray-800">
