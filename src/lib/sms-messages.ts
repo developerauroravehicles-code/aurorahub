@@ -44,16 +44,29 @@ For cancellation or rescheduling requests within the last 24 hours prior to your
 }
 
 /**
- * 4-Hour Reminder Message
- * Sent 4 hours before the appointment
+ * Reminder Message
+ * Sent before the appointment (dynamically calculates hours remaining)
+ * @param appointmentDate - The appointment date (UTC)
  * @param address - The appointment address
  * @param timezoneName - Optional timezone name (e.g., 'America/Vancouver'). If not provided, uses local timezone
  */
-export function getFourHourReminderMessage(address: string, timezoneName?: string): string {
-  // Note: This message doesn't include a date, but if we add one in the future, use timezoneName
-  return `4-Hour Reminder
+export function getFourHourReminderMessage(
+  appointmentDate: Date,
+  address: string,
+  timezoneName?: string
+): string {
+  // Calculate hours remaining until appointment
+  const now = new Date()
+  const appointment = new Date(appointmentDate)
+  const diffInMs = appointment.getTime() - now.getTime()
+  const diffInHours = Math.floor(diffInMs / (1000 * 60 * 60))
+  
+  // Format hours text (singular vs plural)
+  const hoursText = diffInHours === 1 ? '1 hour' : `${diffInHours} hours`
+  
+  return `Appointment Reminder
 
-This is a reminder that your dashcam installation appointment is scheduled to take place in 4 hours at ${address}.
+This is a reminder that your dashcam installation appointment is scheduled to take place in ${hoursText} at ${address}.
 
 Aurora Vehicles.`
 }

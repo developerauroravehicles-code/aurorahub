@@ -4,9 +4,11 @@ import { sendSMS } from '@/lib/twilio'
 import { getFourHourReminderMessage, isWithin4Hours } from '@/lib/sms-messages'
 
 /**
- * API Route for sending 4-hour reminder SMS
+ * API Route for sending reminder SMS
  * This should be called by a cron job or scheduled task
- * Example: Vercel Cron Job that runs every hour
+ * Runs daily at 6 AM (Vercel Hobby plan: 1 cron job per day)
+ * Sends SMS reminders to all appointments that are within 4 hours at the time of execution
+ * SMS message dynamically shows the actual hours remaining until the appointment
  */
 export async function GET(request: Request) {
   // Optional: Add authentication/authorization check
@@ -19,6 +21,9 @@ export async function GET(request: Request) {
     const supabase = await createClient()
     
     // Get all approved demands with appointments in the next 4 hours
+    // When running daily at 6 AM, this will get appointments between 6 AM and 10 AM
+    // The isWithin4Hours check ensures we only send SMS to appointments actually within 4 hours
+    // SMS message will dynamically show the actual hours remaining (e.g., "7 hours", "4 hours", "2 hours", "1 hour")
     const now = new Date()
     const fourHoursFromNow = new Date(now.getTime() + 4 * 60 * 60 * 1000)
     
@@ -56,13 +61,14 @@ export async function GET(request: Request) {
           const address = demand.customer_address || 'the specified location'
           // Get timezone from dealer > region > timezone
           const timezoneName = (demand.dealers as any)?.region_codes?.timezones?.name || undefined
-          const message = getFourHourReminderMessage(address, timezoneName)
+          // Pass appointmentDate to calculate dynamic hours remaining
+          const message = getFourHourReminderMessage(appointmentDate, address, timezoneName)
           
           const result = await sendSMS(demand.customer_phone, message)
           
           if (result.success) {
             sentCount++
-            console.log(`4-hour reminder sent to ${demand.customer_phone} for appointment ${demand.id}`)
+            console.log(`Reminder sent to ${demand.customer_phone} for appointment ${demand.id}`)
           } else {
             errorCount++
             console.error(`Failed to send reminder to ${demand.customer_phone} for appointment ${demand.id}`)
