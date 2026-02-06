@@ -37,10 +37,10 @@ export function DealerClock({ timezoneName, timezoneDisplayName }: DealerClockPr
   }
 
   return (
-    <div className="flex items-center gap-2 text-sm text-gray-300">
-      <span className="text-[#C27E00] font-medium">{currentTime}</span>
+    <div className="flex items-center gap-2 text-sm bg-black/80 backdrop-blur-sm border border-[#C27E00]/30 rounded-lg px-4 py-2 shadow-lg">
+      <span className="text-[#C27E00] font-semibold text-base">{currentTime}</span>
       {timezoneDisplayName && (
-        <span className="text-gray-500 text-xs">({timezoneDisplayName})</span>
+        <span className="text-white/80 text-xs">({timezoneDisplayName})</span>
       )}
     </div>
   )
