@@ -11,7 +11,25 @@ interface CameraModel {
   name: string
 }
 
-export function DemandForm({ cameraModels, defaultAddress = '', timezoneName = null }: { cameraModels: CameraModel[]; defaultAddress?: string; timezoneName?: string | null }) {
+interface CalendarSetting {
+  day_type: 'weekday' | 'weekend'
+  start_hour: number
+  end_hour: number
+  slot_interval_minutes: number
+  appointment_duration_minutes: number
+}
+
+interface DemandFormProps {
+  cameraModels: CameraModel[]
+  defaultAddress?: string
+  timezoneName?: string | null
+  calendarSettings?: {
+    weekday?: CalendarSetting
+    weekend?: CalendarSetting
+  }
+}
+
+export function DemandForm({ cameraModels, defaultAddress = '', timezoneName = null, calendarSettings = {} }: DemandFormProps) {
   const [state, formAction, isPending] = useActionState(createDemand, null)
   const [selectedDate, setSelectedDate] = useState<string>('')
   const [availableSlots, setAvailableSlots] = useState<string[]>([])
@@ -36,25 +54,24 @@ export function DemandForm({ cameraModels, defaultAddress = '', timezoneName = n
     const dateStr = selectedDate // Format: YYYY-MM-DD
     const slots = []
     
-    // Appointment rules:
-    // - Each appointment is 1 hour 15 minutes (75 minutes)
-    // - Slots are created with 1.5 hours (90 minutes) gap between start times
-    // - Monday - Saturday: 09:00-18:00 (last slot must end by 18:00)
-    // - Sunday: 11:00-17:00 (last slot must end by 17:00)
-    
-    let startHour = 9 // Start at 09:00 AM
-    let endHour = 18 // Working hours end time
-    const appointmentDuration = 75 // 1 hour 15 minutes in minutes
-    const slotInterval = 90 // 1.5 hours (90 minutes) gap between slot start times
-    
-    // Create a date object for the selected date to check if it's Sunday
-    // Parse the date string as local date (YYYY-MM-DD)
+    // Create a date object for the selected date to check if it's weekend
     const [year, month, day] = dateStr.split('-').map(Number)
     const dateForCheck = new Date(year, month - 1, day, 12, 0, 0) // Use noon to avoid timezone issues
     
-    // Check if it's Sunday
-    const isSundayCheck = isSunday(dateForCheck)
-    if (isSundayCheck) {
+    // Determine if it's weekend (Saturday = 6, Sunday = 0)
+    const dayOfWeek = dateForCheck.getDay()
+    const isWeekend = dayOfWeek === 0 || dayOfWeek === 6
+    
+    // Get calendar settings for this day type, or use defaults
+    const setting = isWeekend ? calendarSettings.weekend : calendarSettings.weekday
+    
+    let startHour = setting?.start_hour ?? 9 // Default: 09:00 AM
+    let endHour = setting?.end_hour ?? 18 // Default: 18:00
+    const appointmentDuration = setting?.appointment_duration_minutes ?? 75 // Default: 75 minutes
+    const slotInterval = setting?.slot_interval_minutes ?? 90 // Default: 90 minutes
+    
+    // Fallback: If no weekend setting and it's Sunday, use old logic
+    if (isWeekend && !setting && isSunday(dateForCheck)) {
         startHour = 11
         endHour = 17
     }
