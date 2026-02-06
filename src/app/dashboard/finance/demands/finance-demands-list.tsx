@@ -19,6 +19,7 @@ interface Demand {
   stock_number: string | null
   camera_model: string
   appointment_date: string
+  assigned_specialist_id?: string | null
   dealers?: { name: string } | null
   profiles?: { full_name: string } | null
 }
@@ -217,7 +218,20 @@ export function FinanceDemandsList({ myAssignedDemands, unassignedDemands, allAs
                       demandId={demand.id} 
                       isAssigned={true} 
                       status={demand.status}
-                      demand={demand}
+                      demand={{
+                        id: demand.id,
+                        customer_firstname: demand.customer_firstname,
+                        customer_lastname: demand.customer_lastname,
+                        customer_phone: demand.customer_phone,
+                        customer_address: demand.customer_address,
+                        vehicle_make: demand.vehicle_make,
+                        vehicle_model: demand.vehicle_model,
+                        vehicle_year: demand.vehicle_year,
+                        stock_number: demand.stock_number,
+                        camera_model: demand.camera_model,
+                        appointment_date: demand.appointment_date,
+                        assigned_specialist_id: demand.assigned_specialist_id
+                      }}
                     />
                   </div>
                 </li>

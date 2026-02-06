@@ -18,7 +18,7 @@ export default async function FinanceDemandsPage() {
   // Get assigned demands for current user (with all fields for editing)
   const { data: myAssignedDemands } = await supabase
     .from('demands')
-    .select('id, status, created_at, customer_firstname, customer_lastname, customer_phone, customer_address, vehicle_make, vehicle_model, vehicle_year, stock_number, camera_model, appointment_date, dealers(name), profiles!demands_assigned_finance_id_fkey(full_name)')
+    .select('id, status, created_at, customer_firstname, customer_lastname, customer_phone, customer_address, vehicle_make, vehicle_model, vehicle_year, stock_number, camera_model, appointment_date, assigned_specialist_id, dealers(name), profiles!demands_assigned_finance_id_fkey(full_name)')
     .eq('assigned_finance_id', user.id)
     .in('status', ['pending_finance', 'approved'])
     .order('created_at', { ascending: true })

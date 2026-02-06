@@ -51,7 +51,7 @@ export async function assignDemandToMe(demandId: string) {
   return { success: true }
 }
 
-export async function approveDemand(demandId: string, sendSMSToCustomer: boolean = false) {
+export async function approveDemand(demandId: string, sendSMSToCustomer: boolean = false, sendSMSToSpecialist: boolean = false) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   
@@ -113,8 +113,8 @@ export async function approveDemand(demandId: string, sendSMSToCustomer: boolean
         })
       }
       
-      // Send SMS to assigned specialist if exists
-      if (demand.assigned_specialist_id) {
+      // Send SMS to assigned specialist if requested and exists
+      if (sendSMSToSpecialist && demand.assigned_specialist_id) {
         const { data: specialist } = await supabase
           .from('profiles')
           .select('phone')

@@ -17,6 +17,7 @@ interface Demand {
   stock_number: string | null
   camera_model: string
   appointment_date: string
+  assigned_specialist_id?: string | null
 }
 
 export function DemandActions({ demandId, isAssigned, status, demand }: { 
@@ -122,6 +123,7 @@ export function DemandActions({ demandId, isAssigned, status, demand }: {
                 demandId={demandId}
                 isOpen={showApproveModal}
                 onClose={() => setShowApproveModal(false)}
+                hasAssignedSpecialist={!!demand?.assigned_specialist_id}
             />
         </>
     )

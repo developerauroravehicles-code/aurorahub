@@ -8,14 +8,16 @@ interface ApproveConfirmationModalProps {
   demandId: string
   isOpen: boolean
   onClose: () => void
+  hasAssignedSpecialist?: boolean
 }
 
-export function ApproveConfirmationModal({ demandId, isOpen, onClose }: ApproveConfirmationModalProps) {
+export function ApproveConfirmationModal({ demandId, isOpen, onClose, hasAssignedSpecialist = false }: ApproveConfirmationModalProps) {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [confirmApprove, setConfirmApprove] = useState(false)
-  const [sendSMS, setSendSMS] = useState(true)
+  const [sendSMSToCustomer, setSendSMSToCustomer] = useState(true)
+  const [sendSMSToSpecialist, setSendSMSToSpecialist] = useState(true)
 
   const handleApprove = async () => {
     if (!confirmApprove) {
@@ -26,7 +28,7 @@ export function ApproveConfirmationModal({ demandId, isOpen, onClose }: ApproveC
     setLoading(true)
     setError(null)
 
-    const result = await approveDemand(demandId, sendSMS)
+    const result = await approveDemand(demandId, sendSMSToCustomer, sendSMSToSpecialist)
     
     if (result?.error) {
       setError(result.error)
@@ -66,19 +68,35 @@ export function ApproveConfirmationModal({ demandId, isOpen, onClose }: ApproveC
               </label>
             </div>
 
-            {/* SMS Confirmation */}
+            {/* Customer SMS Confirmation */}
             <div className="flex items-start gap-3">
               <input
                 type="checkbox"
-                id="sendSMS"
-                checked={sendSMS}
-                onChange={(e) => setSendSMS(e.target.checked)}
+                id="sendSMSToCustomer"
+                checked={sendSMSToCustomer}
+                onChange={(e) => setSendSMSToCustomer(e.target.checked)}
                 className="mt-1 w-5 h-5 rounded border-gray-700 bg-black/50 text-[#C27E00] focus:ring-[#C27E00] focus:ring-offset-gray-900"
               />
-              <label htmlFor="sendSMS" className="text-white cursor-pointer">
+              <label htmlFor="sendSMSToCustomer" className="text-white cursor-pointer">
                 Send appointment information to customer via SMS
               </label>
             </div>
+
+            {/* Specialist SMS Confirmation */}
+            {hasAssignedSpecialist && (
+              <div className="flex items-start gap-3">
+                <input
+                  type="checkbox"
+                  id="sendSMSToSpecialist"
+                  checked={sendSMSToSpecialist}
+                  onChange={(e) => setSendSMSToSpecialist(e.target.checked)}
+                  className="mt-1 w-5 h-5 rounded border-gray-700 bg-black/50 text-[#C27E00] focus:ring-[#C27E00] focus:ring-offset-gray-900"
+                />
+                <label htmlFor="sendSMSToSpecialist" className="text-white cursor-pointer">
+                  Send information to Specialist
+                </label>
+              </div>
+            )}
           </div>
 
           <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-gray-800">
