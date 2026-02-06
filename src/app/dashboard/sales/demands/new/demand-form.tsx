@@ -37,12 +37,16 @@ export function DemandForm({ cameraModels, defaultAddress = '', timezoneName = n
     
     // Appointment rules:
     // - Each appointment is 1 hour 15 minutes (75 minutes)
+    // - There must be 1.5 hours (90 minutes) gap between appointment start times
+    // - Total slot interval: 75 minutes (appointment) + 90 minutes (gap) = 165 minutes (2h 45m)
     // - Monday - Saturday: 09:00-18:00 (last slot must end by 18:00)
     // - Sunday: 11:00-17:00 (last slot must end by 17:00)
     
     let startHour = 9
     let endHour = 18 // Working hours end time
-    const slotDuration = 75 // 1 hour 15 minutes in minutes
+    const appointmentDuration = 75 // 1 hour 15 minutes in minutes
+    const gapBetweenAppointments = 90 // 1.5 hours gap between appointment start times
+    const slotInterval = appointmentDuration + gapBetweenAppointments // 165 minutes total
     
     if (isSunday(date)) {
         startHour = 11
@@ -54,13 +58,13 @@ export function DemandForm({ cameraModels, defaultAddress = '', timezoneName = n
     let current = setMinutes(setHours(date, startHour), 0)
     
     // Calculate the latest possible start time (so the appointment ends by endHour)
-    // If endHour is 18:00 and slot is 1h 15m, last start time is 16:45 (18:00 - 1h 15m = 16:45)
+    // If endHour is 18:00 and appointment is 1h 15m, last start time is 16:45 (18:00 - 1h 15m = 16:45)
     const latestStartTime = setMinutes(setHours(date, endHour), 0)
-    const latestAllowedStart = addMinutes(latestStartTime, -slotDuration)
+    const latestAllowedStart = addMinutes(latestStartTime, -appointmentDuration)
 
     while (current <= latestAllowedStart) {
         slots.push(current.toISOString())
-        current = addMinutes(current, slotDuration) // 1h 15m intervals
+        current = addMinutes(current, slotInterval) // 165 minutes intervals (75 min appointment + 90 min gap)
     }
     
     setAvailableSlots(slots)
@@ -253,19 +257,28 @@ export function DemandForm({ cameraModels, defaultAddress = '', timezoneName = n
 
         {selectedDate && (() => {
             // Filter out blocked slots - only show available slots
+            // A slot is blocked if it overlaps with an existing appointment OR violates the 90-minute gap rule
             const availableOnlySlots = availableSlots.filter(slot => {
-                // Check if this slot overlaps with any taken appointment
+                const slotTime = new Date(slot)
+                const slotStart = slotTime.getTime()
+                const slotEnd = slotStart + 75 * 60 * 1000 // 75 minutes (appointment duration)
+                
+                // Check if this slot overlaps with any taken appointment or violates gap rule
                 const isBlocked = takenSlots.some(takenSlot => {
-                    const slotTime = new Date(slot)
-                    const slotStart = slotTime.getTime()
-                    const slotEnd = slotStart + 75 * 60 * 1000 // 75 minutes
-                    
                     const takenTime = new Date(takenSlot)
                     const takenStart = takenTime.getTime()
-                    const takenEnd = takenStart + 75 * 60 * 1000 // 75 minutes
+                    const takenEnd = takenStart + 75 * 60 * 1000 // 75 minutes (appointment duration)
                     
                     // Check for overlap: slotStart < takenEnd && slotEnd > takenStart
-                    return slotStart < takenEnd && slotEnd > takenStart
+                    const overlaps = slotStart < takenEnd && slotEnd > takenStart
+                    
+                    // Check for gap violation: slots must be at least 90 minutes apart
+                    // If slot is within 90 minutes before or after an existing appointment, it's blocked
+                    const gapBefore = takenStart - slotEnd // Gap between slot end and taken start
+                    const gapAfter = slotStart - takenEnd // Gap between taken end and slot start
+                    const violatesGap = (gapBefore >= 0 && gapBefore < 90 * 60 * 1000) || (gapAfter >= 0 && gapAfter < 90 * 60 * 1000)
+                    
+                    return overlaps || violatesGap
                 })
                 
                 return !isBlocked // Only include non-blocked slots

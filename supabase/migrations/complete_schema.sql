@@ -500,31 +500,41 @@ CREATE INDEX IF NOT EXISTS idx_timezones_name ON timezones(name);
 -- 9. APPOINTMENT OVERLAP PREVENTION
 -- ============================================
 
--- Create a function to check for overlapping appointments
+-- Create a function to check for overlapping appointments and gap violations
 CREATE OR REPLACE FUNCTION check_appointment_overlap()
 RETURNS TRIGGER AS $$
 DECLARE
   appointment_duration_minutes INTEGER := 75; -- 1 hour 15 minutes
+  required_gap_minutes INTEGER := 90; -- 1.5 hours gap between appointments
   new_start TIMESTAMPTZ;
   new_end TIMESTAMPTZ;
-  overlapping_count INTEGER;
+  violation_count INTEGER;
 BEGIN
   -- Calculate the start and end times for the new appointment
   new_start := NEW.appointment_date;
   new_end := NEW.appointment_date + (appointment_duration_minutes || ' minutes')::INTERVAL;
   
-  -- Check for any overlapping appointments (excluding cancelled ones and the current row if updating)
+  -- Check for any overlapping appointments or gap violations
   SELECT COUNT(*)
-  INTO overlapping_count
+  INTO violation_count
   FROM demands
   WHERE status != 'cancelled'
     AND id != COALESCE(NEW.id, '00000000-0000-0000-0000-000000000000'::uuid) -- Exclude current row on update
-    AND appointment_date < new_end
-    AND (appointment_date + (appointment_duration_minutes || ' minutes')::INTERVAL) > new_start;
+    AND (
+      -- Check for overlap: appointments overlap if new_start < existing_end AND new_end > existing_start
+      (appointment_date < new_end AND (appointment_date + (appointment_duration_minutes || ' minutes')::INTERVAL) > new_start)
+      OR
+      -- Check for gap violation: gap must be at least 90 minutes
+      -- Gap before: existing_start - new_end must be >= 90 minutes OR < 0 (overlap)
+      (appointment_date - new_end < (required_gap_minutes || ' minutes')::INTERVAL AND appointment_date - new_end >= '0 minutes'::INTERVAL)
+      OR
+      -- Gap after: new_start - existing_end must be >= 90 minutes OR < 0 (overlap)
+      (new_start - (appointment_date + (appointment_duration_minutes || ' minutes')::INTERVAL) < (required_gap_minutes || ' minutes')::INTERVAL AND new_start - (appointment_date + (appointment_duration_minutes || ' minutes')::INTERVAL) >= '0 minutes'::INTERVAL)
+    );
   
-  -- If there's an overlap, raise an error
-  IF overlapping_count > 0 THEN
-    RAISE EXCEPTION 'This time slot is already booked. Please select another time.';
+  -- If there's an overlap or gap violation, raise an error
+  IF violation_count > 0 THEN
+    RAISE EXCEPTION 'This time slot is already booked or violates the 90-minute gap requirement. Please select another time.';
   END IF;
   
   RETURN NEW;
