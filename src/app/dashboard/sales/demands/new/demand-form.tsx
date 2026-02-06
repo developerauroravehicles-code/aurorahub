@@ -232,27 +232,6 @@ export function DemandForm({ cameraModels, defaultAddress = '', timezoneName = n
           />
         </div>
 
-        {/* Date Input (Alternative) */}
-        <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-300 mb-1">Or Select Date Manually</label>
-            <input 
-                type="date" 
-                value={selectedDate}
-                required 
-                onChange={e => {
-                    const selected = e.target.value
-                    const today = new Date().toISOString().split('T')[0]
-                    // Prevent selecting past dates
-                    if (selected >= today) {
-                      setSelectedDate(selected)
-                      setSelectedSlot('')
-                    }
-                }}
-                min={new Date().toISOString().split('T')[0]}
-                className="block w-full max-w-xs rounded-md border border-gray-700 bg-black/50 py-2 px-3 shadow-sm focus:border-[#C27E00] focus:outline-none focus:ring-[#C27E00] sm:text-sm text-white [color-scheme:dark]"
-            />
-        </div>
-
         {selectedDate && (() => {
             // Filter out blocked slots - only show available slots
             // A slot is blocked only if it overlaps with an existing appointment
