@@ -36,6 +36,26 @@ export default async function EmployeesPage() {
 
   const { data: employees } = await query
 
+  // For specialists, fetch their assigned dealers
+  const specialistIds = employees?.filter(e => e.role === 'specialist').map(e => e.id) || []
+  const { data: specialistDealers } = specialistIds.length > 0
+    ? await supabase
+        .from('specialist_dealers')
+        .select('specialist_id, dealer_id, dealers(name)')
+        .in('specialist_id', specialistIds)
+    : { data: null }
+
+  // Create a map of specialist_id -> dealers[]
+  const specialistDealersMap = new Map<string, Array<{ name: string }>>()
+  specialistDealers?.forEach(sd => {
+    if (!specialistDealersMap.has(sd.specialist_id)) {
+      specialistDealersMap.set(sd.specialist_id, [])
+    }
+    if (sd.dealers) {
+      specialistDealersMap.get(sd.specialist_id)?.push(sd.dealers as { name: string })
+    }
+  })
+
   // Fetch dealers for dropdown
   let dealersQuery = supabase.from('dealers').select('id, name').order('name')
   
@@ -69,7 +89,13 @@ export default async function EmployeesPage() {
                             </div>
                             <div className="flex items-center gap-4">
                                 <div className="text-right text-sm text-gray-400">
-                                    <p>{(e.dealers as any)?.name || 'Aurora HQ'}</p>
+                                    {e.role === 'specialist' && specialistDealersMap.has(e.id) ? (
+                                        <p className="text-[#C27E00]">
+                                          {specialistDealersMap.get(e.id)?.map(d => d.name).join(', ') || 'No dealers assigned'}
+                                        </p>
+                                      ) : (
+                                        <p>{(e.dealers as any)?.name || 'Aurora HQ'}</p>
+                                      )}
                                     <p>{e.phone}</p>
                                 </div>
                                 <ResetPasswordButton userId={e.id} userName={e.full_name} />

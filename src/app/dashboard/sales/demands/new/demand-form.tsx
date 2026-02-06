@@ -47,13 +47,13 @@ export function DemandForm({ cameraModels, defaultAddress = '', timezoneName = n
     const appointmentDuration = 75 // 1 hour 15 minutes in minutes
     const slotInterval = 90 // 1.5 hours (90 minutes) gap between slot start times
     
-    // Create a date object for the selected date
+    // Create a date object for the selected date to check if it's Sunday
     // Parse the date string as local date (YYYY-MM-DD)
     const [year, month, day] = dateStr.split('-').map(Number)
-    const dateInTimezone = new Date(year, month - 1, day, 0, 0, 0) // Local date at midnight
+    const dateForCheck = new Date(year, month - 1, day, 12, 0, 0) // Use noon to avoid timezone issues
     
     // Check if it's Sunday
-    const isSundayCheck = isSunday(dateInTimezone)
+    const isSundayCheck = isSunday(dateForCheck)
     if (isSundayCheck) {
         startHour = 11
         endHour = 17
@@ -61,26 +61,44 @@ export function DemandForm({ cameraModels, defaultAddress = '', timezoneName = n
 
     // Generate slots in dealer's timezone, then convert to UTC
     // Start from 09:00 AM (or 11:00 AM on Sunday) in dealer's timezone
-    let current = setMinutes(setHours(dateInTimezone, startHour), 0)
+    let currentHour = startHour
+    let currentMinute = 0
     
     // Calculate the latest possible start time (so the appointment ends by endHour)
     // If endHour is 18:00 and appointment is 1h 15m, last start time is 16:45 (18:00 - 1h 15m = 16:45)
-    const latestStartTime = setMinutes(setHours(dateInTimezone, endHour), 0)
-    const latestAllowedStart = addMinutes(latestStartTime, -appointmentDuration)
+    const latestStartHour = endHour
+    const latestStartMinute = 0
+    const latestAllowedHour = latestStartHour
+    const latestAllowedMinute = latestStartMinute - appointmentDuration
+    const latestAllowedHourAdjusted = latestAllowedMinute < 0 ? latestAllowedHour - 1 : latestAllowedHour
+    const latestAllowedMinuteAdjusted = latestAllowedMinute < 0 ? 60 + latestAllowedMinute : latestAllowedMinute
 
-    while (current <= latestAllowedStart) {
-        // Convert to UTC for storage in database
-        // If timezone is provided, treat the local time as if it's in dealer's timezone, then convert to UTC
+    while (currentHour < latestAllowedHourAdjusted || (currentHour === latestAllowedHourAdjusted && currentMinute <= latestAllowedMinuteAdjusted)) {
+        // Create datetime string in dealer's timezone: YYYY-MM-DDTHH:mm:00
+        const hourStr = String(currentHour).padStart(2, '0')
+        const minuteStr = String(currentMinute).padStart(2, '0')
+        const dateTimeStr = `${dateStr}T${hourStr}:${minuteStr}:00`
+        
+        // Convert from dealer's timezone to UTC
         if (timezoneName) {
-          // Convert from dealer's timezone to UTC
-          // fromZonedTime takes a date and treats it as if it's in the specified timezone, then returns UTC
-          const utcDate = fromZonedTime(current, timezoneName)
+          // Create a Date object representing this time in dealer's timezone
+          // We'll use fromZonedTime which treats the date as if it's in the specified timezone
+          const dateInTimezone = new Date(dateTimeStr + (timezoneName.includes('America') ? '' : ''))
+          // fromZonedTime treats the date as if it's in the specified timezone and converts to UTC
+          const utcDate = fromZonedTime(dateInTimezone, timezoneName)
           slots.push(utcDate.toISOString())
         } else {
-          // No timezone, use local time (treat as UTC)
-          slots.push(current.toISOString())
+          // No timezone, create date string and convert to ISO
+          const localDate = new Date(dateTimeStr)
+          slots.push(localDate.toISOString())
         }
-        current = addMinutes(current, slotInterval) // 90 minutes intervals (1.5 hours)
+        
+        // Move to next slot (90 minutes later)
+        currentMinute += slotInterval
+        if (currentMinute >= 60) {
+          currentHour += Math.floor(currentMinute / 60)
+          currentMinute = currentMinute % 60
+        }
     }
     
     setAvailableSlots(slots)
@@ -276,20 +294,27 @@ export function DemandForm({ cameraModels, defaultAddress = '', timezoneName = n
                     <label className="block text-sm font-medium text-gray-300">Available Slots</label>
                     {availableOnlySlots.length > 0 ? (
                         <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-3">
-                            {availableOnlySlots.map(slot => (
-                                <button 
-                                    type="button" 
-                                    key={slot} 
-                                    onClick={() => setSelectedSlot(slot)}
-                                    className={`p-2 border rounded text-sm font-medium transition-colors
-                                        ${selectedSlot === slot 
-                                            ? 'bg-[#C27E00] text-white border-[#C27E00]' 
-                                            : 'bg-black/50 hover:bg-white/10 text-gray-300 border-gray-700'}`}
-                                    title={format(new Date(slot), 'HH:mm')}
-                                >
-                                    {format(new Date(slot), 'HH:mm')}
-                                </button>
-                            ))}
+                            {availableOnlySlots.map(slot => {
+                                // Format slot time in dealer's timezone for display
+                                const slotTime = timezoneName 
+                                  ? formatInTimeZone(new Date(slot), timezoneName, 'HH:mm')
+                                  : format(new Date(slot), 'HH:mm')
+                                
+                                return (
+                                    <button 
+                                        type="button" 
+                                        key={slot} 
+                                        onClick={() => setSelectedSlot(slot)}
+                                        className={`p-2 border rounded text-sm font-medium transition-colors
+                                            ${selectedSlot === slot 
+                                                ? 'bg-[#C27E00] text-white border-[#C27E00]' 
+                                                : 'bg-black/50 hover:bg-white/10 text-gray-300 border-gray-700'}`}
+                                        title={slotTime}
+                                    >
+                                        {slotTime}
+                                    </button>
+                                )
+                            })}
                         </div>
                     ) : (
                         <p className="text-sm text-gray-500">No available slots for this date. All time slots are booked.</p>

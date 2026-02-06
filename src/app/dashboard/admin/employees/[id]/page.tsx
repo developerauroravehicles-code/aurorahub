@@ -2,10 +2,25 @@ import { createClient } from '@/lib/supabase/server'
 import { format } from 'date-fns'
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
+import { DealerAssignment } from './dealer-assignment'
 
 export default async function SpecialistDetailsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const supabase = await createClient()
+  
+  // Check if current user is Aurora Manager
+  const { data: { user } } = await supabase.auth.getUser()
+  let isAuroraManager = false
+  
+  if (user) {
+    const { data: currentProfile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single()
+    
+    isAuroraManager = currentProfile?.role === 'aurora_manager'
+  }
   
   // Fetch Specialist Profile
   const { data: profile } = await supabase
@@ -15,6 +30,19 @@ export default async function SpecialistDetailsPage({ params }: { params: Promis
     .single()
 
   if (!profile) return <div className="text-white">Specialist not found</div>
+
+  // Fetch assigned dealers for this specialist
+  const { data: assignedDealers } = await supabase
+    .from('specialist_dealers')
+    .select('id, dealer_id, dealers(name)')
+    .eq('specialist_id', id)
+    .order('created_at', { ascending: true })
+
+  // Fetch all dealers for assignment dropdown
+  const { data: allDealers } = await supabase
+    .from('dealers')
+    .select('id, name')
+    .order('name')
 
   // Fetch Jobs (Demands) assigned to this specialist OR completed by them (if we track 'completed_by')
   // For now, let's assume jobs are linked via 'assigned_specialist_id' or implicit assignment via dealer pool logic.
@@ -31,23 +59,42 @@ export default async function SpecialistDetailsPage({ params }: { params: Promis
   
   // Let's assume `assigned_specialist_id` is set when they pick it or complete it.
   
-  // Fetch Completed Jobs
-  const { data: completedJobs } = await supabase
-    .from('demands')
-    .select('id, status, created_at, updated_at, customer_firstname, customer_lastname, vehicle_make, vehicle_model, vehicle_year, appointment_date')
-    .eq('status', 'completed')
-    .eq('dealer_id', profile.dealer_id) // Assuming they work for their dealer
-    // Ideally we filter by who completed it. For now, let's show all completed in their dealer if we can't distinguish,
-    // OR better, let's query demand_logs to see who moved it to 'completed'.
-    // Querying logs is expensive.
-    // Let's stick to `dealer_id` context for now as per "Specialist View" logic which shows dealer pool.
+  // Get list of dealer IDs assigned to this specialist
+  const assignedDealerIds = assignedDealers?.map(ad => ad.dealer_id) || []
+  
+  // If specialist has assigned dealers, fetch jobs from all assigned dealers
+  // Otherwise, fall back to profile.dealer_id (for backward compatibility)
+  const dealerIdsToQuery = assignedDealerIds.length > 0 ? assignedDealerIds : (profile.dealer_id ? [profile.dealer_id] : [])
+
+  // Fetch Completed Jobs from all assigned dealers
+  const { data: completedJobs } = assignedDealerIds.length > 0
+    ? await supabase
+        .from('demands')
+        .select('id, status, created_at, updated_at, customer_firstname, customer_lastname, vehicle_make, vehicle_model, vehicle_year, appointment_date, dealer_id, dealers(name)')
+        .eq('status', 'completed')
+        .in('dealer_id', assignedDealerIds)
+        .order('updated_at', { ascending: false })
+    : await supabase
+        .from('demands')
+        .select('id, status, created_at, updated_at, customer_firstname, customer_lastname, vehicle_make, vehicle_model, vehicle_year, appointment_date, dealer_id, dealers(name)')
+        .eq('status', 'completed')
+        .eq('dealer_id', profile.dealer_id || '')
+        .order('updated_at', { ascending: false })
     
-  // Fetch Pending Jobs (Approved but not completed)
-  const { data: pendingJobs } = await supabase
-    .from('demands')
-    .select('id, status, created_at, customer_firstname, customer_lastname, vehicle_make, vehicle_model, vehicle_year, appointment_date')
-    .eq('status', 'approved')
-    .eq('dealer_id', profile.dealer_id)
+  // Fetch Pending Jobs (Approved but not completed) from all assigned dealers
+  const { data: pendingJobs } = assignedDealerIds.length > 0
+    ? await supabase
+        .from('demands')
+        .select('id, status, created_at, customer_firstname, customer_lastname, vehicle_make, vehicle_model, vehicle_year, appointment_date, dealer_id, dealers(name)')
+        .eq('status', 'approved')
+        .in('dealer_id', assignedDealerIds)
+        .order('appointment_date', { ascending: true })
+    : await supabase
+        .from('demands')
+        .select('id, status, created_at, customer_firstname, customer_lastname, vehicle_make, vehicle_model, vehicle_year, appointment_date, dealer_id, dealers(name)')
+        .eq('status', 'approved')
+        .eq('dealer_id', profile.dealer_id || '')
+        .order('appointment_date', { ascending: true })
 
   return (
     <div className="space-y-8">
@@ -56,8 +103,26 @@ export default async function SpecialistDetailsPage({ params }: { params: Promis
             <ArrowLeft className="w-4 h-4 mr-2" /> Back to Employees
         </Link>
         <h1 className="text-2xl font-bold text-white mb-2">{profile.full_name}</h1>
-        <p className="text-gray-400">{profile.role.replace('_', ' ')} at <span className="text-[#C27E00]">{profile.dealers?.name}</span></p>
+        <p className="text-gray-400">
+          {profile.role.replace('_', ' ')}
+          {assignedDealers && assignedDealers.length > 0 ? (
+            <span className="text-[#C27E00]">
+              {' '}at {assignedDealers.map(ad => ad.dealers.name).join(', ')}
+            </span>
+          ) : profile.dealers?.name ? (
+            <span className="text-[#C27E00]"> at {profile.dealers.name}</span>
+          ) : null}
+        </p>
       </div>
+
+      {/* Dealer Assignment Section (only for Aurora Managers) */}
+      {isAuroraManager && (
+        <DealerAssignment
+          specialistId={id}
+          assignedDealers={assignedDealers || []}
+          availableDealers={allDealers || []}
+        />
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Stats Cards */}
@@ -86,6 +151,9 @@ export default async function SpecialistDetailsPage({ params }: { params: Promis
                                       <div>
                                           <p className="font-medium text-white">{job.vehicle_year} {job.vehicle_make} {job.vehicle_model}</p>
                                           <p className="text-sm text-gray-400">{job.customer_firstname} {job.customer_lastname}</p>
+                                          {(job.dealers as any)?.name && (
+                                            <p className="text-xs text-gray-500 mt-1">Dealer: {(job.dealers as any).name}</p>
+                                          )}
                                       </div>
                                       <div className="text-right">
                                           <p className="text-sm text-[#C27E00]">{format(new Date(job.appointment_date), 'PPP p')}</p>
@@ -111,6 +179,9 @@ export default async function SpecialistDetailsPage({ params }: { params: Promis
                                       <div>
                                           <p className="font-medium text-white">{job.vehicle_year} {job.vehicle_make} {job.vehicle_model}</p>
                                           <p className="text-sm text-gray-400">{job.customer_firstname} {job.customer_lastname}</p>
+                                          {(job.dealers as any)?.name && (
+                                            <p className="text-xs text-gray-500 mt-1">Dealer: {(job.dealers as any).name}</p>
+                                          )}
                                       </div>
                                       <div className="text-right">
                                           <p className="text-sm text-green-500">Completed</p>
