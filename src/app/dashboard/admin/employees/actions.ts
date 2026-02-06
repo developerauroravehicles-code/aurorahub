@@ -13,15 +13,15 @@ export async function createEmployee(prevState: ActionState, formData: FormData)
     const supabase = await createClient()
     
     // Check current user's role
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) {
+    const { data: { user: currentUser } } = await supabase.auth.getUser()
+    if (!currentUser) {
       return { error: 'Unauthorized' }
     }
 
     const { data: currentProfile } = await supabase
       .from('profiles')
       .select('role')
-      .eq('id', user.id)
+      .eq('id', currentUser.id)
       .single()
 
     if (!currentProfile) {
