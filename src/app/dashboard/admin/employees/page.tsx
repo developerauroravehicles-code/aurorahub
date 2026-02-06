@@ -24,9 +24,11 @@ export default async function EmployeesPage() {
     .select('*, dealers(name)')
     .order('created_at', { ascending: false })
 
-  // If General Manager, filter by own dealer
+  // If General Manager, filter by own dealer and only show sales and finance
   if (currentUserProfile.role === 'general_manager') {
-    query = query.eq('dealer_id', currentUserProfile.dealer_id)
+    query = query
+      .eq('dealer_id', currentUserProfile.dealer_id)
+      .in('role', ['sales', 'finance'])
   }
 
   // If Aurora Manager, filter to show only Specialists
