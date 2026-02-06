@@ -31,18 +31,22 @@ export default async function SpecialistDetailsPage({ params }: { params: Promis
 
   if (!profile) return <div className="text-white">Specialist not found</div>
 
-  // Fetch assigned dealers for this specialist
-  const { data: assignedDealers } = await supabase
-    .from('specialist_dealers')
-    .select('id, dealer_id, dealers(name)')
-    .eq('specialist_id', id)
-    .order('created_at', { ascending: true })
+  // Fetch assigned dealers for this specialist (only if Aurora Manager)
+  const { data: assignedDealers } = isAuroraManager
+    ? await supabase
+        .from('specialist_dealers')
+        .select('id, dealer_id, dealers(name)')
+        .eq('specialist_id', id)
+        .order('created_at', { ascending: true })
+    : { data: null }
 
-  // Fetch all dealers for assignment dropdown
-  const { data: allDealers } = await supabase
-    .from('dealers')
-    .select('id, name')
-    .order('name')
+  // Fetch all dealers for assignment dropdown (only if Aurora Manager)
+  const { data: allDealers } = isAuroraManager
+    ? await supabase
+        .from('dealers')
+        .select('id, name')
+        .order('name')
+    : { data: null }
 
   // Fetch Jobs (Demands) assigned to this specialist OR completed by them (if we track 'completed_by')
   // For now, let's assume jobs are linked via 'assigned_specialist_id' or implicit assignment via dealer pool logic.
@@ -59,11 +63,13 @@ export default async function SpecialistDetailsPage({ params }: { params: Promis
   
   // Let's assume `assigned_specialist_id` is set when they pick it or complete it.
   
-  // Get list of dealer IDs assigned to this specialist
-  const assignedDealerIds = assignedDealers?.map(ad => ad.dealer_id) || []
+  // Get list of dealer IDs assigned to this specialist (only if Aurora Manager can see them)
+  // For non-Aurora Managers, we still need to fetch jobs but won't show dealer names
+  const assignedDealerIds = (isAuroraManager && assignedDealers) ? assignedDealers.map(ad => ad.dealer_id) : []
   
   // If specialist has assigned dealers, fetch jobs from all assigned dealers
   // Otherwise, fall back to profile.dealer_id (for backward compatibility)
+  // For non-Aurora Managers, we'll use profile.dealer_id but won't show dealer names in UI
   const dealerIdsToQuery = assignedDealerIds.length > 0 ? assignedDealerIds : (profile.dealer_id ? [profile.dealer_id] : [])
 
   // Fetch Completed Jobs from all assigned dealers
@@ -105,11 +111,11 @@ export default async function SpecialistDetailsPage({ params }: { params: Promis
         <h1 className="text-2xl font-bold text-white mb-2">{profile.full_name}</h1>
         <p className="text-gray-400">
           {profile.role.replace('_', ' ')}
-          {assignedDealers && assignedDealers.length > 0 ? (
+          {isAuroraManager && assignedDealers && assignedDealers.length > 0 ? (
             <span className="text-[#C27E00]">
               {' '}at {assignedDealers.map(ad => ad.dealers.name).join(', ')}
             </span>
-          ) : profile.dealers?.name ? (
+          ) : isAuroraManager && profile.dealers?.name ? (
             <span className="text-[#C27E00]"> at {profile.dealers.name}</span>
           ) : null}
         </p>
@@ -151,7 +157,7 @@ export default async function SpecialistDetailsPage({ params }: { params: Promis
                                       <div>
                                           <p className="font-medium text-white">{job.vehicle_year} {job.vehicle_make} {job.vehicle_model}</p>
                                           <p className="text-sm text-gray-400">{job.customer_firstname} {job.customer_lastname}</p>
-                                          {(job.dealers as any)?.name && (
+                                          {isAuroraManager && (job.dealers as any)?.name && (
                                             <p className="text-xs text-gray-500 mt-1">Dealer: {(job.dealers as any).name}</p>
                                           )}
                                       </div>
@@ -179,7 +185,7 @@ export default async function SpecialistDetailsPage({ params }: { params: Promis
                                       <div>
                                           <p className="font-medium text-white">{job.vehicle_year} {job.vehicle_make} {job.vehicle_model}</p>
                                           <p className="text-sm text-gray-400">{job.customer_firstname} {job.customer_lastname}</p>
-                                          {(job.dealers as any)?.name && (
+                                          {isAuroraManager && (job.dealers as any)?.name && (
                                             <p className="text-xs text-gray-500 mt-1">Dealer: {(job.dealers as any).name}</p>
                                           )}
                                       </div>
