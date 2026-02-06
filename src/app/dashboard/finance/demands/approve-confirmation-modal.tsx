@@ -90,9 +90,10 @@ export function ApproveConfirmationModal({ demandId, isOpen, onClose, hasAssigne
                 id="sendSMSToSpecialist"
                 checked={sendSMSToSpecialist}
                 onChange={(e) => setSendSMSToSpecialist(e.target.checked)}
-                className="mt-1 w-5 h-5 rounded border-gray-700 bg-black/50 text-[#C27E00] focus:ring-[#C27E00] focus:ring-offset-gray-900"
+                disabled
+                className="mt-1 w-5 h-5 rounded border-gray-700 bg-black/50 text-[#C27E00] focus:ring-[#C27E00] focus:ring-offset-gray-900 disabled:opacity-75 disabled:cursor-not-allowed"
               />
-              <label htmlFor="sendSMSToSpecialist" className="text-white cursor-pointer">
+              <label htmlFor="sendSMSToSpecialist" className="text-white cursor-not-allowed opacity-75">
                 Send information to Specialist
                 <span className="text-xs text-gray-500 ml-2">(Will be auto-assigned to dealer's specialist)</span>
               </label>
