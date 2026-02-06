@@ -1,5 +1,6 @@
 'use server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 
 type UserRole = 'sales' | 'finance' | 'specialist' | 'aurora_manager' | 'general_manager'
@@ -9,6 +10,23 @@ type ActionState = { error?: string; success?: boolean } | null
 export async function createEmployee(prevState: ActionState, formData: FormData): Promise<ActionState> {
   try {
     const supabaseAdmin = createAdminClient()
+    const supabase = await createClient()
+    
+    // Check current user's role
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
+      return { error: 'Unauthorized' }
+    }
+
+    const { data: currentProfile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single()
+
+    if (!currentProfile) {
+      return { error: 'User profile not found' }
+    }
     
     const email = formData.get('email') as string
     const password = formData.get('password') as string
@@ -25,6 +43,13 @@ export async function createEmployee(prevState: ActionState, formData: FormData)
     const validRoles: UserRole[] = ['sales', 'finance', 'specialist', 'aurora_manager', 'general_manager']
     if (!validRoles.includes(role as UserRole)) {
       return { error: 'Invalid role' }
+    }
+
+    // General Manager can only create sales and finance users
+    if (currentProfile.role === 'general_manager') {
+      if (role !== 'sales' && role !== 'finance') {
+        return { error: 'General Managers can only create Sales and Finance employees' }
+      }
     }
 
     // 1. Create Auth User

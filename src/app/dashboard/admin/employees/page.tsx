@@ -111,7 +111,7 @@ export default async function EmployeesPage() {
         </div>
       </div>
 
-      <CreateEmployeeForm dealers={dealers || []} />
+      <CreateEmployeeForm dealers={dealers || []} currentUserRole={currentUserProfile.role} />
     </div>
   )
 }

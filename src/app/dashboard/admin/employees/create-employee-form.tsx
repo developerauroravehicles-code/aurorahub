@@ -5,7 +5,12 @@ import { createEmployee } from './actions'
 import { useRouter } from 'next/navigation'
 import { useEffect } from 'react'
 
-export function CreateEmployeeForm({ dealers }: { dealers: Array<{ id: string; name: string }> }) {
+interface CreateEmployeeFormProps {
+  dealers: Array<{ id: string; name: string }>
+  currentUserRole?: string
+}
+
+export function CreateEmployeeForm({ dealers, currentUserRole }: CreateEmployeeFormProps) {
   const [state, formAction, isPending] = useActionState(createEmployee, null)
   const router = useRouter()
 
@@ -52,9 +57,13 @@ export function CreateEmployeeForm({ dealers }: { dealers: Array<{ id: string; n
           <select name="role" required className="border border-gray-700 bg-white/5 p-2 w-full rounded text-white focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]">
             <option value="sales" className="bg-black text-white">Sales</option>
             <option value="finance" className="bg-black text-white">Finance</option>
-            <option value="specialist" className="bg-black text-white">Specialist</option>
-            <option value="aurora_manager" className="bg-black text-white">Aurora Manager</option>
-            <option value="general_manager" className="bg-black text-white">General Manager</option>
+            {currentUserRole !== 'general_manager' && (
+              <>
+                <option value="specialist" className="bg-black text-white">Specialist</option>
+                <option value="aurora_manager" className="bg-black text-white">Aurora Manager</option>
+                <option value="general_manager" className="bg-black text-white">General Manager</option>
+              </>
+            )}
           </select>
         </div>
 
