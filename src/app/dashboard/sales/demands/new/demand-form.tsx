@@ -3,7 +3,7 @@
 import { useActionState, useState, useEffect } from 'react'
 import { createDemand, getTakenSlots } from './actions'
 import { format, addMinutes, setHours, setMinutes, isSunday, isSaturday } from 'date-fns'
-import { formatInTimeZone, zonedTimeToUtc } from 'date-fns-tz'
+import { formatInTimeZone, fromZonedTime } from 'date-fns-tz'
 import { AppointmentCalendar } from '@/components/appointment-calendar'
 
 interface CameraModel {
@@ -72,10 +72,9 @@ export function DemandForm({ cameraModels, defaultAddress = '', timezoneName = n
         // Convert to UTC for storage in database
         // If timezone is provided, treat the local time as if it's in dealer's timezone, then convert to UTC
         if (timezoneName) {
-          // Create datetime string in dealer's timezone format: YYYY-MM-DDTHH:mm:ss
-          const dateTimeStr = `${dateStr}T${format(current, 'HH:mm:ss')}`
           // Convert from dealer's timezone to UTC
-          const utcDate = zonedTimeToUtc(dateTimeStr, timezoneName)
+          // fromZonedTime takes a date and treats it as if it's in the specified timezone, then returns UTC
+          const utcDate = fromZonedTime(current, timezoneName)
           slots.push(utcDate.toISOString())
         } else {
           // No timezone, use local time (treat as UTC)
