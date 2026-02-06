@@ -55,7 +55,12 @@ export default async function EmployeesPage() {
         specialistDealersMap.set(sd.specialist_id, [])
       }
       if (sd.dealers) {
-        specialistDealersMap.get(sd.specialist_id)?.push(sd.dealers as { name: string })
+        // Supabase returns dealers as an object, not an array
+        // Use unknown first to avoid type error
+        const dealersData = sd.dealers as unknown as { name: string }
+        if (dealersData?.name) {
+          specialistDealersMap.get(sd.specialist_id)?.push({ name: dealersData.name })
+        }
       }
     })
   }
