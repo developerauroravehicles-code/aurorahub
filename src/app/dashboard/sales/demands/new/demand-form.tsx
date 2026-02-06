@@ -23,6 +23,8 @@ export function DemandForm({ cameraModels, defaultAddress = '', timezoneName = n
     if (selectedDate) {
       // Pass the date string directly
       getTakenSlots(selectedDate + 'T00:00:00').then(setTakenSlots)
+    } else {
+      setTakenSlots([])
     }
   }, [selectedDate])
 
@@ -249,30 +251,52 @@ export function DemandForm({ cameraModels, defaultAddress = '', timezoneName = n
             />
         </div>
 
-        {selectedDate && (
-            <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-300">Available Slots</label>
-                <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-3">
-                    {availableSlots.map(slot => {
-                        const isTaken = takenSlots.includes(slot)
-                        return (
-                            <button 
-                                type="button" 
-                                key={slot} 
-                                disabled={isTaken}
-                                onClick={() => setSelectedSlot(slot)}
-                                className={`p-2 border rounded text-sm font-medium transition-colors
-                                    ${selectedSlot === slot ? 'bg-[#C27E00] text-white border-[#C27E00]' : 
-                                      isTaken ? 'bg-white/5 text-gray-500 cursor-not-allowed border-gray-800' : 'bg-black/50 hover:bg-white/10 text-gray-300 border-gray-700'}`}
-                            >
-                                {format(new Date(slot), 'HH:mm')}
-                            </button>
-                        )
-                    })}
+        {selectedDate && (() => {
+            // Filter out blocked slots - only show available slots
+            const availableOnlySlots = availableSlots.filter(slot => {
+                // Check if this slot overlaps with any taken appointment
+                const isBlocked = takenSlots.some(takenSlot => {
+                    const slotTime = new Date(slot)
+                    const slotStart = slotTime.getTime()
+                    const slotEnd = slotStart + 75 * 60 * 1000 // 75 minutes
+                    
+                    const takenTime = new Date(takenSlot)
+                    const takenStart = takenTime.getTime()
+                    const takenEnd = takenStart + 75 * 60 * 1000 // 75 minutes
+                    
+                    // Check for overlap: slotStart < takenEnd && slotEnd > takenStart
+                    return slotStart < takenEnd && slotEnd > takenStart
+                })
+                
+                return !isBlocked // Only include non-blocked slots
+            })
+            
+            return (
+                <div className="space-y-2">
+                    <label className="block text-sm font-medium text-gray-300">Available Slots</label>
+                    {availableOnlySlots.length > 0 ? (
+                        <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-3">
+                            {availableOnlySlots.map(slot => (
+                                <button 
+                                    type="button" 
+                                    key={slot} 
+                                    onClick={() => setSelectedSlot(slot)}
+                                    className={`p-2 border rounded text-sm font-medium transition-colors
+                                        ${selectedSlot === slot 
+                                            ? 'bg-[#C27E00] text-white border-[#C27E00]' 
+                                            : 'bg-black/50 hover:bg-white/10 text-gray-300 border-gray-700'}`}
+                                    title={format(new Date(slot), 'HH:mm')}
+                                >
+                                    {format(new Date(slot), 'HH:mm')}
+                                </button>
+                            ))}
+                        </div>
+                    ) : (
+                        <p className="text-sm text-gray-500">No available slots for this date. All time slots are booked.</p>
+                    )}
                 </div>
-                {availableSlots.length === 0 && <p className="text-sm text-gray-500">No slots available for this date.</p>}
-            </div>
-        )}
+            )
+        })()}
         <input type="hidden" name="appointmentDate" value={selectedSlot} />
       </div>
 

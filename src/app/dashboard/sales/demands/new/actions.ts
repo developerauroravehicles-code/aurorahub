@@ -104,7 +104,47 @@ export async function getTakenSlots(dateStr: string) {
         .neq('status', 'cancelled')
     // Note: No dealer_id filter - this checks all dealers globally
 
-    return data?.map(d => d.appointment_date) || []
+    if (!data || data.length === 0) {
+        return []
+    }
+
+    // Return all appointment dates - these will be checked for overlap in the UI
+    return data.map(d => d.appointment_date)
+}
+
+/**
+ * Check if a specific slot overlaps with any existing appointment
+ * Returns true if the slot is blocked (overlaps with an existing appointment)
+ */
+export async function isSlotBlocked(slotDate: string): Promise<boolean> {
+    const supabase = await createClient()
+    
+    const slotTime = new Date(slotDate)
+    const slotStart = new Date(slotTime)
+    const slotEnd = new Date(slotTime.getTime() + 75 * 60 * 1000) // 75 minutes
+    
+    // Get all non-cancelled appointments
+    const { data, error } = await supabase
+        .from('demands')
+        .select('appointment_date')
+        .neq('status', 'cancelled')
+    
+    if (error || !data || data.length === 0) {
+        return false
+    }
+    
+    // Check for overlap with any existing appointment
+    for (const demand of data) {
+        const existingStart = new Date(demand.appointment_date)
+        const existingEnd = new Date(existingStart.getTime() + 75 * 60 * 1000) // 75 minutes
+        
+        // Check if slots overlap
+        if (slotStart < existingEnd && slotEnd > existingStart) {
+            return true // Slot is blocked
+        }
+    }
+    
+    return false // Slot is available
 }
 
 /**
