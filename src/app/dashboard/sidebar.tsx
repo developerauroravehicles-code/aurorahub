@@ -60,6 +60,13 @@ export function Sidebar({
   return (
     <div className="flex w-64 flex-col bg-black text-white border-r border-gray-800">
       <div className="flex flex-1 flex-col overflow-y-auto">
+        {/* Dealer Clock - Top of Sidebar */}
+        {timezoneName && (
+          <div className="px-4 pt-6 pb-4 border-b border-gray-800">
+            <DealerClock timezoneName={timezoneName} timezoneDisplayName={timezoneDisplayName} />
+          </div>
+        )}
+        
         <nav className="flex-1 space-y-1 px-4 py-6">
           {links.map((link) => {
             const Icon = link.icon
@@ -85,13 +92,6 @@ export function Sidebar({
         </nav>
       </div>
       <div className="border-t border-gray-800 p-6">
-        {/* Dealer Clock */}
-        {timezoneName && (
-          <div className="mb-6">
-            <DealerClock timezoneName={timezoneName} timezoneDisplayName={timezoneDisplayName} />
-          </div>
-        )}
-        
         <div className="flex items-center mb-6">
           <div className="ml-0">
             <p className="text-sm font-medium text-white">{profile.full_name || 'User'}</p>
