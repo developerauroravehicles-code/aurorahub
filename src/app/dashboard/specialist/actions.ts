@@ -2,7 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { sendSMS } from '@/lib/twilio'
-import { format } from 'date-fns'
+import { getFourHourReminderMessage } from '@/lib/sms-messages'
 
 export async function sendAppointmentReminderSMS(demandId: string) {
   const supabase = await createClient()
@@ -34,12 +34,9 @@ export async function sendAppointmentReminderSMS(demandId: string) {
     return { error: 'This demand is not assigned to you' }
   }
 
-  // Format the appointment date (same format as customer SMS)
-  const appointmentDate = new Date(demand.appointment_date)
-  const formattedDate = format(appointmentDate, 'MMMM dd, yyyy \'at\' HH:mm')
-  
-  // Create the SMS message (same as customer SMS)
-  const message = `An appointment has been created for ${formattedDate} at ${demand.customer_address || 'the specified location'}. Aurora Vehicles.`
+  // Use 4-Hour Reminder message format
+  const address = demand.customer_address || 'the specified location'
+  const message = getFourHourReminderMessage(address)
   
   // Send SMS to specialist
   if (profile.phone) {

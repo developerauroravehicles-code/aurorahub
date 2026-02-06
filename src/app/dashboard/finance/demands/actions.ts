@@ -2,7 +2,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { sendSMS } from '@/lib/twilio'
-import { format } from 'date-fns'
+import { getAppointmentCreatedMessage, getCancellationNoticeMessage, isWithin24Hours } from '@/lib/sms-messages'
 
 export async function assignDemandToMe(demandId: string) {
   const supabase = await createClient()
@@ -127,10 +127,11 @@ export async function approveDemand(demandId: string, sendSMSToCustomer: boolean
         .eq('id', demand.dealer_id)
         .single()
       
-      const dateStr = format(new Date(demand.appointment_date), 'MMMM dd, yyyy \'at\' HH:mm')
+      const appointmentDate = new Date(demand.appointment_date)
       const location = demand.customer_address || dealer?.address || dealer?.name || 'Authorized Dealer'
       
-      const message = `An appointment has been created for ${dateStr} at ${location}. Aurora Vehicles.`
+      // Use new Appointment Created message format
+      const message = getAppointmentCreatedMessage(appointmentDate, location)
       
       // Send SMS to customer
       if (demand.customer_phone) {
@@ -176,7 +177,7 @@ export async function cancelDemand(demandId: string) {
   // Check if demand is assigned to current user
   const { data: demand } = await supabase
     .from('demands')
-    .select('assigned_finance_id, status')
+    .select('assigned_finance_id, status, appointment_date, customer_phone')
     .eq('id', demandId)
     .single()
 
@@ -193,6 +194,21 @@ export async function cancelDemand(demandId: string) {
     .eq('id', demandId)
   
   if (error) return { error: error.message }
+  
+  // Send cancellation notice SMS if appointment is within 24 hours
+  if (demand.appointment_date && demand.customer_phone) {
+    const appointmentDate = new Date(demand.appointment_date)
+    if (isWithin24Hours(appointmentDate)) {
+      try {
+        const message = getCancellationNoticeMessage()
+        await sendSMS(demand.customer_phone, message).catch((error) => {
+          console.error('Failed to send cancellation SMS:', error)
+        })
+      } catch (smsError) {
+        console.error('Failed to send cancellation SMS:', smsError)
+      }
+    }
+  }
   
   revalidatePath('/dashboard/finance/demands')
   revalidatePath('/dashboard')
@@ -219,7 +235,7 @@ export async function updateDemand(demandId: string, formData: FormData) {
   // Check if demand is assigned to current user
   const { data: demand } = await supabase
     .from('demands')
-    .select('assigned_finance_id, status')
+    .select('assigned_finance_id, status, appointment_date, customer_phone')
     .eq('id', demandId)
     .single()
 
@@ -244,6 +260,11 @@ export async function updateDemand(demandId: string, formData: FormData) {
   const stockNumber = formData.get('stock_number') as string | null
   const cameraModel = formData.get('camera_model') as string
   const appointmentDate = formData.get('appointment_date') as string
+  
+  // Check if appointment date changed and if old date was within 24 hours
+  const oldAppointmentDate = demand.appointment_date ? new Date(demand.appointment_date) : null
+  const newAppointmentDate = new Date(appointmentDate)
+  const appointmentDateChanged = oldAppointmentDate && oldAppointmentDate.getTime() !== newAppointmentDate.getTime()
 
   // Validate required fields
   if (!customerFirstname || !customerLastname || !customerPhone || !vehicleMake || !vehicleModel || !cameraModel || !appointmentDate) {
@@ -273,6 +294,18 @@ export async function updateDemand(demandId: string, formData: FormData) {
     .eq('id', demandId)
 
   if (updateError) return { error: updateError.message }
+
+  // Send cancellation/rescheduling notice SMS if appointment date changed and old date was within 24 hours
+  if (appointmentDateChanged && oldAppointmentDate && demand.customer_phone && isWithin24Hours(oldAppointmentDate)) {
+    try {
+      const message = getCancellationNoticeMessage()
+      await sendSMS(demand.customer_phone, message).catch((error) => {
+        console.error('Failed to send rescheduling SMS:', error)
+      })
+    } catch (smsError) {
+      console.error('Failed to send rescheduling SMS:', smsError)
+    }
+  }
 
   revalidatePath('/dashboard/finance/demands')
   revalidatePath('/dashboard')
