@@ -9,10 +9,20 @@ export default async function RegionManagementPage() {
   const supabase = await createClient()
   
   // Fetch region codes with timezone
-  const { data: regionCodes } = await supabase
+  const { data: regionCodesRaw } = await supabase
     .from('region_codes')
     .select('id, code, name, description, timezone_id, timezones(id, name, display_name, utc_offset), created_at, updated_at')
     .order('code')
+  
+  // Transform data to match component's expected type
+  const regionCodes = regionCodesRaw?.map((rc: any) => ({
+    ...rc,
+    timezones: rc.timezones && Array.isArray(rc.timezones) && rc.timezones.length > 0
+      ? rc.timezones[0]
+      : rc.timezones && !Array.isArray(rc.timezones)
+      ? rc.timezones
+      : null
+  })) || []
 
   // Fetch all timezones for selection
   const { data: timezones } = await supabase
