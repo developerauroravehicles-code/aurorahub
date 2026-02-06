@@ -21,10 +21,10 @@ export async function sendAppointmentReminderSMS(demandId: string) {
     return { error: 'Only specialists can send appointment reminders' }
   }
 
-  // Get demand details
+  // Get demand details with dealer timezone info
   const { data: demand } = await supabase
     .from('demands')
-    .select('appointment_date, customer_address, assigned_specialist_id')
+    .select('appointment_date, customer_address, assigned_specialist_id, dealer_id, dealers(region_codes(timezone_id, timezones(name)))')
     .eq('id', demandId)
     .single()
 
@@ -34,9 +34,12 @@ export async function sendAppointmentReminderSMS(demandId: string) {
     return { error: 'This demand is not assigned to you' }
   }
 
-  // Use 4-Hour Reminder message format
+  // Use Reminder message format with dynamic hours
   const address = demand.customer_address || 'the specified location'
-  const message = getFourHourReminderMessage(address)
+  const appointmentDate = new Date(demand.appointment_date)
+  // Get timezone from dealer > region > timezone
+  const timezoneName = (demand.dealers as any)?.region_codes?.timezones?.name || undefined
+  const message = getFourHourReminderMessage(appointmentDate, address, timezoneName)
   
   // Send SMS to specialist
   if (profile.phone) {
