@@ -60,7 +60,7 @@ export async function approveDemand(demandId: string, sendSMSToCustomer: boolean
   // Check if user is finance and demand is assigned to them
   const { data: demand } = await supabase
     .from('demands')
-    .select('assigned_finance_id, status, dealer_id, customer_phone, appointment_date, customer_address')
+    .select('assigned_finance_id, assigned_specialist_id, status, dealer_id, customer_phone, appointment_date, customer_address')
     .eq('id', demandId)
     .single()
 
@@ -92,7 +92,7 @@ export async function approveDemand(demandId: string, sendSMSToCustomer: boolean
   if (updateError) return { error: updateError.message }
 
   // Send SMS if requested
-  if (sendSMSToCustomer && demand.customer_phone) {
+  if (sendSMSToCustomer) {
     try {
       // Fetch dealer info for message
       const { data: dealer } = await supabase
@@ -106,8 +106,27 @@ export async function approveDemand(demandId: string, sendSMSToCustomer: boolean
       
       const message = `An appointment has been created for ${dateStr} at ${location}. Aurora Vehicles.`
       
-      // Send SMS (non-blocking - don't fail approval if SMS fails)
-      await sendSMS(demand.customer_phone, message)
+      // Send SMS to customer
+      if (demand.customer_phone) {
+        await sendSMS(demand.customer_phone, message).catch((error) => {
+          console.error('Failed to send SMS to customer:', error)
+        })
+      }
+      
+      // Send SMS to assigned specialist if exists
+      if (demand.assigned_specialist_id) {
+        const { data: specialist } = await supabase
+          .from('profiles')
+          .select('phone')
+          .eq('id', demand.assigned_specialist_id)
+          .single()
+        
+        if (specialist?.phone) {
+          await sendSMS(specialist.phone, message).catch((error) => {
+            console.error('Failed to send SMS to specialist:', error)
+          })
+        }
+      }
     } catch (smsError) {
       // Log SMS error but don't fail the approval
       console.error('Failed to send SMS notification:', smsError)
