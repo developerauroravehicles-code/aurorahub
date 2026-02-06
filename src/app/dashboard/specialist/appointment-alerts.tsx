@@ -103,8 +103,9 @@ export function AppointmentAlerts({ appointments }: AppointmentAlertsProps) {
     const statusA = getAlertStatus(a.appointment_date)
     const statusB = getAlertStatus(b.appointment_date)
     
-    const priority = { overdue: 0, today: 1, tomorrow: 2 }
-    return priority[statusA] - priority[statusB]
+    // filteredAppointments only contains overdue, today, or tomorrow, so 'normal' is excluded
+    const priority: Record<Exclude<AlertStatus, 'normal'>, number> = { overdue: 0, today: 1, tomorrow: 2 }
+    return priority[statusA as Exclude<AlertStatus, 'normal'>] - priority[statusB as Exclude<AlertStatus, 'normal'>]
   })
 
   return (
