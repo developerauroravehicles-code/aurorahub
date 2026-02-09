@@ -163,7 +163,13 @@ export async function createUser(prevState: ActionState, formData: FormData) {
     user_metadata: { full_name: fullName }
   })
 
-  if (authError) return { error: authError.message }
+  if (authError) {
+    const msg = authError.message || ''
+    if (msg.toLowerCase().includes('already') || msg.toLowerCase().includes('registered') || msg.toLowerCase().includes('duplicate') || msg.includes('users_email_key')) {
+      return { error: 'Bu e-posta adresi daha önce kullanılmış. Silinen kullanıcıların e-postası Supabase tarafında bir süre rezerve kalabilir. Farklı bir e-posta deneyin veya Supabase Dashboard > Authentication > Users üzerinden ilgili kullanıcıyı kalıcı silin.' }
+    }
+    return { error: authError.message }
+  }
   if (!userData.user) return { error: 'Failed to create user' }
 
   // 2. Find Dealer ID
@@ -290,7 +296,10 @@ export async function deleteUser(userId: string) {
   if (user.id === userId) return { error: 'You cannot delete your own account.' }
 
   const supabaseAdmin = getAdminClient()
-  const { error } = await supabaseAdmin.auth.admin.deleteUser(userId)
+  // Önce public.profiles kaydını sil (auth silinince sarkan kayıt kalmasın)
+  await supabaseAdmin.from('profiles').delete().eq('id', userId)
+  // Hard delete (shouldSoftDelete: false) — e-posta yeni kullanıcıda kullanılabilsin
+  const { error } = await supabaseAdmin.auth.admin.deleteUser(userId, false)
   if (error) return { error: error.message }
   revalidatePath('/dashboard/system-management/user')
   return { success: 'User deleted successfully.' }
