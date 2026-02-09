@@ -5,7 +5,7 @@ import { format } from 'date-fns'
 import { formatInTimeZone } from 'date-fns-tz'
 import { sendAppointmentReminderSMS } from './actions'
 
-interface AppointmentAlert {
+export interface AppointmentAlert {
   id: string
   appointment_date: string
   customer_firstname: string

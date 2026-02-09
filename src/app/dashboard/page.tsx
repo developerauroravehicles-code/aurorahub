@@ -2,7 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { format } from 'date-fns'
 import { formatInTimeZone } from 'date-fns-tz'
 import Link from 'next/link'
-import { AppointmentAlerts } from './specialist/appointment-alerts'
+import { AppointmentAlerts, type AppointmentAlert } from './specialist/appointment-alerts'
 
 export default async function DashboardPage() {
   const supabase = await createClient()
@@ -273,10 +273,23 @@ export default async function DashboardPage() {
       .eq('assigned_specialist_id', user.id)
       .eq('status', 'approved')
       .order('appointment_date', { ascending: true })
-    const assignedWork = assignedWorkRaw?.map((d: Record<string, unknown>) => ({
-      ...d,
-      timezoneName: (d.dealers as { region_codes?: { timezones?: { name: string } } } | null)?.region_codes?.timezones?.name ?? null
-    }))
+    const assignedWork: AppointmentAlert[] | undefined = assignedWorkRaw?.map((d) => {
+      const row = d as Record<string, unknown> & { dealers?: { region_codes?: { timezones?: { name: string } } } | null }
+      return {
+        ...d,
+        id: row.id as string,
+        appointment_date: row.appointment_date as string,
+        customer_firstname: row.customer_firstname as string,
+        customer_lastname: row.customer_lastname as string,
+        vehicle_make: row.vehicle_make as string,
+        vehicle_model: row.vehicle_model as string,
+        vehicle_year: row.vehicle_year as number,
+        camera_model: row.camera_model as string,
+        customer_address: (row.customer_address as string | null) ?? null,
+        stock_number: (row.stock_number as string | null) ?? null,
+        timezoneName: row.dealers?.region_codes?.timezones?.name ?? null
+      }
+    })
 
     // Get completed demands by this specialist
     const { data: completedWork } = await supabase
