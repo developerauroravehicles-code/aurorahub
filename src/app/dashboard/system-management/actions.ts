@@ -254,10 +254,15 @@ export async function updateUser(prevState: ActionState, formData: FormData) {
   }
 
   if (email?.trim()) {
-    const { error: authError } = await supabaseAdmin.auth.admin.updateUserById(userId, {
-      email: email.trim()
-    })
-    if (authError) return { error: 'Failed to update email: ' + authError.message }
+    const { data: existingUser } = await supabaseAdmin.auth.admin.getUserById(userId)
+    const currentEmail = existingUser?.user?.email?.toLowerCase()
+    const newEmail = email.trim().toLowerCase()
+    if (currentEmail !== newEmail) {
+      const { error: authError } = await supabaseAdmin.auth.admin.updateUserById(userId, {
+        email: email.trim()
+      })
+      if (authError) return { error: 'Failed to update email: ' + authError.message }
+    }
   }
 
   const { error: profileError } = await supabaseAdmin
