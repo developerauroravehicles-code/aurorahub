@@ -293,7 +293,9 @@ export function FinanceDemandsList({ myAssignedDemands, unassignedDemands, allAs
                         Dealer: {(Array.isArray(demand.dealers) ? demand.dealers[0] : demand.dealers)?.name}
                       </p>
                       <p className="text-xs text-gray-600 mt-1">
-                        Created: {format(new Date(demand.created_at), 'PPP p')}
+                        Created: {getDealerTimezone(demand.dealers)
+                          ? formatInTimeZone(new Date(demand.created_at), getDealerTimezone(demand.dealers)!, 'PPP p')
+                          : format(new Date(demand.created_at), 'PPP p')}
                       </p>
                     </div>
                     <DemandActions demandId={demand.id} isAssigned={false} />

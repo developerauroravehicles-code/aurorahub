@@ -27,6 +27,17 @@ export default async function DashboardPage() {
       .eq('created_by', user.id)
       .order('created_at', { ascending: false })
 
+    // Dealer timezone for appointment display (sales has single dealer)
+    let salesTimezoneName: string | null = null
+    if (profile.dealer_id) {
+      const { data: dealer } = await supabase
+        .from('dealers')
+        .select('region_codes(timezone_id, timezones(name))')
+        .eq('id', profile.dealer_id)
+        .single()
+      salesTimezoneName = (dealer?.region_codes as { timezones?: { name: string } } | null)?.timezones?.name ?? null
+    }
+
     // Calculate statistics
     const totalDemands = demands?.length || 0
     const pendingFinance = demands?.filter(d => d.status === 'pending_finance').length || 0
@@ -114,7 +125,9 @@ export default async function DashboardPage() {
                             {demand.vehicle_year} {demand.vehicle_make} {demand.vehicle_model}
                           </p>
                           <p className="text-xs text-gray-500 mt-1">
-                            Appointment: {format(new Date(demand.appointment_date), 'PPP p')}
+                            Appointment: {salesTimezoneName
+                              ? formatInTimeZone(new Date(demand.appointment_date), salesTimezoneName, 'PPP p')
+                              : format(new Date(demand.appointment_date), 'PPP p')}
                           </p>
                         </div>
                         <div className="text-right">
@@ -309,10 +322,10 @@ export default async function DashboardPage() {
       }
     })
 
-    // Get completed demands by this specialist
+    // Get completed demands by this specialist (with dealer timezone for date display)
     const { data: completedWork } = await supabase
       .from('demands')
-      .select('id, status, updated_at, created_at, customer_firstname, customer_lastname, vehicle_make, vehicle_model, vehicle_year, camera_model, appointment_date')
+      .select('id, status, updated_at, created_at, customer_firstname, customer_lastname, vehicle_make, vehicle_model, vehicle_year, camera_model, appointment_date, dealers(region_codes(timezone_id, timezones(name)))')
       .eq('assigned_specialist_id', user.id)
       .eq('status', 'completed')
       .order('updated_at', { ascending: false })
@@ -513,7 +526,11 @@ export default async function DashboardPage() {
             
             <div className="bg-white/5 rounded-lg border border-gray-800 shadow overflow-hidden">
               <ul className="divide-y divide-gray-800">
-                {completedWork?.slice(0, 5).map(demand => (
+                {completedWork?.slice(0, 5).map(demand => {
+                  const completedDealers = (demand as { dealers?: { region_codes?: { timezones?: { name: string } } } | null }).dealers
+                  const completedTz = (Array.isArray(completedDealers) ? completedDealers[0] : completedDealers)?.region_codes?.timezones?.name ?? null
+                  const fmt = (d: Date, fmtStr: string) => completedTz ? formatInTimeZone(d, completedTz, fmtStr) : format(d, fmtStr)
+                  return (
                   <li key={demand.id} className="p-4 hover:bg-white/5 transition-colors">
                     <div className="flex justify-between items-start">
                       <div className="flex-1">
@@ -532,17 +549,18 @@ export default async function DashboardPage() {
                           {demand.camera_model}
                         </p>
                         <p className="text-xs text-gray-500 mt-1">
-                          Completed: {format(new Date(demand.updated_at || demand.created_at), 'MMM d, yyyy')}
+                          Completed: {fmt(new Date(demand.updated_at || demand.created_at), 'MMM d, yyyy')}
                         </p>
                       </div>
                       <div className="text-right">
                         <p className="text-xs text-gray-500">
-                          {format(new Date(demand.appointment_date), 'MMM d, yyyy')}
+                          {fmt(new Date(demand.appointment_date), 'MMM d, yyyy')}
                         </p>
                       </div>
                     </div>
                   </li>
-                ))}
+                  )
+                })}
               </ul>
             </div>
           </div>
@@ -564,10 +582,10 @@ export default async function DashboardPage() {
       .select('*', { count: 'exact', head: true })
       .eq('role', 'specialist')
 
-    // Get all demands for statistics
+    // Get all demands for statistics (with dealer timezone for appointment display)
     const { data: allDemands } = await supabase
       .from('demands')
-      .select('id, status, created_at, customer_firstname, customer_lastname, vehicle_make, vehicle_model, vehicle_year, camera_model, appointment_date')
+      .select('id, status, created_at, customer_firstname, customer_lastname, vehicle_make, vehicle_model, vehicle_year, camera_model, appointment_date, dealers(region_codes(timezone_id, timezones(name)))')
       .order('created_at', { ascending: false })
 
     // Calculate demand statistics
@@ -672,7 +690,8 @@ export default async function DashboardPage() {
                     completed: 'bg-green-900/50 text-green-300 border-green-800',
                     cancelled: 'bg-red-900/50 text-red-300 border-red-800'
                   }
-                  
+                  const amDealers = (demand as { dealers?: { region_codes?: { timezones?: { name: string } } } | null }).dealers
+                  const amTz = (Array.isArray(amDealers) ? amDealers[0] : amDealers)?.region_codes?.timezones?.name ?? null
                   return (
                     <li key={demand.id} className="p-4 hover:bg-white/5 transition-colors">
                       <div className="flex justify-between items-start">
@@ -692,7 +711,7 @@ export default async function DashboardPage() {
                             Camera: {demand.camera_model}
                           </p>
                           <p className="text-xs text-gray-500 mt-1">
-                            Appointment: {format(new Date(demand.appointment_date), 'PPP p')}
+                            Appointment: {amTz ? formatInTimeZone(new Date(demand.appointment_date), amTz, 'PPP p') : format(new Date(demand.appointment_date), 'PPP p')}
                           </p>
                         </div>
                         <div className="text-right">
@@ -714,12 +733,13 @@ export default async function DashboardPage() {
 
   // If general_manager user, fetch dealer-specific statistics
   if (profile.role === 'general_manager' && profile.dealer_id) {
-    // Get dealer information
+    // Get dealer information and timezone for appointment display
     const { data: dealer } = await supabase
       .from('dealers')
-      .select('name, code')
+      .select('name, code, region_codes(timezone_id, timezones(name))')
       .eq('id', profile.dealer_id)
       .single()
+    const gmTimezoneName: string | null = (dealer?.region_codes as { timezones?: { name: string } } | null)?.timezones?.name ?? null
 
     // Get all demands for this dealer
     const { data: allDemands } = await supabase
@@ -869,7 +889,7 @@ export default async function DashboardPage() {
                           {demand.camera_model}
                         </p>
                         <p className="text-xs text-[#C27E00] mt-1 font-semibold">
-                          {format(new Date(demand.appointment_date), 'PPP p')}
+                          {gmTimezoneName ? formatInTimeZone(new Date(demand.appointment_date), gmTimezoneName, 'PPP p') : format(new Date(demand.appointment_date), 'PPP p')}
                         </p>
                       </div>
                     </div>
@@ -906,7 +926,6 @@ export default async function DashboardPage() {
                     completed: 'bg-green-900/50 text-green-300 border-green-800',
                     cancelled: 'bg-red-900/50 text-red-300 border-red-800'
                   }
-                  
                   return (
                     <li key={demand.id} className="p-4 hover:bg-white/5 transition-colors">
                       <div className="flex justify-between items-start">
@@ -926,7 +945,7 @@ export default async function DashboardPage() {
                             Camera: {demand.camera_model}
                           </p>
                           <p className="text-xs text-gray-500 mt-1">
-                            Appointment: {format(new Date(demand.appointment_date), 'PPP p')}
+                            Appointment: {gmTimezoneName ? formatInTimeZone(new Date(demand.appointment_date), gmTimezoneName, 'PPP p') : format(new Date(demand.appointment_date), 'PPP p')}
                           </p>
                         </div>
                         <div className="text-right">

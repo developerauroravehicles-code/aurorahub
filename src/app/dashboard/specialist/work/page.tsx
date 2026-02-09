@@ -172,7 +172,9 @@ export default async function SpecialistWorkPage() {
                                                 Customer: {demand.customer_phone}
                                             </p>
                                             <p className="text-xs text-gray-600 mt-1">
-                                                Created: {format(new Date(demand.created_at), 'PPP p')}
+                                                Created: {getDealerTimezone(demand)
+                                                    ? formatInTimeZone(new Date(demand.created_at), getDealerTimezone(demand)!, 'PPP p')
+                                                    : format(new Date(demand.created_at), 'PPP p')}
                                             </p>
                                         </div>
                                         <WorkActions demandId={demand.id} isAssigned={false} />

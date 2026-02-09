@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { format } from 'date-fns'
+import { formatInTimeZone } from 'date-fns-tz'
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 import { DealerAssignment } from './dealer-assignment'
@@ -81,32 +82,32 @@ export default async function SpecialistDetailsPage({ params }: { params: Promis
   // For non-Aurora Managers, we'll use profile.dealer_id but won't show dealer names in UI
   const dealerIdsToQuery = assignedDealerIds.length > 0 ? assignedDealerIds : (profile.dealer_id ? [profile.dealer_id] : [])
 
-  // Fetch Completed Jobs from all assigned dealers
+  // Fetch Completed Jobs from all assigned dealers (with dealer timezone for date display)
   const { data: completedJobs } = assignedDealerIds.length > 0
     ? await supabase
         .from('demands')
-        .select('id, status, created_at, updated_at, customer_firstname, customer_lastname, vehicle_make, vehicle_model, vehicle_year, appointment_date, dealer_id, dealers(name)')
+        .select('id, status, created_at, updated_at, customer_firstname, customer_lastname, vehicle_make, vehicle_model, vehicle_year, appointment_date, dealer_id, dealers(name, region_codes(timezone_id, timezones(name)))')
         .eq('status', 'completed')
         .in('dealer_id', assignedDealerIds)
         .order('updated_at', { ascending: false })
     : await supabase
         .from('demands')
-        .select('id, status, created_at, updated_at, customer_firstname, customer_lastname, vehicle_make, vehicle_model, vehicle_year, appointment_date, dealer_id, dealers(name)')
+        .select('id, status, created_at, updated_at, customer_firstname, customer_lastname, vehicle_make, vehicle_model, vehicle_year, appointment_date, dealer_id, dealers(name, region_codes(timezone_id, timezones(name)))')
         .eq('status', 'completed')
         .eq('dealer_id', profile.dealer_id || '')
         .order('updated_at', { ascending: false })
     
-  // Fetch Pending Jobs (Approved but not completed) from all assigned dealers
+  // Fetch Pending Jobs (Approved but not completed) from all assigned dealers (with dealer timezone)
   const { data: pendingJobs } = assignedDealerIds.length > 0
     ? await supabase
         .from('demands')
-        .select('id, status, created_at, customer_firstname, customer_lastname, vehicle_make, vehicle_model, vehicle_year, appointment_date, dealer_id, dealers(name)')
+        .select('id, status, created_at, customer_firstname, customer_lastname, vehicle_make, vehicle_model, vehicle_year, appointment_date, dealer_id, dealers(name, region_codes(timezone_id, timezones(name)))')
         .eq('status', 'approved')
         .in('dealer_id', assignedDealerIds)
         .order('appointment_date', { ascending: true })
     : await supabase
         .from('demands')
-        .select('id, status, created_at, customer_firstname, customer_lastname, vehicle_make, vehicle_model, vehicle_year, appointment_date, dealer_id, dealers(name)')
+        .select('id, status, created_at, customer_firstname, customer_lastname, vehicle_make, vehicle_model, vehicle_year, appointment_date, dealer_id, dealers(name, region_codes(timezone_id, timezones(name)))')
         .eq('status', 'approved')
         .eq('dealer_id', profile.dealer_id || '')
         .order('appointment_date', { ascending: true })
@@ -160,7 +161,9 @@ export default async function SpecialistDetailsPage({ params }: { params: Promis
                       <p className="p-4 text-gray-500">No pending jobs.</p>
                   ) : (
                       <ul className="divide-y divide-gray-800">
-                          {pendingJobs?.map(job => (
+                          {pendingJobs?.map(job => {
+                              const jobTz = (job.dealers as { region_codes?: { timezones?: { name: string } } } | null)?.region_codes?.timezones?.name ?? null
+                              return (
                               <li key={job.id} className="p-4 hover:bg-white/5 transition-colors">
                                   <div className="flex justify-between items-center">
                                       <div>
@@ -171,11 +174,12 @@ export default async function SpecialistDetailsPage({ params }: { params: Promis
                                           )}
                                       </div>
                                       <div className="text-right">
-                                          <p className="text-sm text-[#C27E00]">{format(new Date(job.appointment_date), 'PPP p')}</p>
+                                          <p className="text-sm text-[#C27E00]">{jobTz ? formatInTimeZone(new Date(job.appointment_date), jobTz, 'PPP p') : format(new Date(job.appointment_date), 'PPP p')}</p>
                                       </div>
                                   </div>
                               </li>
-                          ))}
+                              )
+                          })}
                       </ul>
                   )}
               </div>
@@ -188,7 +192,9 @@ export default async function SpecialistDetailsPage({ params }: { params: Promis
                       <p className="p-4 text-gray-500">No completed jobs.</p>
                   ) : (
                       <ul className="divide-y divide-gray-800">
-                          {completedJobs?.map(job => (
+                          {completedJobs?.map(job => {
+                              const jobTz = (job.dealers as { region_codes?: { timezones?: { name: string } } } | null)?.region_codes?.timezones?.name ?? null
+                              return (
                               <li key={job.id} className="p-4 hover:bg-white/5 transition-colors">
                                   <div className="flex justify-between items-center">
                                       <div>
@@ -200,11 +206,12 @@ export default async function SpecialistDetailsPage({ params }: { params: Promis
                                       </div>
                                       <div className="text-right">
                                           <p className="text-sm text-green-500">Completed</p>
-                                          <p className="text-xs text-gray-500">{format(new Date(job.updated_at), 'PPP')}</p>
+                                          <p className="text-xs text-gray-500">{jobTz ? formatInTimeZone(new Date(job.updated_at), jobTz, 'PPP') : format(new Date(job.updated_at), 'PPP')}</p>
                                       </div>
                                   </div>
                               </li>
-                          ))}
+                              )
+                          })}
                       </ul>
                   )}
               </div>

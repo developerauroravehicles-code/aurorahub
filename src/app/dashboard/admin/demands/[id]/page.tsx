@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { format } from 'date-fns'
+import { formatInTimeZone } from 'date-fns-tz'
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 
@@ -7,12 +8,12 @@ export default async function DemandDetailsPage({ params }: { params: Promise<{ 
   const { id } = await params
   const supabase = await createClient()
   
-  // Fetch demand with all related data
+  // Fetch demand with all related data (dealers timezone for appointment display)
   const { data: demand } = await supabase
     .from('demands')
     .select(`
       *,
-      dealers(name),
+      dealers(name, region_codes(timezone_id, timezones(name))),
       profiles!demands_created_by_fkey(full_name, role),
       assigned_finance:profiles!demands_assigned_finance_id_fkey(full_name, role),
       assigned_specialist:profiles!demands_assigned_specialist_id_fkey(full_name, role)
@@ -105,7 +106,9 @@ export default async function DemandDetailsPage({ params }: { params: Promise<{ 
             <div>
               <p className="text-sm text-gray-400">Appointment Date</p>
               <p className="text-white font-semibold text-[#C27E00]">
-                {format(new Date(demand.appointment_date), 'PPP p')}
+                {(demand.dealers as { region_codes?: { timezones?: { name: string } } } | null)?.region_codes?.timezones?.name
+                  ? formatInTimeZone(new Date(demand.appointment_date), (demand.dealers as { region_codes: { timezones: { name: string } } }).region_codes.timezones.name, 'PPP p')
+                  : format(new Date(demand.appointment_date), 'PPP p')}
               </p>
             </div>
           </div>

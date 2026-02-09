@@ -31,12 +31,21 @@ export default async function FinanceDemandsPage() {
     .not('assigned_finance_id', 'is', null)
     .order('created_at', { ascending: true })
 
-  // Transform data to match component's expected type
-  const transformDemand = (demand: any) => ({
-    ...demand,
-    dealers: demand.dealers ? { name: (demand.dealers as unknown as { name: string }).name } : null,
-    profiles: demand.profiles ? (Array.isArray(demand.profiles) ? demand.profiles[0] : demand.profiles) : null
-  })
+  // Transform data — keep dealers with region_codes/timezone for correct appointment display
+  const transformDemand = (demand: any) => {
+    const dealersRaw = demand.dealers
+    const dealers = dealersRaw
+      ? {
+          name: (dealersRaw as any).name,
+          region_codes: (dealersRaw as any).region_codes ?? undefined
+        }
+      : null
+    return {
+      ...demand,
+      dealers,
+      profiles: demand.profiles ? (Array.isArray(demand.profiles) ? demand.profiles[0] : demand.profiles) : null
+    }
+  }
 
   const unassignedDemands = unassignedDemandsRaw?.map(transformDemand) || []
   const myAssignedDemands = myAssignedDemandsRaw?.map(transformDemand) || []

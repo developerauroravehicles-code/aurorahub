@@ -6,7 +6,7 @@ export default async function AdminDemandsPage() {
   
   const { data: demands } = await supabase
     .from('demands')
-    .select('*, dealers(name), profiles!demands_created_by_fkey(full_name)')
+    .select('*, dealers(name, region_codes(timezone_id, timezones(name))), profiles!demands_created_by_fkey(full_name)')
     .order('created_at', { ascending: false })
     .limit(50)
 

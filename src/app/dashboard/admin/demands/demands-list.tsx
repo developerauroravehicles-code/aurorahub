@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from 'react'
 import { format } from 'date-fns'
+import { formatInTimeZone } from 'date-fns-tz'
 import { Filter, X } from 'lucide-react'
 import Link from 'next/link'
 
@@ -15,8 +16,12 @@ interface Demand {
   vehicle_make: string
   vehicle_model: string
   appointment_date: string
-  dealers?: { name: string } | null
+  dealers?: { name: string; region_codes?: { timezones?: { name: string } } } | null
   profiles?: { full_name: string } | null
+}
+
+function getDealerTz(dealers: Demand['dealers']): string | null {
+  return dealers?.region_codes?.timezones?.name ?? null
 }
 
 interface DemandsListProps {
@@ -198,7 +203,9 @@ export function DemandsList({ demands }: DemandsListProps) {
                           {demand.vehicle_year} {demand.vehicle_make} {demand.vehicle_model}
                         </p>
                         <p className="text-sm text-gray-500">
-                          Appointment: {format(new Date(demand.appointment_date), 'PPP p')}
+                          Appointment: {getDealerTz(demand.dealers)
+                            ? formatInTimeZone(new Date(demand.appointment_date), getDealerTz(demand.dealers)!, 'PPP p')
+                            : format(new Date(demand.appointment_date), 'PPP p')}
                         </p>
                         <p className="text-xs text-gray-600 mt-1">
                           Dealer: {(demand.dealers as any)?.name || 'Unknown'} | Created by: {(demand.profiles as any)?.full_name || 'Unknown'}

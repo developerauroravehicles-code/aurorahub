@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { format, startOfMonth, endOfMonth, subMonths } from 'date-fns'
+import { formatInTimeZone } from 'date-fns-tz'
 
 interface Demand {
   id: string
@@ -19,6 +20,7 @@ interface Demand {
   assigned_specialist_id: string | null
   assigned_finance_id: string | null
   created_by: string | null
+  dealers?: { region_codes?: { timezones?: { name: string } } } | null
 }
 
 interface Dealer {
@@ -144,7 +146,7 @@ export default function AdminReportsPage() {
 
       let query = supabase
         .from('demands')
-        .select('id, status, created_at, camera_model, vehicle_make, vehicle_model, vehicle_year, appointment_date, dealer_id, assigned_specialist_id, assigned_finance_id, created_by, customer_firstname, customer_lastname')
+        .select('id, status, created_at, camera_model, vehicle_make, vehicle_model, vehicle_year, appointment_date, dealer_id, assigned_specialist_id, assigned_finance_id, created_by, customer_firstname, customer_lastname, dealers(region_codes(timezone_id, timezones(name)))')
         .gte('created_at', `${startDate}T00:00:00`)
         .lte('created_at', `${endDate}T23:59:59`)
 
@@ -505,7 +507,9 @@ export default function AdminReportsPage() {
                             {demand.camera_model}
                           </td>
                           <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-300">
-                            {format(new Date(demand.appointment_date), 'MMM d, yyyy HH:mm')}
+                            {demand.dealers?.region_codes?.timezones?.name
+                              ? formatInTimeZone(new Date(demand.appointment_date), demand.dealers.region_codes.timezones.name, 'MMM d, yyyy HH:mm')
+                              : format(new Date(demand.appointment_date), 'MMM d, yyyy HH:mm')}
                           </td>
                           <td className="px-4 py-3 whitespace-nowrap">
                             <span className={`px-2 py-1 rounded text-xs font-medium border ${statusColors[demand.status as keyof typeof statusColors] || 'bg-gray-900/50 text-gray-300 border-gray-800'}`}>
