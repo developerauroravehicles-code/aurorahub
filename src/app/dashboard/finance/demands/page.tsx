@@ -7,26 +7,26 @@ export default async function FinanceDemandsPage() {
   
   if (!user) return null
 
-  // Get unassigned demands (demand pool)
+  // Get unassigned demands (demand pool) — dealer timezone for correct appointment display
   const { data: unassignedDemandsRaw } = await supabase
     .from('demands')
-    .select('*, dealers(name), profiles!demands_assigned_finance_id_fkey(full_name)')
+    .select('*, dealers(name, region_codes(timezone_id, timezones(name))), profiles!demands_assigned_finance_id_fkey(full_name)')
     .eq('status', 'pending_finance')
     .is('assigned_finance_id', null)
     .order('created_at', { ascending: true })
 
-  // Get assigned demands for current user (with all fields for editing)
+  // Get assigned demands for current user (with dealer timezone for correct appointment display)
   const { data: myAssignedDemandsRaw } = await supabase
     .from('demands')
-    .select('id, status, created_at, dealer_id, customer_firstname, customer_lastname, customer_phone, customer_address, vehicle_make, vehicle_model, vehicle_year, stock_number, camera_model, appointment_date, assigned_specialist_id, dealers(name), profiles!demands_assigned_finance_id_fkey(full_name)')
+    .select('id, status, created_at, dealer_id, customer_firstname, customer_lastname, customer_phone, customer_address, vehicle_make, vehicle_model, vehicle_year, stock_number, camera_model, appointment_date, assigned_specialist_id, dealers(name, region_codes(timezone_id, timezones(name))), profiles!demands_assigned_finance_id_fkey(full_name)')
     .eq('assigned_finance_id', user.id)
     .in('status', ['pending_finance', 'approved'])
     .order('created_at', { ascending: true })
 
-  // Get all assigned demands (for reference)
+  // Get all assigned demands (for reference) — dealer timezone for correct appointment display
   const { data: allAssignedDemandsRaw } = await supabase
     .from('demands')
-    .select('*, dealers(name), profiles!demands_assigned_finance_id_fkey(full_name)')
+    .select('*, dealers(name, region_codes(timezone_id, timezones(name))), profiles!demands_assigned_finance_id_fkey(full_name)')
     .eq('status', 'pending_finance')
     .not('assigned_finance_id', 'is', null)
     .order('created_at', { ascending: true })

@@ -2,8 +2,11 @@
 
 import { useState, useMemo } from 'react'
 import { format } from 'date-fns'
+import { formatInTimeZone } from 'date-fns-tz'
 import { Filter, X } from 'lucide-react'
 import { DemandActions } from './demand-actions'
+
+type DealerRow = { name: string; region_codes?: { timezones?: { name: string } } } | null
 
 interface Demand {
   id: string
@@ -21,8 +24,21 @@ interface Demand {
   camera_model: string
   appointment_date: string
   assigned_specialist_id?: string | null
-  dealers?: { name: string } | null
+  dealers?: DealerRow | DealerRow[] | null
   profiles?: { full_name: string } | null
+}
+
+function getDealerTimezone(dealers: Demand['dealers']): string | null {
+  if (!dealers) return null
+  const d = Array.isArray(dealers) ? dealers[0] : dealers
+  return (d as DealerRow)?.region_codes?.timezones?.name ?? null
+}
+
+function formatAppointment(appointmentDate: string, dealers: Demand['dealers']): string {
+  const tz = getDealerTimezone(dealers)
+  return tz
+    ? formatInTimeZone(new Date(appointmentDate), tz, 'PPP p')
+    : format(new Date(appointmentDate), 'PPP p')
 }
 
 interface FinanceDemandsListProps {
@@ -209,10 +225,10 @@ export function FinanceDemandsList({ myAssignedDemands, unassignedDemands, allAs
                         {demand.vehicle_year} {demand.vehicle_make} {demand.vehicle_model}
                       </p>
                       <p className="text-sm text-gray-400">
-                        Appointment: <span className="font-semibold text-white">{format(new Date(demand.appointment_date), 'PPP p')}</span>
+                        Appointment: <span className="font-semibold text-white">{formatAppointment(demand.appointment_date, demand.dealers)}</span>
                       </p>
                       <p className="text-sm text-gray-500 mt-1">
-                        Dealer: {(demand.dealers as any)?.name}
+                        Dealer: {(Array.isArray(demand.dealers) ? demand.dealers[0] : demand.dealers)?.name}
                       </p>
                     </div>
                     <DemandActions 
@@ -271,10 +287,10 @@ export function FinanceDemandsList({ myAssignedDemands, unassignedDemands, allAs
                         {demand.vehicle_year} {demand.vehicle_make} {demand.vehicle_model}
                       </p>
                       <p className="text-sm text-gray-400">
-                        Appointment: <span className="font-semibold text-white">{format(new Date(demand.appointment_date), 'PPP p')}</span>
+                        Appointment: <span className="font-semibold text-white">{formatAppointment(demand.appointment_date, demand.dealers)}</span>
                       </p>
                       <p className="text-sm text-gray-500 mt-1">
-                        Dealer: {(demand.dealers as any)?.name}
+                        Dealer: {(Array.isArray(demand.dealers) ? demand.dealers[0] : demand.dealers)?.name}
                       </p>
                       <p className="text-xs text-gray-600 mt-1">
                         Created: {format(new Date(demand.created_at), 'PPP p')}
@@ -313,10 +329,10 @@ export function FinanceDemandsList({ myAssignedDemands, unassignedDemands, allAs
                         {demand.vehicle_year} {demand.vehicle_make} {demand.vehicle_model}
                       </p>
                       <p className="text-sm text-gray-500">
-                        Appointment: {format(new Date(demand.appointment_date), 'PPP p')}
+                        Appointment: {formatAppointment(demand.appointment_date, demand.dealers)}
                       </p>
                       <p className="text-sm text-gray-600 mt-1">
-                        Dealer: {(demand.dealers as any)?.name}
+                        Dealer: {(Array.isArray(demand.dealers) ? demand.dealers[0] : demand.dealers)?.name}
                       </p>
                     </div>
                   </div>

@@ -142,12 +142,13 @@ export default async function DashboardPage() {
       .select('id, status, created_at')
       .order('created_at', { ascending: false })
 
-    // Get assigned demands for this finance user
-    const { data: assignedDemands } = await supabase
+    // Get assigned demands for this finance user (with dealer timezone for correct appointment display)
+    const { data: assignedDemandsRaw } = await supabase
       .from('demands')
-      .select('id, status, created_at, customer_firstname, customer_lastname, vehicle_year, vehicle_make, vehicle_model, appointment_date')
+      .select('id, status, created_at, customer_firstname, customer_lastname, vehicle_year, vehicle_make, vehicle_model, appointment_date, dealers(region_codes(timezone_id, timezones(name)))')
       .eq('assigned_finance_id', user.id)
       .order('created_at', { ascending: false })
+    const assignedDemands = assignedDemandsRaw ?? []
 
     // Calculate statistics
     const totalPending = allDemands?.filter(d => d.status === 'pending_finance').length || 0
@@ -236,7 +237,11 @@ export default async function DashboardPage() {
                             {demand.vehicle_year} {demand.vehicle_make} {demand.vehicle_model}
                           </p>
                           <p className="text-xs text-gray-500 mt-1">
-                            Appointment: {format(new Date(demand.appointment_date), 'PPP p')}
+                            Appointment: {(() => {
+                              const dealers = (demand as { dealers?: { region_codes?: { timezones?: { name: string } } } | null }).dealers
+                              const tz = dealers?.region_codes?.timezones?.name ?? null
+                              return tz ? formatInTimeZone(new Date(demand.appointment_date), tz, 'PPP p') : format(new Date(demand.appointment_date), 'PPP p')
+                            })()}
                           </p>
                         </div>
                         <div className="text-right">
