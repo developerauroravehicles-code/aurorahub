@@ -473,7 +473,9 @@ export default async function DashboardPage() {
                           {demand.camera_model}
                         </p>
                         <p className="text-xs text-[#C27E00] mt-1 font-semibold">
-                          Appointment: {format(new Date(demand.appointment_date), 'PPP p')}
+                          Appointment: {demand.timezoneName
+                            ? formatInTimeZone(new Date(demand.appointment_date), demand.timezoneName, 'PPP p')
+                            : format(new Date(demand.appointment_date), 'PPP p')}
                         </p>
                         {demand.customer_address && (
                           <p className="text-xs text-gray-500 mt-1">
@@ -483,7 +485,9 @@ export default async function DashboardPage() {
                       </div>
                       <div className="text-right">
                         <p className="text-xs text-gray-500">
-                          {format(new Date(demand.appointment_date), 'MMM d, yyyy')}
+                          {demand.timezoneName
+                            ? formatInTimeZone(new Date(demand.appointment_date), demand.timezoneName, 'MMM d, yyyy')
+                            : format(new Date(demand.appointment_date), 'MMM d, yyyy')}
                         </p>
                       </div>
                     </div>

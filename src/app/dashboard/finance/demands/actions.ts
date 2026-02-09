@@ -85,10 +85,21 @@ export async function approveDemand(demandId: string, sendSMSToCustomer: boolean
   }
   
   // Auto-assign to dealer's specialist if not already assigned
+  // First try specialist_dealers (AURORAHQ model); then fallback to profiles.dealer_id
   let assignedSpecialistId = demand.assigned_specialist_id
   
+  if (!assignedSpecialistId && demand.dealer_id) {
+    const { data: sdRow } = await supabase
+      .from('specialist_dealers')
+      .select('specialist_id')
+      .eq('dealer_id', demand.dealer_id)
+      .limit(1)
+      .maybeSingle()
+    if (sdRow?.specialist_id) {
+      assignedSpecialistId = sdRow.specialist_id
+    }
+  }
   if (!assignedSpecialistId) {
-    // Find specialist assigned to this dealer
     const { data: dealerSpecialist } = await supabase
       .from('profiles')
       .select('id')
@@ -96,7 +107,6 @@ export async function approveDemand(demandId: string, sendSMSToCustomer: boolean
       .eq('role', 'specialist')
       .limit(1)
       .single()
-    
     if (dealerSpecialist) {
       assignedSpecialistId = dealerSpecialist.id
     }
@@ -118,52 +128,53 @@ export async function approveDemand(demandId: string, sendSMSToCustomer: boolean
 
   if (updateError) return { error: updateError.message }
 
-  // Send SMS if requested
+  // Send SMS to customer if requested
   if (sendSMSToCustomer) {
     try {
-      // Fetch dealer info with timezone
       const { data: dealer } = await supabase
         .from('dealers')
         .select('name, address, region_codes(timezone_id, timezones(name))')
         .eq('id', demand.dealer_id)
         .single()
-      
       const appointmentDate = new Date(demand.appointment_date)
       const location = demand.customer_address || dealer?.address || dealer?.name || 'Authorized Dealer'
-      
-      // Get timezone name from dealer > region > timezone
       const timezoneName = (dealer?.region_codes as any)?.timezones?.name || undefined
-      
-      // Use new Appointment Created message format with timezone
       const message = getAppointmentCreatedMessage(appointmentDate, location, timezoneName)
-      
-      // Send SMS to customer
       if (demand.customer_phone) {
         await sendSMS(demand.customer_phone, message).catch((error) => {
           console.error('Failed to send SMS to customer:', error)
         })
       }
-      
-      // Send SMS to assigned specialist if requested and exists
-      // Use the newly assigned specialist ID if auto-assigned
-      const specialistIdToNotify = assignedSpecialistId || demand.assigned_specialist_id
-      
-      if (sendSMSToSpecialist && specialistIdToNotify) {
-        const { data: specialist } = await supabase
-          .from('profiles')
-          .select('phone')
-          .eq('id', specialistIdToNotify)
-          .single()
-        
-        if (specialist?.phone) {
-          await sendSMS(specialist.phone, message).catch((error) => {
-            console.error('Failed to send SMS to specialist:', error)
-          })
-        }
+    } catch (smsError) {
+      console.error('Failed to send SMS notification:', smsError)
+    }
+  }
+
+  // Send SMS to assigned specialist if requested (independent of customer SMS)
+  const specialistIdToNotify = assignedSpecialistId || demand.assigned_specialist_id
+  if (sendSMSToSpecialist && specialistIdToNotify) {
+    try {
+      const { data: dealer } = await supabase
+        .from('dealers')
+        .select('name, address, region_codes(timezone_id, timezones(name))')
+        .eq('id', demand.dealer_id)
+        .single()
+      const appointmentDate = new Date(demand.appointment_date)
+      const location = demand.customer_address || dealer?.address || dealer?.name || 'Authorized Dealer'
+      const timezoneName = (dealer?.region_codes as any)?.timezones?.name || undefined
+      const message = getAppointmentCreatedMessage(appointmentDate, location, timezoneName)
+      const { data: specialist } = await supabase
+        .from('profiles')
+        .select('phone')
+        .eq('id', specialistIdToNotify)
+        .single()
+      if (specialist?.phone) {
+        await sendSMS(specialist.phone, message).catch((error) => {
+          console.error('Failed to send SMS to specialist:', error)
+        })
       }
     } catch (smsError) {
-      // Log SMS error but don't fail the approval
-      console.error('Failed to send SMS notification:', smsError)
+      console.error('Failed to send SMS to specialist:', smsError)
     }
   }
 
