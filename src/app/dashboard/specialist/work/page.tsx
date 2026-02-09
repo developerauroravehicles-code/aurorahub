@@ -3,6 +3,23 @@ import { WorkActions } from './work-actions'
 import { format } from 'date-fns'
 import { formatInTimeZone } from 'date-fns-tz'
 
+type WorkDemandRow = {
+  id: string
+  customer_firstname: string
+  customer_lastname: string
+  vehicle_year: number
+  vehicle_make: string
+  vehicle_model: string
+  camera_model: string
+  appointment_date: string
+  customer_phone: string
+  created_at: string
+  address?: string | null
+  assigned_specialist_id?: string | null
+  dealers?: { region_codes?: { timezones?: { name: string } } } | null
+  profiles?: { full_name: string } | null
+}
+
 export default async function SpecialistWorkPage() {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
@@ -23,7 +40,7 @@ export default async function SpecialistWorkPage() {
         : (profile.dealer_id ? [profile.dealer_id] : [])
 
     // Get unassigned work (work pool) — only from dealers this specialist can serve
-    let unassignedWork: Record<string, unknown>[] = []
+    let unassignedWork: WorkDemandRow[] = []
     if (dealerIds.length > 0) {
         const { data } = await supabase
             .from('demands')
@@ -32,7 +49,7 @@ export default async function SpecialistWorkPage() {
             .eq('status', 'approved')
             .is('assigned_specialist_id', null)
             .order('appointment_date', { ascending: true })
-        unassignedWork = data ?? []
+        unassignedWork = (data ?? []) as WorkDemandRow[]
     }
 
     // Get assigned work for current user
@@ -44,7 +61,7 @@ export default async function SpecialistWorkPage() {
         .order('appointment_date', { ascending: true })
 
     // Get all assigned work (for reference) — only from dealers this specialist can serve
-    let allAssignedWork: Record<string, unknown>[] = []
+    let allAssignedWork: WorkDemandRow[] = []
     if (dealerIds.length > 0) {
         const { data } = await supabase
             .from('demands')
@@ -53,7 +70,7 @@ export default async function SpecialistWorkPage() {
             .eq('status', 'approved')
             .not('assigned_specialist_id', 'is', null)
             .order('appointment_date', { ascending: true })
-        allAssignedWork = data ?? []
+        allAssignedWork = (data ?? []) as WorkDemandRow[]
     }
 
     const getDealerTimezone = (d: { dealers?: { region_codes?: { timezones?: { name: string } } } | null }) =>
@@ -126,7 +143,7 @@ export default async function SpecialistWorkPage() {
                     ) : (
                         <ul className="divide-y divide-gray-800">
                             {unassignedWork.map(demand => (
-                                <li key={String((demand as { id: string }).id)} className="p-4 sm:px-6 hover:bg-white/5 transition-colors">
+                                <li key={demand.id} className="p-4 sm:px-6 hover:bg-white/5 transition-colors">
                                     <div className="flex items-center justify-between">
                                         <div className="flex-1">
                                             <div className="flex items-center gap-2 mb-2">
@@ -158,7 +175,7 @@ export default async function SpecialistWorkPage() {
                                                 Created: {format(new Date(demand.created_at), 'PPP p')}
                                             </p>
                                         </div>
-                                        <WorkActions demandId={(demand as { id: string }).id} isAssigned={false} />
+                                        <WorkActions demandId={demand.id} isAssigned={false} />
                                     </div>
                                 </li>
                             ))}
@@ -176,9 +193,9 @@ export default async function SpecialistWorkPage() {
                     <div className="bg-white/5 rounded-lg border border-gray-800 shadow overflow-hidden">
                         <ul className="divide-y divide-gray-800">
                             {allAssignedWork
-                                .filter(w => (w as { assigned_specialist_id: string | null }).assigned_specialist_id !== user.id)
+                                .filter(w => w.assigned_specialist_id !== user.id)
                                 .map(demand => (
-                                <li key={String((demand as { id: string }).id)} className="p-4 sm:px-6 hover:bg-white/5 transition-colors">
+                                <li key={demand.id} className="p-4 sm:px-6 hover:bg-white/5 transition-colors">
                                     <div className="flex items-center justify-between">
                                         <div className="flex-1">
                                             <div className="flex items-center gap-2 mb-2">
@@ -186,7 +203,7 @@ export default async function SpecialistWorkPage() {
                                                     {demand.customer_firstname} {demand.customer_lastname}
                                                 </p>
                                                 <span className="px-2 py-1 rounded text-xs font-medium bg-purple-900/50 text-purple-300 border border-purple-800">
-                                                    ASSIGNED TO: {(demand.profiles as any)?.full_name || 'Unknown'}
+                                                    ASSIGNED TO: {demand.profiles?.full_name ?? 'Unknown'}
                                                 </span>
                                             </div>
                                             <p className="text-sm text-gray-500">
