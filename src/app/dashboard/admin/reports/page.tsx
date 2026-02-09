@@ -5,6 +5,10 @@ import { createClient } from '@/lib/supabase/client'
 import { format, startOfMonth, endOfMonth, subMonths } from 'date-fns'
 import { formatInTimeZone } from 'date-fns-tz'
 
+// Supabase may return dealers as single object or array; timezones/region_codes can be arrays
+type DealerRelation =
+  | { region_codes?: { timezones?: { name: string } | { name: string }[] } | Array<{ timezone_id?: unknown; timezones?: { name: string } | { name: string }[] }> }
+  | null
 interface Demand {
   id: string
   customer_firstname: string
@@ -20,7 +24,20 @@ interface Demand {
   assigned_specialist_id: string | null
   assigned_finance_id: string | null
   created_by: string | null
-  dealers?: { region_codes?: { timezones?: { name: string } } } | null
+  dealers?: DealerRelation | DealerRelation[] | null
+}
+
+function getDealerTz(demand: Demand): string | null {
+  const d = demand.dealers
+  if (!d) return null
+  const dealer = Array.isArray(d) ? d[0] : d
+  const rc = dealer?.region_codes
+  if (!rc) return null
+  const region = Array.isArray(rc) ? rc[0] : rc
+  const tz = region?.timezones
+  if (!tz) return null
+  const t = Array.isArray(tz) ? tz[0] : tz
+  return (t as { name?: string })?.name ?? null
 }
 
 interface Dealer {
@@ -507,8 +524,8 @@ export default function AdminReportsPage() {
                             {demand.camera_model}
                           </td>
                           <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-300">
-                            {demand.dealers?.region_codes?.timezones?.name
-                              ? formatInTimeZone(new Date(demand.appointment_date), demand.dealers.region_codes.timezones.name, 'MMM d, yyyy HH:mm')
+                            {getDealerTz(demand)
+                              ? formatInTimeZone(new Date(demand.appointment_date), getDealerTz(demand)!, 'MMM d, yyyy HH:mm')
                               : format(new Date(demand.appointment_date), 'MMM d, yyyy HH:mm')}
                           </td>
                           <td className="px-4 py-3 whitespace-nowrap">
