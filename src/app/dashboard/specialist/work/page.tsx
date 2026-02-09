@@ -23,7 +23,7 @@ export default async function SpecialistWorkPage() {
         : (profile.dealer_id ? [profile.dealer_id] : [])
 
     // Get unassigned work (work pool) — only from dealers this specialist can serve
-    let unassignedWork: Awaited<ReturnType<typeof supabase.from<'demands'>['select']>>['data'] = []
+    let unassignedWork: Record<string, unknown>[] = []
     if (dealerIds.length > 0) {
         const { data } = await supabase
             .from('demands')
@@ -44,7 +44,7 @@ export default async function SpecialistWorkPage() {
         .order('appointment_date', { ascending: true })
 
     // Get all assigned work (for reference) — only from dealers this specialist can serve
-    let allAssignedWork: Awaited<ReturnType<typeof supabase.from<'demands'>['select']>>['data'] = []
+    let allAssignedWork: Record<string, unknown>[] = []
     if (dealerIds.length > 0) {
         const { data } = await supabase
             .from('demands')
