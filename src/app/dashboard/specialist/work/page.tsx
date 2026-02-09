@@ -13,14 +13,27 @@ export default async function SpecialistWorkPage() {
     
     if (!profile) return <div className="text-white">Profile error</div>
 
-    // Get unassigned work (work pool) with dealer timezone for correct appointment display
-    const { data: unassignedWork } = await supabase
-        .from('demands')
-        .select('*, profiles!demands_assigned_specialist_id_fkey(full_name), dealers(region_codes(timezone_id, timezones(name)))')
-        .eq('dealer_id', profile.dealer_id)
-        .eq('status', 'approved')
-        .is('assigned_specialist_id', null)
-        .order('appointment_date', { ascending: true })
+    // Specialist can see demands from dealers assigned via specialist_dealers, or fallback to profile.dealer_id
+    const { data: specialistDealers } = await supabase
+        .from('specialist_dealers')
+        .select('dealer_id')
+        .eq('specialist_id', user.id)
+    const dealerIds: string[] = (specialistDealers?.length ?? 0) > 0
+        ? (specialistDealers!.map((sd: { dealer_id: string }) => sd.dealer_id))
+        : (profile.dealer_id ? [profile.dealer_id] : [])
+
+    // Get unassigned work (work pool) — only from dealers this specialist can serve
+    let unassignedWork: Awaited<ReturnType<typeof supabase.from<'demands'>.select>>['data'] = []
+    if (dealerIds.length > 0) {
+        const { data } = await supabase
+            .from('demands')
+            .select('*, profiles!demands_assigned_specialist_id_fkey(full_name), dealers(region_codes(timezone_id, timezones(name)))')
+            .in('dealer_id', dealerIds)
+            .eq('status', 'approved')
+            .is('assigned_specialist_id', null)
+            .order('appointment_date', { ascending: true })
+        unassignedWork = data ?? []
+    }
 
     // Get assigned work for current user
     const { data: myAssignedWork } = await supabase
@@ -30,14 +43,18 @@ export default async function SpecialistWorkPage() {
         .eq('status', 'approved')
         .order('appointment_date', { ascending: true })
 
-    // Get all assigned work (for reference)
-    const { data: allAssignedWork } = await supabase
-        .from('demands')
-        .select('*, profiles!demands_assigned_specialist_id_fkey(full_name), dealers(region_codes(timezone_id, timezones(name)))')
-        .eq('dealer_id', profile.dealer_id)
-        .eq('status', 'approved')
-        .not('assigned_specialist_id', 'is', null)
-        .order('appointment_date', { ascending: true })
+    // Get all assigned work (for reference) — only from dealers this specialist can serve
+    let allAssignedWork: Awaited<ReturnType<typeof supabase.from<'demands'>.select>>['data'] = []
+    if (dealerIds.length > 0) {
+        const { data } = await supabase
+            .from('demands')
+            .select('*, profiles!demands_assigned_specialist_id_fkey(full_name), dealers(region_codes(timezone_id, timezones(name)))')
+            .in('dealer_id', dealerIds)
+            .eq('status', 'approved')
+            .not('assigned_specialist_id', 'is', null)
+            .order('appointment_date', { ascending: true })
+        allAssignedWork = data ?? []
+    }
 
     const getDealerTimezone = (d: { dealers?: { region_codes?: { timezones?: { name: string } } } | null }) =>
       (d.dealers as { region_codes?: { timezones?: { name: string } } } | null)?.region_codes?.timezones?.name ?? null

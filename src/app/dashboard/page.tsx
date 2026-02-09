@@ -263,13 +263,26 @@ export default async function DashboardPage() {
 
   // If specialist user, fetch their work statistics
   if (profile.role === 'specialist') {
-    // Get all approved demands for this specialist's dealer (available work)
-    const { data: availableWork } = await supabase
-      .from('demands')
-      .select('id, status, appointment_date, customer_firstname, customer_lastname, vehicle_make, vehicle_model, vehicle_year')
-      .eq('dealer_id', profile.dealer_id)
-      .eq('status', 'approved')
-      .order('appointment_date', { ascending: true })
+    // Specialist can see demands from dealers in specialist_dealers, or fallback to profile.dealer_id
+    const { data: specialistDealers } = await supabase
+      .from('specialist_dealers')
+      .select('dealer_id')
+      .eq('specialist_id', user.id)
+    const dealerIds: string[] = (specialistDealers?.length ?? 0) > 0
+      ? specialistDealers!.map((sd: { dealer_id: string }) => sd.dealer_id)
+      : (profile.dealer_id ? [profile.dealer_id] : [])
+
+    // Get all approved demands for this specialist's dealers (available work)
+    let availableWork: Awaited<ReturnType<typeof supabase.from<'demands'>.select>>['data'] = []
+    if (dealerIds.length > 0) {
+      const { data } = await supabase
+        .from('demands')
+        .select('id, status, appointment_date, customer_firstname, customer_lastname, vehicle_make, vehicle_model, vehicle_year')
+        .in('dealer_id', dealerIds)
+        .eq('status', 'approved')
+        .order('appointment_date', { ascending: true })
+      availableWork = data ?? []
+    }
 
     // Get demands assigned to this specialist (with dealer timezone for correct time display)
     const { data: assignedWorkRaw } = await supabase
@@ -304,20 +317,24 @@ export default async function DashboardPage() {
       .eq('status', 'completed')
       .order('updated_at', { ascending: false })
 
-    // Get today's appointments
+    // Get today's appointments (from dealers this specialist can serve)
     const today = new Date()
     today.setHours(0, 0, 0, 0)
     const tomorrow = new Date(today)
     tomorrow.setDate(tomorrow.getDate() + 1)
 
-    const { data: todayAppointments } = await supabase
-      .from('demands')
-      .select('id, status, appointment_date, customer_firstname, customer_lastname, vehicle_make, vehicle_model, vehicle_year, camera_model, customer_address, dealers(region_codes(timezone_id, timezones(name)))')
-      .eq('dealer_id', profile.dealer_id)
-      .eq('status', 'approved')
-      .gte('appointment_date', today.toISOString())
-      .lt('appointment_date', tomorrow.toISOString())
-      .order('appointment_date', { ascending: true })
+    let todayAppointments: Awaited<ReturnType<typeof supabase.from<'demands'>.select>>['data'] = []
+    if (dealerIds.length > 0) {
+      const { data } = await supabase
+        .from('demands')
+        .select('id, status, appointment_date, customer_firstname, customer_lastname, vehicle_make, vehicle_model, vehicle_year, camera_model, customer_address, dealers(region_codes(timezone_id, timezones(name)))')
+        .in('dealer_id', dealerIds)
+        .eq('status', 'approved')
+        .gte('appointment_date', today.toISOString())
+        .lt('appointment_date', tomorrow.toISOString())
+        .order('appointment_date', { ascending: true })
+      todayAppointments = data ?? []
+    }
 
     // Calculate statistics
     const totalAvailable = availableWork?.length || 0

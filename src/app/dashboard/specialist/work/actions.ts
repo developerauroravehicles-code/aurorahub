@@ -27,9 +27,20 @@ export async function assignWorkToMe(demandId: string) {
     .single()
 
   if (!demand) return { error: 'Work not found' }
-  
-  // Check if demand belongs to specialist's dealer
-  if (demand.dealer_id !== profile.dealer_id) {
+
+  // Allowed dealers: from specialist_dealers, or fallback to profile.dealer_id
+  const { data: specialistDealers } = await supabase
+    .from('specialist_dealers')
+    .select('dealer_id')
+    .eq('specialist_id', user.id)
+  const allowedDealerIds: string[] = (specialistDealers?.length ?? 0) > 0
+    ? specialistDealers!.map((sd: { dealer_id: string }) => sd.dealer_id)
+    : (profile.dealer_id ? [profile.dealer_id] : [])
+
+  if (allowedDealerIds.length === 0) {
+    return { error: 'Your account is not assigned to any dealer' }
+  }
+  if (!demand.dealer_id || !allowedDealerIds.includes(demand.dealer_id)) {
     return { error: 'This work does not belong to your dealer' }
   }
   
