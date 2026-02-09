@@ -273,7 +273,7 @@ export default async function DashboardPage() {
       : (profile.dealer_id ? [profile.dealer_id] : [])
 
     // Get all approved demands for this specialist's dealers (available work)
-    let availableWork: Awaited<ReturnType<typeof supabase.from<'demands'>.select>>['data'] = []
+    let availableWork: Awaited<ReturnType<typeof supabase.from<'demands'>['select']>>['data'] = []
     if (dealerIds.length > 0) {
       const { data } = await supabase
         .from('demands')
@@ -323,7 +323,7 @@ export default async function DashboardPage() {
     const tomorrow = new Date(today)
     tomorrow.setDate(tomorrow.getDate() + 1)
 
-    let todayAppointments: Awaited<ReturnType<typeof supabase.from<'demands'>.select>>['data'] = []
+    let todayAppointments: Awaited<ReturnType<typeof supabase.from<'demands'>['select']>>['data'] = []
     if (dealerIds.length > 0) {
       const { data } = await supabase
         .from('demands')
