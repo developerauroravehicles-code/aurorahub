@@ -126,7 +126,7 @@ export default async function SpecialistWorkPage() {
                     ) : (
                         <ul className="divide-y divide-gray-800">
                             {unassignedWork.map(demand => (
-                                <li key={demand.id} className="p-4 sm:px-6 hover:bg-white/5 transition-colors">
+                                <li key={String((demand as { id: string }).id)} className="p-4 sm:px-6 hover:bg-white/5 transition-colors">
                                     <div className="flex items-center justify-between">
                                         <div className="flex-1">
                                             <div className="flex items-center gap-2 mb-2">
@@ -158,7 +158,7 @@ export default async function SpecialistWorkPage() {
                                                 Created: {format(new Date(demand.created_at), 'PPP p')}
                                             </p>
                                         </div>
-                                        <WorkActions demandId={demand.id} isAssigned={false} />
+                                        <WorkActions demandId={(demand as { id: string }).id} isAssigned={false} />
                                     </div>
                                 </li>
                             ))}
@@ -176,9 +176,9 @@ export default async function SpecialistWorkPage() {
                     <div className="bg-white/5 rounded-lg border border-gray-800 shadow overflow-hidden">
                         <ul className="divide-y divide-gray-800">
                             {allAssignedWork
-                                .filter(w => w.assigned_specialist_id !== user.id)
+                                .filter(w => (w as { assigned_specialist_id: string | null }).assigned_specialist_id !== user.id)
                                 .map(demand => (
-                                <li key={demand.id} className="p-4 sm:px-6 hover:bg-white/5 transition-colors">
+                                <li key={String((demand as { id: string }).id)} className="p-4 sm:px-6 hover:bg-white/5 transition-colors">
                                     <div className="flex items-center justify-between">
                                         <div className="flex-1">
                                             <div className="flex items-center gap-2 mb-2">
