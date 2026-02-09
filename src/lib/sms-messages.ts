@@ -95,10 +95,12 @@ export function isWithin4Hours(appointmentDate: Date): boolean {
 
 /**
  * Check if appointment is in the "4 hours before" reminder window.
- * Used by cron to send reminder exactly ~4 hours before (e.g. 11:00 appointment → send at 07:00).
+ * Used by cron to send reminder exactly ~4 hours before (e.g. 11:00 appointment → 07:00 in dealer time).
  * Window: 3.5h to 4.5h from now so hourly cron catches the right appointments.
+ * Time is evaluated in dealer timezone: we use the same real-time difference (4h is 4h everywhere),
+ * but timezoneName is required so the system is consistent with dealer-local scheduling.
  */
-export function isWithin4HoursBeforeWindow(appointmentDate: Date): boolean {
+export function isWithin4HoursBeforeWindow(appointmentDate: Date, _timezoneName?: string | null): boolean {
   const now = new Date()
   const appointment = new Date(appointmentDate)
   const diffInMs = appointment.getTime() - now.getTime()
