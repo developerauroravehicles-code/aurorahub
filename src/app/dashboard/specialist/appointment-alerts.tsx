@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { format } from 'date-fns'
+import { formatInTimeZone } from 'date-fns-tz'
 import { sendAppointmentReminderSMS } from './actions'
 
 interface AppointmentAlert {
@@ -15,6 +16,7 @@ interface AppointmentAlert {
   camera_model: string
   customer_address: string | null
   stock_number: string | null
+  timezoneName?: string | null
 }
 
 interface AppointmentAlertsProps {
@@ -150,7 +152,9 @@ export function AppointmentAlerts({ appointments }: AppointmentAlertsProps) {
                       </p>
                     )}
                     <p className="text-xs text-[#C27E00] mt-1 font-semibold">
-                      Appointment: {format(new Date(appointment.appointment_date), 'PPP p')}
+                      Appointment: {appointment.timezoneName
+                        ? formatInTimeZone(new Date(appointment.appointment_date), appointment.timezoneName, 'PPP p')
+                        : format(new Date(appointment.appointment_date), 'PPP p')}
                     </p>
                     {appointment.customer_address && (
                       <p className="text-xs text-gray-500 mt-1">
@@ -160,7 +164,9 @@ export function AppointmentAlerts({ appointments }: AppointmentAlertsProps) {
                   </div>
                   <div className="text-right">
                     <p className="text-xs text-gray-500">
-                      {format(new Date(appointment.appointment_date), 'MMM d, yyyy')}
+                      {appointment.timezoneName
+                        ? formatInTimeZone(new Date(appointment.appointment_date), appointment.timezoneName, 'MMM d, yyyy')
+                        : format(new Date(appointment.appointment_date), 'MMM d, yyyy')}
                     </p>
                     {status === 'tomorrow' && sentSMS.has(appointment.id) && (
                       <p className="text-xs text-green-400 mt-1">SMS Sent</p>

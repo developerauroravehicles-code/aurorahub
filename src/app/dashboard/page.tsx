@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { format } from 'date-fns'
+import { formatInTimeZone } from 'date-fns-tz'
 import Link from 'next/link'
 import { AppointmentAlerts } from './specialist/appointment-alerts'
 
@@ -265,13 +266,17 @@ export default async function DashboardPage() {
       .eq('status', 'approved')
       .order('appointment_date', { ascending: true })
 
-    // Get demands assigned to this specialist
-    const { data: assignedWork } = await supabase
+    // Get demands assigned to this specialist (with dealer timezone for correct time display)
+    const { data: assignedWorkRaw } = await supabase
       .from('demands')
-      .select('id, status, appointment_date, customer_firstname, customer_lastname, vehicle_make, vehicle_model, vehicle_year, camera_model, customer_address, stock_number')
+      .select('id, status, appointment_date, customer_firstname, customer_lastname, vehicle_make, vehicle_model, vehicle_year, camera_model, customer_address, stock_number, dealers(region_codes(timezone_id, timezones(name)))')
       .eq('assigned_specialist_id', user.id)
       .eq('status', 'approved')
       .order('appointment_date', { ascending: true })
+    const assignedWork = assignedWorkRaw?.map((d: Record<string, unknown>) => ({
+      ...d,
+      timezoneName: (d.dealers as { region_codes?: { timezones?: { name: string } } } | null)?.region_codes?.timezones?.name ?? null
+    }))
 
     // Get completed demands by this specialist
     const { data: completedWork } = await supabase
@@ -289,7 +294,7 @@ export default async function DashboardPage() {
 
     const { data: todayAppointments } = await supabase
       .from('demands')
-      .select('id, status, appointment_date, customer_firstname, customer_lastname, vehicle_make, vehicle_model, vehicle_year, camera_model, customer_address')
+      .select('id, status, appointment_date, customer_firstname, customer_lastname, vehicle_make, vehicle_model, vehicle_year, camera_model, customer_address, dealers(region_codes(timezone_id, timezones(name)))')
       .eq('dealer_id', profile.dealer_id)
       .eq('status', 'approved')
       .gte('appointment_date', today.toISOString())
@@ -369,7 +374,9 @@ export default async function DashboardPage() {
                           {demand.camera_model}
                         </p>
                         <p className="text-xs text-[#C27E00] mt-1 font-semibold">
-                          {format(new Date(demand.appointment_date), 'PPP p')}
+                          {(demand.dealers as { region_codes?: { timezones?: { name: string } } } | null)?.region_codes?.timezones?.name
+                            ? formatInTimeZone(new Date(demand.appointment_date), (demand.dealers as { region_codes: { timezones: { name: string } } }).region_codes.timezones.name, 'PPP p')
+                            : format(new Date(demand.appointment_date), 'PPP p')}
                         </p>
                       </div>
                       <div className="text-right">

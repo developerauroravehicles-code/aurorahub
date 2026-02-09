@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { WorkActions } from './work-actions'
 import { format } from 'date-fns'
+import { formatInTimeZone } from 'date-fns-tz'
 
 export default async function SpecialistWorkPage() {
     const supabase = await createClient()
@@ -12,10 +13,10 @@ export default async function SpecialistWorkPage() {
     
     if (!profile) return <div className="text-white">Profile error</div>
 
-    // Get unassigned work (work pool)
+    // Get unassigned work (work pool) with dealer timezone for correct appointment display
     const { data: unassignedWork } = await supabase
         .from('demands')
-        .select('*, profiles!demands_assigned_specialist_id_fkey(full_name)')
+        .select('*, profiles!demands_assigned_specialist_id_fkey(full_name), dealers(region_codes(timezone_id, timezones(name)))')
         .eq('dealer_id', profile.dealer_id)
         .eq('status', 'approved')
         .is('assigned_specialist_id', null)
@@ -24,7 +25,7 @@ export default async function SpecialistWorkPage() {
     // Get assigned work for current user
     const { data: myAssignedWork } = await supabase
         .from('demands')
-        .select('*, profiles!demands_assigned_specialist_id_fkey(full_name)')
+        .select('*, profiles!demands_assigned_specialist_id_fkey(full_name), dealers(region_codes(timezone_id, timezones(name)))')
         .eq('assigned_specialist_id', user.id)
         .eq('status', 'approved')
         .order('appointment_date', { ascending: true })
@@ -32,11 +33,18 @@ export default async function SpecialistWorkPage() {
     // Get all assigned work (for reference)
     const { data: allAssignedWork } = await supabase
         .from('demands')
-        .select('*, profiles!demands_assigned_specialist_id_fkey(full_name)')
+        .select('*, profiles!demands_assigned_specialist_id_fkey(full_name), dealers(region_codes(timezone_id, timezones(name)))')
         .eq('dealer_id', profile.dealer_id)
         .eq('status', 'approved')
         .not('assigned_specialist_id', 'is', null)
         .order('appointment_date', { ascending: true })
+
+    const getDealerTimezone = (d: { dealers?: { region_codes?: { timezones?: { name: string } } } | null }) =>
+      (d.dealers as { region_codes?: { timezones?: { name: string } } } | null)?.region_codes?.timezones?.name ?? null
+    const formatAppointment = (appointmentDate: string, timezoneName: string | null) =>
+      timezoneName
+        ? formatInTimeZone(new Date(appointmentDate), timezoneName, 'PPP p')
+        : format(new Date(appointmentDate), 'PPP p')
 
     return (
         <div className="space-y-8">
@@ -70,7 +78,7 @@ export default async function SpecialistWorkPage() {
                                                 Camera: {demand.camera_model}
                                             </p>
                                             <p className="text-sm text-gray-400">
-                                                Appointment: <span className="font-semibold text-white">{format(new Date(demand.appointment_date), 'PPP p')}</span>
+                                                Appointment: <span className="font-semibold text-white">{formatAppointment(demand.appointment_date, getDealerTimezone(demand))}</span>
                                             </p>
                                             {demand.address && (
                                                 <p className="text-sm text-gray-500 mt-1">
@@ -119,7 +127,7 @@ export default async function SpecialistWorkPage() {
                                                 Camera: {demand.camera_model}
                                             </p>
                                             <p className="text-sm text-gray-400">
-                                                Appointment: <span className="font-semibold text-white">{format(new Date(demand.appointment_date), 'PPP p')}</span>
+                                                Appointment: <span className="font-semibold text-white">{formatAppointment(demand.appointment_date, getDealerTimezone(demand))}</span>
                                             </p>
                                             {demand.address && (
                                                 <p className="text-sm text-gray-500 mt-1">
@@ -171,7 +179,7 @@ export default async function SpecialistWorkPage() {
                                                 Camera: {demand.camera_model}
                                             </p>
                                             <p className="text-sm text-gray-500">
-                                                Appointment: {format(new Date(demand.appointment_date), 'PPP p')}
+                                                Appointment: {formatAppointment(demand.appointment_date, getDealerTimezone(demand))}
                                             </p>
                                             {demand.address && (
                                                 <p className="text-sm text-gray-600 mt-1">
