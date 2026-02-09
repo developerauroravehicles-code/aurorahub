@@ -49,7 +49,7 @@ export function AppointmentCalendar({
         setLoadingDates(prev => new Set(prev).add(dateStr))
         
         try {
-          const takenSlots = await getTakenSlots(day.toISOString())
+          const takenSlots = await getTakenSlots(dateStr)
           if (takenSlots.length > 0) {
             newTakenDates.add(dateStr)
           }

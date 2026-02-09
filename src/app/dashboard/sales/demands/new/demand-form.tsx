@@ -41,11 +41,11 @@ export function DemandForm({ cameraModels, defaultAddress = '', timezoneName = n
 
   useEffect(() => {
     if (selectedDate) {
-      getTakenSlots(selectedDate + 'T00:00:00', dealerId ?? undefined).then(setTakenSlots)
+      getTakenSlots(selectedDate + 'T00:00:00', dealerId ?? undefined, timezoneName ?? undefined).then(setTakenSlots)
     } else {
       setTakenSlots([])
     }
-  }, [selectedDate, dealerId])
+  }, [selectedDate, dealerId, timezoneName])
 
   useEffect(() => {
     if (dealerId && selectedDate) {
@@ -246,7 +246,7 @@ export function DemandForm({ cameraModels, defaultAddress = '', timezoneName = n
               setSelectedSlot('')
             }}
             selectedDate={selectedDate ? new Date(selectedDate + 'T00:00:00') : null}
-            getTakenSlots={(dateStr) => getTakenSlots(dateStr, dealerId ?? undefined)}
+            getTakenSlots={(dateStr) => getTakenSlots(dateStr, dealerId ?? undefined, timezoneName ?? undefined)}
           />
         </div>
 

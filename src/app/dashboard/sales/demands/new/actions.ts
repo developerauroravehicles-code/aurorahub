@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { z } from 'zod'
 import { startOfDay, endOfDay, format } from 'date-fns'
+import { fromZonedTime } from 'date-fns-tz'
 import { sendSMS } from '@/lib/twilio'
 import { validateAppointmentSlot } from '@/app/dashboard/system-management/calendar/actions'
 
@@ -97,26 +98,47 @@ export async function createDemand(prevState: ActionState, formData: FormData) {
   redirect('/dashboard/sales/demands')
 }
 
-/** Get appointment times already taken on a date. When dealerId is set, only that dealer's appointments (single calendar per dealer). */
-export async function getTakenSlots(dateStr: string, dealerId?: string | null) {
-    const supabase = await createClient()
+/**
+ * Get appointment times already taken on a date (for that dealer).
+ * When timezoneName is provided, the date is interpreted in the dealer's timezone so the same calendar day is used as in the slot list.
+ */
+export async function getTakenSlots(
+  dateStr: string,
+  dealerId?: string | null,
+  timezoneName?: string | null
+) {
+  const supabase = await createClient()
+  const match = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})/)
+  const y = match ? parseInt(match[1], 10) : 0
+  const m = match ? parseInt(match[2], 10) : 1
+  const d = match ? parseInt(match[3], 10) : 1
+
+  let start: string
+  let end: string
+  if (timezoneName) {
+    const startInTz = new Date(y, m - 1, d, 0, 0, 0)
+    const endInTz = new Date(y, m - 1, d, 23, 59, 59, 999)
+    start = fromZonedTime(startInTz, timezoneName).toISOString()
+    end = fromZonedTime(endInTz, timezoneName).toISOString()
+  } else {
     const date = new Date(dateStr)
-    const start = startOfDay(date).toISOString()
-    const end = endOfDay(date).toISOString()
+    start = startOfDay(date).toISOString()
+    end = endOfDay(date).toISOString()
+  }
 
-    let query = supabase
-        .from('demands')
-        .select('appointment_date')
-        .gte('appointment_date', start)
-        .lte('appointment_date', end)
-        .neq('status', 'cancelled')
-    if (dealerId) {
-        query = query.eq('dealer_id', dealerId)
-    }
-    const { data } = await query
+  let query = supabase
+    .from('demands')
+    .select('appointment_date')
+    .gte('appointment_date', start)
+    .lte('appointment_date', end)
+    .neq('status', 'cancelled')
+  if (dealerId) {
+    query = query.eq('dealer_id', dealerId)
+  }
+  const { data } = await query
 
-    if (!data || data.length === 0) return []
-    return data.map(d => d.appointment_date)
+  if (!data || data.length === 0) return []
+  return data.map((r: { appointment_date: string }) => r.appointment_date)
 }
 
 /**
