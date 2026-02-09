@@ -2,6 +2,8 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
+import { formatInTimeZone, fromZonedTime } from 'date-fns-tz'
+import { getSlotMinutesFromConfig, CALENDAR_DEFAULTS } from '@/lib/calendar-defaults'
 
 export async function createCalendarSetting(formData: FormData) {
   const supabase = await createClient()
@@ -142,5 +144,310 @@ export async function deleteCalendarSetting(settingId: string) {
 
   revalidatePath('/dashboard/system-management/calendar')
   return { success: true }
+}
+
+// --- Dealer calendar blocks (slot/day closing) ---
+
+export async function getCalendarBlocks(dealerId: string, fromDate: string, toDate: string) {
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('dealer_calendar_blocks')
+    .select('id, dealer_id, block_date, start_minutes, end_minutes, created_at')
+    .eq('dealer_id', dealerId)
+    .gte('block_date', fromDate)
+    .lte('block_date', toDate)
+    .order('block_date', { ascending: true })
+    .order('start_minutes', { ascending: true })
+
+  if (error) {
+    console.error('Error fetching calendar blocks:', error)
+    return []
+  }
+  return data || []
+}
+
+/** All blocks in date range (any dealer) for admin calendar management. */
+export async function getCalendarBlocksInRange(fromDate: string, toDate: string) {
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('dealer_calendar_blocks')
+    .select('id, dealer_id, block_date, start_minutes, end_minutes, created_at')
+    .gte('block_date', fromDate)
+    .lte('block_date', toDate)
+    .order('block_date', { ascending: true })
+    .order('start_minutes', { ascending: true })
+
+  if (error) {
+    console.error('Error fetching calendar blocks:', error)
+    return []
+  }
+  return data || []
+}
+
+/** Get blocks for a single date (for demand form slot filtering). */
+export async function getDealerBlocksForDate(dealerId: string, dateStr: string): Promise<{ start_minutes: number; end_minutes: number }[]> {
+  if (!dealerId || !dateStr) return []
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('dealer_calendar_blocks')
+    .select('start_minutes, end_minutes')
+    .eq('dealer_id', dealerId)
+    .eq('block_date', dateStr)
+
+  if (error) return []
+  return (data || []).map((r: { start_minutes: number; end_minutes: number }) => ({
+    start_minutes: r.start_minutes,
+    end_minutes: r.end_minutes
+  }))
+}
+
+export async function createCalendarBlock(formData: FormData): Promise<{ success: boolean; error?: string }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { success: false, error: 'Unauthorized' }
+
+  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+  if (!profile || profile.role !== 'aurora_manager') {
+    return { success: false, error: 'Only Aurora Managers can manage calendar blocks' }
+  }
+
+  const dealerId = formData.get('dealerId') as string
+  const blockDate = formData.get('blockDate') as string
+  const wholeDay = formData.get('wholeDay') === 'true'
+  const startMinutes = wholeDay ? 0 : parseInt(formData.get('startMinutes') as string, 10)
+  const endMinutes = wholeDay ? 1440 : parseInt(formData.get('endMinutes') as string, 10)
+
+  if (!dealerId || !blockDate) return { success: false, error: 'Dealer and date are required' }
+  if (!wholeDay && (isNaN(startMinutes) || isNaN(endMinutes) || startMinutes >= endMinutes)) {
+    return { success: false, error: 'Invalid time range' }
+  }
+
+  const { error } = await supabase.from('dealer_calendar_blocks').insert({
+    dealer_id: dealerId,
+    block_date: blockDate,
+    start_minutes: wholeDay ? 0 : startMinutes,
+    end_minutes: wholeDay ? 1440 : endMinutes
+  })
+
+  if (error) return { success: false, error: error.message }
+  revalidatePath('/dashboard/system-management/calendar')
+  return { success: true }
+}
+
+/** Create multiple blocks at once (e.g. multiple selected slots). */
+export async function createCalendarBlocks(
+  dealerId: string,
+  blockDate: string,
+  blocks: { start_minutes: number; end_minutes: number }[]
+): Promise<{ success: boolean; error?: string }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { success: false, error: 'Unauthorized' }
+
+  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+  if (!profile || profile.role !== 'aurora_manager') {
+    return { success: false, error: 'Only Aurora Managers can manage calendar blocks' }
+  }
+
+  if (!dealerId || !blockDate || !blocks.length) {
+    return { success: false, error: 'Dealer, date and at least one slot are required' }
+  }
+
+  const rows = blocks.map(({ start_minutes, end_minutes }) => ({
+    dealer_id: dealerId,
+    block_date: blockDate,
+    start_minutes,
+    end_minutes
+  }))
+
+  const { error } = await supabase.from('dealer_calendar_blocks').insert(rows)
+  if (error) return { success: false, error: error.message }
+  revalidatePath('/dashboard/system-management/calendar')
+  return { success: true }
+}
+
+export async function deleteCalendarBlock(blockId: string): Promise<{ success: boolean; error?: string }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { success: false, error: 'Unauthorized' }
+
+  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+  if (!profile || profile.role !== 'aurora_manager') {
+    return { success: false, error: 'Only Aurora Managers can manage calendar blocks' }
+  }
+
+  const { error } = await supabase.from('dealer_calendar_blocks').delete().eq('id', blockId)
+  if (error) return { success: false, error: error.message }
+  revalidatePath('/dashboard/system-management/calendar')
+  return { success: true }
+}
+
+/**
+ * Validate that an appointment slot is allowed for a dealer: within dealer hours and not blocked.
+ * Used by createDemand and any flow that books appointments. Single calendar system.
+ */
+export async function validateAppointmentSlot(
+  dealerId: string,
+  appointmentDateISO: string
+): Promise<{ valid: boolean; error?: string }> {
+  const supabase = await createClient()
+  const slotTime = new Date(appointmentDateISO)
+  if (isNaN(slotTime.getTime())) return { valid: false, error: 'Invalid appointment time' }
+
+  const { data: dealer } = await supabase
+    .from('dealers')
+    .select('id, region_codes(timezone_id, timezones(name))')
+    .eq('id', dealerId)
+    .single()
+  if (!dealer) return { valid: false, error: 'Dealer not found' }
+  const timezoneName = (dealer.region_codes as { timezone_id?: string; timezones?: { name: string } } | null)?.timezones?.name ?? null
+  if (!timezoneName) return { valid: false, error: 'Dealer timezone not set' }
+
+  const dateStr = formatInTimeZone(slotTime, timezoneName, 'yyyy-MM-dd')
+  const startMinutes = parseInt(formatInTimeZone(slotTime, timezoneName, 'H'), 10) * 60 +
+    parseInt(formatInTimeZone(slotTime, timezoneName, 'm'), 10)
+  const duration = CALENDAR_DEFAULTS.appointmentDurationMinutes
+  const endMinutes = startMinutes + duration
+
+  const [y, mo, d] = dateStr.split('-').map(Number)
+  const dayOfWeek = new Date(y, mo - 1, d).getDay()
+  const dayType: 'weekday' | 'weekend' = dayOfWeek === 0 || dayOfWeek === 6 ? 'weekend' : 'weekday'
+
+  const { data: settings } = await supabase
+    .from('dealer_calendar_settings')
+    .select('start_hour, end_hour, slot_interval_minutes, appointment_duration_minutes')
+    .eq('dealer_id', dealerId)
+    .eq('day_type', dayType)
+    .maybeSingle()
+
+  const slotStarts = settings
+    ? getSlotMinutesFromConfig({
+        startHour: settings.start_hour,
+        endHour: settings.end_hour,
+        slotIntervalMinutes: settings.slot_interval_minutes,
+        appointmentDurationMinutes: settings.appointment_duration_minutes,
+      })
+    : getDefaultSlotMinutes()
+  const durationUsed = settings?.appointment_duration_minutes ?? CALENDAR_DEFAULTS.appointmentDurationMinutes
+  const lastAllowedEnd = settings
+    ? settings.end_hour * 60
+    : CALENDAR_DEFAULTS.endHour * 60 + CALENDAR_DEFAULTS.endMinute
+
+  if (!slotStarts.includes(startMinutes)) {
+    return { valid: false, error: 'Selected time is not a valid slot for this dealer\'s calendar.' }
+  }
+  if (startMinutes + durationUsed > lastAllowedEnd) {
+    return { valid: false, error: 'Selected time is outside dealer working hours.' }
+  }
+
+  const blocks = await getDealerBlocksForDate(dealerId, dateStr)
+  const inBlock = blocks.some(
+    b => startMinutes < b.end_minutes && endMinutes > b.start_minutes
+  )
+  if (inBlock) {
+    return { valid: false, error: 'Selected slot is closed for this dealer.' }
+  }
+
+  return { valid: true }
+}
+
+function getDefaultSlotMinutes(): number[] {
+  return getSlotMinutesFromConfig({
+    startHour: CALENDAR_DEFAULTS.startHour,
+    endHour: CALENDAR_DEFAULTS.endHour,
+    endMinute: CALENDAR_DEFAULTS.endMinute,
+    slotIntervalMinutes: CALENDAR_DEFAULTS.slotIntervalMinutes,
+    appointmentDurationMinutes: CALENDAR_DEFAULTS.appointmentDurationMinutes,
+  })
+}
+
+/**
+ * Get available appointment slots for a dealer on a date (for Edit Demand modal).
+ * Uses dealer hours, blocks, and existing demands. Optionally exclude one demand's appointment when editing.
+ */
+export async function getAvailableSlotsForEdit(
+  dealerId: string,
+  dateStr: string,
+  excludeDemandId?: string | null
+): Promise<{ slots: string[]; timezoneName: string | null }> {
+  const supabase = await createClient()
+  const [y, mo, d] = dateStr.split('-').map(Number)
+  const dayOfWeek = new Date(y, mo - 1, d).getDay()
+  const dayType: 'weekday' | 'weekend' = dayOfWeek === 0 || dayOfWeek === 6 ? 'weekend' : 'weekday'
+
+  const { data: dealer } = await supabase
+    .from('dealers')
+    .select('id, region_codes(timezone_id, timezones(name))')
+    .eq('id', dealerId)
+    .single()
+  const timezoneName = (dealer?.region_codes as { timezone_id?: string; timezones?: { name: string } } | null)?.timezones?.name ?? null
+
+  const { data: settings } = await supabase
+    .from('dealer_calendar_settings')
+    .select('start_hour, end_hour, slot_interval_minutes, appointment_duration_minutes')
+    .eq('dealer_id', dealerId)
+    .eq('day_type', dayType)
+    .maybeSingle()
+
+  const slotMinutes = settings
+    ? getSlotMinutesFromConfig({
+        startHour: settings.start_hour,
+        endHour: settings.end_hour,
+        slotIntervalMinutes: settings.slot_interval_minutes,
+        appointmentDurationMinutes: settings.appointment_duration_minutes,
+      })
+    : getDefaultSlotMinutes()
+  const duration = settings?.appointment_duration_minutes ?? CALENDAR_DEFAULTS.appointmentDurationMinutes
+
+  const slots: string[] = []
+  for (const startMinutes of slotMinutes) {
+    const h = Math.floor(startMinutes / 60)
+    const m = startMinutes % 60
+    if (timezoneName) {
+      const dateInTz = new Date(y, mo - 1, d, h, m, 0)
+      slots.push(fromZonedTime(dateInTz, timezoneName).toISOString())
+    } else {
+      slots.push(new Date(y, mo - 1, d, h, m, 0).toISOString())
+    }
+  }
+
+  const blocks = await getDealerBlocksForDate(dealerId, dateStr)
+  let availableSlots = slots.filter(slot => {
+    if (blocks.length === 0 || !timezoneName) return true
+    const slotTime = new Date(slot)
+    const slotStartMinutes = parseInt(formatInTimeZone(slotTime, timezoneName, 'H'), 10) * 60 +
+      parseInt(formatInTimeZone(slotTime, timezoneName, 'm'), 10)
+    const slotEndMinutes = slotStartMinutes + duration
+    const inBlock = blocks.some(b => slotStartMinutes < b.end_minutes && slotEndMinutes > b.start_minutes)
+    return !inBlock
+  })
+
+  const startOfDayISO = new Date(y, mo - 1, d, 0, 0, 0).toISOString()
+  const endOfDayISO = new Date(y, mo - 1, d, 23, 59, 59).toISOString()
+  let query = supabase
+    .from('demands')
+    .select('appointment_date')
+    .eq('dealer_id', dealerId)
+    .gte('appointment_date', startOfDayISO)
+    .lte('appointment_date', endOfDayISO)
+    .neq('status', 'cancelled')
+  if (excludeDemandId) {
+    query = query.neq('id', excludeDemandId)
+  }
+  const { data: taken } = await query
+  const takenSet = new Set((taken || []).map((r: { appointment_date: string }) => r.appointment_date))
+  const durationMs = duration * 60 * 1000
+  availableSlots = availableSlots.filter(slot => {
+    const slotStart = new Date(slot).getTime()
+    const slotEnd = slotStart + durationMs
+    for (const takenDate of takenSet) {
+      const tStart = new Date(takenDate).getTime()
+      const tEnd = tStart + durationMs
+      if (slotStart < tEnd && slotEnd > tStart) return false
+    }
+    return true
+  })
+
+  return { slots: availableSlots, timezoneName }
 }
 

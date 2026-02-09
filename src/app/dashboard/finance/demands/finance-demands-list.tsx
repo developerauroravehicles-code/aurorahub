@@ -9,6 +9,7 @@ interface Demand {
   id: string
   status: string
   created_at: string
+  dealer_id?: string | null
   customer_firstname: string
   customer_lastname: string
   customer_phone: string
@@ -220,6 +221,7 @@ export function FinanceDemandsList({ myAssignedDemands, unassignedDemands, allAs
                       status={demand.status}
                       demand={{
                         id: demand.id,
+                        dealer_id: demand.dealer_id,
                         customer_firstname: demand.customer_firstname,
                         customer_lastname: demand.customer_lastname,
                         customer_phone: demand.customer_phone,

@@ -196,21 +196,20 @@ For cancellation or rescheduling requests within the last 24 hours prior to your
 
 #### Ne Zaman Gönderilir?
 
-Vercel Cron Job her saat başı çalışır ve **randevudan 4 saat önce** olan tüm approved demand'ler için SMS gönderir.
+Vercel Cron Job her saat başı çalışır ve **randevu saatinden tam 4 saat önce** SMS gönderir. Örnek: 11:00 randevusu → 07:00'de hatırlatma; 14:00 randevusu → 10:00'da hatırlatma.
 
 #### Şartlar ve Kontroller
 
 - ✅ Demand status'ü `approved` olduğunda
-- ✅ Randevu tarihi **4 saat içinde** olduğunda
+- ✅ Randevu tarihi **şu andan yaklaşık 3,5–4,5 saat sonra** (tam 4 saat önce penceresi) olduğunda
 - ✅ Demand'in `customer_phone` alanı dolu olduğunda
 - ✅ Randevu tarihi geçmişte değilse
 
 #### Otomatik İşlem
 
 - Vercel Cron Job her saat başı `/api/send-reminders` endpoint'ini çağırır
-- Endpoint tüm approved demand'leri kontrol eder
-- 4 saat içindeki randevular için SMS gönderilir
-- Her randevu için sadece bir kez SMS gönderilir (cron job her saat çalıştığı için)
+- Endpoint, randevu saati “şu andan ~4 saat sonra” olan approved demand'leri seçer (3,5h–4,5h penceresi)
+- Sadece bu penceredeki randevular için SMS gönderilir; her randevu için yalnızca bir kez (tam 4 saat önce) gönderilir
 
 #### Mesaj İçeriği
 
@@ -444,15 +443,15 @@ TWILIO_DEFAULT_COUNTRY_CODE=1  # Optional: 1 for Canada/USA, 90 for Turkey, etc.
    ↓
 2. /api/send-reminders endpoint'i çağrılır
    ↓
-3. Tüm approved demand'ler sorgulanır:
+3. "Tam 4 saat önce" penceresindeki approved demand'ler sorgulanır:
    a. Status = 'approved'
-   b. Appointment date >= now
-   c. Appointment date <= now + 4 hours
+   b. Appointment date >= now + 3.5 hours
+   c. Appointment date <= now + 4.5 hours
    d. Customer phone is not null
    ↓
 4. Her demand için:
-   a. 4 saat içinde mi kontrol edilir
-   b. 4-Hour Reminder SMS gönderilir
+   a. 3.5h–4.5h penceresinde mi kontrol edilir (isWithin4HoursBeforeWindow)
+   b. 4-Hour Reminder SMS gönderilir (mesajda "in 4 hours")
    c. Sonuç loglanır
    ↓
 5. JSON response döner (sent count, error count)
@@ -484,7 +483,7 @@ TWILIO_DEFAULT_COUNTRY_CODE=1  # Optional: 1 for Canada/USA, 90 for Turkey, etc.
 | **Finance Approve** | Finance kullanıcısı approve eder | Specialist | Appointment Created | Checkbox işaretli + specialist assign edilmiş + specialist phone var | ✅ İşaretli (Kilitli) |
 | **Demand Cancellation** | Finance kullanıcısı cancel eder | Customer | Cancellation Notice | Randevu 24 saat içinde + customer_phone var | 🔄 Otomatik |
 | **Demand Rescheduling** | Finance kullanıcısı randevu tarihini değiştirir | Customer | Cancellation Notice | Eski randevu 24 saat içinde + customer_phone var | 🔄 Otomatik |
-| **4-Hour Reminder** | Vercel Cron Job (her saat başı) | Customer | 4-Hour Reminder | Randevu 4 saat içinde + status approved + customer_phone var | 🔄 Otomatik |
+| **4-Hour Reminder** | Vercel Cron Job (her saat başı) | Customer | 4-Hour Reminder | Randevu tam 4 saat önce penceresinde (3.5h–4.5h) + status approved + customer_phone var | 🔄 Otomatik |
 | **Specialist Alert** | Specialist dashboard yüklenir | Specialist | 4-Hour Reminder | Randevu yarın + specialist assign edilmiş + daha önce gönderilmemiş | 🔄 Otomatik |
 
 ---
@@ -502,7 +501,7 @@ TWILIO_DEFAULT_COUNTRY_CODE=1  # Optional: 1 for Canada/USA, 90 for Turkey, etc.
 
 4. **24 Saat Kuralı:** Cancellation/Rescheduling notice sadece randevu 24 saat içindeyse gönderilir.
 
-5. **4 Saat Hatırlatma:** Cron job her saat başı çalışır ve 4 saat içindeki randevular için otomatik hatırlatma gönderir.
+5. **4 Saat Hatırlatma:** Cron job her saat başı çalışır; her randevu için hatırlatma **randevu saatinden tam 4 saat önce** gönderilir (örn. 11:00 randevusu → 07:00'de SMS).
 
 6. **Non-Blocking:** SMS gönderim hataları ana işlemleri (approve, cancel, update) etkilemez.
 

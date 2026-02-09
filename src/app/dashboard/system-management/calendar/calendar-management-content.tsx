@@ -1,8 +1,18 @@
 'use client'
 
 import { useState } from 'react'
-import { Calendar, Plus, Edit, Trash2 } from 'lucide-react'
-import { createCalendarSetting, updateCalendarSetting, deleteCalendarSetting } from './actions'
+import { Trash2, CalendarX2, Clock, Plus, Edit } from 'lucide-react'
+import { createCalendarBlock, createCalendarBlocks, deleteCalendarBlock } from './actions'
+import { getGlobalSlotMinutes, getSlotMinutesFromConfig, CALENDAR_DEFAULTS } from '@/lib/calendar-defaults'
+
+interface CalendarBlock {
+  id: string
+  dealer_id: string
+  block_date: string
+  start_minutes: number
+  end_minutes: number
+  created_at?: string
+}
 
 interface CalendarSetting {
   id: string
@@ -12,9 +22,7 @@ interface CalendarSetting {
   end_hour: number
   slot_interval_minutes: number
   appointment_duration_minutes: number
-  dealers: {
-    name: string
-  }
+  dealers?: { name: string }
 }
 
 interface Dealer {
@@ -25,22 +33,83 @@ interface Dealer {
 interface CalendarManagementContentProps {
   settings: CalendarSetting[]
   dealers: Dealer[]
+  blocks: CalendarBlock[]
   createCalendarSetting: (formData: FormData) => Promise<{ success: boolean; error?: string }>
   updateCalendarSetting: (settingId: string, startHour: number, endHour: number, slotIntervalMinutes: number, appointmentDurationMinutes: number) => Promise<{ success: boolean; error?: string }>
   deleteCalendarSetting: (settingId: string) => Promise<{ success: boolean; error?: string }>
+  createCalendarBlock: (formData: FormData) => Promise<{ success: boolean; error?: string }>
+  createCalendarBlocks: (dealerId: string, blockDate: string, blocks: { start_minutes: number; end_minutes: number }[]) => Promise<{ success: boolean; error?: string }>
+  deleteCalendarBlock: (blockId: string) => Promise<{ success: boolean; error?: string }>
+}
+
+/** Global calendar slots (09:00–16:30, 90 min interval). Same as demand form. */
+function getSlotsForCloseUI(): { start_minutes: number; end_minutes: number; label: string }[] {
+  const duration = CALENDAR_DEFAULTS.appointmentDurationMinutes
+  return getGlobalSlotMinutes().map(start_minutes => ({
+    start_minutes,
+    end_minutes: start_minutes + duration,
+    label: `${String(Math.floor(start_minutes / 60)).padStart(2, '0')}:${String(start_minutes % 60).padStart(2, '0')}`
+  }))
+}
+
+/** Slots for close UI for a specific dealer and date – uses dealer hours (weekday/weekend) when set. */
+function getSlotsForDealerDate(
+  dealerId: string,
+  blockDate: string,
+  getSetting: (dealerId: string, dayType: 'weekday' | 'weekend') => CalendarSetting | undefined
+): { start_minutes: number; end_minutes: number; label: string }[] {
+  const [y, mo, d] = blockDate.split('-').map(Number)
+  const dayOfWeek = new Date(y, mo - 1, d).getDay()
+  const dayType: 'weekday' | 'weekend' = dayOfWeek === 0 || dayOfWeek === 6 ? 'weekend' : 'weekday'
+  const setting = getSetting(dealerId, dayType)
+  const slotMinutes = setting
+    ? getSlotMinutesFromConfig({
+        startHour: setting.start_hour,
+        endHour: setting.end_hour,
+        slotIntervalMinutes: setting.slot_interval_minutes,
+        appointmentDurationMinutes: setting.appointment_duration_minutes,
+      })
+    : getGlobalSlotMinutes()
+  const duration = setting?.appointment_duration_minutes ?? CALENDAR_DEFAULTS.appointmentDurationMinutes
+  return slotMinutes.map(start_minutes => ({
+    start_minutes,
+    end_minutes: start_minutes + duration,
+    label: `${String(Math.floor(start_minutes / 60)).padStart(2, '0')}:${String(start_minutes % 60).padStart(2, '0')}`
+  }))
+}
+
+function formatBlockLabel(block: CalendarBlock): string {
+  const d = new Date(block.block_date + 'T12:00:00')
+  const dateStr = d.toLocaleDateString('en-CA', { day: 'numeric', month: 'short', year: 'numeric' })
+  if (block.start_minutes === 0 && block.end_minutes === 1440) {
+    return `${dateStr} (all day)`
+  }
+  const sh = Math.floor(block.start_minutes / 60)
+  const sm = block.start_minutes % 60
+  const eh = Math.floor(block.end_minutes / 60)
+  const em = block.end_minutes % 60
+  return `${dateStr} ${String(sh).padStart(2, '0')}:${String(sm).padStart(2, '0')}-${String(eh).padStart(2, '0')}:${String(em).padStart(2, '0')}`
 }
 
 export function CalendarManagementContent({
-  settings,
+  settings = [],
   dealers,
+  blocks,
   createCalendarSetting,
   updateCalendarSetting,
-  deleteCalendarSetting
+  deleteCalendarSetting,
+  createCalendarBlock,
+  createCalendarBlocks,
+  deleteCalendarBlock
 }: CalendarManagementContentProps) {
-  const [showCreateForm, setShowCreateForm] = useState(false)
+  const [showAddHoursFor, setShowAddHoursFor] = useState<{ dealerId: string; dayType: 'weekday' | 'weekend' } | null>(null)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
+  const [blockError, setBlockError] = useState<string | null>(null)
+  const [blockSuccess, setBlockSuccess] = useState<string | null>(null)
+  const [blockDateByDealer, setBlockDateByDealer] = useState<Record<string, string>>({})
+  const [selectedSlotsByDealer, setSelectedSlotsByDealer] = useState<Record<string, { start_minutes: number; end_minutes: number }[]>>({})
 
   const handleCreate = async (formData: FormData) => {
     setError(null)
@@ -48,7 +117,7 @@ export function CalendarManagementContent({
     const result = await createCalendarSetting(formData)
     if (result.success) {
       setSuccess('Calendar setting created successfully!')
-      setShowCreateForm(false)
+      setShowAddHoursFor(null)
       // Reset form by reloading
       window.location.reload()
     } else {
@@ -88,7 +157,63 @@ export function CalendarManagementContent({
     }
   }
 
-  // Group settings by dealer
+  const handleCloseEntireDay = async (dealerId: string, blockDate: string) => {
+    setBlockError(null)
+    setBlockSuccess(null)
+    const fd = new FormData()
+    fd.set('dealerId', dealerId)
+    fd.set('blockDate', blockDate)
+    fd.set('wholeDay', 'true')
+    const result = await createCalendarBlock(fd)
+    if (result.success) {
+      setBlockSuccess('Day closed successfully.')
+      window.location.reload()
+    } else {
+      setBlockError(result.error || 'Failed to close day.')
+    }
+  }
+
+  const handleCloseSelectedSlots = async (dealerId: string, blockDate: string, slots: { start_minutes: number; end_minutes: number }[]) => {
+    setBlockError(null)
+    setBlockSuccess(null)
+    if (slots.length === 0) {
+      setBlockError('Please select at least one slot to close.')
+      return
+    }
+    const result = await createCalendarBlocks(dealerId, blockDate, slots)
+    if (result.success) {
+      setBlockSuccess('Selected slots closed successfully.')
+      setSelectedSlotsByDealer(prev => ({ ...prev, [dealerId]: [] }))
+      window.location.reload()
+    } else {
+      setBlockError(result.error || 'Failed to close slots.')
+    }
+  }
+
+  const toggleSlotSelection = (dealerId: string, slot: { start_minutes: number; end_minutes: number }) => {
+    setSelectedSlotsByDealer(prev => {
+      const current = prev[dealerId] || []
+      const exists = current.some(s => s.start_minutes === slot.start_minutes && s.end_minutes === slot.end_minutes)
+      if (exists) {
+        return { ...prev, [dealerId]: current.filter(s => !(s.start_minutes === slot.start_minutes && s.end_minutes === slot.end_minutes)) }
+      }
+      return { ...prev, [dealerId]: [...current, slot] }
+    })
+  }
+
+  const handleDeleteBlock = async (blockId: string) => {
+    if (!confirm('Remove this block? Closed slots will become available again.')) return
+    setBlockError(null)
+    setBlockSuccess(null)
+    const result = await deleteCalendarBlock(blockId)
+    if (result.success) {
+      setBlockSuccess('Block removed.')
+      window.location.reload()
+    } else {
+      setBlockError(result.error || 'Failed to remove block.')
+    }
+  }
+
   const settingsByDealer = new Map<string, CalendarSetting[]>()
   settings.forEach(setting => {
     if (!settingsByDealer.has(setting.dealer_id)) {
@@ -96,6 +221,9 @@ export function CalendarManagementContent({
     }
     settingsByDealer.get(setting.dealer_id)!.push(setting)
   })
+
+  const getSetting = (dealerId: string, dayType: 'weekday' | 'weekend') =>
+    settingsByDealer.get(dealerId)?.find(s => s.day_type === dayType)
 
   return (
     <div className="space-y-6">
@@ -109,256 +237,300 @@ export function CalendarManagementContent({
           {success}
         </div>
       )}
-
-      <div className="flex justify-between items-center">
-        <h2 className="text-lg font-medium text-white">Calendar Settings</h2>
-        <button
-          onClick={() => setShowCreateForm(!showCreateForm)}
-          className="flex items-center gap-2 px-4 py-2 bg-[#C27E00] text-white rounded-md hover:bg-[#a06900] transition-colors"
-        >
-          <Plus className="w-4 h-4" />
-          Add Calendar Setting
-        </button>
-      </div>
-
-      {showCreateForm && (
-        <div className="bg-white/5 border border-gray-800 rounded-lg p-6">
-          <h3 className="text-md font-medium text-white mb-4">Create New Calendar Setting</h3>
-          <form action={handleCreate} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">Dealer</label>
-                <select
-                  name="dealerId"
-                  required
-                  className="w-full border border-gray-700 bg-black/50 text-white rounded-md px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]"
-                >
-                  <option value="" className="bg-black">Select a dealer...</option>
-                  {dealers.map(dealer => (
-                    <option key={dealer.id} value={dealer.id} className="bg-black">
-                      {dealer.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">Day Type</label>
-                <select
-                  name="dayType"
-                  required
-                  className="w-full border border-gray-700 bg-black/50 text-white rounded-md px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]"
-                >
-                  <option value="weekday" className="bg-black">Weekday</option>
-                  <option value="weekend" className="bg-black">Weekend</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">Start Hour</label>
-                <input
-                  type="number"
-                  name="startHour"
-                  min="0"
-                  max="23"
-                  required
-                  className="w-full border border-gray-700 bg-black/50 text-white rounded-md px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">End Hour</label>
-                <input
-                  type="number"
-                  name="endHour"
-                  min="0"
-                  max="23"
-                  required
-                  className="w-full border border-gray-700 bg-black/50 text-white rounded-md px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">Slot Interval (minutes)</label>
-                <input
-                  type="number"
-                  name="slotIntervalMinutes"
-                  min="1"
-                  required
-                  defaultValue={90}
-                  className="w-full border border-gray-700 bg-black/50 text-white rounded-md px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">Appointment Duration (minutes)</label>
-                <input
-                  type="number"
-                  name="appointmentDurationMinutes"
-                  min="1"
-                  required
-                  defaultValue={75}
-                  className="w-full border border-gray-700 bg-black/50 text-white rounded-md px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]"
-                />
-              </div>
-            </div>
-            <div className="flex gap-2">
-              <button
-                type="submit"
-                className="px-4 py-2 bg-[#C27E00] text-white rounded-md hover:bg-[#a06900] transition-colors"
-              >
-                Create
-              </button>
-              <button
-                type="button"
-                onClick={() => setShowCreateForm(false)}
-                className="px-4 py-2 bg-gray-700 text-white rounded-md hover:bg-gray-600 transition-colors"
-              >
-                Cancel
-              </button>
-            </div>
-          </form>
+      {blockError && (
+        <div className="bg-red-900/50 border border-red-800 text-red-200 p-4 rounded-md">
+          {blockError}
+        </div>
+      )}
+      {blockSuccess && (
+        <div className="bg-green-900/50 border border-green-800 text-green-200 p-4 rounded-md">
+          {blockSuccess}
         </div>
       )}
 
-      <div className="space-y-6">
-        {Array.from(settingsByDealer.entries()).map(([dealerId, dealerSettings]) => {
-          const dealer = dealers.find(d => d.id === dealerId)
+      {/* Single global calendar – default; dealers can override hours below */}
+      <div className="mb-6 p-4 rounded-lg bg-[#C27E00]/10 border border-[#C27E00]/30">
+        <p className="text-sm text-white">
+          <strong>Single calendar for all dealers.</strong> Default: 09:00–16:30, 90 min between slots (75 min appointment). Set custom start/end per dealer below. Times are shown in each dealer&apos;s timezone.
+        </p>
+      </div>
+
+      {/* Dealer hours – start/end per dealer (weekday & weekend) */}
+      <div className="mb-10">
+        <h2 className="text-lg font-medium text-white mb-2 flex items-center gap-2">
+          <Clock className="w-5 h-5 text-[#C27E00]" />
+          Dealer hours
+        </h2>
+        <p className="text-sm text-gray-400 mb-4">
+          Set when each dealer can take appointments (start and end time). If not set, default 09:00–16:30 is used.
+        </p>
+        {dealers.map(dealer => {
+          const weekdaySetting = getSetting(dealer.id, 'weekday')
+          const weekendSetting = getSetting(dealer.id, 'weekend')
           return (
-            <div key={dealerId} className="bg-white/5 border border-gray-800 rounded-lg p-6">
-              <h3 className="text-lg font-semibold text-white mb-4">{dealer?.name || 'Unknown Dealer'}</h3>
-              <div className="space-y-4">
-                {dealerSettings.map(setting => (
-                  <div key={setting.id} className="bg-black/50 border border-gray-800 rounded-lg p-4">
-                    {editingId === setting.id ? (
+            <div key={dealer.id} className="bg-white/5 border border-gray-800 rounded-lg p-6 mb-4">
+              <h3 className="text-md font-semibold text-white mb-4">{dealer.name}</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Weekday */}
+                <div className="bg-black/30 rounded-lg p-4">
+                  <p className="text-sm font-medium text-gray-300 mb-3">Weekday</p>
+                  {weekdaySetting ? (
+                    editingId === weekdaySetting.id ? (
                       <form
-                        action={(formData) => handleUpdate(setting.id, formData)}
-                        className="space-y-4"
+                        action={(formData) => handleUpdate(weekdaySetting.id, formData)}
+                        className="space-y-3"
                       >
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="flex flex-wrap gap-3 items-end">
                           <div>
-                            <label className="block text-sm font-medium text-gray-300 mb-1">Day Type</label>
-                            <div className="px-3 py-2 bg-gray-800 text-gray-400 rounded-md capitalize">
-                              {setting.day_type}
-                            </div>
-                          </div>
-                          <div>
-                            <label className="block text-sm font-medium text-gray-300 mb-1">Start Hour</label>
+                            <label className="block text-xs text-gray-400 mb-1">Start</label>
                             <input
                               type="number"
                               name="startHour"
-                              min="0"
-                              max="23"
-                              defaultValue={setting.start_hour}
-                              required
-                              className="w-full border border-gray-700 bg-black/50 text-white rounded-md px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]"
+                              min={0}
+                              max={23}
+                              defaultValue={weekdaySetting.start_hour}
+                              className="w-20 border border-gray-700 bg-black/50 text-white rounded px-2 py-1.5 text-sm"
                             />
                           </div>
                           <div>
-                            <label className="block text-sm font-medium text-gray-300 mb-1">End Hour</label>
+                            <label className="block text-xs text-gray-400 mb-1">End</label>
                             <input
                               type="number"
                               name="endHour"
-                              min="0"
-                              max="23"
-                              defaultValue={setting.end_hour}
-                              required
-                              className="w-full border border-gray-700 bg-black/50 text-white rounded-md px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]"
+                              min={0}
+                              max={23}
+                              defaultValue={weekdaySetting.end_hour}
+                              className="w-20 border border-gray-700 bg-black/50 text-white rounded px-2 py-1.5 text-sm"
                             />
                           </div>
-                          <div>
-                            <label className="block text-sm font-medium text-gray-300 mb-1">Slot Interval (minutes)</label>
-                            <input
-                              type="number"
-                              name="slotIntervalMinutes"
-                              min="1"
-                              defaultValue={setting.slot_interval_minutes}
-                              required
-                              className="w-full border border-gray-700 bg-black/50 text-white rounded-md px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]"
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-sm font-medium text-gray-300 mb-1">Appointment Duration (minutes)</label>
-                            <input
-                              type="number"
-                              name="appointmentDurationMinutes"
-                              min="1"
-                              defaultValue={setting.appointment_duration_minutes}
-                              required
-                              className="w-full border border-gray-700 bg-black/50 text-white rounded-md px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]"
-                            />
-                          </div>
-                        </div>
-                        <div className="flex gap-2">
-                          <button
-                            type="submit"
-                            className="px-4 py-2 bg-[#C27E00] text-white rounded-md hover:bg-[#a06900] transition-colors"
-                          >
-                            Save
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setEditingId(null)}
-                            className="px-4 py-2 bg-gray-700 text-white rounded-md hover:bg-gray-600 transition-colors"
-                          >
-                            Cancel
-                          </button>
+                          <input type="hidden" name="slotIntervalMinutes" value={CALENDAR_DEFAULTS.slotIntervalMinutes} />
+                          <input type="hidden" name="appointmentDurationMinutes" value={CALENDAR_DEFAULTS.appointmentDurationMinutes} />
+                          <button type="submit" className="px-3 py-1.5 bg-[#C27E00] text-white rounded text-sm hover:bg-[#a06900]">Save</button>
+                          <button type="button" onClick={() => setEditingId(null)} className="px-3 py-1.5 bg-gray-700 text-white rounded text-sm hover:bg-gray-600">Cancel</button>
                         </div>
                       </form>
                     ) : (
-                      <div className="flex justify-between items-start">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-3 mb-2">
-                            <span className="px-3 py-1 bg-[#C27E00]/20 text-[#C27E00] rounded-md text-sm font-medium capitalize">
-                              {setting.day_type}
-                            </span>
-                          </div>
-                          <div className="grid grid-cols-2 gap-4 text-sm">
-                            <div>
-                              <span className="text-gray-400">Start Hour:</span>
-                              <span className="text-white ml-2">{setting.start_hour}:00</span>
-                            </div>
-                            <div>
-                              <span className="text-gray-400">End Hour:</span>
-                              <span className="text-white ml-2">{setting.end_hour}:00</span>
-                            </div>
-                            <div>
-                              <span className="text-gray-400">Slot Interval:</span>
-                              <span className="text-white ml-2">{setting.slot_interval_minutes} minutes</span>
-                            </div>
-                            <div>
-                              <span className="text-gray-400">Appointment Duration:</span>
-                              <span className="text-white ml-2">{setting.appointment_duration_minutes} minutes</span>
-                            </div>
-                          </div>
-                        </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-white">{weekdaySetting.start_hour}:00 – {weekdaySetting.end_hour}:00</span>
                         <div className="flex gap-2">
-                          <button
-                            onClick={() => setEditingId(setting.id)}
-                            className="p-2 text-[#C27E00] hover:bg-white/10 rounded transition-colors"
-                            title="Edit"
-                          >
-                            <Edit className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => handleDelete(setting.id)}
-                            className="p-2 text-red-400 hover:bg-white/10 rounded transition-colors"
-                            title="Delete"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
+                          <button type="button" onClick={() => setEditingId(weekdaySetting.id)} className="p-1.5 text-[#C27E00] hover:bg-white/10 rounded" title="Edit"><Edit className="w-4 h-4" /></button>
+                          <button type="button" onClick={() => handleDelete(weekdaySetting.id)} className="p-1.5 text-red-400 hover:bg-white/10 rounded" title="Delete"><Trash2 className="w-4 h-4" /></button>
                         </div>
                       </div>
-                    )}
-                  </div>
-                ))}
+                    )
+                  ) : showAddHoursFor?.dealerId === dealer.id && showAddHoursFor?.dayType === 'weekday' ? (
+                    <form
+                      onSubmit={async (e) => {
+                        e.preventDefault()
+                        const fd = new FormData(e.currentTarget)
+                        fd.set('dealerId', dealer.id)
+                        fd.set('dayType', 'weekday')
+                        fd.set('slotIntervalMinutes', String(CALENDAR_DEFAULTS.slotIntervalMinutes))
+                        fd.set('appointmentDurationMinutes', String(CALENDAR_DEFAULTS.appointmentDurationMinutes))
+                        await handleCreate(fd)
+                        setShowAddHoursFor(null)
+                      }}
+                      className="space-y-3"
+                    >
+                      <div className="flex flex-wrap gap-3 items-end">
+                        <div>
+                          <label className="block text-xs text-gray-400 mb-1">Start (hour 0–23)</label>
+                          <input type="number" name="startHour" min={0} max={23} defaultValue={9} required className="w-20 border border-gray-700 bg-black/50 text-white rounded px-2 py-1.5 text-sm" />
+                        </div>
+                        <div>
+                          <label className="block text-xs text-gray-400 mb-1">End (hour 0–23)</label>
+                          <input type="number" name="endHour" min={0} max={23} defaultValue={16} required className="w-20 border border-gray-700 bg-black/50 text-white rounded px-2 py-1.5 text-sm" />
+                        </div>
+                        <button type="submit" className="px-3 py-1.5 bg-[#C27E00] text-white rounded text-sm hover:bg-[#a06900]">Save</button>
+                        <button type="button" onClick={() => setShowAddHoursFor(null)} className="px-3 py-1.5 bg-gray-700 text-white rounded text-sm">Cancel</button>
+                      </div>
+                    </form>
+                  ) : (
+                    <p className="text-gray-500 text-sm">Default 09:00–16:30</p>
+                  )}
+                  {!weekdaySetting && !(showAddHoursFor?.dealerId === dealer.id && showAddHoursFor?.dayType === 'weekday') && (
+                    <button type="button" onClick={() => setShowAddHoursFor({ dealerId: dealer.id, dayType: 'weekday' })} className="mt-2 flex items-center gap-1 text-sm text-[#C27E00] hover:underline">
+                      <Plus className="w-4 h-4" /> Set hours
+                    </button>
+                  )}
+                </div>
+                {/* Weekend */}
+                <div className="bg-black/30 rounded-lg p-4">
+                  <p className="text-sm font-medium text-gray-300 mb-3">Weekend</p>
+                  {weekendSetting ? (
+                    editingId === weekendSetting.id ? (
+                      <form
+                        action={(formData) => handleUpdate(weekendSetting.id, formData)}
+                        className="space-y-3"
+                      >
+                        <div className="flex flex-wrap gap-3 items-end">
+                          <div>
+                            <label className="block text-xs text-gray-400 mb-1">Start</label>
+                            <input type="number" name="startHour" min={0} max={23} defaultValue={weekendSetting.start_hour} className="w-20 border border-gray-700 bg-black/50 text-white rounded px-2 py-1.5 text-sm" />
+                          </div>
+                          <div>
+                            <label className="block text-xs text-gray-400 mb-1">End</label>
+                            <input type="number" name="endHour" min={0} max={23} defaultValue={weekendSetting.end_hour} className="w-20 border border-gray-700 bg-black/50 text-white rounded px-2 py-1.5 text-sm" />
+                          </div>
+                          <input type="hidden" name="slotIntervalMinutes" value={CALENDAR_DEFAULTS.slotIntervalMinutes} />
+                          <input type="hidden" name="appointmentDurationMinutes" value={CALENDAR_DEFAULTS.appointmentDurationMinutes} />
+                          <button type="submit" className="px-3 py-1.5 bg-[#C27E00] text-white rounded text-sm hover:bg-[#a06900]">Save</button>
+                          <button type="button" onClick={() => setEditingId(null)} className="px-3 py-1.5 bg-gray-700 text-white rounded text-sm">Cancel</button>
+                        </div>
+                      </form>
+                    ) : (
+                      <div className="flex items-center justify-between">
+                        <span className="text-white">{weekendSetting.start_hour}:00 – {weekendSetting.end_hour}:00</span>
+                        <div className="flex gap-2">
+                          <button type="button" onClick={() => setEditingId(weekendSetting.id)} className="p-1.5 text-[#C27E00] hover:bg-white/10 rounded" title="Edit"><Edit className="w-4 h-4" /></button>
+                          <button type="button" onClick={() => handleDelete(weekendSetting.id)} className="p-1.5 text-red-400 hover:bg-white/10 rounded" title="Delete"><Trash2 className="w-4 h-4" /></button>
+                        </div>
+                      </div>
+                    )
+                  ) : showAddHoursFor?.dealerId === dealer.id && showAddHoursFor?.dayType === 'weekend' ? (
+                    <form
+                      onSubmit={async (e) => {
+                        e.preventDefault()
+                        const fd = new FormData(e.currentTarget)
+                        fd.set('dealerId', dealer.id)
+                        fd.set('dayType', 'weekend')
+                        fd.set('slotIntervalMinutes', String(CALENDAR_DEFAULTS.slotIntervalMinutes))
+                        fd.set('appointmentDurationMinutes', String(CALENDAR_DEFAULTS.appointmentDurationMinutes))
+                        await handleCreate(fd)
+                        setShowAddHoursFor(null)
+                      }}
+                      className="space-y-3"
+                    >
+                      <div className="flex flex-wrap gap-3 items-end">
+                        <div>
+                          <label className="block text-xs text-gray-400 mb-1">Start (hour 0–23)</label>
+                          <input type="number" name="startHour" min={0} max={23} defaultValue={9} required className="w-20 border border-gray-700 bg-black/50 text-white rounded px-2 py-1.5 text-sm" />
+                        </div>
+                        <div>
+                          <label className="block text-xs text-gray-400 mb-1">End (hour 0–23)</label>
+                          <input type="number" name="endHour" min={0} max={23} defaultValue={16} required className="w-20 border border-gray-700 bg-black/50 text-white rounded px-2 py-1.5 text-sm" />
+                        </div>
+                        <button type="submit" className="px-3 py-1.5 bg-[#C27E00] text-white rounded text-sm hover:bg-[#a06900]">Save</button>
+                        <button type="button" onClick={() => setShowAddHoursFor(null)} className="px-3 py-1.5 bg-gray-700 text-white rounded text-sm">Cancel</button>
+                      </div>
+                    </form>
+                  ) : (
+                    <p className="text-gray-500 text-sm">Default 09:00–16:30</p>
+                  )}
+                  {!weekendSetting && !(showAddHoursFor?.dealerId === dealer.id && showAddHoursFor?.dayType === 'weekend') && (
+                    <button type="button" onClick={() => setShowAddHoursFor({ dealerId: dealer.id, dayType: 'weekend' })} className="mt-2 flex items-center gap-1 text-sm text-[#C27E00] hover:underline">
+                      <Plus className="w-4 h-4" /> Set hours
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           )
         })}
       </div>
 
-      {settings.length === 0 && (
-        <div className="text-center py-12 text-gray-400">
-          <Calendar className="w-12 h-12 mx-auto mb-4 opacity-50" />
-          <p>No calendar settings found. Create one to get started.</p>
-        </div>
-      )}
+      {/* Close slots or days (dealer-based) */}
+      <div className="mb-10">
+        <h2 className="text-lg font-medium text-white mb-2 flex items-center gap-2">
+          <CalendarX2 className="w-5 h-5 text-[#C27E00]" />
+          Close Slots or Days
+        </h2>
+        <p className="text-sm text-gray-400 mb-4">
+          Close entire days or select specific time slots per dealer. Appointments cannot be created for closed days or slots.
+        </p>
+        {dealers.map(dealer => {
+          const dealerBlocks = blocks.filter(b => b.dealer_id === dealer.id)
+          const blockDate = blockDateByDealer[dealer.id] || ''
+          const slotsForDate = blockDate ? getSlotsForDealerDate(dealer.id, blockDate, getSetting) : []
+          const selectedSlots = selectedSlotsByDealer[dealer.id] || []
+          const isSlotSelected = (s: { start_minutes: number; end_minutes: number }) =>
+            selectedSlots.some(x => x.start_minutes === s.start_minutes && x.end_minutes === s.end_minutes)
+          return (
+            <div key={dealer.id} className="bg-white/5 border border-gray-800 rounded-lg p-6 mb-4">
+              <h3 className="text-md font-semibold text-white mb-4">{dealer.name}</h3>
+              <div className="space-y-4 mb-6">
+                <div className="flex flex-wrap items-end gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-1">Date</label>
+                    <input
+                      type="date"
+                      value={blockDate}
+                      onChange={(e) => setBlockDateByDealer(prev => ({ ...prev, [dealer.id]: e.target.value }))}
+                      min={new Date().toISOString().slice(0, 10)}
+                      className="w-full border border-gray-700 bg-black/50 text-white rounded-md px-3 py-2 focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]"
+                    />
+                  </div>
+                  {blockDate && (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => handleCloseEntireDay(dealer.id, blockDate)}
+                        className="px-4 py-2 bg-gray-700 text-white rounded-md hover:bg-gray-600 transition-colors text-sm font-medium"
+                      >
+                        Close entire day
+                      </button>
+                      {slotsForDate.length > 0 && (
+                        <div className="w-full mt-2">
+                          <p className="text-sm font-medium text-gray-300 mb-2">
+                            Select slots to close (click to toggle). These are the same slots used for appointments.
+                          </p>
+                          <div className="flex flex-wrap gap-2">
+                            {slotsForDate.map(slot => (
+                              <button
+                                key={`${slot.start_minutes}-${slot.end_minutes}`}
+                                type="button"
+                                onClick={() => toggleSlotSelection(dealer.id, { start_minutes: slot.start_minutes, end_minutes: slot.end_minutes })}
+                                className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                                  isSlotSelected(slot)
+                                    ? 'bg-[#C27E00] text-white border border-[#C27E00]'
+                                    : 'bg-black/50 text-gray-300 border border-gray-700 hover:bg-white/10'
+                                }`}
+                              >
+                                {slot.label}
+                              </button>
+                            ))}
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => handleCloseSelectedSlots(dealer.id, blockDate, selectedSlots)}
+                            disabled={selectedSlots.length === 0}
+                            className="mt-3 px-4 py-2 bg-[#C27E00] text-white rounded-md hover:bg-[#a06900] transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            Close selected slots
+                          </button>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+              </div>
+              {dealerBlocks.length > 0 ? (
+                <div className="space-y-2">
+                  <p className="text-sm text-gray-400">Closed days / slots:</p>
+                  <ul className="space-y-1">
+                    {dealerBlocks.map(block => (
+                      <li key={block.id} className="flex items-center justify-between bg-black/30 rounded px-3 py-2 text-sm text-gray-300">
+                        <span>{formatBlockLabel(block)}</span>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteBlock(block.id)}
+                          className="p-1.5 text-red-400 hover:bg-white/10 rounded transition-colors"
+                          title="Remove block"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : (
+                <p className="text-sm text-gray-500">No closed days or slots for this dealer yet.</p>
+              )}
+            </div>
+          )
+        })}
+      </div>
+
     </div>
   )
 }

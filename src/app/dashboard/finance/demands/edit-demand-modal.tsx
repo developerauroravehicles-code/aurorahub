@@ -2,11 +2,14 @@
 
 import { useState, useEffect } from 'react'
 import { updateDemand, revertDemandToPending } from './actions'
+import { getAvailableSlotsForEdit } from '@/app/dashboard/system-management/calendar/actions'
 import { useRouter } from 'next/navigation'
 import { format } from 'date-fns'
+import { formatInTimeZone } from 'date-fns-tz'
 
 interface Demand {
   id: string
+  dealer_id?: string | null
   customer_firstname: string
   customer_lastname: string
   customer_phone: string
@@ -40,8 +43,13 @@ export function EditDemandModal({ demand, isOpen, onClose }: EditDemandModalProp
     vehicle_year: demand.vehicle_year,
     stock_number: demand.stock_number || '',
     camera_model: demand.camera_model,
-    appointment_date: format(new Date(demand.appointment_date), "yyyy-MM-dd'T'HH:mm"),
   })
+  const initialAppointment = new Date(demand.appointment_date)
+  const [selectedDate, setSelectedDate] = useState(() => format(initialAppointment, 'yyyy-MM-dd'))
+  const [selectedSlot, setSelectedSlot] = useState<string>(() => demand.appointment_date)
+  const [availableSlots, setAvailableSlots] = useState<string[]>([])
+  const [slotsTimezone, setSlotsTimezone] = useState<string | null>(null)
+  const [slotsLoading, setSlotsLoading] = useState(false)
 
   useEffect(() => {
     if (isOpen) {
@@ -55,11 +63,33 @@ export function EditDemandModal({ demand, isOpen, onClose }: EditDemandModalProp
         vehicle_year: demand.vehicle_year,
         stock_number: demand.stock_number || '',
         camera_model: demand.camera_model,
-        appointment_date: format(new Date(demand.appointment_date), "yyyy-MM-dd'T'HH:mm"),
       })
+      const d = new Date(demand.appointment_date)
+      setSelectedDate(format(d, 'yyyy-MM-dd'))
+      setSelectedSlot(demand.appointment_date)
       setError(null)
     }
   }, [isOpen, demand])
+
+  useEffect(() => {
+    if (!isOpen || !demand.dealer_id) {
+      if (!demand.dealer_id) setAvailableSlots([])
+      return
+    }
+    setSlotsLoading(true)
+    getAvailableSlotsForEdit(demand.dealer_id, selectedDate, demand.id)
+      .then(({ slots, timezoneName }) => {
+        setAvailableSlots(slots)
+        setSlotsTimezone(timezoneName)
+        setSelectedSlot(prev => {
+          const prevDate = prev ? format(new Date(prev), 'yyyy-MM-dd') : ''
+          if (prevDate === selectedDate && slots.includes(prev)) return prev
+          if (slots.length > 0) return slots[0]
+          return ''
+        })
+      })
+      .finally(() => setSlotsLoading(false))
+  }, [isOpen, demand.dealer_id, demand.id, selectedDate])
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -70,6 +100,7 @@ export function EditDemandModal({ demand, isOpen, onClose }: EditDemandModalProp
     Object.entries(formData).forEach(([key, value]) => {
       form.append(key, value.toString())
     })
+    form.append('appointment_date', selectedSlot)
 
     const result = await updateDemand(demand.id, form)
     
@@ -226,15 +257,56 @@ export function EditDemandModal({ demand, isOpen, onClose }: EditDemandModalProp
                 />
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">Appointment Date & Time *</label>
-                <input
-                  type="datetime-local"
-                  value={formData.appointment_date}
-                  onChange={(e) => setFormData({ ...formData, appointment_date: e.target.value })}
-                  required
-                  className="w-full border border-gray-700 bg-black/50 py-2 px-3 rounded text-white focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00] [color-scheme:dark]"
-                />
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-300 mb-1">Appointment (Day & Slot) *</label>
+                <div className="space-y-3">
+                  {!demand.dealer_id ? (
+                    <p className="text-sm text-amber-500">Dealer not set; cannot show slots.</p>
+                  ) : (
+                    <>
+                  <div>
+                    <span className="text-xs text-gray-500 block mb-1">Date</span>
+                    <input
+                      type="date"
+                      value={selectedDate}
+                      onChange={(e) => setSelectedDate(e.target.value)}
+                      min={format(new Date(), 'yyyy-MM-dd')}
+                      className="w-full max-w-xs border border-gray-700 bg-black/50 py-2 px-3 rounded text-white focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00] [color-scheme:dark]"
+                    />
+                  </div>
+                  <div>
+                    <span className="text-xs text-gray-500 block mb-1">Time slot</span>
+                    {slotsLoading ? (
+                      <p className="text-sm text-gray-500">Loading slots…</p>
+                    ) : availableSlots.length === 0 ? (
+                      <p className="text-sm text-amber-500">No available slots for this date.</p>
+                    ) : (
+                      <div className="flex flex-wrap gap-2">
+                        {availableSlots.map(slot => {
+                          const label = slotsTimezone
+                            ? formatInTimeZone(new Date(slot), slotsTimezone, 'HH:mm')
+                            : format(new Date(slot), 'HH:mm')
+                          return (
+                            <button
+                              key={slot}
+                              type="button"
+                              onClick={() => setSelectedSlot(slot)}
+                              className={`px-3 py-2 rounded text-sm font-medium transition-colors ${
+                                selectedSlot === slot
+                                  ? 'bg-[#C27E00] text-white border border-[#C27E00]'
+                                  : 'bg-black/50 text-gray-300 border border-gray-700 hover:bg-white/10'
+                              }`}
+                            >
+                              {label}
+                            </button>
+                          )
+                        })}
+                      </div>
+                    )}
+                  </div>
+                    </>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -257,7 +329,12 @@ export function EditDemandModal({ demand, isOpen, onClose }: EditDemandModalProp
                 </button>
                 <button
                   type="submit"
-                  disabled={loading || reverting}
+                  disabled={
+                    loading ||
+                    reverting ||
+                    !selectedSlot ||
+                    (!!demand.dealer_id && availableSlots.length > 0 && !availableSlots.includes(selectedSlot))
+                  }
                   className="px-4 py-2 bg-[#C27E00] hover:bg-[#a06900] text-white rounded disabled:opacity-50 transition-colors"
                 >
                   {loading ? 'Saving...' : 'Save Changes'}

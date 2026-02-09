@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { SystemManagementTabs } from '../system-management-tabs'
 import { CalendarManagementContent } from './calendar-management-content'
-import { createCalendarSetting, updateCalendarSetting, deleteCalendarSetting } from './actions'
+import { createCalendarSetting, updateCalendarSetting, deleteCalendarSetting, getCalendarBlocksInRange, createCalendarBlock, createCalendarBlocks, deleteCalendarBlock } from './actions'
 
 export const dynamic = 'force-dynamic'
 
@@ -20,6 +20,12 @@ export default async function CalendarManagementPage() {
     .select('id, name')
     .order('name')
 
+  const today = new Date().toISOString().slice(0, 10)
+  const endDate = new Date()
+  endDate.setDate(endDate.getDate() + 90)
+  const toDate = endDate.toISOString().slice(0, 10)
+  const blocks = await getCalendarBlocksInRange(today, toDate)
+
   return (
     <div className="space-y-8">
       <div>
@@ -32,9 +38,13 @@ export default async function CalendarManagementPage() {
           <CalendarManagementContent 
             settings={settings || []}
             dealers={dealers || []}
+            blocks={blocks}
             createCalendarSetting={createCalendarSetting}
             updateCalendarSetting={updateCalendarSetting}
             deleteCalendarSetting={deleteCalendarSetting}
+            createCalendarBlock={createCalendarBlock}
+            createCalendarBlocks={createCalendarBlocks}
+            deleteCalendarBlock={deleteCalendarBlock}
           />
         </div>
       </div>

@@ -16,6 +16,12 @@ export function APIManagementContent() {
     businessAccountId: '',
     enabled: false
   })
+  const [googleDriveSettings, setGoogleDriveSettings] = useState({
+    clientId: '',
+    clientSecret: '',
+    defaultFolderId: '',
+    enabled: false
+  })
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null)
   const supabase = createClient()
@@ -42,6 +48,17 @@ export function APIManagementContent() {
       
       if (whatsappData?.value) {
         setWhatsappSettings(JSON.parse(whatsappData.value))
+      }
+
+      // Load Google Drive settings
+      const { data: googleDriveData } = await supabase
+        .from('system_settings')
+        .select('value')
+        .eq('key', 'google_drive_settings')
+        .single()
+      
+      if (googleDriveData?.value) {
+        setGoogleDriveSettings(JSON.parse(googleDriveData.value))
       }
     }
     loadSettings()
@@ -89,6 +106,30 @@ export function APIManagementContent() {
       setMessage({ type: 'success', text: 'WhatsApp settings saved successfully!' })
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to save WhatsApp settings'
+      setMessage({ type: 'error', text: errorMessage })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const saveGoogleDriveSettings = async () => {
+    setLoading(true)
+    setMessage(null)
+    try {
+      const { error } = await supabase
+        .from('system_settings')
+        .upsert({
+          key: 'google_drive_settings',
+          value: JSON.stringify(googleDriveSettings),
+          updated_at: new Date().toISOString()
+        }, {
+          onConflict: 'key'
+        })
+
+      if (error) throw error
+      setMessage({ type: 'success', text: 'Google Drive settings saved successfully!' })
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to save Google Drive settings'
       setMessage({ type: 'error', text: errorMessage })
     } finally {
       setLoading(false)
@@ -244,6 +285,74 @@ export function APIManagementContent() {
             className="bg-[#C27E00] hover:bg-[#a06900] text-white px-4 py-2 rounded-md font-medium transition-colors disabled:opacity-50"
           >
             {loading ? 'Saving...' : 'Save WhatsApp Settings'}
+          </button>
+        </div>
+      </div>
+
+      {/* Google Drive Settings */}
+      <div className="bg-white/5 rounded-lg border border-gray-800 p-6">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h4 className="text-md font-semibold text-white mb-1">Google Drive</h4>
+            <p className="text-sm text-gray-400">Connect to Google Drive for file storage and backup</p>
+          </div>
+          <label className="flex items-center cursor-pointer">
+            <input
+              type="checkbox"
+              checked={googleDriveSettings.enabled}
+              onChange={(e) => setGoogleDriveSettings({ ...googleDriveSettings, enabled: e.target.checked })}
+              className="sr-only"
+            />
+            <div className={`relative w-11 h-6 rounded-full transition-colors ${
+              googleDriveSettings.enabled ? 'bg-[#C27E00]' : 'bg-gray-600'
+            }`}>
+              <div className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform ${
+                googleDriveSettings.enabled ? 'transform translate-x-5' : ''
+              }`} />
+            </div>
+          </label>
+        </div>
+
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-1">Client ID</label>
+            <input
+              type="text"
+              value={googleDriveSettings.clientId}
+              onChange={(e) => setGoogleDriveSettings({ ...googleDriveSettings, clientId: e.target.value })}
+              className="block w-full rounded-md border border-gray-700 bg-white/5 px-3 py-2 text-white placeholder-gray-500 focus:border-[#C27E00] focus:outline-none focus:ring-1 focus:ring-[#C27E00] sm:text-sm"
+              placeholder="Your Google OAuth Client ID"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-1">Client Secret</label>
+            <input
+              type="password"
+              value={googleDriveSettings.clientSecret}
+              onChange={(e) => setGoogleDriveSettings({ ...googleDriveSettings, clientSecret: e.target.value })}
+              className="block w-full rounded-md border border-gray-700 bg-white/5 px-3 py-2 text-white placeholder-gray-500 focus:border-[#C27E00] focus:outline-none focus:ring-1 focus:ring-[#C27E00] sm:text-sm"
+              placeholder="Your Google OAuth Client Secret"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-1">Default Folder ID (optional)</label>
+            <input
+              type="text"
+              value={googleDriveSettings.defaultFolderId}
+              onChange={(e) => setGoogleDriveSettings({ ...googleDriveSettings, defaultFolderId: e.target.value })}
+              className="block w-full rounded-md border border-gray-700 bg-white/5 px-3 py-2 text-white placeholder-gray-500 focus:border-[#C27E00] focus:outline-none focus:ring-1 focus:ring-[#C27E00] sm:text-sm"
+              placeholder="Folder ID for uploads (leave empty for root)"
+            />
+          </div>
+
+          <button
+            onClick={saveGoogleDriveSettings}
+            disabled={loading}
+            className="bg-[#C27E00] hover:bg-[#a06900] text-white px-4 py-2 rounded-md font-medium transition-colors disabled:opacity-50"
+          >
+            {loading ? 'Saving...' : 'Save Google Drive Settings'}
           </button>
         </div>
       </div>

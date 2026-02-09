@@ -2,7 +2,9 @@
 
 import { useActionState, useState, useEffect } from 'react'
 import { createDemand, getTakenSlots } from './actions'
-import { format, addMinutes, setHours, setMinutes, isSunday, isSaturday } from 'date-fns'
+import { getDealerBlocksForDate } from '@/app/dashboard/system-management/calendar/actions'
+import { getGlobalSlotMinutes, getSlotMinutesFromConfig, CALENDAR_DEFAULTS } from '@/lib/calendar-defaults'
+import { format } from 'date-fns'
 import { formatInTimeZone, fromZonedTime } from 'date-fns-tz'
 import { AppointmentCalendar } from '@/components/appointment-calendar'
 
@@ -23,103 +25,66 @@ interface DemandFormProps {
   cameraModels: CameraModel[]
   defaultAddress?: string
   timezoneName?: string | null
-  calendarSettings?: {
-    weekday?: CalendarSetting
-    weekend?: CalendarSetting
-  }
+  dealerId?: string | null
+  calendarSettings?: { weekday?: CalendarSetting; weekend?: CalendarSetting }
 }
 
-export function DemandForm({ cameraModels, defaultAddress = '', timezoneName = null, calendarSettings = {} }: DemandFormProps) {
+export function DemandForm({ cameraModels, defaultAddress = '', timezoneName = null, dealerId = null, calendarSettings }: DemandFormProps) {
   const [state, formAction, isPending] = useActionState(createDemand, null)
   const [selectedDate, setSelectedDate] = useState<string>('')
   const [availableSlots, setAvailableSlots] = useState<string[]>([])
   const [takenSlots, setTakenSlots] = useState<string[]>([])
+  const [dealerBlocks, setDealerBlocks] = useState<{ start_minutes: number; end_minutes: number }[]>([])
   const [selectedSlot, setSelectedSlot] = useState<string>('')
   const [selectedCamera, setSelectedCamera] = useState<string>('')
   const [customCamera, setCustomCamera] = useState<string>('')
 
   useEffect(() => {
     if (selectedDate) {
-      // Pass the date string directly
-      getTakenSlots(selectedDate + 'T00:00:00').then(setTakenSlots)
+      getTakenSlots(selectedDate + 'T00:00:00', dealerId ?? undefined).then(setTakenSlots)
     } else {
       setTakenSlots([])
     }
-  }, [selectedDate])
+  }, [selectedDate, dealerId])
+
+  useEffect(() => {
+    if (dealerId && selectedDate) {
+      getDealerBlocksForDate(dealerId, selectedDate).then(setDealerBlocks)
+    } else {
+      setDealerBlocks([])
+    }
+  }, [dealerId, selectedDate])
 
   useEffect(() => {
     if (!selectedDate) return
-    
-    // Create date in dealer's timezone (or local time if no timezone)
-    const dateStr = selectedDate // Format: YYYY-MM-DD
-    const slots = []
-    
-    // Create a date object for the selected date to check if it's weekend
-    const [year, month, day] = dateStr.split('-').map(Number)
-    const dateForCheck = new Date(year, month - 1, day, 12, 0, 0) // Use noon to avoid timezone issues
-    
-    // Determine if it's weekend (Saturday = 6, Sunday = 0)
-    const dayOfWeek = dateForCheck.getDay()
+    const dateStr = selectedDate
+    const [y, mo, d] = dateStr.split('-').map(Number)
+    const dayOfWeek = new Date(y, mo - 1, d).getDay()
     const isWeekend = dayOfWeek === 0 || dayOfWeek === 6
-    
-    // Get calendar settings for this day type, or use defaults
-    const setting = isWeekend ? calendarSettings.weekend : calendarSettings.weekday
-    
-    let startHour = setting?.start_hour ?? 9 // Default: 09:00 AM
-    let endHour = setting?.end_hour ?? 18 // Default: 18:00
-    const appointmentDuration = setting?.appointment_duration_minutes ?? 75 // Default: 75 minutes
-    const slotInterval = setting?.slot_interval_minutes ?? 90 // Default: 90 minutes
-    
-    // Fallback: If no weekend setting and it's Sunday, use old logic
-    if (isWeekend && !setting && isSunday(dateForCheck)) {
-        startHour = 11
-        endHour = 17
+    const dayType = isWeekend ? 'weekend' : 'weekday'
+    const setting = calendarSettings?.[dayType]
+    const slotMinutes = setting
+      ? getSlotMinutesFromConfig({
+          startHour: setting.start_hour,
+          endHour: setting.end_hour,
+          slotIntervalMinutes: setting.slot_interval_minutes,
+          appointmentDurationMinutes: setting.appointment_duration_minutes,
+        })
+      : getGlobalSlotMinutes()
+    const slots: string[] = []
+    for (const startMinutes of slotMinutes) {
+      const h = Math.floor(startMinutes / 60)
+      const m = startMinutes % 60
+      if (timezoneName) {
+        const dateInTz = new Date(y, mo - 1, d, h, m, 0)
+        const utcDate = fromZonedTime(dateInTz, timezoneName)
+        slots.push(utcDate.toISOString())
+      } else {
+        slots.push(new Date(y, mo - 1, d, h, m, 0).toISOString())
+      }
     }
-
-    // Generate slots in dealer's timezone, then convert to UTC
-    // Start from 09:00 AM (or 11:00 AM on Sunday) in dealer's timezone
-    let currentHour = startHour
-    let currentMinute = 0
-    
-    // Calculate the latest possible start time (so the appointment ends by endHour)
-    // If endHour is 18:00 and appointment is 1h 15m, last start time is 16:45 (18:00 - 1h 15m = 16:45)
-    const latestStartHour = endHour
-    const latestStartMinute = 0
-    const latestAllowedHour = latestStartHour
-    const latestAllowedMinute = latestStartMinute - appointmentDuration
-    const latestAllowedHourAdjusted = latestAllowedMinute < 0 ? latestAllowedHour - 1 : latestAllowedHour
-    const latestAllowedMinuteAdjusted = latestAllowedMinute < 0 ? 60 + latestAllowedMinute : latestAllowedMinute
-
-    while (currentHour < latestAllowedHourAdjusted || (currentHour === latestAllowedHourAdjusted && currentMinute <= latestAllowedMinuteAdjusted)) {
-        // Create datetime string in dealer's timezone: YYYY-MM-DDTHH:mm:00
-        const hourStr = String(currentHour).padStart(2, '0')
-        const minuteStr = String(currentMinute).padStart(2, '0')
-        const dateTimeStr = `${dateStr}T${hourStr}:${minuteStr}:00`
-        
-        // Convert from dealer's timezone to UTC
-        if (timezoneName) {
-          // Create a Date object representing this time in dealer's timezone
-          // We'll use fromZonedTime which treats the date as if it's in the specified timezone
-          const dateInTimezone = new Date(dateTimeStr + (timezoneName.includes('America') ? '' : ''))
-          // fromZonedTime treats the date as if it's in the specified timezone and converts to UTC
-          const utcDate = fromZonedTime(dateInTimezone, timezoneName)
-          slots.push(utcDate.toISOString())
-        } else {
-          // No timezone, create date string and convert to ISO
-          const localDate = new Date(dateTimeStr)
-          slots.push(localDate.toISOString())
-        }
-        
-        // Move to next slot (90 minutes later)
-        currentMinute += slotInterval
-        if (currentMinute >= 60) {
-          currentHour += Math.floor(currentMinute / 60)
-          currentMinute = currentMinute % 60
-        }
-    }
-    
     setAvailableSlots(slots)
-  }, [selectedDate, timezoneName])
+  }, [selectedDate, timezoneName, calendarSettings])
 
   return (
     <form action={formAction} className="space-y-6 max-w-4xl bg-white/5 p-8 rounded-lg shadow border border-gray-800">
@@ -281,29 +246,38 @@ export function DemandForm({ cameraModels, defaultAddress = '', timezoneName = n
               setSelectedSlot('')
             }}
             selectedDate={selectedDate ? new Date(selectedDate + 'T00:00:00') : null}
-            getTakenSlots={getTakenSlots}
+            getTakenSlots={(dateStr) => getTakenSlots(dateStr, dealerId ?? undefined)}
           />
         </div>
 
         {selectedDate && (() => {
-            // Filter out blocked slots - only show available slots
-            // A slot is blocked only if it overlaps with an existing appointment
+            const appointmentDurationMinutes = CALENDAR_DEFAULTS.appointmentDurationMinutes
+            // Filter out blocked slots: existing appointments + dealer calendar blocks (closed days/slots)
             const availableOnlySlots = availableSlots.filter(slot => {
                 const slotTime = new Date(slot)
                 const slotStart = slotTime.getTime()
-                const slotEnd = slotStart + 75 * 60 * 1000 // 75 minutes (appointment duration)
-                
-                // Check if this slot overlaps with any taken appointment
-                const isBlocked = takenSlots.some(takenSlot => {
+                const slotEnd = slotStart + appointmentDurationMinutes * 60 * 1000
+
+                const isTaken = takenSlots.some(takenSlot => {
                     const takenTime = new Date(takenSlot)
                     const takenStart = takenTime.getTime()
-                    const takenEnd = takenStart + 75 * 60 * 1000 // 75 minutes (appointment duration)
-                    
-                    // Check for overlap: slotStart < takenEnd && slotEnd > takenStart
+                    const takenEnd = takenStart + appointmentDurationMinutes * 60 * 1000
                     return slotStart < takenEnd && slotEnd > takenStart
                 })
-                
-                return !isBlocked // Only include non-blocked slots
+                if (isTaken) return false
+
+                // Dealer calendar blocks: slot in dealer local time vs block [start_minutes, end_minutes]
+                if (dealerBlocks.length > 0 && timezoneName) {
+                    const slotStartMinutes = parseInt(formatInTimeZone(slotTime, timezoneName, 'H'), 10) * 60 +
+                      parseInt(formatInTimeZone(slotTime, timezoneName, 'm'), 10)
+                    const slotEndMinutes = slotStartMinutes + appointmentDurationMinutes
+                    const inBlock = dealerBlocks.some(
+                      b => slotStartMinutes < b.end_minutes && slotEndMinutes > b.start_minutes
+                    )
+                    if (inBlock) return false
+                }
+
+                return true
             })
             
             return (

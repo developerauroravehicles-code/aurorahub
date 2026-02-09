@@ -1,8 +1,11 @@
 'use client'
 
-import { useActionState } from 'react'
-import { createUser } from '../actions'
+import { useActionState, useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+import { createUser, getProfileForEdit, updateUser, deleteUser } from '../actions'
 import { ResetPasswordButton } from '@/app/dashboard/admin/employees/reset-password-button'
+import { Pencil, Trash2, X, Loader2 } from 'lucide-react'
+import type { Dealer } from '@/types/system-management'
 
 function UserForm() {
   const [state, formAction, isPending] = useActionState(createUser, null)
@@ -100,7 +103,231 @@ function UserForm() {
   )
 }
 
-function UserList({ profiles, errors }: { profiles: any[], errors: any }) {
+function EditUserModal({
+  userId,
+  dealers,
+  onClose,
+  onSuccess
+}: {
+  userId: string
+  dealers: Dealer[]
+  onClose: () => void
+  onSuccess: () => void
+}) {
+  const [profile, setProfile] = useState<{
+    id: string
+    full_name: string | null
+    phone: string | null
+    email?: string
+    role: string
+    dealer_id: string | null
+    dealers?: { code: string; name: string } | null
+  } | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [fetchError, setFetchError] = useState<string | null>(null)
+  const [state, formAction, isPending] = useActionState(updateUser, null)
+
+  useEffect(() => {
+    let cancelled = false
+    getProfileForEdit(userId).then((res) => {
+      if (cancelled) return
+      if (res.error && !res.profile) setFetchError(res.error)
+      else if (res.profile) setProfile(res.profile as any)
+      setLoading(false)
+    })
+    return () => { cancelled = true }
+  }, [userId])
+
+  if (state?.success) {
+    onSuccess()
+    onClose()
+    return null
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+      <div className="bg-[#1a1a1a] border border-gray-800 rounded-lg p-6 w-full max-w-md shadow-xl">
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-lg font-semibold text-white">Edit User</h3>
+          <button type="button" onClick={onClose} className="text-gray-400 hover:text-white">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {loading && (
+          <div className="flex items-center justify-center py-8 text-gray-400">
+            <Loader2 className="w-8 h-8 animate-spin" />
+          </div>
+        )}
+
+        {fetchError && !loading && (
+          <p className="text-red-400 text-sm mb-4">{fetchError}</p>
+        )}
+
+        {profile && !loading && (
+          <form action={formAction} className="space-y-4">
+            <input type="hidden" name="userId" value={profile.id} />
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-1">Full Name</label>
+              <input
+                name="fullName"
+                required
+                defaultValue={profile.full_name ?? ''}
+                className="block w-full rounded-md border border-gray-700 bg-white/5 px-3 py-2 text-white sm:text-sm focus:border-[#C27E00] focus:ring-1 focus:ring-[#C27E00]"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-1">Phone</label>
+              <input
+                name="phone"
+                defaultValue={profile.phone ?? ''}
+                className="block w-full rounded-md border border-gray-700 bg-white/5 px-3 py-2 text-white sm:text-sm focus:border-[#C27E00] focus:ring-1 focus:ring-[#C27E00]"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-1">Email</label>
+              <input
+                name="email"
+                type="email"
+                defaultValue={profile.email ?? ''}
+                className="block w-full rounded-md border border-gray-700 bg-white/5 px-3 py-2 text-white sm:text-sm focus:border-[#C27E00] focus:ring-1 focus:ring-[#C27E00]"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-1">Role</label>
+              <select
+                name="role"
+                defaultValue={profile.role}
+                className="block w-full rounded-md border border-gray-700 bg-white/5 px-3 py-2 text-white sm:text-sm focus:border-[#C27E00] focus:ring-1 focus:ring-[#C27E00]"
+              >
+                <option value="sales" className="bg-black">Sales</option>
+                <option value="finance" className="bg-black">Finance</option>
+                <option value="specialist" className="bg-black">Specialist</option>
+                <option value="aurora_manager" className="bg-black">Aurora Manager</option>
+                <option value="general_manager" className="bg-black">General Manager</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-1">Dealer</label>
+              <select
+                name="dealerCode"
+                defaultValue={(profile.dealers as any)?.code ?? ''}
+                className="block w-full rounded-md border border-gray-700 bg-white/5 px-3 py-2 text-white sm:text-sm focus:border-[#C27E00] focus:ring-1 focus:ring-[#C27E00]"
+              >
+                <option value="" className="bg-black">— None —</option>
+                {dealers.map((d) => (
+                  <option key={d.id} value={d.code} className="bg-black">{d.name} ({d.code})</option>
+                ))}
+              </select>
+            </div>
+            {state?.error && <p className="text-red-400 text-sm">{state.error}</p>}
+            <div className="flex gap-2 pt-2">
+              <button
+                type="submit"
+                disabled={isPending}
+                className="flex-1 rounded-md bg-[#C27E00] px-4 py-2 text-sm font-medium text-white hover:bg-[#a06900] disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                Save
+              </button>
+              <button
+                type="button"
+                onClick={onClose}
+                className="rounded-md border border-gray-600 px-4 py-2 text-sm text-gray-300 hover:bg-white/5"
+              >
+                Cancel
+              </button>
+            </div>
+          </form>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function DeleteUserButton({
+  userId,
+  userName,
+  onSuccess
+}: {
+  userId: string
+  userName: string
+  onSuccess: () => void
+}) {
+  const [showConfirm, setShowConfirm] = useState(false)
+  const [status, setStatus] = useState<'idle' | 'loading' | 'error'>('idle')
+  const [errorMessage, setErrorMessage] = useState('')
+
+  const handleDelete = async () => {
+    setStatus('loading')
+    setErrorMessage('')
+    const result = await deleteUser(userId)
+    if (result.error) {
+      setStatus('error')
+      setErrorMessage(result.error)
+      return
+    }
+    onSuccess()
+    setShowConfirm(false)
+    setStatus('idle')
+  }
+
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => setShowConfirm(true)}
+        className="text-gray-400 hover:text-red-400 transition-colors p-1"
+        title="Delete user"
+      >
+        <Trash2 className="w-4 h-4" />
+      </button>
+      {showConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+          <div className="bg-[#1a1a1a] border border-gray-800 rounded-lg p-6 w-full max-w-sm shadow-xl">
+            <h3 className="text-lg font-semibold text-white mb-2">Delete User</h3>
+            <p className="text-sm text-gray-400 mb-4">
+              Are you sure you want to delete <span className="text-[#C27E00] font-medium">{userName}</span>? This cannot be undone.
+            </p>
+            {status === 'error' && <p className="text-red-400 text-sm mb-4">{errorMessage}</p>}
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={handleDelete}
+                disabled={status === 'loading'}
+                className="flex-1 rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {status === 'loading' ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                Delete
+              </button>
+              <button
+                type="button"
+                onClick={() => { setShowConfirm(false); setStatus('idle'); setErrorMessage('') }}
+                className="rounded-md border border-gray-600 px-4 py-2 text-sm text-gray-300 hover:bg-white/5"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  )
+}
+
+function UserList({
+  profiles,
+  errors,
+  dealers,
+  onRefresh
+}: {
+  profiles: any[]
+  errors: any
+  dealers: Dealer[]
+  onRefresh: () => void
+}) {
+  const [editingUserId, setEditingUserId] = useState<string | null>(null)
+
   return (
     <div className="mt-6">
       <h3 className="text-lg font-semibold text-white mb-4">User List ({profiles.length})</h3>
@@ -130,7 +357,22 @@ function UserList({ profiles, errors }: { profiles: any[], errors: any }) {
                   )}
                 </td>
                 <td className="px-4 py-2 text-right">
-                  <ResetPasswordButton userId={profile.id} userName={profile.full_name} />
+                  <div className="flex items-center justify-end gap-1">
+                    <button
+                      type="button"
+                      onClick={() => setEditingUserId(profile.id)}
+                      className="text-gray-400 hover:text-[#C27E00] transition-colors p-1"
+                      title="Edit user"
+                    >
+                      <Pencil className="w-4 h-4" />
+                    </button>
+                    <ResetPasswordButton userId={profile.id} userName={profile.full_name} />
+                    <DeleteUserButton
+                      userId={profile.id}
+                      userName={profile.full_name ?? 'this user'}
+                      onSuccess={onRefresh}
+                    />
+                  </div>
                 </td>
               </tr>
             ))}
@@ -140,11 +382,28 @@ function UserList({ profiles, errors }: { profiles: any[], errors: any }) {
           </tbody>
         </table>
       </div>
+      {editingUserId && (
+        <EditUserModal
+          userId={editingUserId}
+          dealers={dealers}
+          onClose={() => setEditingUserId(null)}
+          onSuccess={onRefresh}
+        />
+      )}
     </div>
   )
 }
 
-export function UserManagementContent({ profiles, errors }: { profiles: any[], errors: any }) {
+export function UserManagementContent({
+  profiles,
+  errors,
+  dealers
+}: {
+  profiles: any[]
+  errors: any
+  dealers: Dealer[]
+}) {
+  const router = useRouter()
   return (
     <div className="space-y-6">
       <div>
@@ -152,7 +411,12 @@ export function UserManagementContent({ profiles, errors }: { profiles: any[], e
         <p className="text-sm text-gray-400 mb-4">Add a new user to the system</p>
         <UserForm />
       </div>
-      <UserList profiles={profiles} errors={errors || {}} />
+      <UserList
+        profiles={profiles}
+        errors={errors || {}}
+        dealers={dealers}
+        onRefresh={() => router.refresh()}
+      />
     </div>
   )
 }

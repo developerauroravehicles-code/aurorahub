@@ -14,10 +14,10 @@ export default async function NewDemandPage() {
   const cameraModels = await getCameraModels()
   const supabase = await createClient()
   
-  // Get current user's dealer information
   const { data: { user } } = await supabase.auth.getUser()
   let dealerName = ''
   let timezoneName: string | null = null
+  let dealerId: string | null = null
   let calendarSettings: { weekday?: CalendarSetting; weekend?: CalendarSetting } = {}
   
   if (user) {
@@ -28,7 +28,7 @@ export default async function NewDemandPage() {
       .single()
     
     if (profile?.dealer_id) {
-      // Fetch dealer name and timezone
+      dealerId = profile.dealer_id
       const { data: dealer } = await supabase
         .from('dealers')
         .select('name, region_codes(timezone_id, timezones(name))')
@@ -41,20 +41,14 @@ export default async function NewDemandPage() {
           timezoneName = (dealer.region_codes as any).timezones.name
         }
       }
-
-      // Fetch calendar settings for this dealer
       const { data: settings } = await supabase
         .from('dealer_calendar_settings')
         .select('day_type, start_hour, end_hour, slot_interval_minutes, appointment_duration_minutes')
         .eq('dealer_id', profile.dealer_id)
-      
       if (settings) {
-        settings.forEach(setting => {
-          if (setting.day_type === 'weekday') {
-            calendarSettings.weekday = setting as CalendarSetting
-          } else if (setting.day_type === 'weekend') {
-            calendarSettings.weekend = setting as CalendarSetting
-          }
+        settings.forEach((s: CalendarSetting) => {
+          if (s.day_type === 'weekday') calendarSettings.weekday = s
+          else if (s.day_type === 'weekend') calendarSettings.weekend = s
         })
       }
     }
@@ -67,6 +61,7 @@ export default async function NewDemandPage() {
         cameraModels={cameraModels} 
         defaultAddress={dealerName} 
         timezoneName={timezoneName}
+        dealerId={dealerId}
         calendarSettings={calendarSettings}
       />
     </div>

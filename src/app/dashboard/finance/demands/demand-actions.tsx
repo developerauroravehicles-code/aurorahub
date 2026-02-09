@@ -7,6 +7,7 @@ import { ApproveConfirmationModal } from './approve-confirmation-modal'
 
 interface Demand {
   id: string
+  dealer_id?: string | null
   customer_firstname: string
   customer_lastname: string
   customer_phone: string

@@ -201,6 +201,96 @@ export async function createUser(prevState: ActionState, formData: FormData) {
   return { success: 'User created successfully!' }
 }
 
+export async function getProfileForEdit(userId: string) {
+  await verifyAuroraManager()
+  const supabaseAdmin = getAdminClient()
+
+  const { data: profile, error: profileError } = await supabaseAdmin
+    .from('profiles')
+    .select('id, full_name, phone, role, dealer_id, dealers(id, name, code)')
+    .eq('id', userId)
+    .single()
+
+  if (profileError || !profile) return { error: 'Profile not found', profile: null }
+
+  const { data: authUser, error: authError } = await supabaseAdmin.auth.admin.getUserById(userId)
+  const email = authError ? undefined : authUser?.user?.email
+
+  return {
+    profile: {
+      ...profile,
+      email
+    },
+    error: null
+  }
+}
+
+type UserRole = 'sales' | 'finance' | 'specialist' | 'aurora_manager' | 'general_manager'
+
+export async function updateUser(prevState: ActionState, formData: FormData) {
+  await verifyAuroraManager()
+  const supabaseAdmin = getAdminClient()
+
+  if (!formData) return { error: 'Invalid form data received.' }
+
+  const userId = formData.get('userId') as string
+  const fullName = formData.get('fullName') as string
+  const phone = formData.get('phone') as string
+  const email = formData.get('email') as string
+  const role = formData.get('role') as string
+  const dealerCode = formData.get('dealerCode') as string
+
+  if (!userId || !fullName || !role) return { error: 'User ID, full name and role are required.' }
+
+  let dealerId: string | null = null
+  if (dealerCode?.trim()) {
+    const { data: dealer } = await supabaseAdmin
+      .from('dealers')
+      .select('id')
+      .eq('code', dealerCode.trim())
+      .single()
+    if (dealer) dealerId = dealer.id
+    else return { error: 'Dealer code not found.' }
+  }
+
+  if (email?.trim()) {
+    const { error: authError } = await supabaseAdmin.auth.admin.updateUserById(userId, {
+      email: email.trim()
+    })
+    if (authError) return { error: 'Failed to update email: ' + authError.message }
+  }
+
+  const { error: profileError } = await supabaseAdmin
+    .from('profiles')
+    .update({
+      full_name: fullName.trim(),
+      phone: phone?.trim() || null,
+      role: role as UserRole,
+      dealer_id: dealerId
+    })
+    .eq('id', userId)
+
+  if (profileError) return { error: 'Failed to update profile: ' + profileError.message }
+
+  revalidatePath('/dashboard/system-management/user')
+  return { success: 'User updated successfully!' }
+}
+
+export async function deleteUser(userId: string) {
+  await verifyAuroraManager()
+  const { createClient } = await import('@/lib/supabase/server')
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Unauthorized' }
+  if (user.id === userId) return { error: 'You cannot delete your own account.' }
+
+  const supabaseAdmin = getAdminClient()
+  const { error } = await supabaseAdmin.auth.admin.deleteUser(userId)
+  if (error) return { error: error.message }
+  revalidatePath('/dashboard/system-management/user')
+  return { success: 'User deleted successfully.' }
+}
+
 export async function createCameraModel(prevState: ActionState, formData: FormData) {
   await verifyAuroraManager()
   const supabaseAdmin = getAdminClient()

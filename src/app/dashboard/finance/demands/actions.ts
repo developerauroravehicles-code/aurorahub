@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { sendSMS } from '@/lib/twilio'
 import { getAppointmentCreatedMessage, getCancellationNoticeMessage, isWithin24Hours } from '@/lib/sms-messages'
+import { validateAppointmentSlot } from '@/app/dashboard/system-management/calendar/actions'
 
 export async function assignDemandToMe(demandId: string) {
   const supabase = await createClient()
@@ -238,7 +239,7 @@ export async function updateDemand(demandId: string, formData: FormData) {
   // Check if demand is assigned to current user
   const { data: demand } = await supabase
     .from('demands')
-    .select('assigned_finance_id, status, appointment_date, customer_phone')
+    .select('assigned_finance_id, status, appointment_date, customer_phone, dealer_id')
     .eq('id', demandId)
     .single()
 
@@ -276,6 +277,13 @@ export async function updateDemand(demandId: string, formData: FormData) {
 
   if (isNaN(vehicleYear) || vehicleYear < 1900) {
     return { error: 'Invalid vehicle year' }
+  }
+
+  if (demand.dealer_id) {
+    const validation = await validateAppointmentSlot(demand.dealer_id, appointmentDate)
+    if (!validation.valid) {
+      return { error: validation.error ?? 'Selected appointment time is not available for this dealer.' }
+    }
   }
 
   // Update demand

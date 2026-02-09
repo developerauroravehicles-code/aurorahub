@@ -5,7 +5,7 @@ import { UserManagementContent } from './user-management-content'
 export const dynamic = 'force-dynamic'
 
 export default async function UserManagementPage() {
-  const { profiles, errors } = await getSystemData()
+  const { profiles, errors, dealers } = await getSystemData()
 
   return (
     <div className="space-y-8">
@@ -16,7 +16,7 @@ export default async function UserManagementPage() {
 
         {/* Tab Content */}
         <div className="bg-white/5 rounded-lg border border-gray-800 p-6">
-          <UserManagementContent profiles={profiles} errors={errors} />
+          <UserManagementContent profiles={profiles} errors={errors} dealers={dealers || []} />
         </div>
       </div>
     </div>

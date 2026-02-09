@@ -1,14 +1,13 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { sendSMS } from '@/lib/twilio'
-import { getFourHourReminderMessage, isWithin4Hours } from '@/lib/sms-messages'
+import { getFourHourReminderMessage, isWithin4HoursBeforeWindow } from '@/lib/sms-messages'
 
 /**
  * API Route for sending reminder SMS
- * This should be called by a cron job or scheduled task
- * Runs daily at 6 AM (Vercel Hobby plan: 1 cron job per day)
- * Sends SMS reminders to all appointments that are within 4 hours at the time of execution
- * SMS message dynamically shows the actual hours remaining until the appointment
+ * Called by cron every hour at the top of the hour.
+ * Sends reminder exactly ~4 hours before each appointment (e.g. 11:00 appointment → 07:00).
+ * Only appointments in the 3.5h–4.5h window are sent so each appointment gets one reminder.
  */
 export async function GET(request: Request) {
   // Optional: Add authentication/authorization check
@@ -20,19 +19,17 @@ export async function GET(request: Request) {
   try {
     const supabase = await createClient()
     
-    // Get all approved demands with appointments in the next 4 hours
-    // When running daily at 6 AM, this will get appointments between 6 AM and 10 AM
-    // The isWithin4Hours check ensures we only send SMS to appointments actually within 4 hours
-    // SMS message will dynamically show the actual hours remaining (e.g., "7 hours", "4 hours", "2 hours", "1 hour")
+    // Appointments that are ~4 hours from now (window 3.5h–4.5h) so we send exactly 4h before (e.g. 07:00 → 11:00)
     const now = new Date()
-    const fourHoursFromNow = new Date(now.getTime() + 4 * 60 * 60 * 1000)
+    const threeAndHalfHoursFromNow = new Date(now.getTime() + 3.5 * 60 * 60 * 1000)
+    const fourAndHalfHoursFromNow = new Date(now.getTime() + 4.5 * 60 * 60 * 1000)
     
     const { data: demands, error } = await supabase
       .from('demands')
       .select('id, appointment_date, customer_phone, customer_address, status, dealer_id, dealers(region_codes(timezone_id, timezones(name)))')
       .eq('status', 'approved')
-      .gte('appointment_date', now.toISOString())
-      .lte('appointment_date', fourHoursFromNow.toISOString())
+      .gte('appointment_date', threeAndHalfHoursFromNow.toISOString())
+      .lte('appointment_date', fourAndHalfHoursFromNow.toISOString())
       .not('customer_phone', 'is', null)
 
     if (error) {
@@ -51,18 +48,17 @@ export async function GET(request: Request) {
     let sentCount = 0
     let errorCount = 0
 
-    // Send SMS for each demand that is within 4 hours
+    // Send SMS only for appointments in the 4-hours-before window
     for (const demand of demands) {
       const appointmentDate = new Date(demand.appointment_date)
       
-      // Double-check if it's within 4 hours (to avoid sending too early)
-      if (isWithin4Hours(appointmentDate) && demand.customer_phone) {
+      if (isWithin4HoursBeforeWindow(appointmentDate) && demand.customer_phone) {
         try {
           const address = demand.customer_address || 'the specified location'
           // Get timezone from dealer > region > timezone
           const timezoneName = (demand.dealers as any)?.region_codes?.timezones?.name || undefined
           // Pass appointmentDate to calculate dynamic hours remaining
-          const message = getFourHourReminderMessage(appointmentDate, address, timezoneName)
+          const message = getFourHourReminderMessage(appointmentDate, address, timezoneName, true)
           
           const result = await sendSMS(demand.customer_phone, message)
           

@@ -5,6 +5,7 @@ import { redirect } from 'next/navigation'
 import { z } from 'zod'
 import { startOfDay, endOfDay, format } from 'date-fns'
 import { sendSMS } from '@/lib/twilio'
+import { validateAppointmentSlot } from '@/app/dashboard/system-management/calendar/actions'
 
 const schema = z.object({
   firstName: z.string().min(1),
@@ -51,8 +52,16 @@ export async function createDemand(prevState: ActionState, formData: FormData) {
 
   const data = result.data
 
-  // Check if the time slot is already taken
-  const slotTaken = await isTimeSlotTaken(data.appointmentDate)
+  if (!profile.dealer_id) {
+    return { error: 'Your account is not assigned to a dealer.' }
+  }
+
+  const validation = await validateAppointmentSlot(profile.dealer_id, data.appointmentDate)
+  if (!validation.valid) {
+    return { error: validation.error ?? 'This time slot is not available.' }
+  }
+
+  const slotTaken = await isTimeSlotTaken(data.appointmentDate, profile.dealer_id)
   if (slotTaken) {
       return { error: 'This time slot is already booked. Please select another time.' }
   }
@@ -88,27 +97,25 @@ export async function createDemand(prevState: ActionState, formData: FormData) {
   redirect('/dashboard/sales/demands')
 }
 
-export async function getTakenSlots(dateStr: string) {
+/** Get appointment times already taken on a date. When dealerId is set, only that dealer's appointments (single calendar per dealer). */
+export async function getTakenSlots(dateStr: string, dealerId?: string | null) {
     const supabase = await createClient()
-    // Ensure we parse correctly.
     const date = new Date(dateStr)
     const start = startOfDay(date).toISOString()
     const end = endOfDay(date).toISOString()
 
-    // Get all appointments for this date across ALL dealers (not filtered by dealer_id)
-    const { data } = await supabase
+    let query = supabase
         .from('demands')
         .select('appointment_date')
         .gte('appointment_date', start)
         .lte('appointment_date', end)
         .neq('status', 'cancelled')
-    // Note: No dealer_id filter - this checks all dealers globally
-
-    if (!data || data.length === 0) {
-        return []
+    if (dealerId) {
+        query = query.eq('dealer_id', dealerId)
     }
+    const { data } = await query
 
-    // Return all appointment dates - these will be checked for overlap in the UI
+    if (!data || data.length === 0) return []
     return data.map(d => d.appointment_date)
 }
 
@@ -148,53 +155,37 @@ export async function isSlotBlocked(slotDate: string): Promise<boolean> {
 }
 
 /**
- * Check if a specific time slot is already taken
- * This ensures only one appointment per time slot across ALL dealers
- * Appointments are 75 minutes long
- * This is a global check - if any dealer has an appointment at this time, the slot is taken
+ * Check if a specific time slot is already taken for a dealer.
+ * Single calendar per dealer: only one appointment per slot per dealer. Appointments are 75 minutes.
  */
-export async function isTimeSlotTaken(appointmentDate: string): Promise<boolean> {
+export async function isTimeSlotTaken(appointmentDate: string, dealerId: string | null): Promise<boolean> {
+    if (!dealerId) return false
     const supabase = await createClient()
-    
-    // Parse the appointment date
     const requestedTime = new Date(appointmentDate)
     const requestedStart = new Date(requestedTime)
-    const requestedEnd = new Date(requestedTime.getTime() + 75 * 60 * 1000) // 75 minutes
-    
-    // Get the same day range for optimization
+    const requestedEnd = new Date(requestedTime.getTime() + 75 * 60 * 1000)
     const dayStart = startOfDay(requestedTime).toISOString()
     const dayEnd = endOfDay(requestedTime).toISOString()
-    
-    // Get all non-cancelled appointments for the same day across ALL dealers
-    // No dealer_id filter - this checks globally across all dealers
+
     const { data, error } = await supabase
         .from('demands')
         .select('appointment_date')
+        .eq('dealer_id', dealerId)
         .gte('appointment_date', dayStart)
         .lte('appointment_date', dayEnd)
         .neq('status', 'cancelled')
-    
+
     if (error) {
         console.error('Error checking time slot:', error)
-        return false // If error, allow creation (fail open)
+        return false
     }
-    
-    if (!data || data.length === 0) {
-        return false // No appointments, slot is available
-    }
-    
-    // Check for any overlap with existing appointments
+    if (!data || data.length === 0) return false
+
     for (const demand of data) {
         const existingStart = new Date(demand.appointment_date)
-        const existingEnd = new Date(existingStart.getTime() + 75 * 60 * 1000) // 75 minutes
-        
-        // Check if there's any overlap between the requested slot and existing slot
-        // Overlap occurs if: requestedStart < existingEnd && requestedEnd > existingStart
-        if (requestedStart < existingEnd && requestedEnd > existingStart) {
-            return true // Slot is taken (overlap detected) - applies to ALL dealers
-        }
+        const existingEnd = new Date(existingStart.getTime() + 75 * 60 * 1000)
+        if (requestedStart < existingEnd && requestedEnd > existingStart) return true
     }
-    
-    return false // Slot is available for all dealers
+    return false
 }
 
