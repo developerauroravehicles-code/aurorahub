@@ -387,9 +387,11 @@ export default async function DashboardPage() {
                           {demand.camera_model}
                         </p>
                         <p className="text-xs text-[#C27E00] mt-1 font-semibold">
-                          {(demand.dealers as { region_codes?: { timezones?: { name: string } } } | null)?.region_codes?.timezones?.name
-                            ? formatInTimeZone(new Date(demand.appointment_date), (demand.dealers as { region_codes: { timezones: { name: string } } }).region_codes.timezones.name, 'PPP p')
-                            : format(new Date(demand.appointment_date), 'PPP p')}
+                          {(() => {
+                            const dealers = demand.dealers as unknown as { region_codes?: { timezones?: { name: string } } } | { region_codes?: { timezones?: { name: string } } }[] | null
+                            const tz = Array.isArray(dealers) ? dealers[0]?.region_codes?.timezones?.name : dealers?.region_codes?.timezones?.name
+                            return tz ? formatInTimeZone(new Date(demand.appointment_date), tz, 'PPP p') : format(new Date(demand.appointment_date), 'PPP p')
+                          })()}
                         </p>
                       </div>
                       <div className="text-right">
