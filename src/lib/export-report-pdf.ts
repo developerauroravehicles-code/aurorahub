@@ -17,6 +17,8 @@ export interface ReportDemandRow {
 export interface ExportReportOptions {
   reportTitle: string
   dateRange: string
+  exporterFullName: string
+  exporterEmail: string
   totalDemands: number
   totalAppointments: number
   cameraCounts: Record<string, number>
@@ -29,6 +31,8 @@ export function exportReportToPdf(options: ExportReportOptions): void {
   const {
     reportTitle,
     dateRange,
+    exporterFullName,
+    exporterEmail,
     totalDemands,
     totalAppointments,
     cameraCounts,
@@ -51,7 +55,12 @@ export function exportReportToPdf(options: ExportReportOptions): void {
   doc.setFontSize(10)
   doc.setFont('helvetica', 'normal')
   doc.text(`Date Range: ${dateRange}`, 14, yPos)
-  yPos += 10
+  yPos += 6
+
+  // Exported by
+  doc.text(`Exported by: ${exporterFullName || 'N/A'}`, 14, yPos)
+  doc.text(`Email: ${exporterEmail || 'N/A'}`, 14, yPos + 5)
+  yPos += 12
 
   // Summary stats
   doc.setFont('helvetica', 'bold')

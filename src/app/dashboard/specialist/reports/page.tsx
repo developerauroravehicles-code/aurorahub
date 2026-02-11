@@ -80,11 +80,17 @@ export default function SpecialistReportsPage() {
     return acc
   }, {} as Record<string, number>)
 
-  const handleExportPdf = () => {
+  const handleExportPdf = async () => {
+    const { data: { user } } = await supabase.auth.getUser()
+    const { data: profile } = user
+      ? await supabase.from('profiles').select('full_name').eq('id', user.id).single()
+      : { data: null }
     const dateRangeStr = `${format(new Date(startDate), 'MMM d, yyyy')} - ${format(new Date(endDate), 'MMM d, yyyy')}`
     exportReportToPdf({
       reportTitle: 'Specialist Reports',
       dateRange: dateRangeStr,
+      exporterFullName: profile?.full_name ?? 'N/A',
+      exporterEmail: user?.email ?? 'N/A',
       totalDemands,
       totalAppointments,
       cameraCounts,

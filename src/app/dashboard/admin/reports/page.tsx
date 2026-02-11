@@ -233,11 +233,17 @@ export default function AdminReportsPage() {
     return acc
   }, {} as Record<string, number>)
 
-  const handleExportPdf = () => {
+  const handleExportPdf = async () => {
+    const { data: { user } } = await supabase.auth.getUser()
+    const { data: profile } = user
+      ? await supabase.from('profiles').select('full_name').eq('id', user.id).single()
+      : { data: null }
     const dateRangeStr = `${formatInTimeZone(new Date(startDate + 'T12:00:00Z'), SYSTEM_DEFAULT_TIMEZONE, 'MMM d, yyyy')} - ${formatInTimeZone(new Date(endDate + 'T12:00:00Z'), SYSTEM_DEFAULT_TIMEZONE, 'MMM d, yyyy')}`
     exportReportToPdf({
       reportTitle: 'Admin Reports',
       dateRange: dateRangeStr,
+      exporterFullName: profile?.full_name ?? 'N/A',
+      exporterEmail: user?.email ?? 'N/A',
       totalDemands,
       totalAppointments,
       cameraCounts,
