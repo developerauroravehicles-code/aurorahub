@@ -212,7 +212,8 @@ function buildReportPdf(options: ExportReportOptions): jsPDF {
 /** Returns base64 string of the PDF (for email attachment) */
 export function generateReportPdfBase64(options: ExportReportOptions): string {
   const doc = buildReportPdf(options)
-  return doc.output('base64')
+  const dataUri = doc.output('datauristring')
+  return dataUri.split(',')[1] ?? ''
 }
 
 export function exportReportToPdf(options: ExportReportOptions): void {
