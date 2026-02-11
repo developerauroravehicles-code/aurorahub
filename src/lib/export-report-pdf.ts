@@ -27,7 +27,7 @@ export interface ExportReportOptions {
   demands: ReportDemandRow[]
 }
 
-export function exportReportToPdf(options: ExportReportOptions): void {
+function buildReportPdf(options: ExportReportOptions): jsPDF {
   const {
     reportTitle,
     dateRange,
@@ -206,6 +206,17 @@ export function exportReportToPdf(options: ExportReportOptions): void {
     )
   }
 
-  const fileName = `${reportTitle.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0, 10)}.pdf`
+  return doc
+}
+
+/** Returns base64 string of the PDF (for email attachment) */
+export function generateReportPdfBase64(options: ExportReportOptions): string {
+  const doc = buildReportPdf(options)
+  return doc.output('base64')
+}
+
+export function exportReportToPdf(options: ExportReportOptions): void {
+  const doc = buildReportPdf(options)
+  const fileName = `${options.reportTitle.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0, 10)}.pdf`
   doc.save(fileName)
 }

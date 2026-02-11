@@ -19,6 +19,9 @@
    TWILIO_AUTH_TOKEN=your-token
    TWILIO_PHONE_NUMBER=your-twilio-number
    TWILIO_DEFAULT_COUNTRY_CODE=1  # Optional: Default country code for phone formatting (1 for Canada/USA, 90 for Turkey, etc.)
+
+   RESEND_API_KEY=re_xxxxx  # For report email feature (get from resend.com)
+   RESEND_FROM_EMAIL=onboarding@resend.dev  # Test domain; use your verified domain for production
    ```
 
 3. **Database Setup**

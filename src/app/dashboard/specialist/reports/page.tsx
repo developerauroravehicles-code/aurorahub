@@ -5,8 +5,9 @@ import { createClient } from '@/lib/supabase/client'
 import { format, startOfMonth, endOfMonth, subMonths } from 'date-fns'
 import { formatInTimeZone } from 'date-fns-tz'
 import { SYSTEM_DEFAULT_TIMEZONE } from '@/lib/timezone-defaults'
-import { exportReportToPdf } from '@/lib/export-report-pdf'
-import { FileDown } from 'lucide-react'
+import { exportReportToPdf, type ExportReportOptions } from '@/lib/export-report-pdf'
+import { SendReportEmailModal } from '@/components/send-report-email-modal'
+import { FileDown, Mail } from 'lucide-react'
 
 interface Demand {
   id: string
@@ -24,6 +25,8 @@ interface Demand {
 export default function SpecialistReportsPage() {
   const [demands, setDemands] = useState<Demand[]>([])
   const [loading, setLoading] = useState(true)
+  const [emailModalOpen, setEmailModalOpen] = useState(false)
+  const [reportOptionsForEmail, setReportOptionsForEmail] = useState<ExportReportOptions | null>(null)
   const [startDate, setStartDate] = useState(format(startOfMonth(new Date()), 'yyyy-MM-dd'))
   const [endDate, setEndDate] = useState(format(endOfMonth(new Date()), 'yyyy-MM-dd'))
   const supabase = createClient()
@@ -80,13 +83,13 @@ export default function SpecialistReportsPage() {
     return acc
   }, {} as Record<string, number>)
 
-  const handleExportPdf = async () => {
+  const getReportOptions = async (): Promise<ExportReportOptions> => {
     const { data: { user } } = await supabase.auth.getUser()
     const { data: profile } = user
       ? await supabase.from('profiles').select('full_name').eq('id', user.id).single()
       : { data: null }
     const dateRangeStr = `${format(new Date(startDate), 'MMM d, yyyy')} - ${format(new Date(endDate), 'MMM d, yyyy')}`
-    exportReportToPdf({
+    return {
       reportTitle: 'Specialist Reports',
       dateRange: dateRangeStr,
       exporterFullName: profile?.full_name ?? 'N/A',
@@ -104,7 +107,18 @@ export default function SpecialistReportsPage() {
         status: d.status.replace('_', ' ').toUpperCase(),
         created: formatInTimeZone(new Date(d.created_at), SYSTEM_DEFAULT_TIMEZONE, 'MMM d, yyyy'),
       })),
-    })
+    }
+  }
+
+  const handleExportPdf = async () => {
+    const opts = await getReportOptions()
+    exportReportToPdf(opts)
+  }
+
+  const handleOpenEmailModal = async () => {
+    const opts = await getReportOptions()
+    setReportOptionsForEmail(opts)
+    setEmailModalOpen(true)
   }
 
   const setDateRange = (months: number) => {
@@ -121,14 +135,24 @@ export default function SpecialistReportsPage() {
           <h1 className="text-2xl font-semibold text-white mb-2">Specialist Reports</h1>
           <p className="text-gray-400">View detailed reports of your assigned work and appointments</p>
         </div>
-        <button
-          onClick={handleExportPdf}
-          disabled={loading}
-          className="inline-flex items-center gap-2 px-4 py-2 bg-[#C27E00] hover:bg-[#a06900] text-white rounded-md font-medium text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          <FileDown className="w-4 h-4" />
-          Export PDF
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={handleExportPdf}
+            disabled={loading}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-[#C27E00] hover:bg-[#a06900] text-white rounded-md font-medium text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <FileDown className="w-4 h-4" />
+            Export PDF
+          </button>
+          <button
+            onClick={handleOpenEmailModal}
+            disabled={loading}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 border border-gray-600 text-white rounded-md font-medium text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <Mail className="w-4 h-4" />
+            Send E-mail
+          </button>
+        </div>
       </div>
 
       {/* Date Filter */}
@@ -350,6 +374,14 @@ export default function SpecialistReportsPage() {
             )}
           </div>
         </>
+      )}
+
+      {reportOptionsForEmail && (
+        <SendReportEmailModal
+          isOpen={emailModalOpen}
+          onClose={() => setEmailModalOpen(false)}
+          reportOptions={reportOptionsForEmail}
+        />
       )}
     </div>
   )

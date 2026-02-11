@@ -6,8 +6,9 @@ import { startOfMonth, endOfMonth, subMonths } from 'date-fns'
 import { fromZonedTime } from 'date-fns-tz'
 import { formatInTimeZone } from 'date-fns-tz'
 import { getEffectiveTimezone, SYSTEM_DEFAULT_TIMEZONE } from '@/lib/timezone-defaults'
-import { exportReportToPdf } from '@/lib/export-report-pdf'
-import { FileDown } from 'lucide-react'
+import { exportReportToPdf, type ExportReportOptions } from '@/lib/export-report-pdf'
+import { SendReportEmailModal } from '@/components/send-report-email-modal'
+import { FileDown, Mail } from 'lucide-react'
 
 // Supabase may return dealers as array; timezones/region_codes can be arrays
 type DealerRelation =
@@ -43,6 +44,8 @@ function getDealerTz(demand: Demand): string | null {
 export default function SalesReportsPage() {
   const [demands, setDemands] = useState<Demand[]>([])
   const [loading, setLoading] = useState(true)
+  const [emailModalOpen, setEmailModalOpen] = useState(false)
+  const [reportOptionsForEmail, setReportOptionsForEmail] = useState<ExportReportOptions | null>(null)
   const [startDate, setStartDate] = useState(formatInTimeZone(startOfMonth(new Date()), SYSTEM_DEFAULT_TIMEZONE, 'yyyy-MM-dd'))
   const [endDate, setEndDate] = useState(formatInTimeZone(endOfMonth(new Date()), SYSTEM_DEFAULT_TIMEZONE, 'yyyy-MM-dd'))
   const supabase = createClient()
@@ -112,13 +115,13 @@ export default function SalesReportsPage() {
     }
   }, [demands])
 
-  const handleExportPdf = async () => {
+  const getReportOptions = async (): Promise<ExportReportOptions> => {
     const { data: { user } } = await supabase.auth.getUser()
     const { data: profile } = user
       ? await supabase.from('profiles').select('full_name').eq('id', user.id).single()
       : { data: null }
     const dateRangeStr = `${formatInTimeZone(new Date(startDate + 'T12:00:00Z'), SYSTEM_DEFAULT_TIMEZONE, 'MMM d, yyyy')} - ${formatInTimeZone(new Date(endDate + 'T12:00:00Z'), SYSTEM_DEFAULT_TIMEZONE, 'MMM d, yyyy')}`
-    exportReportToPdf({
+    return {
       reportTitle: 'Sales Reports',
       dateRange: dateRangeStr,
       exporterFullName: profile?.full_name ?? 'N/A',
@@ -136,7 +139,18 @@ export default function SalesReportsPage() {
         status: d.status.replace('_', ' ').toUpperCase(),
         created: formatInTimeZone(new Date(d.created_at), getEffectiveTimezone(getDealerTz(d) ?? null), 'MMM d, yyyy'),
       })),
-    })
+    }
+  }
+
+  const handleExportPdf = async () => {
+    const opts = await getReportOptions()
+    exportReportToPdf(opts)
+  }
+
+  const handleOpenEmailModal = async () => {
+    const opts = await getReportOptions()
+    setReportOptionsForEmail(opts)
+    setEmailModalOpen(true)
   }
 
   const setDateRange = (months: number) => {
@@ -153,14 +167,24 @@ export default function SalesReportsPage() {
           <h1 className="text-2xl font-semibold text-white mb-2">Sales Reports</h1>
           <p className="text-gray-400">View detailed reports of your demands and appointments</p>
         </div>
-        <button
-          onClick={handleExportPdf}
-          disabled={loading}
-          className="inline-flex items-center gap-2 px-4 py-2 bg-[#C27E00] hover:bg-[#a06900] text-white rounded-md font-medium text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          <FileDown className="w-4 h-4" />
-          Export PDF
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={handleExportPdf}
+            disabled={loading}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-[#C27E00] hover:bg-[#a06900] text-white rounded-md font-medium text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <FileDown className="w-4 h-4" />
+            Export PDF
+          </button>
+          <button
+            onClick={handleOpenEmailModal}
+            disabled={loading}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 border border-gray-600 text-white rounded-md font-medium text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <Mail className="w-4 h-4" />
+            Send E-mail
+          </button>
+        </div>
       </div>
 
       {/* Date Filter */}
@@ -382,6 +406,14 @@ export default function SalesReportsPage() {
             )}
           </div>
         </>
+      )}
+
+      {reportOptionsForEmail && (
+        <SendReportEmailModal
+          isOpen={emailModalOpen}
+          onClose={() => setEmailModalOpen(false)}
+          reportOptions={reportOptionsForEmail}
+        />
       )}
     </div>
   )
