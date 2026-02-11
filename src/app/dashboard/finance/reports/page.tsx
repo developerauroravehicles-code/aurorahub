@@ -3,6 +3,10 @@
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { format, startOfMonth, endOfMonth, subMonths } from 'date-fns'
+import { formatInTimeZone } from 'date-fns-tz'
+import { SYSTEM_DEFAULT_TIMEZONE } from '@/lib/timezone-defaults'
+import { exportReportToPdf } from '@/lib/export-report-pdf'
+import { FileDown } from 'lucide-react'
 
 interface Demand {
   id: string
@@ -76,6 +80,27 @@ export default function FinanceReportsPage() {
     return acc
   }, {} as Record<string, number>)
 
+  const handleExportPdf = () => {
+    const dateRangeStr = `${format(new Date(startDate), 'MMM d, yyyy')} - ${format(new Date(endDate), 'MMM d, yyyy')}`
+    exportReportToPdf({
+      reportTitle: 'Finance Reports',
+      dateRange: dateRangeStr,
+      totalDemands,
+      totalAppointments,
+      cameraCounts,
+      statusCounts,
+      vehicleMakeCounts,
+      demands: demands.map((d) => ({
+        customer: `${d.customer_firstname} ${d.customer_lastname}`,
+        vehicle: `${d.vehicle_year} ${d.vehicle_make} ${d.vehicle_model}`,
+        camera: d.camera_model,
+        appointment: formatInTimeZone(new Date(d.appointment_date), SYSTEM_DEFAULT_TIMEZONE, 'MMM d, yyyy HH:mm'),
+        status: d.status.replace('_', ' ').toUpperCase(),
+        created: formatInTimeZone(new Date(d.created_at), SYSTEM_DEFAULT_TIMEZONE, 'MMM d, yyyy'),
+      })),
+    })
+  }
+
   const setDateRange = (months: number) => {
     const end = new Date()
     const start = subMonths(end, months)
@@ -85,9 +110,19 @@ export default function FinanceReportsPage() {
 
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-2xl font-semibold text-white mb-2">Finance Reports</h1>
-        <p className="text-gray-400">View detailed reports of your assigned demands and appointments</p>
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold text-white mb-2">Finance Reports</h1>
+          <p className="text-gray-400">View detailed reports of your assigned demands and appointments</p>
+        </div>
+        <button
+          onClick={handleExportPdf}
+          disabled={loading}
+          className="inline-flex items-center gap-2 px-4 py-2 bg-[#C27E00] hover:bg-[#a06900] text-white rounded-md font-medium text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          <FileDown className="w-4 h-4" />
+          Export PDF
+        </button>
       </div>
 
       {/* Date Filter */}

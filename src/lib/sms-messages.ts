@@ -11,9 +11,9 @@ export type SMSMessageType = 'appointment_created' | 'cancellation_notice' | 'fo
 /**
  * Appointment Created Message
  * Sent when a demand is approved by finance
- * @param appointmentDate - The appointment date (UTC)
+ * @param appointmentDate - The appointment date (ISO/UTC moment)
  * @param address - The appointment address
- * @param timezoneName - Optional timezone name (e.g., 'America/Vancouver'). If not provided, uses local timezone
+ * @param timezoneName - Optional dealer timezone. If not provided, uses PST (system default)
  */
 export function getAppointmentCreatedMessage(
   appointmentDate: Date,

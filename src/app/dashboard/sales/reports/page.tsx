@@ -6,6 +6,8 @@ import { startOfMonth, endOfMonth, subMonths } from 'date-fns'
 import { fromZonedTime } from 'date-fns-tz'
 import { formatInTimeZone } from 'date-fns-tz'
 import { getEffectiveTimezone, SYSTEM_DEFAULT_TIMEZONE } from '@/lib/timezone-defaults'
+import { exportReportToPdf } from '@/lib/export-report-pdf'
+import { FileDown } from 'lucide-react'
 
 // Supabase may return dealers as array; timezones/region_codes can be arrays
 type DealerRelation =
@@ -110,6 +112,27 @@ export default function SalesReportsPage() {
     }
   }, [demands])
 
+  const handleExportPdf = () => {
+    const dateRangeStr = `${formatInTimeZone(new Date(startDate + 'T12:00:00Z'), SYSTEM_DEFAULT_TIMEZONE, 'MMM d, yyyy')} - ${formatInTimeZone(new Date(endDate + 'T12:00:00Z'), SYSTEM_DEFAULT_TIMEZONE, 'MMM d, yyyy')}`
+    exportReportToPdf({
+      reportTitle: 'Sales Reports',
+      dateRange: dateRangeStr,
+      totalDemands,
+      totalAppointments,
+      cameraCounts,
+      statusCounts,
+      vehicleMakeCounts,
+      demands: demands.map((d) => ({
+        customer: `${d.customer_firstname} ${d.customer_lastname}`,
+        vehicle: `${d.vehicle_year} ${d.vehicle_make} ${d.vehicle_model}`,
+        camera: d.camera_model,
+        appointment: formatInTimeZone(new Date(d.appointment_date), getEffectiveTimezone(getDealerTz(d) ?? null), 'MMM d, yyyy HH:mm'),
+        status: d.status.replace('_', ' ').toUpperCase(),
+        created: formatInTimeZone(new Date(d.created_at), getEffectiveTimezone(getDealerTz(d) ?? null), 'MMM d, yyyy'),
+      })),
+    })
+  }
+
   const setDateRange = (months: number) => {
     const end = new Date()
     const start = subMonths(end, months)
@@ -119,9 +142,19 @@ export default function SalesReportsPage() {
 
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-2xl font-semibold text-white mb-2">Sales Reports</h1>
-        <p className="text-gray-400">View detailed reports of your demands and appointments</p>
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold text-white mb-2">Sales Reports</h1>
+          <p className="text-gray-400">View detailed reports of your demands and appointments</p>
+        </div>
+        <button
+          onClick={handleExportPdf}
+          disabled={loading}
+          className="inline-flex items-center gap-2 px-4 py-2 bg-[#C27E00] hover:bg-[#a06900] text-white rounded-md font-medium text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          <FileDown className="w-4 h-4" />
+          Export PDF
+        </button>
       </div>
 
       {/* Date Filter */}

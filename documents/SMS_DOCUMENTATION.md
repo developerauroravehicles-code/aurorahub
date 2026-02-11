@@ -286,6 +286,7 @@ Aurora Vehicles.
 **Tarih Formatı:**
 - **Format:** `MMMM dd, yyyy 'at' HH:mm`
 - **Örnek:** `February 20, 2026 at 02:00 PM`
+- **Saat Dilimi:** Randevu tarihi bayinin timezone'unda gösterilir (`dealers → region_codes → timezones`). Timezone yoksa PST (America/Vancouver) kullanılır.
 
 **Adres Önceliği:**
 1. `demand.customer_address` (varsa)
@@ -316,6 +317,8 @@ Aurora Vehicles.
 **Adres Önceliği:**
 1. `demand.customer_address` (varsa)
 2. `'the specified location'` (fallback)
+
+**Saat Dilimi (4-Hour Reminder):** Cron job ve Specialist alert mesajları dealer timezone kullanır (`getTimezoneFromDealer`). Timezone yoksa sistem varsayılanı PST kullanılır.
 
 ---
 
@@ -509,19 +512,48 @@ TWILIO_DEFAULT_COUNTRY_CODE=1  # Optional: 1 for Canada/USA, 90 for Turkey, etc.
 
 8. **Cron Job Güvenliği:** `/api/send-reminders` endpoint'i `CRON_SECRET` environment variable ile korunur.
 
+9. **Saat Dilimi:** Sistem UTC veya sunucu saati kullanmaz. Tüm tarih gösterimleri dealer timezone ile yapılır; timezone yoksa PST (America/Vancouver) kullanılır.
+
+---
+
+## Durum Kontrolü (2026-02-09)
+
+### Bileşen Özeti
+
+| Bileşen | Dosya | Timezone Kaynağı | Durum |
+|---------|-------|------------------|-------|
+| **4-Hour Reminder (Cron)** | `src/app/api/send-reminders/route.ts` | `getTimezoneFromDealer(demand.dealers)` | ✅ Dealer TZ / PST fallback |
+| **Specialist Alert SMS** | `src/app/dashboard/specialist/actions.ts` | `getTimezoneFromDealer(demand.dealers)` | ✅ Dealer TZ / PST fallback |
+| **Appointment Created** | `src/app/dashboard/finance/demands/actions.ts` | `dealer.region_codes.timezones.name` | ✅ Dealer TZ / PST fallback |
+| **SMS Mesaj Şablonları** | `src/lib/sms-messages.ts` | `getEffectiveTimezone(timezoneName)` | ✅ PST varsayılan |
+
+### İlgili Fonksiyonlar
+
+| Fonksiyon | Kullanım |
+|-----------|----------|
+| `getAppointmentCreatedMessage(appointmentDate, address, timezoneName?)` | Randevu tarihi dealer TZ'de formatlanır |
+| `getFourHourReminderMessage(appointmentDate, address, timezoneName?, forceFourHours?)` | "in X hours" mesajı; timezone opsiyonel (PST fallback) |
+| `isWithin4HoursBeforeWindow(appointmentDate, _timezoneName?)` | 3.5h–4.5h penceresi (mutlak süre) |
+| `getTimezoneFromDealer(dealer)` | Supabase dealer yanıtından timezone çıkarır (array desteği) |
+| `getEffectiveTimezone(dealerTz)` | Dealer TZ yoksa `America/Vancouver` (PST) döner |
+
+### Kontrol Listesi
+
+- [x] Cron job dealer timezone ile çalışıyor
+- [x] Specialist alert dealer timezone kullanıyor
+- [x] Finance approve mesajı dealer timezone ile formatlanıyor
+- [x] Timezone yoksa PST kullanılıyor (UTC/sunucu yok)
+- [x] `CRON_SECRET` ile endpoint korunuyor
+
 ---
 
 ## Son Güncelleme
 
-**Tarih:** 2026-02-20  
-**Versiyon:** 2.0  
+**Tarih:** 2026-02-09  
+**Versiyon:** 2.1  
 **Son Değişiklikler:**
-- SMS mesaj formatları güncellendi (3 yeni format)
-- Appointment Created formatı eklendi
-- Cancellation/Rescheduling Notice formatı eklendi
-- 4-Hour Reminder formatı eklendi
-- Cancellation SMS gönderimi eklendi (24 saat içindeyse)
-- Rescheduling SMS gönderimi eklendi (24 saat içindeyse)
-- 4-Hour Reminder cron job eklendi (her saat başı)
-- Specialist appointment alert mesaj formatı güncellendi (4-Hour Reminder formatı)
+- Timezone sistemi: Dealer timezone + PST varsayılan (UTC kaldırıldı)
+- `getTimezoneFromDealer` ile send-reminders ve specialist actions güncellendi
+- `getEffectiveTimezone` ile tüm mesaj şablonları PST fallback kullanıyor
+- Durum kontrolü bölümü eklendi
 
