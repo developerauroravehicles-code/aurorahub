@@ -126,6 +126,7 @@ export default function SalesReportsPage() {
       dateRange: dateRangeStr,
       exporterFullName: profile?.full_name ?? 'N/A',
       exporterEmail: user?.email ?? 'N/A',
+      appliedFilters: ['Scope: My created demands'],
       totalDemands,
       totalAppointments,
       cameraCounts,

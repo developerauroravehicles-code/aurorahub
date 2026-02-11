@@ -19,6 +19,7 @@ export interface ExportReportOptions {
   dateRange: string
   exporterFullName: string
   exporterEmail: string
+  appliedFilters?: string[]
   totalDemands: number
   totalAppointments: number
   cameraCounts: Record<string, number>
@@ -33,6 +34,7 @@ function buildReportPdf(options: ExportReportOptions): jsPDF {
     dateRange,
     exporterFullName,
     exporterEmail,
+    appliedFilters,
     totalDemands,
     totalAppointments,
     cameraCounts,
@@ -56,6 +58,15 @@ function buildReportPdf(options: ExportReportOptions): jsPDF {
   doc.setFont('helvetica', 'normal')
   doc.text(`Date Range: ${dateRange}`, 14, yPos)
   yPos += 6
+
+  // Applied filters (if any)
+  if (appliedFilters && appliedFilters.length > 0) {
+    appliedFilters.forEach((filter) => {
+      doc.text(filter, 14, yPos)
+      yPos += 5
+    })
+    yPos += 2
+  }
 
   // Exported by
   doc.text(`Exported by: ${exporterFullName || 'N/A'}`, 14, yPos)

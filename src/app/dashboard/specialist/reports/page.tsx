@@ -94,6 +94,7 @@ export default function SpecialistReportsPage() {
       dateRange: dateRangeStr,
       exporterFullName: profile?.full_name ?? 'N/A',
       exporterEmail: user?.email ?? 'N/A',
+      appliedFilters: ['Scope: My assigned work'],
       totalDemands,
       totalAppointments,
       cameraCounts,

@@ -94,6 +94,7 @@ export default function FinanceReportsPage() {
       dateRange: dateRangeStr,
       exporterFullName: profile?.full_name ?? 'N/A',
       exporterEmail: user?.email ?? 'N/A',
+      appliedFilters: ['Scope: My assigned demands'],
       totalDemands,
       totalAppointments,
       cameraCounts,

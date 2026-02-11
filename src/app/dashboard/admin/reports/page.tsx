@@ -242,11 +242,18 @@ export default function AdminReportsPage() {
       ? await supabase.from('profiles').select('full_name').eq('id', user.id).single()
       : { data: null }
     const dateRangeStr = `${formatInTimeZone(new Date(startDate + 'T12:00:00Z'), SYSTEM_DEFAULT_TIMEZONE, 'MMM d, yyyy')} - ${formatInTimeZone(new Date(endDate + 'T12:00:00Z'), SYSTEM_DEFAULT_TIMEZONE, 'MMM d, yyyy')}`
+    const dealerFilter = selectedDealerId === 'all'
+      ? 'Dealer: All Dealers'
+      : `Dealer: ${dealers.find(d => d.id === selectedDealerId)?.name ?? selectedDealerId}`
+    const personnelFilter = selectedEmployeeId === 'all'
+      ? 'Personnel: All Personnel'
+      : `Personnel: ${employees.find(e => e.id === selectedEmployeeId)?.full_name ?? selectedEmployeeId}`
     return {
       reportTitle: 'Admin Reports',
       dateRange: dateRangeStr,
       exporterFullName: profile?.full_name ?? 'N/A',
       exporterEmail: user?.email ?? 'N/A',
+      appliedFilters: [dealerFilter, personnelFilter],
       totalDemands,
       totalAppointments,
       cameraCounts,
