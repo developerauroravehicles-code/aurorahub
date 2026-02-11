@@ -1,8 +1,8 @@
 # AuroraHub - Kapsamlı Bug & Hata Raporu (Güncel)
 
-**Tarih:** 2025-01-XX  
+**Tarih:** 2026-02-09  
 **Test Kapsamı:** Tüm sistem (TypeScript, Import/Export, Server Actions, Routes, Error Handling)  
-**Son Güncelleme:** Yeni Kapsamlı Test - 2025-01-XX
+**Son Güncelleme:** Hatırlatma Sistemi Kontrolü + Dealer Timezone + Slot Bloklama - 2026-02-09
 
 ---
 
@@ -232,3 +232,31 @@ Mevcut kod tabanında kritik seviyede hata bulunmamaktadır. Tüm önceki kritik
 ---
 
 **Not:** Bu rapor otomatik analiz ve manuel kod incelemesi sonucunda oluşturulmuştur. Kritik hata bulunmamaktadır, ancak iyileştirme önerileri mevcuttur.
+
+---
+
+## 📅 2026-02-09 GÜNCELLEMELERİ
+
+### Hatırlatma Sistemi Kontrolü ✅
+
+**Kontrol Edilen Bileşenler:**
+- `/api/send-reminders` – Cron ile 4 saat önce hatırlatma
+- `src/app/dashboard/specialist/actions.ts` – Specialist appointment alert SMS
+- `src/lib/sms-messages.ts` – 4-Hour Reminder mesaj formatı
+
+**Yapılan Düzeltmeler:**
+- ✅ Timezone çıkarımı `getTimezoneFromDealer()` ile standartlaştırıldı (Supabase array yanıtları destekleniyor)
+- ✅ Send-reminders route artık dealer timezone’unu doğru alıyor
+- ✅ Specialist actions timezone çıkarımı düzeltildi
+
+**Sistem Özeti:**
+| Bileşen | Tetikleyici | Pencere | Mesaj |
+|---------|-------------|---------|-------|
+| Cron Job | Her saat başı | Randevudan 3.5–4.5 saat önce | 4-Hour Reminder |
+| Specialist Alert | Dashboard yükleme | Yarınki randevular | 4-Hour Reminder formatı |
+
+### Diğer Son Düzeltmeler (2026-02)
+
+1. **Dealer Timezone Sistemi:** Randevu ve tarih gösterimleri sistem genelinde dealer timezone kullanıyor (`formatInTimeZone`)
+2. **Slot Bloklama:** Randevu oluşturulurken dolu slotlar doğru bloklanıyor; timezone çıkarımı `getTimezoneFromDealer` ile yapılıyor
+3. **Kullanıcı Silme:** Yabancı anahtar (FK) kısıtlamaları nedeniyle oluşan "Database error deleting user" hatası giderildi; silmeden önce demands ve demand_logs referansları null yapılıyor

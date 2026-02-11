@@ -1,8 +1,8 @@
 import { createClient } from '@/lib/supabase/server'
-import { format } from 'date-fns'
 import { formatInTimeZone } from 'date-fns-tz'
 import Link from 'next/link'
 import { AppointmentAlerts, type AppointmentAlert } from './specialist/appointment-alerts'
+import { getEffectiveTimezone, getTodayRangeInTimezone, SYSTEM_DEFAULT_TIMEZONE } from '@/lib/timezone-defaults'
 
 export default async function DashboardPage() {
   const supabase = await createClient()
@@ -125,14 +125,12 @@ export default async function DashboardPage() {
                             {demand.vehicle_year} {demand.vehicle_make} {demand.vehicle_model}
                           </p>
                           <p className="text-xs text-gray-500 mt-1">
-                            Appointment: {salesTimezoneName
-                              ? formatInTimeZone(new Date(demand.appointment_date), salesTimezoneName, 'PPP p')
-                              : format(new Date(demand.appointment_date), 'PPP p')}
+                            Appointment: {formatInTimeZone(new Date(demand.appointment_date), getEffectiveTimezone(salesTimezoneName), 'PPP p')}
                           </p>
                         </div>
                         <div className="text-right">
                           <p className="text-xs text-gray-500">
-                            {format(new Date(demand.created_at), 'MMM d, yyyy')}
+                            {formatInTimeZone(new Date(demand.created_at), getEffectiveTimezone(salesTimezoneName), 'MMM d, yyyy')}
                           </p>
                         </div>
                       </div>
@@ -253,13 +251,13 @@ export default async function DashboardPage() {
                             Appointment: {(() => {
                               const dealers = (demand as { dealers?: { region_codes?: { timezones?: { name: string } } } | null }).dealers
                               const tz = dealers?.region_codes?.timezones?.name ?? null
-                              return tz ? formatInTimeZone(new Date(demand.appointment_date), tz, 'PPP p') : format(new Date(demand.appointment_date), 'PPP p')
+                              return formatInTimeZone(new Date(demand.appointment_date), getEffectiveTimezone(tz), 'PPP p')
                             })()}
                           </p>
                         </div>
                         <div className="text-right">
                           <p className="text-xs text-gray-500">
-                            {format(new Date(demand.created_at), 'MMM d, yyyy')}
+                            {formatInTimeZone(new Date(demand.created_at), getEffectiveTimezone((demand as { dealers?: { region_codes?: { timezones?: { name: string } } } | null }).dealers?.region_codes?.timezones?.name ?? null), 'MMM d, yyyy')}
                           </p>
                         </div>
                       </div>
@@ -330,11 +328,8 @@ export default async function DashboardPage() {
       .eq('status', 'completed')
       .order('updated_at', { ascending: false })
 
-    // Get today's appointments (from dealers this specialist can serve)
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
-    const tomorrow = new Date(today)
-    tomorrow.setDate(tomorrow.getDate() + 1)
+    // Get today's appointments (PST - system default timezone)
+    const { start: todayStart, end: todayEnd } = getTodayRangeInTimezone(SYSTEM_DEFAULT_TIMEZONE)
 
     let todayAppointments: { id: string; status: string; appointment_date: string; customer_firstname: string; customer_lastname: string; vehicle_make: string; vehicle_model: string; vehicle_year: number; camera_model: string; customer_address: string | null; dealers: unknown }[] = []
     if (dealerIds.length > 0) {
@@ -343,8 +338,8 @@ export default async function DashboardPage() {
         .select('id, status, appointment_date, customer_firstname, customer_lastname, vehicle_make, vehicle_model, vehicle_year, camera_model, customer_address, dealers(region_codes(timezone_id, timezones(name)))')
         .in('dealer_id', dealerIds)
         .eq('status', 'approved')
-        .gte('appointment_date', today.toISOString())
-        .lt('appointment_date', tomorrow.toISOString())
+        .gte('appointment_date', todayStart)
+        .lte('appointment_date', todayEnd)
         .order('appointment_date', { ascending: true })
       todayAppointments = data ?? []
     }
@@ -425,7 +420,7 @@ export default async function DashboardPage() {
                           {(() => {
                             const dealers = demand.dealers as unknown as { region_codes?: { timezones?: { name: string } } } | { region_codes?: { timezones?: { name: string } } }[] | null
                             const tz = Array.isArray(dealers) ? dealers[0]?.region_codes?.timezones?.name : dealers?.region_codes?.timezones?.name
-                            return tz ? formatInTimeZone(new Date(demand.appointment_date), tz, 'PPP p') : format(new Date(demand.appointment_date), 'PPP p')
+                            return formatInTimeZone(new Date(demand.appointment_date), getEffectiveTimezone(tz), 'PPP p')
                           })()}
                         </p>
                       </div>
@@ -486,9 +481,7 @@ export default async function DashboardPage() {
                           {demand.camera_model}
                         </p>
                         <p className="text-xs text-[#C27E00] mt-1 font-semibold">
-                          Appointment: {demand.timezoneName
-                            ? formatInTimeZone(new Date(demand.appointment_date), demand.timezoneName, 'PPP p')
-                            : format(new Date(demand.appointment_date), 'PPP p')}
+                          Appointment: {formatInTimeZone(new Date(demand.appointment_date), getEffectiveTimezone(demand.timezoneName ?? null), 'PPP p')}
                         </p>
                         {demand.customer_address && (
                           <p className="text-xs text-gray-500 mt-1">
@@ -498,9 +491,7 @@ export default async function DashboardPage() {
                       </div>
                       <div className="text-right">
                         <p className="text-xs text-gray-500">
-                          {demand.timezoneName
-                            ? formatInTimeZone(new Date(demand.appointment_date), demand.timezoneName, 'MMM d, yyyy')
-                            : format(new Date(demand.appointment_date), 'MMM d, yyyy')}
+                          {formatInTimeZone(new Date(demand.appointment_date), getEffectiveTimezone(demand.timezoneName ?? null), 'MMM d, yyyy')}
                         </p>
                       </div>
                     </div>
@@ -529,7 +520,7 @@ export default async function DashboardPage() {
                 {completedWork?.slice(0, 5).map(demand => {
                   const completedDealers = (demand as { dealers?: { region_codes?: { timezones?: { name: string } } } | null }).dealers
                   const completedTz = (Array.isArray(completedDealers) ? completedDealers[0] : completedDealers)?.region_codes?.timezones?.name ?? null
-                  const fmt = (d: Date, fmtStr: string) => completedTz ? formatInTimeZone(d, completedTz, fmtStr) : format(d, fmtStr)
+                  const fmt = (d: Date, fmtStr: string) => formatInTimeZone(d, getEffectiveTimezone(completedTz ?? null), fmtStr)
                   return (
                   <li key={demand.id} className="p-4 hover:bg-white/5 transition-colors">
                     <div className="flex justify-between items-start">
@@ -711,12 +702,12 @@ export default async function DashboardPage() {
                             Camera: {demand.camera_model}
                           </p>
                           <p className="text-xs text-gray-500 mt-1">
-                            Appointment: {amTz ? formatInTimeZone(new Date(demand.appointment_date), amTz, 'PPP p') : format(new Date(demand.appointment_date), 'PPP p')}
+                            Appointment: {formatInTimeZone(new Date(demand.appointment_date), getEffectiveTimezone(amTz ?? null), 'PPP p')}
                           </p>
                         </div>
                         <div className="text-right">
                           <p className="text-xs text-gray-500">
-                            {format(new Date(demand.created_at), 'MMM d, yyyy')}
+                            {formatInTimeZone(new Date(demand.created_at), getEffectiveTimezone(amTz ?? null), 'MMM d, yyyy')}
                           </p>
                         </div>
                       </div>
@@ -754,19 +745,16 @@ export default async function DashboardPage() {
       .select('role')
       .eq('dealer_id', profile.dealer_id)
 
-    // Get today's appointments
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
-    const tomorrow = new Date(today)
-    tomorrow.setDate(tomorrow.getDate() + 1)
+    // Get today's appointments (dealer timezone, fallback PST)
+    const { start: gmTodayStart, end: gmTodayEnd } = getTodayRangeInTimezone(getEffectiveTimezone(gmTimezoneName))
 
     const { data: todayAppointments } = await supabase
       .from('demands')
       .select('id, status, appointment_date, customer_firstname, customer_lastname, vehicle_make, vehicle_model, vehicle_year, camera_model')
       .eq('dealer_id', profile.dealer_id)
       .eq('status', 'approved')
-      .gte('appointment_date', today.toISOString())
-      .lt('appointment_date', tomorrow.toISOString())
+      .gte('appointment_date', gmTodayStart)
+      .lte('appointment_date', gmTodayEnd)
       .order('appointment_date', { ascending: true })
 
     // Calculate demand statistics
@@ -889,7 +877,7 @@ export default async function DashboardPage() {
                           {demand.camera_model}
                         </p>
                         <p className="text-xs text-[#C27E00] mt-1 font-semibold">
-                          {gmTimezoneName ? formatInTimeZone(new Date(demand.appointment_date), gmTimezoneName, 'PPP p') : format(new Date(demand.appointment_date), 'PPP p')}
+                          {formatInTimeZone(new Date(demand.appointment_date), getEffectiveTimezone(gmTimezoneName ?? null), 'PPP p')}
                         </p>
                       </div>
                     </div>
@@ -945,12 +933,12 @@ export default async function DashboardPage() {
                             Camera: {demand.camera_model}
                           </p>
                           <p className="text-xs text-gray-500 mt-1">
-                            Appointment: {gmTimezoneName ? formatInTimeZone(new Date(demand.appointment_date), gmTimezoneName, 'PPP p') : format(new Date(demand.appointment_date), 'PPP p')}
+                            Appointment: {formatInTimeZone(new Date(demand.appointment_date), getEffectiveTimezone(gmTimezoneName ?? null), 'PPP p')}
                           </p>
                         </div>
                         <div className="text-right">
                           <p className="text-xs text-gray-500">
-                            {format(new Date(demand.created_at), 'MMM d, yyyy')}
+                            {formatInTimeZone(new Date(demand.created_at), getEffectiveTimezone(gmTimezoneName ?? null), 'MMM d, yyyy')}
                           </p>
                         </div>
                       </div>

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { sendSMS } from '@/lib/twilio'
 import { getFourHourReminderMessage, isWithin4HoursBeforeWindow } from '@/lib/sms-messages'
+import { getTimezoneFromDealer } from '@/lib/dealer-timezone'
 
 /**
  * API Route for sending reminder SMS
@@ -48,7 +49,7 @@ export async function GET(request: Request) {
 
     for (const demand of demands) {
       const appointmentDate = new Date(demand.appointment_date)
-      const timezoneName = (demand.dealers as { region_codes?: { timezones?: { name: string } } } | null)?.region_codes?.timezones?.name ?? null
+      const timezoneName = getTimezoneFromDealer(demand.dealers as Parameters<typeof getTimezoneFromDealer>[0]) ?? null
 
       // Only send if we're in the 3.5h–4.5h-before window (same in any TZ; dealer TZ used for consistency)
       if (!isWithin4HoursBeforeWindow(appointmentDate, timezoneName) || !demand.customer_phone) continue

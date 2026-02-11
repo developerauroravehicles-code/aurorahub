@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { format } from 'date-fns'
 import { formatInTimeZone } from 'date-fns-tz'
+import { getEffectiveTimezone } from '@/lib/timezone-defaults'
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 
@@ -106,9 +107,7 @@ export default async function DemandDetailsPage({ params }: { params: Promise<{ 
             <div>
               <p className="text-sm text-gray-400">Appointment Date</p>
               <p className="text-white font-semibold text-[#C27E00]">
-                {(demand.dealers as { region_codes?: { timezones?: { name: string } } } | null)?.region_codes?.timezones?.name
-                  ? formatInTimeZone(new Date(demand.appointment_date), (demand.dealers as { region_codes: { timezones: { name: string } } }).region_codes.timezones.name, 'PPP p')
-                  : format(new Date(demand.appointment_date), 'PPP p')}
+                {formatInTimeZone(new Date(demand.appointment_date), getEffectiveTimezone((demand.dealers as { region_codes?: { timezones?: { name: string } } } | null)?.region_codes?.timezones?.name ?? null), 'PPP p')}
               </p>
             </div>
           </div>
@@ -159,11 +158,11 @@ export default async function DemandDetailsPage({ params }: { params: Promise<{ 
           <div className="space-y-3">
             <div>
               <p className="text-sm text-gray-400">Created At</p>
-              <p className="text-white">{format(new Date(demand.created_at), 'PPP p')}</p>
+              <p className="text-white">{formatInTimeZone(new Date(demand.created_at), getEffectiveTimezone((demand.dealers as { region_codes?: { timezones?: { name: string } } } | null)?.region_codes?.timezones?.name ?? null), 'PPP p')}</p>
             </div>
             <div>
               <p className="text-sm text-gray-400">Last Updated</p>
-              <p className="text-white">{format(new Date(demand.updated_at || demand.created_at), 'PPP p')}</p>
+              <p className="text-white">{formatInTimeZone(new Date(demand.updated_at || demand.created_at), getEffectiveTimezone((demand.dealers as { region_codes?: { timezones?: { name: string } } } | null)?.region_codes?.timezones?.name ?? null), 'PPP p')}</p>
             </div>
           </div>
         </div>
@@ -193,7 +192,7 @@ export default async function DemandDetailsPage({ params }: { params: Promise<{ 
                     )}
                   </div>
                   <p className="text-xs text-gray-500">
-                    {format(new Date(log.created_at), 'MMM d, yyyy HH:mm')}
+                    {formatInTimeZone(new Date(log.created_at), getEffectiveTimezone((demand.dealers as { region_codes?: { timezones?: { name: string } } } | null)?.region_codes?.timezones?.name ?? null), 'MMM d, yyyy HH:mm')}
                   </p>
                 </div>
               </div>

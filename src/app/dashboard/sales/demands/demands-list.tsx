@@ -2,7 +2,8 @@
 
 import { useState, useMemo } from 'react'
 import { format } from 'date-fns'
-import { formatInTimeZone } from 'date-fns-tz'
+import { formatInTimeZone, fromZonedTime } from 'date-fns-tz'
+import { getEffectiveTimezone, getTodayRangeInTimezone } from '@/lib/timezone-defaults'
 import { Filter, X } from 'lucide-react'
 
 interface Demand {
@@ -36,33 +37,43 @@ export function DemandsList({ demands, timezoneName = null }: DemandsListProps) 
       filtered = filtered.filter(d => d.status === statusFilter)
     }
 
-    // Date filter
+    // Date filter (PST / dealer timezone - no server local)
     if (dateFilter !== 'all') {
-      const now = new Date()
-      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-      
+      const tz = getEffectiveTimezone(timezoneName ?? null)
+      const { start: todayStart, end: todayEnd } = getTodayRangeInTimezone(tz)
+      const todayStartMs = new Date(todayStart).getTime()
+      const todayEndMs = new Date(todayEnd).getTime()
+
       if (dateFilter === 'today') {
-        const tomorrow = new Date(today)
-        tomorrow.setDate(tomorrow.getDate() + 1)
         filtered = filtered.filter(d => {
-          const appointmentDate = new Date(d.appointment_date)
-          return appointmentDate >= today && appointmentDate < tomorrow
+          const t = new Date(d.appointment_date).getTime()
+          return t >= todayStartMs && t <= todayEndMs
         })
       } else if (dateFilter === 'this_week') {
-        const weekStart = new Date(today)
-        weekStart.setDate(today.getDate() - today.getDay())
-        const weekEnd = new Date(weekStart)
-        weekEnd.setDate(weekStart.getDate() + 7)
+        const dateStr = formatInTimeZone(new Date(), tz, 'yyyy-MM-dd')
+        const [y, mo, d] = dateStr.split('-').map(Number)
+        const dateInTz = new Date(y, mo - 1, d)
+        const dayOfWeek = dateInTz.getDay()
+        const weekStartDate = new Date(dateInTz)
+        weekStartDate.setDate(dateInTz.getDate() - dayOfWeek)
+        const weekEndDate = new Date(weekStartDate)
+        weekEndDate.setDate(weekStartDate.getDate() + 7)
+        const weekStartMs = fromZonedTime(weekStartDate, tz).getTime()
+        const weekEndMs = fromZonedTime(weekEndDate, tz).getTime()
         filtered = filtered.filter(d => {
-          const appointmentDate = new Date(d.appointment_date)
-          return appointmentDate >= weekStart && appointmentDate < weekEnd
+          const t = new Date(d.appointment_date).getTime()
+          return t >= weekStartMs && t < weekEndMs
         })
       } else if (dateFilter === 'this_month') {
-        const monthStart = new Date(today.getFullYear(), today.getMonth(), 1)
-        const monthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 1)
+        const dateStr = formatInTimeZone(new Date(), tz, 'yyyy-MM-dd')
+        const [y, mo] = dateStr.split('-').map(Number)
+        const monthStartDate = new Date(y, mo - 1, 1)
+        const monthEndDate = new Date(y, mo, 1)
+        const monthStartMs = fromZonedTime(monthStartDate, tz).getTime()
+        const monthEndMs = fromZonedTime(monthEndDate, tz).getTime()
         filtered = filtered.filter(d => {
-          const appointmentDate = new Date(d.appointment_date)
-          return appointmentDate >= monthStart && appointmentDate < monthEnd
+          const t = new Date(d.appointment_date).getTime()
+          return t >= monthStartMs && t < monthEndMs
         })
       }
     }
@@ -77,7 +88,7 @@ export function DemandsList({ demands, timezoneName = null }: DemandsListProps) 
     }
 
     return filtered
-  }, [demands, statusFilter, dateFilter, searchQuery])
+  }, [demands, statusFilter, dateFilter, searchQuery, timezoneName])
 
   const hasActiveFilters = statusFilter !== 'all' || dateFilter !== 'all' || searchQuery.trim() !== ''
 
@@ -207,9 +218,7 @@ export function DemandsList({ demands, timezoneName = null }: DemandsListProps) 
                       </div>
                       <div className="mt-2 flex items-center text-sm text-gray-400 sm:mt-0">
                         <p>
-                          Appointment: {timezoneName 
-                            ? formatInTimeZone(new Date(demand.appointment_date), timezoneName, 'PPP p')
-                            : format(new Date(demand.appointment_date), 'PPP p')}
+                          Appointment: {formatInTimeZone(new Date(demand.appointment_date), getEffectiveTimezone(timezoneName ?? null), 'PPP p')}
                         </p>
                       </div>
                     </div>

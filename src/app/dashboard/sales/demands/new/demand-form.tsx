@@ -6,6 +6,7 @@ import { getDealerBlocksForDate } from '@/app/dashboard/system-management/calend
 import { getGlobalSlotMinutes, getSlotMinutesFromConfig, CALENDAR_DEFAULTS } from '@/lib/calendar-defaults'
 import { format } from 'date-fns'
 import { formatInTimeZone, fromZonedTime } from 'date-fns-tz'
+import { SYSTEM_DEFAULT_TIMEZONE } from '@/lib/timezone-defaults'
 import { AppointmentCalendar } from '@/components/appointment-calendar'
 
 interface CameraModel {
@@ -75,13 +76,10 @@ export function DemandForm({ cameraModels, defaultAddress = '', timezoneName = n
     for (const startMinutes of slotMinutes) {
       const h = Math.floor(startMinutes / 60)
       const m = startMinutes % 60
-      if (timezoneName) {
-        const dateInTz = new Date(y, mo - 1, d, h, m, 0)
-        const utcDate = fromZonedTime(dateInTz, timezoneName)
-        slots.push(utcDate.toISOString())
-      } else {
-        slots.push(new Date(y, mo - 1, d, h, m, 0).toISOString())
-      }
+      const tz = timezoneName ?? SYSTEM_DEFAULT_TIMEZONE
+      const dateInTz = new Date(y, mo - 1, d, h, m, 0)
+      const utcDate = fromZonedTime(dateInTz, tz)
+      slots.push(utcDate.toISOString())
     }
     setAvailableSlots(slots)
   }, [selectedDate, timezoneName, calendarSettings])
@@ -287,9 +285,8 @@ export function DemandForm({ cameraModels, defaultAddress = '', timezoneName = n
                         <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-3">
                             {availableOnlySlots.map(slot => {
                                 // Format slot time in dealer's timezone for display
-                                const slotTime = timezoneName 
-                                  ? formatInTimeZone(new Date(slot), timezoneName, 'HH:mm')
-                                  : format(new Date(slot), 'HH:mm')
+                                const tz = timezoneName ?? SYSTEM_DEFAULT_TIMEZONE
+                                const slotTime = formatInTimeZone(new Date(slot), tz, 'HH:mm')
                                 
                                 return (
                                     <button 

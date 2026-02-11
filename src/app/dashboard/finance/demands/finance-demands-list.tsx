@@ -3,6 +3,7 @@
 import { useState, useMemo } from 'react'
 import { format } from 'date-fns'
 import { formatInTimeZone } from 'date-fns-tz'
+import { getEffectiveTimezone } from '@/lib/timezone-defaults'
 import { Filter, X } from 'lucide-react'
 import { DemandActions } from './demand-actions'
 
@@ -36,9 +37,7 @@ function getDealerTimezone(dealers: Demand['dealers']): string | null {
 
 function formatAppointment(appointmentDate: string, dealers: Demand['dealers']): string {
   const tz = getDealerTimezone(dealers)
-  return tz
-    ? formatInTimeZone(new Date(appointmentDate), tz, 'PPP p')
-    : format(new Date(appointmentDate), 'PPP p')
+  return formatInTimeZone(new Date(appointmentDate), getEffectiveTimezone(tz ?? null), 'PPP p')
 }
 
 interface FinanceDemandsListProps {
@@ -293,9 +292,7 @@ export function FinanceDemandsList({ myAssignedDemands, unassignedDemands, allAs
                         Dealer: {(Array.isArray(demand.dealers) ? demand.dealers[0] : demand.dealers)?.name}
                       </p>
                       <p className="text-xs text-gray-600 mt-1">
-                        Created: {getDealerTimezone(demand.dealers)
-                          ? formatInTimeZone(new Date(demand.created_at), getDealerTimezone(demand.dealers)!, 'PPP p')
-                          : format(new Date(demand.created_at), 'PPP p')}
+                        Created: {formatInTimeZone(new Date(demand.created_at), getEffectiveTimezone(getDealerTimezone(demand.dealers) ?? null), 'PPP p')}
                       </p>
                     </div>
                     <DemandActions demandId={demand.id} isAssigned={false} />

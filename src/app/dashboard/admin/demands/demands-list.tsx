@@ -3,6 +3,7 @@
 import { useState, useMemo } from 'react'
 import { format } from 'date-fns'
 import { formatInTimeZone } from 'date-fns-tz'
+import { getEffectiveTimezone } from '@/lib/timezone-defaults'
 import { Filter, X } from 'lucide-react'
 import Link from 'next/link'
 
@@ -203,9 +204,7 @@ export function DemandsList({ demands }: DemandsListProps) {
                           {demand.vehicle_year} {demand.vehicle_make} {demand.vehicle_model}
                         </p>
                         <p className="text-sm text-gray-500">
-                          Appointment: {getDealerTz(demand.dealers)
-                            ? formatInTimeZone(new Date(demand.appointment_date), getDealerTz(demand.dealers)!, 'PPP p')
-                            : format(new Date(demand.appointment_date), 'PPP p')}
+                          Appointment: {formatInTimeZone(new Date(demand.appointment_date), getEffectiveTimezone(getDealerTz(demand.dealers) ?? null), 'PPP p')}
                         </p>
                         <p className="text-xs text-gray-600 mt-1">
                           Dealer: {(demand.dealers as any)?.name || 'Unknown'} | Created by: {(demand.profiles as any)?.full_name || 'Unknown'}

@@ -1,4 +1,5 @@
-import { format, formatInTimeZone } from 'date-fns-tz'
+import { formatInTimeZone } from 'date-fns-tz'
+import { getEffectiveTimezone } from './timezone-defaults'
 
 /**
  * SMS Message Templates
@@ -19,12 +20,8 @@ export function getAppointmentCreatedMessage(
   address: string,
   timezoneName?: string
 ): string {
-  let formattedDate: string
-  if (timezoneName) {
-    formattedDate = formatInTimeZone(appointmentDate, timezoneName, 'MMMM dd, yyyy \'at\' HH:mm')
-  } else {
-    formattedDate = format(appointmentDate, 'MMMM dd, yyyy \'at\' HH:mm')
-  }
+  const tz = getEffectiveTimezone(timezoneName ?? null)
+  const formattedDate = formatInTimeZone(appointmentDate, tz, 'MMMM dd, yyyy \'at\' HH:mm')
   
   return `Appointment Created
 
@@ -46,9 +43,9 @@ For cancellation or rescheduling requests within the last 24 hours prior to your
 /**
  * Reminder Message
  * Sent before the appointment. When sent in the "4h before" window, message says "in 4 hours".
- * @param appointmentDate - The appointment date (UTC)
+ * @param appointmentDate - The appointment date (ISO/UTC moment)
  * @param address - The appointment address
- * @param timezoneName - Optional timezone name (e.g., 'America/Vancouver'). If not provided, uses local timezone
+ * @param timezoneName - Optional dealer timezone. If not provided, uses PST (system default)
  * @param forceFourHours - If true, message always says "in 4 hours" (used when sending exactly 4h before)
  */
 export function getFourHourReminderMessage(

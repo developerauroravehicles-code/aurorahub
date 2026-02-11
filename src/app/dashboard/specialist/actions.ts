@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { sendSMS } from '@/lib/twilio'
 import { getFourHourReminderMessage } from '@/lib/sms-messages'
+import { getTimezoneFromDealer } from '@/lib/dealer-timezone'
 
 export async function sendAppointmentReminderSMS(demandId: string) {
   const supabase = await createClient()
@@ -37,8 +38,7 @@ export async function sendAppointmentReminderSMS(demandId: string) {
   // Use Reminder message format with dynamic hours
   const address = demand.customer_address || 'the specified location'
   const appointmentDate = new Date(demand.appointment_date)
-  // Get timezone from dealer > region > timezone
-  const timezoneName = (demand.dealers as any)?.region_codes?.timezones?.name || undefined
+  const timezoneName = getTimezoneFromDealer(demand.dealers as Parameters<typeof getTimezoneFromDealer>[0]) ?? undefined
   const message = getFourHourReminderMessage(appointmentDate, address, timezoneName)
   
   // Send SMS to specialist

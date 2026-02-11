@@ -3,10 +3,10 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { z } from 'zod'
-import { startOfDay, endOfDay } from 'date-fns'
 import { fromZonedTime, formatInTimeZone } from 'date-fns-tz'
 import { validateAppointmentSlot } from '@/app/dashboard/system-management/calendar/actions'
 import { getTimezoneFromDealer } from '@/lib/dealer-timezone'
+import { SYSTEM_DEFAULT_TIMEZONE } from '@/lib/timezone-defaults'
 
 async function getDealerTimezone(dealerId: string | null): Promise<string | null> {
   if (!dealerId) return null
@@ -132,11 +132,13 @@ export async function getTakenSlots(
     const endInTz = new Date(y, m - 1, d, 23, 59, 59, 999)
     start = fromZonedTime(startInTz, timezoneName).toISOString()
     end = fromZonedTime(endInTz, timezoneName).toISOString()
-  } else {
-    const date = new Date(dateStr)
-    start = startOfDay(date).toISOString()
-    end = endOfDay(date).toISOString()
-  }
+    } else {
+      const [y, mo, d] = dateStr.split(/[T\s]/)[0].split('-').map(Number)
+      const startInTz = new Date(y, (mo || 1) - 1, d || 1, 0, 0, 0)
+      const endInTz = new Date(y, (mo || 1) - 1, d || 1, 23, 59, 59, 999)
+      start = fromZonedTime(startInTz, SYSTEM_DEFAULT_TIMEZONE).toISOString()
+      end = fromZonedTime(endInTz, SYSTEM_DEFAULT_TIMEZONE).toISOString()
+    }
 
   let query = supabase
     .from('demands')
@@ -214,8 +216,12 @@ export async function isTimeSlotTaken(
       dayStart = fromZonedTime(startInTz, timezoneName).toISOString()
       dayEnd = fromZonedTime(endInTz, timezoneName).toISOString()
     } else {
-      dayStart = startOfDay(requestedTime).toISOString()
-      dayEnd = endOfDay(requestedTime).toISOString()
+      const dateStr = formatInTimeZone(requestedTime, SYSTEM_DEFAULT_TIMEZONE, 'yyyy-MM-dd')
+      const [y, mo, d] = dateStr.split('-').map(Number)
+      const startInTz = new Date(y, mo - 1, d, 0, 0, 0)
+      const endInTz = new Date(y, mo - 1, d, 23, 59, 59, 999)
+      dayStart = fromZonedTime(startInTz, SYSTEM_DEFAULT_TIMEZONE).toISOString()
+      dayEnd = fromZonedTime(endInTz, SYSTEM_DEFAULT_TIMEZONE).toISOString()
     }
 
     const { data, error } = await supabase

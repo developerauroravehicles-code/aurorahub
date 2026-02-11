@@ -2,8 +2,9 @@
 
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { format, startOfMonth, endOfMonth, subMonths } from 'date-fns'
-import { formatInTimeZone } from 'date-fns-tz'
+import { startOfMonth, endOfMonth, subMonths } from 'date-fns'
+import { formatInTimeZone, fromZonedTime } from 'date-fns-tz'
+import { getEffectiveTimezone, SYSTEM_DEFAULT_TIMEZONE } from '@/lib/timezone-defaults'
 
 // Supabase may return dealers as single object or array; timezones/region_codes can be arrays
 type DealerRelation =
@@ -59,8 +60,8 @@ export default function AdminReportsPage() {
   const [loading, setLoading] = useState(true)
   const [userRole, setUserRole] = useState<string>('')
   const [userDealerId, setUserDealerId] = useState<string | null>(null)
-  const [startDate, setStartDate] = useState(format(startOfMonth(new Date()), 'yyyy-MM-dd'))
-  const [endDate, setEndDate] = useState(format(endOfMonth(new Date()), 'yyyy-MM-dd'))
+  const [startDate, setStartDate] = useState(formatInTimeZone(startOfMonth(new Date()), SYSTEM_DEFAULT_TIMEZONE, 'yyyy-MM-dd'))
+  const [endDate, setEndDate] = useState(formatInTimeZone(endOfMonth(new Date()), SYSTEM_DEFAULT_TIMEZONE, 'yyyy-MM-dd'))
   const [selectedDealerId, setSelectedDealerId] = useState<string>('all')
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>('all')
   const supabase = createClient()
@@ -161,11 +162,16 @@ export default function AdminReportsPage() {
         }
       }
 
+      const [sy, sm, sd] = startDate.split('-').map(Number)
+      const [ey, em, ed] = endDate.split('-').map(Number)
+      const rangeStart = fromZonedTime(new Date(sy, sm - 1, sd, 0, 0, 0), SYSTEM_DEFAULT_TIMEZONE).toISOString()
+      const rangeEnd = fromZonedTime(new Date(ey, em - 1, ed, 23, 59, 59, 999), SYSTEM_DEFAULT_TIMEZONE).toISOString()
+
       let query = supabase
         .from('demands')
         .select('id, status, created_at, camera_model, vehicle_make, vehicle_model, vehicle_year, appointment_date, dealer_id, assigned_specialist_id, assigned_finance_id, created_by, customer_firstname, customer_lastname, dealers(region_codes(timezone_id, timezones(name)))')
-        .gte('created_at', `${startDate}T00:00:00`)
-        .lte('created_at', `${endDate}T23:59:59`)
+        .gte('created_at', rangeStart)
+        .lte('created_at', rangeEnd)
 
       // Filter by dealer
       // If General Manager, always filter by their dealer
@@ -228,8 +234,8 @@ export default function AdminReportsPage() {
   const setDateRange = (months: number) => {
     const end = new Date()
     const start = subMonths(end, months)
-    setStartDate(format(startOfMonth(start), 'yyyy-MM-dd'))
-    setEndDate(format(endOfMonth(end), 'yyyy-MM-dd'))
+    setStartDate(formatInTimeZone(startOfMonth(start), SYSTEM_DEFAULT_TIMEZONE, 'yyyy-MM-dd'))
+    setEndDate(formatInTimeZone(endOfMonth(end), SYSTEM_DEFAULT_TIMEZONE, 'yyyy-MM-dd'))
   }
 
   // Update employees when dealer changes
@@ -388,7 +394,7 @@ export default function AdminReportsPage() {
             <div className="bg-white/5 border border-gray-800 p-6 rounded-lg">
               <h3 className="text-sm font-medium text-gray-400 mb-2">Date Range</h3>
               <p className="text-sm text-white">
-                {format(new Date(startDate), 'MMM d, yyyy')} - {format(new Date(endDate), 'MMM d, yyyy')}
+                {formatInTimeZone(new Date(startDate + 'T12:00:00Z'), SYSTEM_DEFAULT_TIMEZONE, 'MMM d, yyyy')} - {formatInTimeZone(new Date(endDate + 'T12:00:00Z'), SYSTEM_DEFAULT_TIMEZONE, 'MMM d, yyyy')}
               </p>
             </div>
           </div>
@@ -524,9 +530,7 @@ export default function AdminReportsPage() {
                             {demand.camera_model}
                           </td>
                           <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-300">
-                            {getDealerTz(demand)
-                              ? formatInTimeZone(new Date(demand.appointment_date), getDealerTz(demand)!, 'MMM d, yyyy HH:mm')
-                              : format(new Date(demand.appointment_date), 'MMM d, yyyy HH:mm')}
+                            {formatInTimeZone(new Date(demand.appointment_date), getEffectiveTimezone(getDealerTz(demand) ?? null), 'MMM d, yyyy HH:mm')}
                           </td>
                           <td className="px-4 py-3 whitespace-nowrap">
                             <span className={`px-2 py-1 rounded text-xs font-medium border ${statusColors[demand.status as keyof typeof statusColors] || 'bg-gray-900/50 text-gray-300 border-gray-800'}`}>
@@ -534,7 +538,7 @@ export default function AdminReportsPage() {
                             </span>
                           </td>
                           <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-400">
-                            {format(new Date(demand.created_at), 'MMM d, yyyy')}
+                            {formatInTimeZone(new Date(demand.created_at), getEffectiveTimezone(getDealerTz(demand) ?? null), 'MMM d, yyyy')}
                           </td>
                         </tr>
                       )

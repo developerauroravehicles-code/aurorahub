@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { WorkActions } from './work-actions'
-import { format } from 'date-fns'
 import { formatInTimeZone } from 'date-fns-tz'
+import { getEffectiveTimezone } from '@/lib/timezone-defaults'
 
 type WorkDemandRow = {
   id: string
@@ -76,9 +76,7 @@ export default async function SpecialistWorkPage() {
     const getDealerTimezone = (d: { dealers?: { region_codes?: { timezones?: { name: string } } } | null }) =>
       (d.dealers as { region_codes?: { timezones?: { name: string } } } | null)?.region_codes?.timezones?.name ?? null
     const formatAppointment = (appointmentDate: string, timezoneName: string | null) =>
-      timezoneName
-        ? formatInTimeZone(new Date(appointmentDate), timezoneName, 'PPP p')
-        : format(new Date(appointmentDate), 'PPP p')
+      formatInTimeZone(new Date(appointmentDate), getEffectiveTimezone(timezoneName ?? null), 'PPP p')
 
     return (
         <div className="space-y-8">
@@ -172,9 +170,7 @@ export default async function SpecialistWorkPage() {
                                                 Customer: {demand.customer_phone}
                                             </p>
                                             <p className="text-xs text-gray-600 mt-1">
-                                                Created: {getDealerTimezone(demand)
-                                                    ? formatInTimeZone(new Date(demand.created_at), getDealerTimezone(demand)!, 'PPP p')
-                                                    : format(new Date(demand.created_at), 'PPP p')}
+                                                Created: {formatInTimeZone(new Date(demand.created_at), getEffectiveTimezone(getDealerTimezone(demand) ?? null), 'PPP p')}
                                             </p>
                                         </div>
                                         <WorkActions demandId={demand.id} isAssigned={false} />
