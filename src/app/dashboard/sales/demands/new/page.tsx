@@ -1,6 +1,7 @@
 import { DemandForm } from './demand-form'
 import { getCameraModels } from './get-cameras'
 import { createClient } from '@/lib/supabase/server'
+import { getTimezoneFromDealer } from '@/lib/dealer-timezone'
 
 interface CalendarSetting {
   day_type: 'weekday' | 'weekend'
@@ -37,9 +38,7 @@ export default async function NewDemandPage() {
       
       if (dealer) {
         dealerName = dealer.name
-        if (dealer.region_codes && (dealer.region_codes as any).timezones) {
-          timezoneName = (dealer.region_codes as any).timezones.name
-        }
+        timezoneName = getTimezoneFromDealer(dealer as Parameters<typeof getTimezoneFromDealer>[0]) ?? null
       }
       const { data: settings } = await supabase
         .from('dealer_calendar_settings')

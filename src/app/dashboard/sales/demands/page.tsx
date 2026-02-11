@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { Plus } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { DemandsList } from './demands-list'
+import { getTimezoneFromDealer } from '@/lib/dealer-timezone'
 
 export default async function DemandsPage() {
   const supabase = await createClient()
@@ -14,18 +15,15 @@ export default async function DemandsPage() {
   
   if (!profile) return <div>Profile error</div>
 
-  // Get dealer timezone
+  // Get dealer timezone for appointment display
   let timezoneName: string | null = null
   if (profile.dealer_id) {
     const { data: dealer } = await supabase
       .from('dealers')
-      .select('region_codes(timezones(name))')
+      .select('region_codes(timezone_id, timezones(name))')
       .eq('id', profile.dealer_id)
       .single()
-    
-    if (dealer?.region_codes && (dealer.region_codes as any).timezones) {
-      timezoneName = (dealer.region_codes as any).timezones.name
-    }
+    timezoneName = getTimezoneFromDealer(dealer as Parameters<typeof getTimezoneFromDealer>[0]) ?? null
   }
 
   // Fetch demands for this dealer

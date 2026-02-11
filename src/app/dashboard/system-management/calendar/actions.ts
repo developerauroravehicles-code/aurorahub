@@ -380,7 +380,8 @@ export async function getAvailableSlotsForEdit(
     .select('id, region_codes(timezone_id, timezones(name))')
     .eq('id', dealerId)
     .single()
-  const timezoneName = (dealer?.region_codes as { timezone_id?: string; timezones?: { name: string } } | null)?.timezones?.name ?? null
+  const { getTimezoneFromDealer } = await import('@/lib/dealer-timezone')
+  const timezoneName = getTimezoneFromDealer(dealer as Parameters<typeof getTimezoneFromDealer>[0]) ?? null
 
   const { data: settings } = await supabase
     .from('dealer_calendar_settings')
@@ -422,8 +423,12 @@ export async function getAvailableSlotsForEdit(
     return !inBlock
   })
 
-  const startOfDayISO = new Date(y, mo - 1, d, 0, 0, 0).toISOString()
-  const endOfDayISO = new Date(y, mo - 1, d, 23, 59, 59).toISOString()
+  const startOfDayISO = timezoneName
+    ? fromZonedTime(new Date(y, mo - 1, d, 0, 0, 0), timezoneName).toISOString()
+    : new Date(y, mo - 1, d, 0, 0, 0).toISOString()
+  const endOfDayISO = timezoneName
+    ? fromZonedTime(new Date(y, mo - 1, d, 23, 59, 59, 999), timezoneName).toISOString()
+    : new Date(y, mo - 1, d, 23, 59, 59, 999).toISOString()
   let query = supabase
     .from('demands')
     .select('appointment_date')

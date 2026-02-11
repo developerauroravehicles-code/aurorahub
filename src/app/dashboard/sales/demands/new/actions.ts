@@ -3,10 +3,21 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { z } from 'zod'
-import { startOfDay, endOfDay, format } from 'date-fns'
-import { fromZonedTime } from 'date-fns-tz'
-import { sendSMS } from '@/lib/twilio'
+import { startOfDay, endOfDay } from 'date-fns'
+import { fromZonedTime, formatInTimeZone } from 'date-fns-tz'
 import { validateAppointmentSlot } from '@/app/dashboard/system-management/calendar/actions'
+import { getTimezoneFromDealer } from '@/lib/dealer-timezone'
+
+async function getDealerTimezone(dealerId: string | null): Promise<string | null> {
+  if (!dealerId) return null
+  const supabase = await createClient()
+  const { data } = await supabase
+    .from('dealers')
+    .select('region_codes(timezone_id, timezones(name))')
+    .eq('id', dealerId)
+    .single()
+  return getTimezoneFromDealer(data as Parameters<typeof getTimezoneFromDealer>[0]) ?? null
+}
 
 const schema = z.object({
   firstName: z.string().min(1),
@@ -62,7 +73,8 @@ export async function createDemand(prevState: ActionState, formData: FormData) {
     return { error: validation.error ?? 'This time slot is not available.' }
   }
 
-  const slotTaken = await isTimeSlotTaken(data.appointmentDate, profile.dealer_id)
+  const timezoneName = await getDealerTimezone(profile.dealer_id)
+  const slotTaken = await isTimeSlotTaken(data.appointmentDate, profile.dealer_id, timezoneName)
   if (slotTaken) {
       return { error: 'This time slot is already booked. Please select another time.' }
   }
@@ -179,15 +191,32 @@ export async function isSlotBlocked(slotDate: string): Promise<boolean> {
 /**
  * Check if a specific time slot is already taken for a dealer.
  * Single calendar per dealer: only one appointment per slot per dealer. Appointments are 75 minutes.
+ * When timezoneName is provided, day boundaries use dealer timezone (fixes server-TZ mismatch).
  */
-export async function isTimeSlotTaken(appointmentDate: string, dealerId: string | null): Promise<boolean> {
+export async function isTimeSlotTaken(
+  appointmentDate: string,
+  dealerId: string | null,
+  timezoneName?: string | null
+): Promise<boolean> {
     if (!dealerId) return false
     const supabase = await createClient()
     const requestedTime = new Date(appointmentDate)
-    const requestedStart = new Date(requestedTime)
-    const requestedEnd = new Date(requestedTime.getTime() + 75 * 60 * 1000)
-    const dayStart = startOfDay(requestedTime).toISOString()
-    const dayEnd = endOfDay(requestedTime).toISOString()
+    const requestedStart = requestedTime.getTime()
+    const requestedEnd = requestedStart + 75 * 60 * 1000
+
+    let dayStart: string
+    let dayEnd: string
+    if (timezoneName) {
+      const dateStr = formatInTimeZone(requestedTime, timezoneName, 'yyyy-MM-dd')
+      const [y, mo, d] = dateStr.split('-').map(Number)
+      const startInTz = new Date(y, mo - 1, d, 0, 0, 0)
+      const endInTz = new Date(y, mo - 1, d, 23, 59, 59, 999)
+      dayStart = fromZonedTime(startInTz, timezoneName).toISOString()
+      dayEnd = fromZonedTime(endInTz, timezoneName).toISOString()
+    } else {
+      dayStart = startOfDay(requestedTime).toISOString()
+      dayEnd = endOfDay(requestedTime).toISOString()
+    }
 
     const { data, error } = await supabase
         .from('demands')
@@ -204,8 +233,8 @@ export async function isTimeSlotTaken(appointmentDate: string, dealerId: string 
     if (!data || data.length === 0) return false
 
     for (const demand of data) {
-        const existingStart = new Date(demand.appointment_date)
-        const existingEnd = new Date(existingStart.getTime() + 75 * 60 * 1000)
+        const existingStart = new Date(demand.appointment_date).getTime()
+        const existingEnd = existingStart + 75 * 60 * 1000
         if (requestedStart < existingEnd && requestedEnd > existingStart) return true
     }
     return false
