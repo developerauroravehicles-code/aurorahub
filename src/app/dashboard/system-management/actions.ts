@@ -296,9 +296,27 @@ export async function deleteUser(userId: string) {
   if (user.id === userId) return { error: 'You cannot delete your own account.' }
 
   const supabaseAdmin = getAdminClient()
-  // Önce public.profiles kaydını sil (auth silinince sarkan kayıt kalmasın)
-  await supabaseAdmin.from('profiles').delete().eq('id', userId)
-  // Hard delete (shouldSoftDelete: false) — e-posta yeni kullanıcıda kullanılabilsin
+
+  // Null out foreign keys that reference this profile so the profile can be deleted
+  const { error: demandsError } = await supabaseAdmin
+    .from('demands')
+    .update({
+      created_by: null,
+      assigned_specialist_id: null,
+      assigned_finance_id: null
+    })
+    .or(`created_by.eq.${userId},assigned_specialist_id.eq.${userId},assigned_finance_id.eq.${userId}`)
+  if (demandsError) return { error: 'Database error updating demands: ' + demandsError.message }
+
+  const { error: logsError } = await supabaseAdmin
+    .from('demand_logs')
+    .update({ actor_id: null })
+    .eq('actor_id', userId)
+  if (logsError) return { error: 'Database error updating logs: ' + logsError.message }
+
+  const { error: profileError } = await supabaseAdmin.from('profiles').delete().eq('id', userId)
+  if (profileError) return { error: 'Database error deleting user: ' + profileError.message }
+
   const { error } = await supabaseAdmin.auth.admin.deleteUser(userId, false)
   if (error) return { error: error.message }
   revalidatePath('/dashboard/system-management/user')
