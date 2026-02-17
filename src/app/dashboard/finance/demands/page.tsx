@@ -1,3 +1,5 @@
+import Link from 'next/link'
+import { Plus } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { FinanceDemandsList } from './finance-demands-list'
 
@@ -53,9 +55,18 @@ export default async function FinanceDemandsPage() {
 
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-2xl font-semibold text-white mb-2">Demand Management</h1>
-        <p className="text-gray-400">Assign demands to yourself from the pool or manage your assigned demands.</p>
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold text-white mb-2">Demand Management</h1>
+          <p className="text-gray-400">Create new demands, assign demands from the pool, or manage your assigned demands.</p>
+        </div>
+        <Link
+          href="/dashboard/finance/demands/new"
+          className="inline-flex items-center gap-2 bg-[#C27E00] text-white px-4 py-2 rounded-md hover:bg-[#a06900] transition-colors"
+        >
+          <Plus className="w-4 h-4" />
+          New Demand
+        </Link>
       </div>
 
       <FinanceDemandsList 

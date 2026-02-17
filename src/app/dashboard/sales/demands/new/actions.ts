@@ -42,7 +42,9 @@ export async function createDemand(prevState: ActionState, formData: FormData) {
 
   const { data: profile } = await supabase.from('profiles').select('id, dealer_id, role').eq('id', user.id).single()
   if (!profile) return { error: 'Profile not found' }
-  if (profile.role !== 'sales') return { error: 'Only sales users can create demands' }
+  if (!['sales', 'finance'].includes(profile.role)) {
+    return { error: 'Only sales and finance users can create demands' }
+  }
 
   const rawData = {
     firstName: formData.get('firstName'),
@@ -79,21 +81,24 @@ export async function createDemand(prevState: ActionState, formData: FormData) {
       return { error: 'This time slot is already booked. Please select another time.' }
   }
 
-  const { data: demand, error } = await supabase.from('demands').insert({
-      created_by: profile.id,
-      dealer_id: profile.dealer_id,
-      customer_firstname: data.firstName,
-      customer_lastname: data.lastName,
-      customer_phone: data.phone,
-      customer_address: data.address,
-      vehicle_make: data.vehicleMake,
-      vehicle_model: data.vehicleModel,
-      vehicle_year: data.vehicleYear,
-      stock_number: data.stockNumber,
-      camera_model: data.cameraModel,
-      appointment_date: data.appointmentDate,
-      status: 'pending_finance'
-  }).select().single()
+  const insertData = {
+    created_by: profile.id,
+    dealer_id: profile.dealer_id,
+    customer_firstname: data.firstName,
+    customer_lastname: data.lastName,
+    customer_phone: data.phone,
+    customer_address: data.address,
+    vehicle_make: data.vehicleMake,
+    vehicle_model: data.vehicleModel,
+    vehicle_year: data.vehicleYear,
+    stock_number: data.stockNumber,
+    camera_model: data.cameraModel,
+    appointment_date: data.appointmentDate,
+    status: 'pending_finance' as const,
+    ...(profile.role === 'finance' && { assigned_finance_id: profile.id }),
+  }
+
+  const { data: demand, error } = await supabase.from('demands').insert(insertData).select().single()
 
   if (error) {
       console.error('Demand creation error:', error)
@@ -107,7 +112,7 @@ export async function createDemand(prevState: ActionState, formData: FormData) {
   // SMS will be sent when finance approves the demand
   // Removed SMS sending from demand creation
 
-  redirect('/dashboard/sales/demands')
+  redirect(profile.role === 'finance' ? '/dashboard/finance/demands' : '/dashboard/sales/demands')
 }
 
 /**
