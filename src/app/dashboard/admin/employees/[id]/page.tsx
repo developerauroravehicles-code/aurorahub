@@ -174,7 +174,7 @@ export default async function SpecialistDetailsPage({ params }: { params: Promis
                                           )}
                                       </div>
                                       <div className="text-right">
-                                          <p className="text-sm text-[#C27E00]">{jobTz ? formatInTimeZone(new Date(job.appointment_date), jobTz, 'PPP p') : format(new Date(job.appointment_date), 'PPP p')}</p>
+                                          <p className="text-sm text-[#C27E00]">{jobTz ? formatInTimeZone(new Date(job.appointment_date), jobTz, 'PPP h:mm a') : format(new Date(job.appointment_date), 'PPP h:mm a')}</p>
                                       </div>
                                   </div>
                               </li>

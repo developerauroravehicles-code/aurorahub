@@ -1,9 +1,7 @@
 'use client'
 
-import { useEffect, useState } from 'react'
 import { format } from 'date-fns'
 import { formatInTimeZone } from 'date-fns-tz'
-import { sendAppointmentReminderSMS } from './actions'
 
 export interface AppointmentAlert {
   id: string
@@ -68,27 +66,7 @@ function getStatusLabel(status: AlertStatus): string {
 }
 
 export function AppointmentAlerts({ appointments }: AppointmentAlertsProps) {
-  const [sentSMS, setSentSMS] = useState<Set<string>>(new Set())
-
-  // Send SMS for tomorrow appointments (yellow) - only once per appointment
-  useEffect(() => {
-    const tomorrowAppointments = appointments.filter(apt => {
-      const status = getAlertStatus(apt.appointment_date)
-      return status === 'tomorrow' && !sentSMS.has(apt.id)
-    })
-
-    tomorrowAppointments.forEach(async (apt) => {
-      try {
-        const result = await sendAppointmentReminderSMS(apt.id)
-        if (result.success) {
-          setSentSMS(prev => new Set(prev).add(apt.id))
-        }
-      } catch (error) {
-        console.error('Failed to send SMS reminder:', error)
-      }
-    })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [appointments])
+  // 4-hour reminder SMS now sent by cron to both customer and specialist at the same time (see send-reminders API)
 
   // Filter appointments to show only overdue, today, and tomorrow
   const filteredAppointments = appointments.filter(apt => {
@@ -153,8 +131,8 @@ export function AppointmentAlerts({ appointments }: AppointmentAlertsProps) {
                     )}
                     <p className="text-xs text-[#C27E00] mt-1 font-semibold">
                       Appointment: {appointment.timezoneName
-                        ? formatInTimeZone(new Date(appointment.appointment_date), appointment.timezoneName, 'PPP p')
-                        : format(new Date(appointment.appointment_date), 'PPP p')}
+                        ? formatInTimeZone(new Date(appointment.appointment_date), appointment.timezoneName, 'PPP h:mm a')
+                        : format(new Date(appointment.appointment_date), 'PPP h:mm a')}
                     </p>
                     {appointment.customer_address && (
                       <p className="text-xs text-gray-500 mt-1">
@@ -168,9 +146,6 @@ export function AppointmentAlerts({ appointments }: AppointmentAlertsProps) {
                         ? formatInTimeZone(new Date(appointment.appointment_date), appointment.timezoneName, 'MMM d, yyyy')
                         : format(new Date(appointment.appointment_date), 'MMM d, yyyy')}
                     </p>
-                    {status === 'tomorrow' && sentSMS.has(appointment.id) && (
-                      <p className="text-xs text-green-400 mt-1">SMS Sent</p>
-                    )}
                   </div>
                 </div>
               </li>

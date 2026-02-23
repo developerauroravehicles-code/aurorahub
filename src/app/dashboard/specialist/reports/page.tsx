@@ -104,7 +104,7 @@ export default function SpecialistReportsPage() {
         customer: `${d.customer_firstname} ${d.customer_lastname}`,
         vehicle: `${d.vehicle_year} ${d.vehicle_make} ${d.vehicle_model}`,
         camera: d.camera_model,
-        appointment: formatInTimeZone(new Date(d.appointment_date), SYSTEM_DEFAULT_TIMEZONE, 'MMM d, yyyy HH:mm'),
+        appointment: formatInTimeZone(new Date(d.appointment_date), SYSTEM_DEFAULT_TIMEZONE, 'MMM d, yyyy h:mm a'),
         status: d.status.replace('_', ' ').toUpperCase(),
         created: formatInTimeZone(new Date(d.created_at), SYSTEM_DEFAULT_TIMEZONE, 'MMM d, yyyy'),
       })),
@@ -356,7 +356,7 @@ export default function SpecialistReportsPage() {
                             {demand.camera_model}
                           </td>
                           <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-300">
-                            {format(new Date(demand.appointment_date), 'MMM d, yyyy HH:mm')}
+                            {format(new Date(demand.appointment_date), 'MMM d, yyyy h:mm a')}
                           </td>
                           <td className="px-4 py-3 whitespace-nowrap">
                             <span className={`px-2 py-1 rounded text-xs font-medium border ${statusColors[demand.status as keyof typeof statusColors] || 'bg-gray-900/50 text-gray-300 border-gray-800'}`}>

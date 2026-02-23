@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { getTimezoneFromDealer } from '@/lib/dealer-timezone'
 
 interface CalendarSetting {
-  day_type: 'weekday' | 'weekend'
+  day_type: 'weekday' | 'saturday' | 'sunday'
   start_hour: number
   end_hour: number
   slot_interval_minutes: number
@@ -19,7 +19,7 @@ export default async function NewDemandPage() {
   let dealerName = ''
   let timezoneName: string | null = null
   let dealerId: string | null = null
-  let calendarSettings: { weekday?: CalendarSetting; weekend?: CalendarSetting } = {}
+  let calendarSettings: { weekday?: CalendarSetting; saturday?: CalendarSetting; sunday?: CalendarSetting } = {}
   
   if (user) {
     const { data: profile } = await supabase
@@ -47,7 +47,8 @@ export default async function NewDemandPage() {
       if (settings) {
         settings.forEach((s: CalendarSetting) => {
           if (s.day_type === 'weekday') calendarSettings.weekday = s
-          else if (s.day_type === 'weekend') calendarSettings.weekend = s
+          else if (s.day_type === 'saturday') calendarSettings.saturday = s
+          else if (s.day_type === 'sunday') calendarSettings.sunday = s
         })
       }
     }

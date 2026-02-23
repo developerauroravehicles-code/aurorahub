@@ -6,6 +6,13 @@ import { getAvailableSlotsForEdit } from '@/app/dashboard/system-management/cale
 import { useRouter } from 'next/navigation'
 import { format } from 'date-fns'
 import { formatInTimeZone } from 'date-fns-tz'
+import { VEHICLE_MAKES_CA } from '@/lib/vehicle-makes'
+import { getModelsForMake, getTrimsForModel } from '@/lib/vehicle-models'
+
+function parseModelAndTrim(val: string): { model: string; trim: string } {
+  const m = val?.match(/^(.+?)\s*\(([^)]+)\)$/)
+  return m ? { model: m[1].trim(), trim: m[2].trim() } : { model: val || '', trim: '' }
+}
 
 interface Demand {
   id: string
@@ -203,24 +210,108 @@ export function EditDemandModal({ demand, isOpen, onClose }: EditDemandModalProp
 
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-1">Vehicle Make *</label>
-                <input
-                  type="text"
+                <select
                   value={formData.vehicle_make}
-                  onChange={(e) => setFormData({ ...formData, vehicle_make: e.target.value })}
+                  onChange={(e) => {
+                    const newMake = e.target.value
+                    const models = getModelsForMake(newMake)
+                    const { model: baseModel } = parseModelAndTrim(formData.vehicle_model)
+                    setFormData({
+                      ...formData,
+                      vehicle_make: newMake,
+                      vehicle_model: models.includes(baseModel) ? baseModel : '',
+                    })
+                  }}
                   required
                   className="w-full border border-gray-700 bg-black/50 py-2 px-3 rounded text-white focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]"
-                />
+                >
+                  <option value="">-- Select make --</option>
+                  {[
+                    ...(formData.vehicle_make && !VEHICLE_MAKES_CA.includes(formData.vehicle_make) ? [formData.vehicle_make] : []),
+                    ...VEHICLE_MAKES_CA,
+                  ].map((make) => (
+                    <option key={make} value={make} className="bg-black text-white">
+                      {make}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-1">Vehicle Model *</label>
-                <input
-                  type="text"
-                  value={formData.vehicle_model}
-                  onChange={(e) => setFormData({ ...formData, vehicle_model: e.target.value })}
-                  required
-                  className="w-full border border-gray-700 bg-black/50 py-2 px-3 rounded text-white focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]"
-                />
+                {formData.vehicle_make ? (
+                  <div className="space-y-2">
+                    {(() => {
+                      const { model: baseModel } = parseModelAndTrim(formData.vehicle_model)
+                      const models = getModelsForMake(formData.vehicle_make)
+                      const isBaseInList = models.includes(baseModel)
+                      return (
+                        <>
+                          <select
+                            value={isBaseInList ? baseModel : (baseModel ? '__custom__' : '')}
+                            onChange={(e) => {
+                              const v = e.target.value
+                              setFormData({
+                                ...formData,
+                                vehicle_model: v === '__custom__' ? formData.vehicle_model : v,
+                              })
+                            }}
+                            required={!formData.vehicle_model || isBaseInList}
+                            className="w-full border border-gray-700 bg-black/50 py-2 px-3 rounded text-white focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]"
+                          >
+                            <option value="">-- Select model --</option>
+                            {[
+                              ...(baseModel && !isBaseInList ? [baseModel] : []),
+                              ...models,
+                            ]
+                              .filter((m, i, arr) => arr.indexOf(m) === i)
+                              .map((model) => (
+                                <option key={model} value={model} className="bg-black text-white">
+                                  {model}
+                                </option>
+                              ))}
+                            <option value="__custom__" className="bg-black text-white">Other</option>
+                          </select>
+                          {isBaseInList && getTrimsForModel(formData.vehicle_make, baseModel).length > 0 && (
+                            <select
+                              value={parseModelAndTrim(formData.vehicle_model).trim}
+                              onChange={(e) => setFormData({
+                                ...formData,
+                                vehicle_model: e.target.value ? `${baseModel} (${e.target.value})` : baseModel,
+                              })}
+                              className="w-full border border-gray-700 bg-black/50 py-2 px-3 rounded text-white focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]"
+                            >
+                              <option value="">-- Select trim (optional) --</option>
+                              {getTrimsForModel(formData.vehicle_make, baseModel).map((trim) => (
+                                <option key={trim} value={trim} className="bg-black text-white">
+                                  {trim}
+                                </option>
+                              ))}
+                            </select>
+                          )}
+                          {!isBaseInList && (
+                            <input
+                              type="text"
+                              value={formData.vehicle_model}
+                              onChange={(e) => setFormData({ ...formData, vehicle_model: e.target.value })}
+                              placeholder="Enter model name"
+                              required
+                              className="w-full border border-gray-700 bg-black/50 py-2 px-3 rounded text-white focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]"
+                            />
+                          )}
+                        </>
+                      )
+                    })()}
+                  </div>
+                ) : (
+                  <input
+                    type="text"
+                    value=""
+                    readOnly
+                    placeholder="Select make first"
+                    className="w-full border border-gray-700 bg-black/50 py-2 px-3 rounded text-gray-500 cursor-not-allowed"
+                  />
+                )}
               </div>
 
               <div>
@@ -284,8 +375,8 @@ export function EditDemandModal({ demand, isOpen, onClose }: EditDemandModalProp
                       <div className="flex flex-wrap gap-2">
                         {availableSlots.map(slot => {
                           const label = slotsTimezone
-                            ? formatInTimeZone(new Date(slot), slotsTimezone, 'HH:mm')
-                            : format(new Date(slot), 'HH:mm')
+                            ? formatInTimeZone(new Date(slot), slotsTimezone, 'h:mm a')
+                            : format(new Date(slot), 'h:mm a')
                           return (
                             <button
                               key={slot}

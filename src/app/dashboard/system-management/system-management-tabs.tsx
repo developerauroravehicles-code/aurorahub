@@ -2,7 +2,7 @@
 
 import { usePathname } from 'next/navigation'
 import { clsx } from 'clsx'
-import { Image, Camera, Users, Building2, Database, Settings, MapPin, Calendar } from 'lucide-react'
+import { Image, Camera, Users, Building2, Database, Settings, MapPin, Calendar, MessageSquare } from 'lucide-react'
 import Link from 'next/link'
 
 export function SystemManagementTabs({ activeTab }: { activeTab: string }) {
@@ -13,6 +13,7 @@ export function SystemManagementTabs({ activeTab }: { activeTab: string }) {
     { id: 'dealer', name: 'Dealer', href: '/dashboard/system-management/dealer', icon: Building2 },
     { id: 'region', name: 'Region', href: '/dashboard/system-management/region', icon: MapPin },
     { id: 'calendar', name: 'Calendar Management', href: '/dashboard/system-management/calendar', icon: Calendar },
+    { id: 'sms', name: 'SMS Management', href: '/dashboard/system-management/sms', icon: MessageSquare },
     { id: 'database', name: 'Database Management', href: '/dashboard/system-management/database', icon: Database },
     { id: 'api', name: 'API Management', href: '/dashboard/system-management/api', icon: Settings },
     { id: 'logo', name: 'Logo Management', href: '/dashboard/system-management/logo', icon: Image },

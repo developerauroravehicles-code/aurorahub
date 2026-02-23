@@ -8,6 +8,8 @@ import { format } from 'date-fns'
 import { formatInTimeZone, fromZonedTime } from 'date-fns-tz'
 import { SYSTEM_DEFAULT_TIMEZONE } from '@/lib/timezone-defaults'
 import { AppointmentCalendar } from '@/components/appointment-calendar'
+import { VEHICLE_MAKES_CA } from '@/lib/vehicle-makes'
+import { getModelsForMake, getTrimsForModel } from '@/lib/vehicle-models'
 
 interface CameraModel {
   id: string
@@ -15,7 +17,7 @@ interface CameraModel {
 }
 
 interface CalendarSetting {
-  day_type: 'weekday' | 'weekend'
+  day_type: 'weekday' | 'saturday' | 'sunday'
   start_hour: number
   end_hour: number
   slot_interval_minutes: number
@@ -27,7 +29,7 @@ interface DemandFormProps {
   defaultAddress?: string
   timezoneName?: string | null
   dealerId?: string | null
-  calendarSettings?: { weekday?: CalendarSetting; weekend?: CalendarSetting }
+  calendarSettings?: { weekday?: CalendarSetting; saturday?: CalendarSetting; sunday?: CalendarSetting }
 }
 
 export function DemandForm({ cameraModels, defaultAddress = '', timezoneName = null, dealerId = null, calendarSettings }: DemandFormProps) {
@@ -39,6 +41,10 @@ export function DemandForm({ cameraModels, defaultAddress = '', timezoneName = n
   const [selectedSlot, setSelectedSlot] = useState<string>('')
   const [selectedCamera, setSelectedCamera] = useState<string>('')
   const [customCamera, setCustomCamera] = useState<string>('')
+  const [selectedMake, setSelectedMake] = useState<string>('')
+  const [selectedModel, setSelectedModel] = useState<string>('')
+  const [selectedTrim, setSelectedTrim] = useState<string>('')
+  const [customModel, setCustomModel] = useState<string>('')
 
   useEffect(() => {
     if (selectedDate) {
@@ -61,8 +67,7 @@ export function DemandForm({ cameraModels, defaultAddress = '', timezoneName = n
     const dateStr = selectedDate
     const [y, mo, d] = dateStr.split('-').map(Number)
     const dayOfWeek = new Date(y, mo - 1, d).getDay()
-    const isWeekend = dayOfWeek === 0 || dayOfWeek === 6
-    const dayType = isWeekend ? 'weekend' : 'weekday'
+    const dayType = dayOfWeek === 6 ? 'saturday' : dayOfWeek === 0 ? 'sunday' : 'weekday'
     const setting = calendarSettings?.[dayType]
     const slotMinutes = setting
       ? getSlotMinutesFromConfig({
@@ -141,12 +146,91 @@ export function DemandForm({ cameraModels, defaultAddress = '', timezoneName = n
 
         <div>
           <label className="block text-sm font-medium text-gray-300">Make</label>
-          <input name="vehicleMake" required className="mt-1 block w-full rounded-md border border-gray-700 bg-black/50 py-2 px-3 shadow-sm focus:border-[#C27E00] focus:outline-none focus:ring-[#C27E00] sm:text-sm text-white" />
+          <select
+            name="vehicleMake"
+            value={selectedMake}
+            onChange={(e) => {
+              setSelectedMake(e.target.value)
+              setSelectedModel('')
+              setSelectedTrim('')
+              setCustomModel('')
+            }}
+            required
+            className="mt-1 block w-full rounded-md border border-gray-700 bg-black/50 py-2 px-3 shadow-sm focus:border-[#C27E00] focus:outline-none focus:ring-[#C27E00] sm:text-sm text-white"
+          >
+            <option value="">-- Select make --</option>
+            {VEHICLE_MAKES_CA.map((make) => (
+              <option key={make} value={make} className="bg-black text-white">
+                {make}
+              </option>
+            ))}
+          </select>
         </div>
 
         <div>
           <label className="block text-sm font-medium text-gray-300">Model</label>
-          <input name="vehicleModel" required className="mt-1 block w-full rounded-md border border-gray-700 bg-black/50 py-2 px-3 shadow-sm focus:border-[#C27E00] focus:outline-none focus:ring-[#C27E00] sm:text-sm text-white" />
+          {selectedMake ? (
+            <div className="space-y-2">
+              <select
+                value={selectedModel}
+                onChange={(e) => {
+                  setSelectedModel(e.target.value)
+                  setSelectedTrim('')
+                  setCustomModel(e.target.value === '__custom__' ? customModel : '')
+                }}
+                required={selectedModel !== '__custom__'}
+                className="mt-1 block w-full rounded-md border border-gray-700 bg-black/50 py-2 px-3 shadow-sm focus:border-[#C27E00] focus:outline-none focus:ring-[#C27E00] sm:text-sm text-white"
+              >
+                <option value="">-- Select model --</option>
+                {getModelsForMake(selectedMake).map((model) => (
+                  <option key={model} value={model} className="bg-black text-white">
+                    {model}
+                  </option>
+                ))}
+                <option value="__custom__" className="bg-black text-white">Other</option>
+              </select>
+              {selectedModel && selectedModel !== '__custom__' && getTrimsForModel(selectedMake, selectedModel).length > 0 && (
+                <select
+                  value={selectedTrim}
+                  onChange={(e) => setSelectedTrim(e.target.value)}
+                  className="mt-1 block w-full rounded-md border border-gray-700 bg-black/50 py-2 px-3 shadow-sm focus:border-[#C27E00] focus:outline-none focus:ring-[#C27E00] sm:text-sm text-white"
+                >
+                  <option value="">-- Select trim (optional) --</option>
+                  {getTrimsForModel(selectedMake, selectedModel).map((trim) => (
+                    <option key={trim} value={trim} className="bg-black text-white">
+                      {trim}
+                    </option>
+                  ))}
+                </select>
+              )}
+              {selectedModel === '__custom__' && (
+                <input
+                  type="text"
+                  value={customModel}
+                  onChange={(e) => setCustomModel(e.target.value)}
+                  placeholder="Enter model name"
+                  required
+                  name="vehicleModel"
+                  className="block w-full rounded-md border border-gray-700 bg-black/50 py-2 px-3 shadow-sm focus:border-[#C27E00] focus:outline-none focus:ring-[#C27E00] sm:text-sm text-white"
+                />
+              )}
+              {(selectedModel && selectedModel !== '__custom__') && (
+                <input
+                  type="hidden"
+                  name="vehicleModel"
+                  value={selectedTrim ? `${selectedModel} (${selectedTrim})` : selectedModel}
+                />
+              )}
+            </div>
+          ) : (
+            <input
+              type="text"
+              value=""
+              readOnly
+              placeholder="Select make first"
+              className="mt-1 block w-full rounded-md border border-gray-700 bg-black/50 py-2 px-3 shadow-sm sm:text-sm text-gray-500 cursor-not-allowed"
+            />
+          )}
         </div>
 
         <div>
@@ -286,7 +370,7 @@ export function DemandForm({ cameraModels, defaultAddress = '', timezoneName = n
                             {availableOnlySlots.map(slot => {
                                 // Format slot time in dealer's timezone for display
                                 const tz = timezoneName ?? SYSTEM_DEFAULT_TIMEZONE
-                                const slotTime = formatInTimeZone(new Date(slot), tz, 'HH:mm')
+                                const slotTime = formatInTimeZone(new Date(slot), tz, 'h:mm a')
                                 
                                 return (
                                     <button 

@@ -2,7 +2,9 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { sendSMS } from '@/lib/twilio'
-import { getFourHourReminderMessage } from '@/lib/sms-messages'
+import { logSmsSent } from '@/lib/sms-logger'
+import { getSmsSettings } from '@/lib/sms-resolver'
+import { resolveReminderTemplate } from '@/lib/sms-resolver'
 import { getTimezoneFromDealer } from '@/lib/dealer-timezone'
 
 export async function sendAppointmentReminderSMS(demandId: string) {
@@ -14,7 +16,7 @@ export async function sendAppointmentReminderSMS(demandId: string) {
   // Check if user is specialist
   const { data: profile } = await supabase
     .from('profiles')
-    .select('role, phone')
+    .select('role, phone, full_name')
     .eq('id', user.id)
     .single()
 
@@ -35,17 +37,35 @@ export async function sendAppointmentReminderSMS(demandId: string) {
     return { error: 'This demand is not assigned to you' }
   }
 
-  // Use Reminder message format with dynamic hours
+  const smsSettings = await getSmsSettings()
+  const rh = smsSettings.four_hour_reminder
+  if (!rh.enabled) return { error: 'SMS reminders are disabled in system settings' }
+
   const address = demand.customer_address || 'the specified location'
   const appointmentDate = new Date(demand.appointment_date)
-  const timezoneName = getTimezoneFromDealer(demand.dealers as Parameters<typeof getTimezoneFromDealer>[0]) ?? undefined
-  const message = getFourHourReminderMessage(appointmentDate, address, timezoneName)
-  
+  const now = new Date()
+  const diffInHours = Math.floor((appointmentDate.getTime() - now.getTime()) / (1000 * 60 * 60))
+  const hoursText = diffInHours === 1 ? '1 hour' : `${diffInHours} hours`
+
+  const message = resolveReminderTemplate(rh.template, {
+    hoursText,
+    address,
+    signature: smsSettings.signature,
+  })
+
   // Send SMS to specialist
   if (profile.phone) {
     try {
       const result = await sendSMS(profile.phone, message)
       if (result.success) {
+        logSmsSent({
+          phoneNumber: profile.phone,
+          recipientType: 'specialist',
+          recipientName: profile.full_name ?? undefined,
+          demandId,
+          messageType: 'four_hour_reminder',
+          triggeredBy: 'system',
+        }).catch(() => {})
         return { success: true }
       } else {
         return { error: 'Failed to send SMS' }

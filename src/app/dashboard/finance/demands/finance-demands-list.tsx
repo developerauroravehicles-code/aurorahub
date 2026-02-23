@@ -37,7 +37,7 @@ function getDealerTimezone(dealers: Demand['dealers']): string | null {
 
 function formatAppointment(appointmentDate: string, dealers: Demand['dealers']): string {
   const tz = getDealerTimezone(dealers)
-  return formatInTimeZone(new Date(appointmentDate), getEffectiveTimezone(tz ?? null), 'PPP p')
+  return formatInTimeZone(new Date(appointmentDate), getEffectiveTimezone(tz ?? null), 'PPP h:mm a')
 }
 
 interface FinanceDemandsListProps {
@@ -292,7 +292,7 @@ export function FinanceDemandsList({ myAssignedDemands, unassignedDemands, allAs
                         Dealer: {(Array.isArray(demand.dealers) ? demand.dealers[0] : demand.dealers)?.name}
                       </p>
                       <p className="text-xs text-gray-600 mt-1">
-                        Created: {formatInTimeZone(new Date(demand.created_at), getEffectiveTimezone(getDealerTimezone(demand.dealers) ?? null), 'PPP p')}
+                        Created: {formatInTimeZone(new Date(demand.created_at), getEffectiveTimezone(getDealerTimezone(demand.dealers) ?? null), 'PPP h:mm a')}
                       </p>
                     </div>
                     <DemandActions demandId={demand.id} isAssigned={false} />

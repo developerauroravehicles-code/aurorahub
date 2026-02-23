@@ -1,8 +1,11 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { sendSMS } from '@/lib/twilio'
-import { getFourHourReminderMessage, isWithin4HoursBeforeWindow } from '@/lib/sms-messages'
+import { isWithin4HoursBeforeWindow } from '@/lib/sms-messages'
+import { getSmsSettings } from '@/lib/sms-resolver'
+import { resolveReminderTemplate } from '@/lib/sms-resolver'
 import { getTimezoneFromDealer } from '@/lib/dealer-timezone'
+import { logSmsSent } from '@/lib/sms-logger'
 
 /**
  * API Route for sending reminder SMS
@@ -25,7 +28,7 @@ export async function GET(request: Request) {
     // Fetch approved appointments in the next 6 hours (candidates); actual "4h before" is decided per dealer time below
     const { data: demands, error } = await supabase
       .from('demands')
-      .select('id, appointment_date, customer_phone, customer_address, status, dealer_id, dealers(region_codes(timezone_id, timezones(name)))')
+      .select('id, appointment_date, customer_phone, customer_firstname, customer_lastname, customer_address, status, dealer_id, assigned_specialist_id, dealers(region_codes(timezone_id, timezones(name)))')
       .eq('status', 'approved')
       .gte('appointment_date', now.toISOString())
       .lte('appointment_date', sixHoursFromNow.toISOString())
@@ -52,23 +55,75 @@ export async function GET(request: Request) {
       const timezoneName = getTimezoneFromDealer(demand.dealers as Parameters<typeof getTimezoneFromDealer>[0]) ?? null
 
       // Only send if we're in the 3.5h–4.5h-before window (same in any TZ; dealer TZ used for consistency)
-      if (!isWithin4HoursBeforeWindow(appointmentDate, timezoneName) || !demand.customer_phone) continue
+      if (!isWithin4HoursBeforeWindow(appointmentDate, timezoneName)) continue
 
-      try {
-        const address = demand.customer_address || 'the specified location'
-        const message = getFourHourReminderMessage(appointmentDate, address, timezoneName ?? undefined, true)
-        const result = await sendSMS(demand.customer_phone, message)
+      const smsSettings = await getSmsSettings()
+      const rh = smsSettings.four_hour_reminder
+      if (!rh.enabled) continue
+      if (!rh.sendToCustomer && !rh.sendToSpecialist) continue
 
-        if (result.success) {
-          sentCount++
-          console.log(`Reminder sent to ${demand.customer_phone} for appointment ${demand.id}`)
-        } else {
+      const address = demand.customer_address || 'the specified location'
+      const message = resolveReminderTemplate(rh.template, {
+        hoursText: '4 hours',
+        address,
+        signature: smsSettings.signature,
+      })
+
+      // Send to customer (same message as specialist)
+      if (rh.sendToCustomer && demand.customer_phone) {
+        try {
+          const result = await sendSMS(demand.customer_phone, message)
+          if (result.success) {
+            sentCount++
+            logSmsSent({
+              phoneNumber: demand.customer_phone,
+              recipientType: 'customer',
+              recipientName: `${(demand as { customer_firstname?: string }).customer_firstname} ${(demand as { customer_lastname?: string }).customer_lastname}`.trim(),
+              demandId: demand.id,
+              messageType: 'four_hour_reminder',
+              triggeredBy: 'system',
+            }).catch(() => {})
+            console.log(`Reminder sent to customer ${demand.customer_phone} for appointment ${demand.id}`)
+          } else {
+            errorCount++
+            console.error(`Failed to send reminder to customer ${demand.customer_phone} for appointment ${demand.id}`)
+          }
+        } catch (error) {
           errorCount++
-          console.error(`Failed to send reminder to ${demand.customer_phone} for appointment ${demand.id}`)
+          console.error(`Error sending reminder to customer for appointment ${demand.id}:`, error)
         }
-      } catch (error) {
-        errorCount++
-        console.error(`Error sending reminder for appointment ${demand.id}:`, error)
+      }
+
+      // Send to assigned specialist (same message, same time)
+      if (rh.sendToSpecialist && (demand as { assigned_specialist_id?: string }).assigned_specialist_id) {
+        try {
+          const { data: specialist } = await supabase
+            .from('profiles')
+            .select('phone, full_name')
+            .eq('id', (demand as { assigned_specialist_id?: string }).assigned_specialist_id)
+            .single()
+          if (specialist?.phone) {
+            const result = await sendSMS(specialist.phone, message)
+            if (result.success) {
+              sentCount++
+              logSmsSent({
+                phoneNumber: specialist.phone,
+                recipientType: 'specialist',
+                recipientName: specialist.full_name ?? undefined,
+                demandId: demand.id,
+                messageType: 'four_hour_reminder',
+                triggeredBy: 'system',
+              }).catch(() => {})
+              console.log(`Reminder sent to specialist ${specialist.phone} for appointment ${demand.id}`)
+            } else {
+              errorCount++
+              console.error(`Failed to send reminder to specialist ${specialist.phone} for appointment ${demand.id}`)
+            }
+          }
+        } catch (error) {
+          errorCount++
+          console.error(`Error sending reminder to specialist for appointment ${demand.id}:`, error)
+        }
       }
     }
 

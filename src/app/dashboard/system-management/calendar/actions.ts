@@ -29,8 +29,12 @@ export async function createCalendarSetting(formData: FormData) {
   const slotIntervalMinutes = parseInt(formData.get('slotIntervalMinutes') as string)
   const appointmentDurationMinutes = parseInt(formData.get('appointmentDurationMinutes') as string)
 
+  const validDayTypes = ['weekday', 'saturday', 'sunday'] as const
   if (!dealerId || !dayType || isNaN(startHour) || isNaN(endHour) || isNaN(slotIntervalMinutes) || isNaN(appointmentDurationMinutes)) {
     return { success: false, error: 'Missing required fields' }
+  }
+  if (!validDayTypes.includes(dayType as typeof validDayTypes[number])) {
+    return { success: false, error: 'Invalid day type. Must be weekday, saturday, or sunday.' }
   }
 
   if (startHour >= endHour) {
@@ -311,7 +315,7 @@ export async function validateAppointmentSlot(
 
   const [y, mo, d] = dateStr.split('-').map(Number)
   const dayOfWeek = new Date(y, mo - 1, d).getDay()
-  const dayType: 'weekday' | 'weekend' = dayOfWeek === 0 || dayOfWeek === 6 ? 'weekend' : 'weekday'
+  const dayType: 'weekday' | 'saturday' | 'sunday' = dayOfWeek === 6 ? 'saturday' : dayOfWeek === 0 ? 'sunday' : 'weekday'
 
   const { data: settings } = await supabase
     .from('dealer_calendar_settings')
@@ -373,7 +377,7 @@ export async function getAvailableSlotsForEdit(
   const supabase = await createClient()
   const [y, mo, d] = dateStr.split('-').map(Number)
   const dayOfWeek = new Date(y, mo - 1, d).getDay()
-  const dayType: 'weekday' | 'weekend' = dayOfWeek === 0 || dayOfWeek === 6 ? 'weekend' : 'weekday'
+  const dayType: 'weekday' | 'saturday' | 'sunday' = dayOfWeek === 6 ? 'saturday' : dayOfWeek === 0 ? 'sunday' : 'weekday'
 
   const { data: dealer } = await supabase
     .from('dealers')

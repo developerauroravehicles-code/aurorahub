@@ -2,7 +2,9 @@
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { sendSMS } from '@/lib/twilio'
-import { getAppointmentCreatedMessage, getCancellationNoticeMessage, isWithin24Hours } from '@/lib/sms-messages'
+import { logSmsSent } from '@/lib/sms-logger'
+import { getSmsSettings } from '@/lib/sms-resolver'
+import { resolveAppointmentCreatedTemplate, resolveCancellationTemplate, resolveReminderTemplate } from '@/lib/sms-resolver'
 import { validateAppointmentSlot } from '@/app/dashboard/system-management/calendar/actions'
 
 export async function assignDemandToMe(demandId: string) {
@@ -61,7 +63,7 @@ export async function approveDemand(demandId: string, sendSMSToCustomer: boolean
   // Check if user is finance and demand is assigned to them
   const { data: demand } = await supabase
     .from('demands')
-    .select('assigned_finance_id, assigned_specialist_id, status, dealer_id, customer_phone, appointment_date, customer_address')
+    .select('assigned_finance_id, assigned_specialist_id, status, dealer_id, customer_phone, customer_firstname, customer_lastname, appointment_date, customer_address')
     .eq('id', demandId)
     .single()
 
@@ -128,8 +130,11 @@ export async function approveDemand(demandId: string, sendSMSToCustomer: boolean
 
   if (updateError) return { error: updateError.message }
 
-  // Send SMS to customer if requested
-  if (sendSMSToCustomer) {
+  const smsSettings = await getSmsSettings()
+  const ac = smsSettings.appointment_created
+
+  // Send SMS to customer if requested and enabled in settings
+  if (ac.enabled && ac.sendToCustomer && sendSMSToCustomer && demand.customer_phone) {
     try {
       const { data: dealer } = await supabase
         .from('dealers')
@@ -139,20 +144,31 @@ export async function approveDemand(demandId: string, sendSMSToCustomer: boolean
       const appointmentDate = new Date(demand.appointment_date)
       const location = demand.customer_address || dealer?.address || dealer?.name || 'Authorized Dealer'
       const timezoneName = (dealer?.region_codes as any)?.timezones?.name || undefined
-      const message = getAppointmentCreatedMessage(appointmentDate, location, timezoneName)
-      if (demand.customer_phone) {
-        await sendSMS(demand.customer_phone, message).catch((error) => {
-          console.error('Failed to send SMS to customer:', error)
-        })
+      const message = resolveAppointmentCreatedTemplate(ac.template, {
+        appointmentDate,
+        address: location,
+        timezoneName,
+        signature: smsSettings.signature,
+      })
+      const result = await sendSMS(demand.customer_phone, message)
+      if (result.success) {
+        logSmsSent({
+          phoneNumber: demand.customer_phone,
+          recipientType: 'customer',
+          recipientName: `${demand.customer_firstname} ${demand.customer_lastname}`.trim(),
+          demandId,
+          messageType: 'appointment_created',
+          triggeredBy: 'system',
+        }).catch(() => {})
       }
     } catch (smsError) {
       console.error('Failed to send SMS notification:', smsError)
     }
   }
 
-  // Send SMS to assigned specialist if requested (independent of customer SMS)
+  // Send SMS to assigned specialist if requested and enabled in settings
   const specialistIdToNotify = assignedSpecialistId || demand.assigned_specialist_id
-  if (sendSMSToSpecialist && specialistIdToNotify) {
+  if (ac.enabled && ac.sendToSpecialist && sendSMSToSpecialist && specialistIdToNotify) {
     try {
       const { data: dealer } = await supabase
         .from('dealers')
@@ -162,16 +178,29 @@ export async function approveDemand(demandId: string, sendSMSToCustomer: boolean
       const appointmentDate = new Date(demand.appointment_date)
       const location = demand.customer_address || dealer?.address || dealer?.name || 'Authorized Dealer'
       const timezoneName = (dealer?.region_codes as any)?.timezones?.name || undefined
-      const message = getAppointmentCreatedMessage(appointmentDate, location, timezoneName)
+      const message = resolveAppointmentCreatedTemplate(ac.template, {
+        appointmentDate,
+        address: location,
+        timezoneName,
+        signature: smsSettings.signature,
+      })
       const { data: specialist } = await supabase
         .from('profiles')
-        .select('phone')
+        .select('phone, full_name')
         .eq('id', specialistIdToNotify)
         .single()
       if (specialist?.phone) {
-        await sendSMS(specialist.phone, message).catch((error) => {
-          console.error('Failed to send SMS to specialist:', error)
-        })
+        const result = await sendSMS(specialist.phone, message)
+        if (result.success) {
+          logSmsSent({
+            phoneNumber: specialist.phone,
+            recipientType: 'specialist',
+            recipientName: specialist.full_name ?? undefined,
+            demandId,
+            messageType: 'appointment_created',
+            triggeredBy: 'system',
+          }).catch(() => {})
+        }
       }
     } catch (smsError) {
       console.error('Failed to send SMS to specialist:', smsError)
@@ -192,7 +221,7 @@ export async function cancelDemand(demandId: string) {
   // Check if demand is assigned to current user
   const { data: demand } = await supabase
     .from('demands')
-    .select('assigned_finance_id, status, appointment_date, customer_phone')
+    .select('assigned_finance_id, status, appointment_date, customer_phone, customer_firstname, customer_lastname, assigned_specialist_id')
     .eq('id', demandId)
     .single()
 
@@ -210,17 +239,53 @@ export async function cancelDemand(demandId: string) {
   
   if (error) return { error: error.message }
   
-  // Send cancellation notice SMS if appointment is within 24 hours
-  if (demand.appointment_date && demand.customer_phone) {
-    const appointmentDate = new Date(demand.appointment_date)
-    if (isWithin24Hours(appointmentDate)) {
+  // Send cancellation notice SMS when demand is cancelled (always, no 24h condition)
+  const smsSettings = await getSmsSettings()
+  const cn = smsSettings.cancellation_notice
+  if (cn.enabled && (cn.sendToCustomer || cn.sendToSpecialist)) {
+    const message = resolveCancellationTemplate(cn.template, {
+      phone: smsSettings.contactPhone,
+      signature: smsSettings.signature,
+    })
+    if (cn.sendToCustomer && demand.customer_phone) {
       try {
-        const message = getCancellationNoticeMessage()
-        await sendSMS(demand.customer_phone, message).catch((error) => {
-          console.error('Failed to send cancellation SMS:', error)
-        })
+        const result = await sendSMS(demand.customer_phone, message)
+        if (result.success) {
+          logSmsSent({
+            phoneNumber: demand.customer_phone,
+            recipientType: 'customer',
+            recipientName: `${demand.customer_firstname} ${demand.customer_lastname}`.trim(),
+            demandId,
+            messageType: 'cancellation_notice',
+            triggeredBy: 'system',
+          }).catch(() => {})
+        }
       } catch (smsError) {
-        console.error('Failed to send cancellation SMS:', smsError)
+        console.error('Failed to send cancellation SMS to customer:', smsError)
+      }
+    }
+    if (cn.sendToSpecialist && (demand as { assigned_specialist_id?: string }).assigned_specialist_id) {
+      try {
+        const { data: specialist } = await supabase
+          .from('profiles')
+          .select('phone, full_name')
+          .eq('id', (demand as { assigned_specialist_id?: string }).assigned_specialist_id)
+          .single()
+        if (specialist?.phone) {
+          const result = await sendSMS(specialist.phone, message)
+          if (result.success) {
+            logSmsSent({
+              phoneNumber: specialist.phone,
+              recipientType: 'specialist',
+              recipientName: specialist.full_name ?? undefined,
+              demandId,
+              messageType: 'cancellation_notice',
+              triggeredBy: 'system',
+            }).catch(() => {})
+          }
+        }
+      } catch (smsError) {
+        console.error('Failed to send cancellation SMS to specialist:', smsError)
       }
     }
   }
@@ -250,7 +315,7 @@ export async function updateDemand(demandId: string, formData: FormData) {
   // Check if demand is assigned to current user
   const { data: demand } = await supabase
     .from('demands')
-    .select('assigned_finance_id, status, appointment_date, customer_phone, dealer_id')
+    .select('assigned_finance_id, status, appointment_date, customer_phone, customer_firstname, customer_lastname, dealer_id, assigned_specialist_id')
     .eq('id', demandId)
     .single()
 
@@ -317,15 +382,54 @@ export async function updateDemand(demandId: string, formData: FormData) {
 
   if (updateError) return { error: updateError.message }
 
-  // Send cancellation/rescheduling notice SMS if appointment date changed and old date was within 24 hours
-  if (appointmentDateChanged && oldAppointmentDate && demand.customer_phone && isWithin24Hours(oldAppointmentDate)) {
-    try {
-      const message = getCancellationNoticeMessage()
-      await sendSMS(demand.customer_phone, message).catch((error) => {
-        console.error('Failed to send rescheduling SMS:', error)
-      })
-    } catch (smsError) {
-      console.error('Failed to send rescheduling SMS:', smsError)
+  // Send rescheduling notice SMS when appointment date changed (always, no 24h condition)
+  const smsSettings = await getSmsSettings()
+  const rn = smsSettings.rescheduling_notice
+  if (rn.enabled && appointmentDateChanged && (rn.sendToCustomer || rn.sendToSpecialist)) {
+    const message = resolveCancellationTemplate(rn.template, {
+      phone: smsSettings.contactPhone,
+      signature: smsSettings.signature,
+    })
+    if (rn.sendToCustomer && demand.customer_phone) {
+      try {
+        const result = await sendSMS(demand.customer_phone, message)
+        if (result.success) {
+          logSmsSent({
+            phoneNumber: demand.customer_phone,
+            recipientType: 'customer',
+            recipientName: `${demand.customer_firstname} ${demand.customer_lastname}`.trim(),
+            demandId,
+            messageType: 'rescheduling_notice',
+            triggeredBy: 'system',
+          }).catch(() => {})
+        }
+      } catch (smsError) {
+        console.error('Failed to send rescheduling SMS to customer:', smsError)
+      }
+    }
+    if (rn.sendToSpecialist && (demand as { assigned_specialist_id?: string }).assigned_specialist_id) {
+      try {
+        const { data: specialist } = await supabase
+          .from('profiles')
+          .select('phone, full_name')
+          .eq('id', (demand as { assigned_specialist_id?: string }).assigned_specialist_id)
+          .single()
+        if (specialist?.phone) {
+          const result = await sendSMS(specialist.phone, message)
+          if (result.success) {
+            logSmsSent({
+              phoneNumber: specialist.phone,
+              recipientType: 'specialist',
+              recipientName: specialist.full_name ?? undefined,
+              demandId,
+              messageType: 'rescheduling_notice',
+              triggeredBy: 'system',
+            }).catch(() => {})
+          }
+        }
+      } catch (smsError) {
+        console.error('Failed to send rescheduling SMS to specialist:', smsError)
+      }
     }
   }
 

@@ -136,7 +136,7 @@ export default function SalesReportsPage() {
         customer: `${d.customer_firstname} ${d.customer_lastname}`,
         vehicle: `${d.vehicle_year} ${d.vehicle_make} ${d.vehicle_model}`,
         camera: d.camera_model,
-        appointment: formatInTimeZone(new Date(d.appointment_date), getEffectiveTimezone(getDealerTz(d) ?? null), 'MMM d, yyyy HH:mm'),
+        appointment: formatInTimeZone(new Date(d.appointment_date), getEffectiveTimezone(getDealerTz(d) ?? null), 'MMM d, yyyy h:mm a'),
         status: d.status.replace('_', ' ').toUpperCase(),
         created: formatInTimeZone(new Date(d.created_at), getEffectiveTimezone(getDealerTz(d) ?? null), 'MMM d, yyyy'),
       })),
@@ -388,7 +388,7 @@ export default function SalesReportsPage() {
                             {demand.camera_model}
                           </td>
                           <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-300">
-                            {formatInTimeZone(new Date(demand.appointment_date), getEffectiveTimezone(getDealerTz(demand) ?? null), 'MMM d, yyyy HH:mm')}
+                            {formatInTimeZone(new Date(demand.appointment_date), getEffectiveTimezone(getDealerTz(demand) ?? null), 'MMM d, yyyy h:mm a')}
                           </td>
                           <td className="px-4 py-3 whitespace-nowrap">
                             <span className={`px-2 py-1 rounded text-xs font-medium border ${statusColors[demand.status as keyof typeof statusColors] || 'bg-gray-900/50 text-gray-300 border-gray-800'}`}>

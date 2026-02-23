@@ -21,7 +21,7 @@ export function getAppointmentCreatedMessage(
   timezoneName?: string
 ): string {
   const tz = getEffectiveTimezone(timezoneName ?? null)
-  const formattedDate = formatInTimeZone(appointmentDate, tz, 'MMMM dd, yyyy \'at\' HH:mm')
+  const formattedDate = formatInTimeZone(appointmentDate, tz, "MMMM dd, yyyy 'at' h:mm a")
   
   return `Appointment Created
 

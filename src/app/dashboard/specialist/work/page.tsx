@@ -76,7 +76,7 @@ export default async function SpecialistWorkPage() {
     const getDealerTimezone = (d: { dealers?: { region_codes?: { timezones?: { name: string } } } | null }) =>
       (d.dealers as { region_codes?: { timezones?: { name: string } } } | null)?.region_codes?.timezones?.name ?? null
     const formatAppointment = (appointmentDate: string, timezoneName: string | null) =>
-      formatInTimeZone(new Date(appointmentDate), getEffectiveTimezone(timezoneName ?? null), 'PPP p')
+      formatInTimeZone(new Date(appointmentDate), getEffectiveTimezone(timezoneName ?? null), 'PPP h:mm a')
 
     return (
         <div className="space-y-8">
@@ -170,7 +170,7 @@ export default async function SpecialistWorkPage() {
                                                 Customer: {demand.customer_phone}
                                             </p>
                                             <p className="text-xs text-gray-600 mt-1">
-                                                Created: {formatInTimeZone(new Date(demand.created_at), getEffectiveTimezone(getDealerTimezone(demand) ?? null), 'PPP p')}
+                                                Created: {formatInTimeZone(new Date(demand.created_at), getEffectiveTimezone(getDealerTimezone(demand) ?? null), 'PPP h:mm a')}
                                             </p>
                                         </div>
                                         <WorkActions demandId={demand.id} isAssigned={false} />

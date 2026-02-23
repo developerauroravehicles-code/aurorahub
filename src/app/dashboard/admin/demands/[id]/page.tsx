@@ -1,13 +1,14 @@
 import { createClient } from '@/lib/supabase/server'
-import { format } from 'date-fns'
 import { formatInTimeZone } from 'date-fns-tz'
 import { getEffectiveTimezone } from '@/lib/timezone-defaults'
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
+import { DeleteDemandButton } from '../delete-demand-button'
 
 export default async function DemandDetailsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
   
   // Fetch demand with all related data (dealers timezone for appointment display)
   const { data: demand } = await supabase
@@ -47,20 +48,42 @@ export default async function DemandDetailsPage({ params }: { params: Promise<{ 
     cancelled: 'bg-red-900/50 text-red-300 border-red-800'
   }
 
+  let isAuroraManager = false
+  if (user) {
+    const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+    isAuroraManager = profile?.role === 'aurora_manager'
+  }
+
+  const customerName = `${demand.customer_firstname} ${demand.customer_lastname}`
+  const formattedAppointment = formatInTimeZone(
+    new Date(demand.appointment_date),
+    getEffectiveTimezone((demand.dealers as { region_codes?: { timezones?: { name: string } } } | null)?.region_codes?.timezones?.name ?? null),
+    'PPP h:mm a'
+  )
+
   return (
     <div className="space-y-8">
       {/* Header */}
-      <div className="flex items-center gap-4">
-        <Link 
-          href="/dashboard/admin/demands"
-          className="text-gray-400 hover:text-white transition-colors"
-        >
-          <ArrowLeft className="w-5 h-5" />
-        </Link>
-        <div>
-          <h1 className="text-2xl font-semibold text-white">Demand Details</h1>
-          <p className="text-gray-400">View complete information and process history</p>
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div className="flex items-center gap-4">
+          <Link 
+            href="/dashboard/admin/demands"
+            className="text-gray-400 hover:text-white transition-colors"
+          >
+            <ArrowLeft className="w-5 h-5" />
+          </Link>
+          <div>
+            <h1 className="text-2xl font-semibold text-white">Demand Details</h1>
+            <p className="text-gray-400">View complete information and process history</p>
+          </div>
         </div>
+        {isAuroraManager && (
+          <DeleteDemandButton
+            demandId={id}
+            customerName={customerName}
+            appointmentDate={formattedAppointment}
+          />
+        )}
       </div>
 
       {/* Status Badge */}
@@ -104,10 +127,16 @@ export default async function DemandDetailsPage({ params }: { params: Promise<{ 
               <p className="text-sm text-gray-400">Camera Model</p>
               <p className="text-white">{demand.camera_model}</p>
             </div>
+            {demand.stock_number && (
+              <div>
+                <p className="text-sm text-gray-400">Stock Number</p>
+                <p className="text-white">{demand.stock_number}</p>
+              </div>
+            )}
             <div>
               <p className="text-sm text-gray-400">Appointment Date</p>
               <p className="text-white font-semibold text-[#C27E00]">
-                {formatInTimeZone(new Date(demand.appointment_date), getEffectiveTimezone((demand.dealers as { region_codes?: { timezones?: { name: string } } } | null)?.region_codes?.timezones?.name ?? null), 'PPP p')}
+                {formatInTimeZone(new Date(demand.appointment_date), getEffectiveTimezone((demand.dealers as { region_codes?: { timezones?: { name: string } } } | null)?.region_codes?.timezones?.name ?? null), 'PPP h:mm a')}
               </p>
             </div>
           </div>
@@ -158,11 +187,11 @@ export default async function DemandDetailsPage({ params }: { params: Promise<{ 
           <div className="space-y-3">
             <div>
               <p className="text-sm text-gray-400">Created At</p>
-              <p className="text-white">{formatInTimeZone(new Date(demand.created_at), getEffectiveTimezone((demand.dealers as { region_codes?: { timezones?: { name: string } } } | null)?.region_codes?.timezones?.name ?? null), 'PPP p')}</p>
+              <p className="text-white">{formatInTimeZone(new Date(demand.created_at), getEffectiveTimezone((demand.dealers as { region_codes?: { timezones?: { name: string } } } | null)?.region_codes?.timezones?.name ?? null), 'PPP h:mm a')}</p>
             </div>
             <div>
               <p className="text-sm text-gray-400">Last Updated</p>
-              <p className="text-white">{formatInTimeZone(new Date(demand.updated_at || demand.created_at), getEffectiveTimezone((demand.dealers as { region_codes?: { timezones?: { name: string } } } | null)?.region_codes?.timezones?.name ?? null), 'PPP p')}</p>
+              <p className="text-white">{formatInTimeZone(new Date(demand.updated_at || demand.created_at), getEffectiveTimezone((demand.dealers as { region_codes?: { timezones?: { name: string } } } | null)?.region_codes?.timezones?.name ?? null), 'PPP h:mm a')}</p>
             </div>
           </div>
         </div>
@@ -192,7 +221,7 @@ export default async function DemandDetailsPage({ params }: { params: Promise<{ 
                     )}
                   </div>
                   <p className="text-xs text-gray-500">
-                    {formatInTimeZone(new Date(log.created_at), getEffectiveTimezone((demand.dealers as { region_codes?: { timezones?: { name: string } } } | null)?.region_codes?.timezones?.name ?? null), 'MMM d, yyyy HH:mm')}
+                    {formatInTimeZone(new Date(log.created_at), getEffectiveTimezone((demand.dealers as { region_codes?: { timezones?: { name: string } } } | null)?.region_codes?.timezones?.name ?? null), 'MMM d, yyyy h:mm a')}
                   </p>
                 </div>
               </div>

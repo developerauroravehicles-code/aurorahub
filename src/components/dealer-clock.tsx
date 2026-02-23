@@ -9,17 +9,18 @@ interface DealerClockProps {
 }
 
 export function DealerClock({ timezoneName, timezoneDisplayName }: DealerClockProps) {
-  const [currentTime, setCurrentTime] = useState<string>('')
+  const [timePart, setTimePart] = useState<string>('')
+  const [periodPart, setPeriodPart] = useState<string>('')
   const [currentDate, setCurrentDate] = useState<string>('')
 
   useEffect(() => {
     if (!timezoneName) {
-      // If no timezone, use local time
       const updateTime = () => {
         const now = new Date()
         const localTz = Intl.DateTimeFormat().resolvedOptions().timeZone
-        setCurrentTime(formatInTimeZone(now, localTz, 'HH:mm:ss'))
-        setCurrentDate(formatInTimeZone(now, localTz, 'MMM dd, yyyy'))
+        setTimePart(formatInTimeZone(now, localTz, 'h:mm:ss'))
+        setPeriodPart(formatInTimeZone(now, localTz, 'a'))
+        setCurrentDate(formatInTimeZone(now, localTz, 'MMM d, yyyy'))
       }
       updateTime()
       const interval = setInterval(updateTime, 1000)
@@ -28,8 +29,9 @@ export function DealerClock({ timezoneName, timezoneDisplayName }: DealerClockPr
 
     const updateTime = () => {
       const now = new Date()
-      setCurrentTime(formatInTimeZone(now, timezoneName, 'HH:mm:ss'))
-      setCurrentDate(formatInTimeZone(now, timezoneName, 'MMM dd, yyyy'))
+      setTimePart(formatInTimeZone(now, timezoneName, 'h:mm:ss'))
+      setPeriodPart(formatInTimeZone(now, timezoneName, 'a'))
+      setCurrentDate(formatInTimeZone(now, timezoneName, 'MMM d, yyyy'))
     }
     updateTime()
     const interval = setInterval(updateTime, 1000)
@@ -41,14 +43,15 @@ export function DealerClock({ timezoneName, timezoneDisplayName }: DealerClockPr
   }
 
   return (
-    <div className="flex flex-col gap-1 text-sm bg-black/80 backdrop-blur-sm border border-[#C27E00]/30 rounded-lg px-4 py-2 shadow-lg">
-      <div className="flex items-center gap-2">
-        <span className="text-[#C27E00] font-semibold text-base">{currentTime}</span>
-        {timezoneDisplayName && (
-          <span className="text-white/80 text-xs">({timezoneDisplayName})</span>
-        )}
+    <div className="flex flex-col gap-0.5 text-sm bg-black/80 backdrop-blur-sm border border-[#C27E00]/40 rounded-lg px-4 py-3 shadow-lg min-w-[200px]">
+      <div className="flex items-baseline gap-1.5">
+        <span className="text-[#C27E00] font-semibold text-lg leading-tight tabular-nums">{timePart}</span>
+        <span className="text-[#C27E00] font-semibold text-lg leading-tight">{periodPart}</span>
       </div>
-      <div className="text-white/70 text-xs">{currentDate}</div>
+      {timezoneDisplayName && (
+        <div className="text-[#C27E00]/90 text-xs">({timezoneDisplayName})</div>
+      )}
+      <div className="text-[#C27E00]/80 text-xs pt-0.5">{currentDate}</div>
     </div>
   )
 }

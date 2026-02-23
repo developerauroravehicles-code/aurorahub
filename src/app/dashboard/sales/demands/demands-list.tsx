@@ -218,7 +218,7 @@ export function DemandsList({ demands, timezoneName = null }: DemandsListProps) 
                       </div>
                       <div className="mt-2 flex items-center text-sm text-gray-400 sm:mt-0">
                         <p>
-                          Appointment: {formatInTimeZone(new Date(demand.appointment_date), getEffectiveTimezone(timezoneName ?? null), 'PPP p')}
+                          Appointment: {formatInTimeZone(new Date(demand.appointment_date), getEffectiveTimezone(timezoneName ?? null), 'PPP h:mm a')}
                         </p>
                       </div>
                     </div>

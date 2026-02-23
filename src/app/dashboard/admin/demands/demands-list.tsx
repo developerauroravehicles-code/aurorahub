@@ -204,7 +204,7 @@ export function DemandsList({ demands }: DemandsListProps) {
                           {demand.vehicle_year} {demand.vehicle_make} {demand.vehicle_model}
                         </p>
                         <p className="text-sm text-gray-500">
-                          Appointment: {formatInTimeZone(new Date(demand.appointment_date), getEffectiveTimezone(getDealerTz(demand.dealers) ?? null), 'PPP p')}
+                          Appointment: {formatInTimeZone(new Date(demand.appointment_date), getEffectiveTimezone(getDealerTz(demand.dealers) ?? null), 'PPP h:mm a')}
                         </p>
                         <p className="text-xs text-gray-600 mt-1">
                           Dealer: {(demand.dealers as any)?.name || 'Unknown'} | Created by: {(demand.profiles as any)?.full_name || 'Unknown'}

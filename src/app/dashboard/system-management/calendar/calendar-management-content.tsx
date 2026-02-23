@@ -14,10 +14,12 @@ interface CalendarBlock {
   created_at?: string
 }
 
+type DayType = 'weekday' | 'saturday' | 'sunday'
+
 interface CalendarSetting {
   id: string
   dealer_id: string
-  day_type: 'weekday' | 'weekend'
+  day_type: DayType
   start_hour: number
   end_hour: number
   slot_interval_minutes: number
@@ -52,15 +54,15 @@ function getSlotsForCloseUI(): { start_minutes: number; end_minutes: number; lab
   }))
 }
 
-/** Slots for close UI for a specific dealer and date – uses dealer hours (weekday/weekend) when set. */
+/** Slots for close UI for a specific dealer and date – uses dealer hours (weekday/saturday/sunday) when set. */
 function getSlotsForDealerDate(
   dealerId: string,
   blockDate: string,
-  getSetting: (dealerId: string, dayType: 'weekday' | 'weekend') => CalendarSetting | undefined
+  getSetting: (dealerId: string, dayType: DayType) => CalendarSetting | undefined
 ): { start_minutes: number; end_minutes: number; label: string }[] {
   const [y, mo, d] = blockDate.split('-').map(Number)
   const dayOfWeek = new Date(y, mo - 1, d).getDay()
-  const dayType: 'weekday' | 'weekend' = dayOfWeek === 0 || dayOfWeek === 6 ? 'weekend' : 'weekday'
+  const dayType: DayType = dayOfWeek === 6 ? 'saturday' : dayOfWeek === 0 ? 'sunday' : 'weekday'
   const setting = getSetting(dealerId, dayType)
   const slotMinutes = setting
     ? getSlotMinutesFromConfig({
@@ -102,7 +104,7 @@ export function CalendarManagementContent({
   createCalendarBlocks,
   deleteCalendarBlock
 }: CalendarManagementContentProps) {
-  const [showAddHoursFor, setShowAddHoursFor] = useState<{ dealerId: string; dayType: 'weekday' | 'weekend' } | null>(null)
+  const [showAddHoursFor, setShowAddHoursFor] = useState<{ dealerId: string; dayType: DayType } | null>(null)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
@@ -222,7 +224,7 @@ export function CalendarManagementContent({
     settingsByDealer.get(setting.dealer_id)!.push(setting)
   })
 
-  const getSetting = (dealerId: string, dayType: 'weekday' | 'weekend') =>
+  const getSetting = (dealerId: string, dayType: DayType) =>
     settingsByDealer.get(dealerId)?.find(s => s.day_type === dayType)
 
   return (
@@ -255,7 +257,7 @@ export function CalendarManagementContent({
         </p>
       </div>
 
-      {/* Dealer hours – start/end per dealer (weekday & weekend) */}
+      {/* Dealer hours – start/end per dealer (weekday, saturday, sunday) */}
       <div className="mb-10">
         <h2 className="text-lg font-medium text-white mb-2 flex items-center gap-2">
           <Clock className="w-5 h-5 text-[#C27E00]" />
@@ -266,14 +268,15 @@ export function CalendarManagementContent({
         </p>
         {dealers.map(dealer => {
           const weekdaySetting = getSetting(dealer.id, 'weekday')
-          const weekendSetting = getSetting(dealer.id, 'weekend')
+          const saturdaySetting = getSetting(dealer.id, 'saturday')
+          const sundaySetting = getSetting(dealer.id, 'sunday')
           return (
             <div key={dealer.id} className="bg-white/5 border border-gray-800 rounded-lg p-6 mb-4">
               <h3 className="text-md font-semibold text-white mb-4">{dealer.name}</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 {/* Weekday */}
                 <div className="bg-black/30 rounded-lg p-4">
-                  <p className="text-sm font-medium text-gray-300 mb-3">Weekday</p>
+                  <p className="text-sm font-medium text-gray-300 mb-3">Weekday (Mon–Fri)</p>
                   {weekdaySetting ? (
                     editingId === weekdaySetting.id ? (
                       <form
@@ -354,23 +357,23 @@ export function CalendarManagementContent({
                     </button>
                   )}
                 </div>
-                {/* Weekend */}
+                {/* Saturday */}
                 <div className="bg-black/30 rounded-lg p-4">
-                  <p className="text-sm font-medium text-gray-300 mb-3">Weekend</p>
-                  {weekendSetting ? (
-                    editingId === weekendSetting.id ? (
+                  <p className="text-sm font-medium text-gray-300 mb-3">Saturday</p>
+                  {saturdaySetting ? (
+                    editingId === saturdaySetting.id ? (
                       <form
-                        action={(formData) => handleUpdate(weekendSetting.id, formData)}
+                        action={(formData) => handleUpdate(saturdaySetting.id, formData)}
                         className="space-y-3"
                       >
                         <div className="flex flex-wrap gap-3 items-end">
                           <div>
                             <label className="block text-xs text-gray-400 mb-1">Start</label>
-                            <input type="number" name="startHour" min={0} max={23} defaultValue={weekendSetting.start_hour} className="w-20 border border-gray-700 bg-black/50 text-white rounded px-2 py-1.5 text-sm" />
+                            <input type="number" name="startHour" min={0} max={23} defaultValue={saturdaySetting.start_hour} className="w-20 border border-gray-700 bg-black/50 text-white rounded px-2 py-1.5 text-sm" />
                           </div>
                           <div>
                             <label className="block text-xs text-gray-400 mb-1">End</label>
-                            <input type="number" name="endHour" min={0} max={23} defaultValue={weekendSetting.end_hour} className="w-20 border border-gray-700 bg-black/50 text-white rounded px-2 py-1.5 text-sm" />
+                            <input type="number" name="endHour" min={0} max={23} defaultValue={saturdaySetting.end_hour} className="w-20 border border-gray-700 bg-black/50 text-white rounded px-2 py-1.5 text-sm" />
                           </div>
                           <input type="hidden" name="slotIntervalMinutes" value={CALENDAR_DEFAULTS.slotIntervalMinutes} />
                           <input type="hidden" name="appointmentDurationMinutes" value={CALENDAR_DEFAULTS.appointmentDurationMinutes} />
@@ -380,20 +383,20 @@ export function CalendarManagementContent({
                       </form>
                     ) : (
                       <div className="flex items-center justify-between">
-                        <span className="text-white">{weekendSetting.start_hour}:00 – {weekendSetting.end_hour}:00</span>
+                        <span className="text-white">{saturdaySetting.start_hour}:00 – {saturdaySetting.end_hour}:00</span>
                         <div className="flex gap-2">
-                          <button type="button" onClick={() => setEditingId(weekendSetting.id)} className="p-1.5 text-[#C27E00] hover:bg-white/10 rounded" title="Edit"><Edit className="w-4 h-4" /></button>
-                          <button type="button" onClick={() => handleDelete(weekendSetting.id)} className="p-1.5 text-red-400 hover:bg-white/10 rounded" title="Delete"><Trash2 className="w-4 h-4" /></button>
+                          <button type="button" onClick={() => setEditingId(saturdaySetting.id)} className="p-1.5 text-[#C27E00] hover:bg-white/10 rounded" title="Edit"><Edit className="w-4 h-4" /></button>
+                          <button type="button" onClick={() => handleDelete(saturdaySetting.id)} className="p-1.5 text-red-400 hover:bg-white/10 rounded" title="Delete"><Trash2 className="w-4 h-4" /></button>
                         </div>
                       </div>
                     )
-                  ) : showAddHoursFor?.dealerId === dealer.id && showAddHoursFor?.dayType === 'weekend' ? (
+                  ) : showAddHoursFor?.dealerId === dealer.id && showAddHoursFor?.dayType === 'saturday' ? (
                     <form
                       onSubmit={async (e) => {
                         e.preventDefault()
                         const fd = new FormData(e.currentTarget)
                         fd.set('dealerId', dealer.id)
-                        fd.set('dayType', 'weekend')
+                        fd.set('dayType', 'saturday')
                         fd.set('slotIntervalMinutes', String(CALENDAR_DEFAULTS.slotIntervalMinutes))
                         fd.set('appointmentDurationMinutes', String(CALENDAR_DEFAULTS.appointmentDurationMinutes))
                         await handleCreate(fd)
@@ -417,8 +420,77 @@ export function CalendarManagementContent({
                   ) : (
                     <p className="text-gray-500 text-sm">Default 09:00–16:30</p>
                   )}
-                  {!weekendSetting && !(showAddHoursFor?.dealerId === dealer.id && showAddHoursFor?.dayType === 'weekend') && (
-                    <button type="button" onClick={() => setShowAddHoursFor({ dealerId: dealer.id, dayType: 'weekend' })} className="mt-2 flex items-center gap-1 text-sm text-[#C27E00] hover:underline">
+                  {!saturdaySetting && !(showAddHoursFor?.dealerId === dealer.id && showAddHoursFor?.dayType === 'saturday') && (
+                    <button type="button" onClick={() => setShowAddHoursFor({ dealerId: dealer.id, dayType: 'saturday' })} className="mt-2 flex items-center gap-1 text-sm text-[#C27E00] hover:underline">
+                      <Plus className="w-4 h-4" /> Set hours
+                    </button>
+                  )}
+                </div>
+                {/* Sunday */}
+                <div className="bg-black/30 rounded-lg p-4">
+                  <p className="text-sm font-medium text-gray-300 mb-3">Sunday</p>
+                  {sundaySetting ? (
+                    editingId === sundaySetting.id ? (
+                      <form
+                        action={(formData) => handleUpdate(sundaySetting.id, formData)}
+                        className="space-y-3"
+                      >
+                        <div className="flex flex-wrap gap-3 items-end">
+                          <div>
+                            <label className="block text-xs text-gray-400 mb-1">Start</label>
+                            <input type="number" name="startHour" min={0} max={23} defaultValue={sundaySetting.start_hour} className="w-20 border border-gray-700 bg-black/50 text-white rounded px-2 py-1.5 text-sm" />
+                          </div>
+                          <div>
+                            <label className="block text-xs text-gray-400 mb-1">End</label>
+                            <input type="number" name="endHour" min={0} max={23} defaultValue={sundaySetting.end_hour} className="w-20 border border-gray-700 bg-black/50 text-white rounded px-2 py-1.5 text-sm" />
+                          </div>
+                          <input type="hidden" name="slotIntervalMinutes" value={CALENDAR_DEFAULTS.slotIntervalMinutes} />
+                          <input type="hidden" name="appointmentDurationMinutes" value={CALENDAR_DEFAULTS.appointmentDurationMinutes} />
+                          <button type="submit" className="px-3 py-1.5 bg-[#C27E00] text-white rounded text-sm hover:bg-[#a06900]">Save</button>
+                          <button type="button" onClick={() => setEditingId(null)} className="px-3 py-1.5 bg-gray-700 text-white rounded text-sm">Cancel</button>
+                        </div>
+                      </form>
+                    ) : (
+                      <div className="flex items-center justify-between">
+                        <span className="text-white">{sundaySetting.start_hour}:00 – {sundaySetting.end_hour}:00</span>
+                        <div className="flex gap-2">
+                          <button type="button" onClick={() => setEditingId(sundaySetting.id)} className="p-1.5 text-[#C27E00] hover:bg-white/10 rounded" title="Edit"><Edit className="w-4 h-4" /></button>
+                          <button type="button" onClick={() => handleDelete(sundaySetting.id)} className="p-1.5 text-red-400 hover:bg-white/10 rounded" title="Delete"><Trash2 className="w-4 h-4" /></button>
+                        </div>
+                      </div>
+                    )
+                  ) : showAddHoursFor?.dealerId === dealer.id && showAddHoursFor?.dayType === 'sunday' ? (
+                    <form
+                      onSubmit={async (e) => {
+                        e.preventDefault()
+                        const fd = new FormData(e.currentTarget)
+                        fd.set('dealerId', dealer.id)
+                        fd.set('dayType', 'sunday')
+                        fd.set('slotIntervalMinutes', String(CALENDAR_DEFAULTS.slotIntervalMinutes))
+                        fd.set('appointmentDurationMinutes', String(CALENDAR_DEFAULTS.appointmentDurationMinutes))
+                        await handleCreate(fd)
+                        setShowAddHoursFor(null)
+                      }}
+                      className="space-y-3"
+                    >
+                      <div className="flex flex-wrap gap-3 items-end">
+                        <div>
+                          <label className="block text-xs text-gray-400 mb-1">Start (hour 0–23)</label>
+                          <input type="number" name="startHour" min={0} max={23} defaultValue={9} required className="w-20 border border-gray-700 bg-black/50 text-white rounded px-2 py-1.5 text-sm" />
+                        </div>
+                        <div>
+                          <label className="block text-xs text-gray-400 mb-1">End (hour 0–23)</label>
+                          <input type="number" name="endHour" min={0} max={23} defaultValue={16} required className="w-20 border border-gray-700 bg-black/50 text-white rounded px-2 py-1.5 text-sm" />
+                        </div>
+                        <button type="submit" className="px-3 py-1.5 bg-[#C27E00] text-white rounded text-sm hover:bg-[#a06900]">Save</button>
+                        <button type="button" onClick={() => setShowAddHoursFor(null)} className="px-3 py-1.5 bg-gray-700 text-white rounded text-sm">Cancel</button>
+                      </div>
+                    </form>
+                  ) : (
+                    <p className="text-gray-500 text-sm">Default 09:00–16:30</p>
+                  )}
+                  {!sundaySetting && !(showAddHoursFor?.dealerId === dealer.id && showAddHoursFor?.dayType === 'sunday') && (
+                    <button type="button" onClick={() => setShowAddHoursFor({ dealerId: dealer.id, dayType: 'sunday' })} className="mt-2 flex items-center gap-1 text-sm text-[#C27E00] hover:underline">
                       <Plus className="w-4 h-4" /> Set hours
                     </button>
                   )}
