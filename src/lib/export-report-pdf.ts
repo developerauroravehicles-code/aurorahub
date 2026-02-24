@@ -6,6 +6,7 @@ interface JsPDFWithAutoTable extends jsPDF {
 }
 
 export interface ReportDemandRow {
+  demandId?: string
   customer: string
   vehicle: string
   camera: string
@@ -192,12 +193,13 @@ function buildReportPdf(options: ExportReportOptions): jsPDF {
       headStyles: { fillColor: [194, 126, 0], fontSize: 8 },
       bodyStyles: { fontSize: 7 },
       columnStyles: {
-        0: { cellWidth: 35 },
-        1: { cellWidth: 35 },
-        2: { cellWidth: 25 },
-        3: { cellWidth: 35 },
-        4: { cellWidth: 25 },
+        0: { cellWidth: 22 },
+        1: { cellWidth: 33 },
+        2: { cellWidth: 32 },
+        3: { cellWidth: 22 },
+        4: { cellWidth: 32 },
         5: { cellWidth: 25 },
+        6: { cellWidth: 22 },
       },
       margin: { left: 14 },
     })

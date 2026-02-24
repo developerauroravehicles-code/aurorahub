@@ -94,6 +94,15 @@ export default async function DemandDetailsPage({ params }: { params: Promise<{ 
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Demand ID (read-only) */}
+        <div className="bg-white/5 border border-gray-800 p-6 rounded-lg">
+          <h2 className="text-lg font-semibold text-white mb-4">Demand ID</h2>
+          <div>
+            <p className="text-sm text-gray-400">Reference Number</p>
+            <p className="text-2xl font-bold text-[#C27E00]">#{demand.demand_number ?? '—'}</p>
+          </div>
+        </div>
+
         {/* Customer Information */}
         <div className="bg-white/5 border border-gray-800 p-6 rounded-lg">
           <h2 className="text-lg font-semibold text-white mb-4">Customer Information</h2>

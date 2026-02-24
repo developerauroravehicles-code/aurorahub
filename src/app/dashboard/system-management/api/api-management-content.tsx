@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 
 export function APIManagementContent() {
@@ -20,8 +21,13 @@ export function APIManagementContent() {
     clientId: '',
     clientSecret: '',
     defaultFolderId: '',
+    refreshToken: '',
+    useOAuth: false,
+    serviceAccountEmail: '',
+    serviceAccountPrivateKey: '',
     enabled: false
   })
+  const searchParams = useSearchParams()
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null)
   const supabase = createClient()
@@ -58,11 +64,50 @@ export function APIManagementContent() {
         .single()
       
       if (googleDriveData?.value) {
-        setGoogleDriveSettings(JSON.parse(googleDriveData.value))
+        const parsed = JSON.parse(googleDriveData.value)
+        setGoogleDriveSettings({
+          clientId: parsed.clientId ?? '',
+          clientSecret: parsed.clientSecret ?? '',
+          defaultFolderId: parsed.defaultFolderId ?? '',
+          refreshToken: parsed.refreshToken ?? '',
+          useOAuth: parsed.useOAuth ?? false,
+          serviceAccountEmail: parsed.serviceAccountEmail ?? '',
+          serviceAccountPrivateKey: parsed.serviceAccountPrivateKey ?? '',
+          enabled: parsed.enabled ?? false
+        })
       }
     }
     loadSettings()
   }, [supabase])
+
+  useEffect(() => {
+    const drive = searchParams.get('drive')
+    const err = searchParams.get('drive_error')
+    if (drive === 'connected') {
+      setMessage({ type: 'success', text: 'Google Drive connected successfully!' })
+      window.history.replaceState({}, '', '/dashboard/system-management/api')
+      // Refetch to show Connected badge
+      supabase.from('system_settings').select('value').eq('key', 'google_drive_settings').single().then(({ data }) => {
+        if (data?.value) {
+          const p = JSON.parse(data.value)
+          setGoogleDriveSettings(s => ({ ...s, refreshToken: p.refreshToken ?? '', useOAuth: p.useOAuth ?? false }))
+        }
+      })
+    } else if (err) {
+      const msg: Record<string, string> = {
+        no_client_id: 'Save Client ID and Secret first, then click Connect.',
+        no_credentials: 'Client ID and Secret required for OAuth.',
+        no_code: 'Authorization was cancelled.',
+        no_refresh_token: 'Google did not return a refresh token. Try again with prompt=consent.',
+        session_expired: 'Session expired. Please log in again.',
+        unauthorized: 'Only Aurora Managers can connect Drive.',
+        oauth_access_denied: 'Authorization was denied.',
+        token_exchange_failed: 'Failed to exchange authorization code.'
+      }
+      setMessage({ type: 'error', text: msg[err] ?? err })
+      window.history.replaceState({}, '', '/dashboard/system-management/api')
+    }
+  }, [searchParams])
 
   const saveTwilioSettings = async () => {
     setLoading(true)
@@ -294,7 +339,7 @@ export function APIManagementContent() {
         <div className="flex items-center justify-between mb-4">
           <div>
             <h4 className="text-md font-semibold text-white mb-1">Google Drive</h4>
-            <p className="text-sm text-gray-400">Connect to Google Drive for file storage and backup</p>
+            <p className="text-sm text-gray-400">Upload invoices to Drive. Use <strong>OAuth</strong> (no Service Account key needed) or Service Account. See docs/GOOGLE_DRIVE_SETUP.md.</p>
           </div>
           <label className="flex items-center cursor-pointer">
             <input
@@ -314,37 +359,106 @@ export function APIManagementContent() {
         </div>
 
         <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">Client ID</label>
-            <input
-              type="text"
-              value={googleDriveSettings.clientId}
-              onChange={(e) => setGoogleDriveSettings({ ...googleDriveSettings, clientId: e.target.value })}
-              className="block w-full rounded-md border border-gray-700 bg-white/5 px-3 py-2 text-white placeholder-gray-500 focus:border-[#C27E00] focus:outline-none focus:ring-1 focus:ring-[#C27E00] sm:text-sm"
-              placeholder="Your Google OAuth Client ID"
-            />
+          {/* OAuth - recommended when Service Account key is disabled */}
+          <div className="p-4 rounded-lg bg-[#C27E00]/10 border border-[#C27E00]/30 mb-4">
+            <h5 className="text-sm font-semibold text-[#C27E00] mb-2">OAuth 2.0 (recommended for work/organization accounts)</h5>
+            <p className="text-xs text-gray-400 mb-3">Use when Service Account key creation is disabled by your organization. No key file needed.</p>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-1">OAuth Client ID</label>
+                <input
+                  type="text"
+                  value={googleDriveSettings.clientId}
+                  onChange={(e) => setGoogleDriveSettings({ ...googleDriveSettings, clientId: e.target.value })}
+                  className="block w-full rounded-md border border-gray-700 bg-white/5 px-3 py-2 text-white placeholder-gray-500 focus:border-[#C27E00] focus:outline-none focus:ring-1 focus:ring-[#C27E00] sm:text-sm"
+                  placeholder="xxx.apps.googleusercontent.com"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-1">OAuth Client Secret</label>
+                <input
+                  type="password"
+                  value={googleDriveSettings.clientSecret}
+                  onChange={(e) => setGoogleDriveSettings({ ...googleDriveSettings, clientSecret: e.target.value })}
+                  className="block w-full rounded-md border border-gray-700 bg-white/5 px-3 py-2 text-white placeholder-gray-500 focus:border-[#C27E00] focus:outline-none focus:ring-1 focus:ring-[#C27E00] sm:text-sm"
+                  placeholder="GOCSPX-xxx"
+                />
+              </div>
+            </div>
+            <p className="text-xs text-gray-500 mt-1">Create OAuth 2.0 Client ID (Web application) in GCP. Add redirect URI: /api/drive-oauth/callback (e.g. https://yourdomain.com/api/drive-oauth/callback or http://localhost:3000/api/drive-oauth/callback)</p>
+            <p className="text-xs text-gray-500 mt-1">Enter Client ID, Secret and Root Folder ID. Click Connect to save and authorize.</p>
+            <div className="mt-3 flex items-center gap-3">
+              <button
+                type="button"
+                onClick={async () => {
+                  if (!googleDriveSettings.clientId?.trim() || !googleDriveSettings.clientSecret?.trim()) {
+                    setMessage({ type: 'error', text: 'Client ID and Client Secret are required.' })
+                    return
+                  }
+                  setLoading(true)
+                  setMessage(null)
+                  try {
+                    const { error } = await supabase
+                      .from('system_settings')
+                      .upsert({
+                        key: 'google_drive_settings',
+                        value: JSON.stringify(googleDriveSettings),
+                        updated_at: new Date().toISOString()
+                      }, { onConflict: 'key' })
+                    if (error) throw error
+                    window.location.href = '/api/drive-oauth/authorize'
+                  } catch (e) {
+                    setMessage({ type: 'error', text: e instanceof Error ? e.message : 'Failed to save' })
+                    setLoading(false)
+                  }
+                }}
+                disabled={loading}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-md font-medium transition-colors text-sm bg-[#C27E00] hover:bg-[#a06900] text-white disabled:opacity-50"
+              >
+                {loading ? 'Saving...' : 'Connect to Google'}
+              </button>
+              {googleDriveSettings.refreshToken && (
+                <span className="text-sm text-green-400">✓ Connected</span>
+              )}
+            </div>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">Client Secret</label>
-            <input
-              type="password"
-              value={googleDriveSettings.clientSecret}
-              onChange={(e) => setGoogleDriveSettings({ ...googleDriveSettings, clientSecret: e.target.value })}
-              className="block w-full rounded-md border border-gray-700 bg-white/5 px-3 py-2 text-white placeholder-gray-500 focus:border-[#C27E00] focus:outline-none focus:ring-1 focus:ring-[#C27E00] sm:text-sm"
-              placeholder="Your Google OAuth Client Secret"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">Default Folder ID (optional)</label>
+            <label className="block text-sm font-medium text-gray-300 mb-1">Root Folder ID</label>
             <input
               type="text"
               value={googleDriveSettings.defaultFolderId}
               onChange={(e) => setGoogleDriveSettings({ ...googleDriveSettings, defaultFolderId: e.target.value })}
               className="block w-full rounded-md border border-gray-700 bg-white/5 px-3 py-2 text-white placeholder-gray-500 focus:border-[#C27E00] focus:outline-none focus:ring-1 focus:ring-[#C27E00] sm:text-sm"
-              placeholder="Folder ID for uploads (leave empty for root)"
+              placeholder="Drive folder ID (My Drive folder or Shared Drive)"
             />
+            <p className="mt-1 text-xs text-gray-500">OAuth: use any folder in your Drive. Service Account: use Shared Drive.</p>
+          </div>
+
+          <hr className="border-gray-700 my-4" />
+          <p className="text-xs text-gray-500">Or use Service Account (requires key file; not available when org policy blocks it):</p>
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-1">Service Account Email</label>
+            <input
+              type="text"
+              value={googleDriveSettings.serviceAccountEmail}
+              onChange={(e) => setGoogleDriveSettings({ ...googleDriveSettings, serviceAccountEmail: e.target.value })}
+              className="block w-full rounded-md border border-gray-700 bg-white/5 px-3 py-2 text-white placeholder-gray-500 focus:border-[#C27E00] focus:outline-none focus:ring-1 focus:ring-[#C27E00] sm:text-sm"
+              placeholder="xxx@xxx.iam.gserviceaccount.com"
+            />
+            <p className="mt-1 text-xs text-gray-500">From the JSON key file (client_email)</p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-1">Service Account Private Key</label>
+            <textarea
+              value={googleDriveSettings.serviceAccountPrivateKey}
+              onChange={(e) => setGoogleDriveSettings({ ...googleDriveSettings, serviceAccountPrivateKey: e.target.value })}
+              rows={4}
+              className="block w-full rounded-md border border-gray-700 bg-white/5 px-3 py-2 text-white placeholder-gray-500 focus:border-[#C27E00] focus:outline-none focus:ring-1 focus:ring-[#C27E00] sm:text-sm font-mono text-sm"
+              placeholder="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----"
+            />
+            <p className="mt-1 text-xs text-gray-500">From the JSON key file (private_key), including BEGIN/END lines</p>
           </div>
 
           <button

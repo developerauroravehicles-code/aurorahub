@@ -28,13 +28,14 @@ export async function createDealer(formData: FormData): Promise<{ success: boole
     const name = formData.get('name') as string
     const code = formData.get('code') as string
     const address = formData.get('address') as string
+    const phone = formData.get('phone') as string
     const regionCodeId = formData.get('region_code_id') as string
 
     if (!name || !code) {
       return { success: false, error: 'Missing fields' }
     }
 
-    const dealerData: { name: string; code: string; address?: string; region_code_id?: string } = { name, code, address }
+    const dealerData: { name: string; code: string; address?: string; phone?: string | null; region_code_id?: string } = { name, code, address: address || null, phone: phone?.trim() || null }
     if (regionCodeId && regionCodeId !== 'none') {
       dealerData.region_code_id = regionCodeId
     }
@@ -223,16 +224,18 @@ export async function updateDealer(formData: FormData): Promise<{ success: boole
     const name = formData.get('name') as string
     const code = formData.get('code') as string
     const address = formData.get('address') as string
+    const phone = formData.get('phone') as string
     const regionCodeId = formData.get('region_code_id') as string
 
     if (!dealerId || !name || !code) {
       return { success: false, error: 'Missing required fields' }
     }
 
-    const updateData: { name: string; code: string; address: string | null; region_code_id: string | null } = { 
+    const updateData: { name: string; code: string; address: string | null; phone: string | null; region_code_id: string | null } = { 
       name, 
       code, 
       address: address || null,
+      phone: phone?.trim() || null,
       region_code_id: null
     }
     if (regionCodeId && regionCodeId !== 'none') {

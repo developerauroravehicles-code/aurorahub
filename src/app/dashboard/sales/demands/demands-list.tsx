@@ -8,6 +8,7 @@ import { Filter, X } from 'lucide-react'
 
 interface Demand {
   id: string
+  demand_number?: number | string
   status: string
   created_at: string
   customer_firstname: string
@@ -26,7 +27,8 @@ interface DemandsListProps {
 export function DemandsList({ demands, timezoneName = null }: DemandsListProps) {
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [dateFilter, setDateFilter] = useState<string>('all')
-  const [searchQuery, setSearchQuery] = useState<string>('')
+  const [searchType, setSearchType] = useState<'customer' | 'demand_id'>('customer')
+  const [searchValue, setSearchValue] = useState<string>('')
   const [showFilters, setShowFilters] = useState(false)
 
   const filteredDemands = useMemo(() => {
@@ -78,24 +80,29 @@ export function DemandsList({ demands, timezoneName = null }: DemandsListProps) 
       }
     }
 
-    // Search filter
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase()
-      filtered = filtered.filter(d => 
-        `${d.customer_firstname} ${d.customer_lastname}`.toLowerCase().includes(query) ||
-        `${d.vehicle_year} ${d.vehicle_make} ${d.vehicle_model}`.toLowerCase().includes(query)
-      )
+    // Search filter (by selected criterion only)
+    if (searchValue.trim()) {
+      const query = searchValue.toLowerCase().trim()
+      if (searchType === 'customer') {
+        filtered = filtered.filter(d =>
+          `${d.customer_firstname} ${d.customer_lastname}`.toLowerCase().includes(query)
+        )
+      } else {
+        filtered = filtered.filter(d =>
+          d.demand_number != null && String(d.demand_number).toLowerCase().includes(query)
+        )
+      }
     }
 
     return filtered
-  }, [demands, statusFilter, dateFilter, searchQuery, timezoneName])
+  }, [demands, statusFilter, dateFilter, searchType, searchValue, timezoneName])
 
-  const hasActiveFilters = statusFilter !== 'all' || dateFilter !== 'all' || searchQuery.trim() !== ''
+  const hasActiveFilters = statusFilter !== 'all' || dateFilter !== 'all' || searchValue.trim() !== ''
 
   const clearFilters = () => {
     setStatusFilter('all')
     setDateFilter('all')
-    setSearchQuery('')
+    setSearchValue('')
   }
 
   return (
@@ -128,16 +135,31 @@ export function DemandsList({ demands, timezoneName = null }: DemandsListProps) 
 
         {showFilters && (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {/* Search */}
-            <div>
-              <label className="block text-xs font-medium text-gray-400 mb-1">Search</label>
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Customer name or vehicle..."
-                className="w-full border border-gray-700 bg-white/5 p-2 rounded text-white text-sm focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]"
-              />
+            {/* Search - by customer name or demand ID */}
+            <div className="md:col-span-2 flex gap-2">
+              <div className="flex-1 min-w-0">
+                <label className="block text-xs font-medium text-gray-400 mb-1">Search by</label>
+                <select
+                  value={searchType}
+                  onChange={(e) => setSearchType(e.target.value as 'customer' | 'demand_id')}
+                  className="w-full border border-gray-700 bg-white/5 p-2 rounded text-white text-sm focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]"
+                >
+                  <option value="customer" className="bg-black">Customer name</option>
+                  <option value="demand_id" className="bg-black">Demand ID</option>
+                </select>
+              </div>
+              <div className="flex-1 min-w-0">
+                <label className="block text-xs font-medium text-gray-400 mb-1">
+                  {searchType === 'customer' ? 'Name' : 'Demand ID'}
+                </label>
+                <input
+                  type="text"
+                  value={searchValue}
+                  onChange={(e) => setSearchValue(e.target.value)}
+                  placeholder={searchType === 'customer' ? 'Customer first or last name...' : 'ARR20260000001'}
+                  className="w-full border border-gray-700 bg-white/5 p-2 rounded text-white text-sm focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]"
+                />
+              </div>
             </div>
 
             {/* Status Filter */}
@@ -199,9 +221,14 @@ export function DemandsList({ demands, timezoneName = null }: DemandsListProps) 
                 <li key={demand.id} className="hover:bg-white/5 transition-colors">
                   <div className="px-4 py-4 sm:px-6">
                     <div className="flex items-center justify-between">
-                      <p className="text-sm font-medium text-[#C27E00] truncate">
-                        {demand.customer_firstname} {demand.customer_lastname}
-                      </p>
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-medium text-[#C27E00] truncate">
+                          {demand.customer_firstname} {demand.customer_lastname}
+                        </p>
+                        {demand.demand_number != null && (
+                          <span className="text-xs text-gray-500">#{demand.demand_number}</span>
+                        )}
+                      </div>
                       <div className="ml-2 flex-shrink-0 flex">
                         <p className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full border ${
                           statusColors[demand.status as keyof typeof statusColors] || 'bg-white/10 text-gray-300 border-gray-700'

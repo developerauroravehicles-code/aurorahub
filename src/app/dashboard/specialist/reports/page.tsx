@@ -11,6 +11,7 @@ import { FileDown, Mail } from 'lucide-react'
 
 interface Demand {
   id: string
+  demand_number?: number | string
   customer_firstname: string
   customer_lastname: string
   vehicle_make: string
@@ -44,7 +45,7 @@ export default function SpecialistReportsPage() {
       // Fetch demands assigned to this specialist
       const { data: demandsData, error } = await supabase
         .from('demands')
-        .select('id, status, created_at, camera_model, vehicle_make, vehicle_model, vehicle_year, appointment_date, customer_firstname, customer_lastname')
+        .select('id, demand_number, status, created_at, camera_model, vehicle_make, vehicle_model, vehicle_year, appointment_date, customer_firstname, customer_lastname')
         .eq('assigned_specialist_id', user.id)
         .gte('created_at', `${startDate}T00:00:00`)
         .lte('created_at', `${endDate}T23:59:59`)
@@ -101,6 +102,7 @@ export default function SpecialistReportsPage() {
       statusCounts,
       vehicleMakeCounts,
       demands: demands.map((d) => ({
+        demandId: d.demand_number != null ? `#${d.demand_number}` : undefined,
         customer: `${d.customer_firstname} ${d.customer_lastname}`,
         vehicle: `${d.vehicle_year} ${d.vehicle_make} ${d.vehicle_model}`,
         camera: d.camera_model,
@@ -328,6 +330,7 @@ export default function SpecialistReportsPage() {
                 <table className="min-w-full divide-y divide-gray-800">
                   <thead className="bg-white/5">
                     <tr>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Demand ID</th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Customer</th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Vehicle</th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Camera</th>
@@ -346,6 +349,9 @@ export default function SpecialistReportsPage() {
                       }
                       return (
                         <tr key={demand.id} className="hover:bg-white/5 transition-colors">
+                          <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-400">
+                            {demand.demand_number != null ? `#${demand.demand_number}` : '-'}
+                          </td>
                           <td className="px-4 py-3 whitespace-nowrap text-sm text-white">
                             {demand.customer_firstname} {demand.customer_lastname}
                           </td>

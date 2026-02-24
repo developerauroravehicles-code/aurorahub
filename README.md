@@ -60,6 +60,8 @@
   - Specialist: View Work List, Complete Jobs.
   - Admin: Manage Employees and Dealers.
 - **SMS**: Twilio integration for appointments.
+- **Google Drive**: Automatic invoice PDF upload (Dealer > Year > Month folders). See [docs/GOOGLE_DRIVE_SETUP.md](docs/GOOGLE_DRIVE_SETUP.md).
+
 # Aurora-Hub
 # aurorahub
 # aurorahub

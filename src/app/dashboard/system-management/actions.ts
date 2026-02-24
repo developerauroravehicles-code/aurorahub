@@ -49,7 +49,7 @@ export async function getSystemData(): Promise<SystemData> {
   // Fetch dealers
   const { data: dealers, error: dealersError } = await supabaseAdmin
     .from('dealers')
-    .select('id, name, code, address, region_code_id, created_at')
+    .select('id, name, code, address, phone, region_code_id, created_at')
     .order('created_at', { ascending: false })
 
   // Fetch profiles with dealer info
@@ -125,13 +125,15 @@ export async function createDealer(prevState: ActionState, formData: FormData) {
   const name = formData.get('name') as string
   const code = formData.get('code') as string
   const address = formData.get('address') as string
+  const phone = formData.get('phone') as string
 
   if (!name || !code) return { error: 'Name and Code are required' }
 
   const { error } = await supabaseAdmin.from('dealers').insert({
     name,
     code,
-    address
+    address: address || null,
+    phone: phone?.trim() || null
   })
 
   if (error) return { error: error.message }

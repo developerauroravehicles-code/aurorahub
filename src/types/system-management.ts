@@ -5,6 +5,7 @@ export interface Dealer {
   name: string
   code: string
   address?: string | null
+  phone?: string | null
   region_code_id?: string | null
   created_at?: string
   region_codes?: RegionCode | null

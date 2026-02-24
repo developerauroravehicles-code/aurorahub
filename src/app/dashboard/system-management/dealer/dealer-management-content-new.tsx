@@ -74,6 +74,7 @@ export const DealerManagementContent = memo(function DealerManagementContent({
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Name</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Code</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Region</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Phone</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Address</th>
                   <th className="px-4 py-3 text-right text-xs font-medium text-gray-400 uppercase tracking-wider">Actions</th>
                 </tr>
@@ -91,7 +92,7 @@ export const DealerManagementContent = memo(function DealerManagementContent({
               if (isEditing) {
                 return (
                   <tr key={d.id} className="bg-white/5">
-                    <td colSpan={5} className="px-4 py-4">
+                    <td colSpan={6} className="px-4 py-4">
                       <form onSubmit={handleUpdateDealer} className="space-y-4">
                         <input type="hidden" name="dealerId" value={d.id} />
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -110,6 +111,16 @@ export const DealerManagementContent = memo(function DealerManagementContent({
                               name="code" 
                               defaultValue={d.code}
                               required 
+                              className="border border-gray-700 bg-white/5 p-2 w-full rounded text-white focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00] text-sm"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-300 mb-1">Phone</label>
+                            <input 
+                              name="phone" 
+                              type="tel"
+                              defaultValue={d.phone || ''}
+                              placeholder="e.g. 604-555-1234"
                               className="border border-gray-700 bg-white/5 p-2 w-full rounded text-white focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00] text-sm"
                             />
                           </div>
@@ -178,6 +189,9 @@ export const DealerManagementContent = memo(function DealerManagementContent({
                         No Region
                       </span>
                     )}
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    <div className="text-sm text-gray-400">{d.phone || '-'}</div>
                   </td>
                   <td className="px-4 py-3">
                     <div className="text-sm text-gray-400">{d.address || '-'}</div>
@@ -250,6 +264,10 @@ export const DealerManagementContent = memo(function DealerManagementContent({
           <div>
             <label className="block text-sm font-medium text-gray-300">Dealer Code</label>
             <input name="code" required className="border border-gray-700 bg-white/5 p-2 w-full rounded text-white focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00] placeholder-gray-500" placeholder="e.g. KIASURREY" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-300">Phone</label>
+            <input name="phone" type="tel" className="border border-gray-700 bg-white/5 p-2 w-full rounded text-white focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00] placeholder-gray-500" placeholder="e.g. 604-555-1234" />
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-300">Address</label>

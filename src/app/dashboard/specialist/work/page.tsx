@@ -5,6 +5,7 @@ import { getEffectiveTimezone } from '@/lib/timezone-defaults'
 
 type WorkDemandRow = {
   id: string
+  demand_number?: number | string
   customer_firstname: string
   customer_lastname: string
   vehicle_year: number
@@ -99,6 +100,9 @@ export default async function SpecialistWorkPage() {
                                                 <p className="text-lg font-medium text-[#C27E00]">
                                                     {demand.customer_firstname} {demand.customer_lastname}
                                                 </p>
+                                                {demand.demand_number != null && (
+                                                    <span className="text-xs font-medium text-gray-500">#{demand.demand_number}</span>
+                                                )}
                                                 <span className="px-2 py-1 rounded text-xs font-medium bg-blue-900/50 text-blue-300 border border-blue-800">
                                                     ASSIGNED TO ME
                                                 </span>
@@ -148,6 +152,9 @@ export default async function SpecialistWorkPage() {
                                                 <p className="text-lg font-medium text-white">
                                                     {demand.customer_firstname} {demand.customer_lastname}
                                                 </p>
+                                                {demand.demand_number != null && (
+                                                    <span className="text-xs font-medium text-gray-500">#{demand.demand_number}</span>
+                                                )}
                                                 <span className="px-2 py-1 rounded text-xs font-medium bg-gray-900/50 text-gray-300 border border-gray-800">
                                                     UNASSIGNED
                                                 </span>
@@ -200,6 +207,9 @@ export default async function SpecialistWorkPage() {
                                                 <p className="text-lg font-medium text-gray-500">
                                                     {demand.customer_firstname} {demand.customer_lastname}
                                                 </p>
+                                                {demand.demand_number != null && (
+                                                    <span className="text-xs font-medium text-gray-500">#{demand.demand_number}</span>
+                                                )}
                                                 <span className="px-2 py-1 rounded text-xs font-medium bg-purple-900/50 text-purple-300 border border-purple-800">
                                                     ASSIGNED TO: {demand.profiles?.full_name ?? 'Unknown'}
                                                 </span>

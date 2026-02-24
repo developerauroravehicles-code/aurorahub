@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { clsx } from 'clsx'
-import { LogOut, LayoutDashboard, FileText, Users, Settings } from 'lucide-react'
+import { LogOut, LayoutDashboard, FileText, Users, Settings, Receipt } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { DealerClock } from '@/components/dealer-clock'
@@ -53,6 +53,7 @@ export function Sidebar({
     links.push({ name: 'Employees', href: '/dashboard/admin/employees', icon: Users })
     
     if (role === 'aurora_manager') {
+      links.push({ name: 'Invoice', href: '/dashboard/admin/invoices', icon: Receipt })
       links.push({ name: 'System Management', href: '/dashboard/system-management', icon: Settings })
     }
   }

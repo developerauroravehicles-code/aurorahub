@@ -16,6 +16,7 @@ function parseModelAndTrim(val: string): { model: string; trim: string } {
 
 interface Demand {
   id: string
+  demand_number?: number | string
   dealer_id?: string | null
   customer_firstname: string
   customer_lastname: string
@@ -146,7 +147,12 @@ export function EditDemandModal({ demand, isOpen, onClose }: EditDemandModalProp
       <div className="bg-gray-900 border border-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         <div className="p-6">
           <div className="flex justify-between items-center mb-6">
-            <h2 className="text-2xl font-semibold text-white">Edit Demand</h2>
+            <div>
+              <h2 className="text-2xl font-semibold text-white">Edit Demand</h2>
+              {demand.demand_number != null && (
+                <p className="text-sm text-gray-500 mt-1">Demand ID: <span className="font-medium text-[#C27E00]">#{demand.demand_number}</span></p>
+              )}
+            </div>
             <button
               onClick={onClose}
               className="text-gray-400 hover:text-white transition-colors"

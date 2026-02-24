@@ -86,13 +86,13 @@ export default async function SpecialistDetailsPage({ params }: { params: Promis
   const { data: completedJobs } = assignedDealerIds.length > 0
     ? await supabase
         .from('demands')
-        .select('id, status, created_at, updated_at, customer_firstname, customer_lastname, vehicle_make, vehicle_model, vehicle_year, appointment_date, dealer_id, dealers(name, region_codes(timezone_id, timezones(name)))')
+        .select('id, demand_number, status, created_at, updated_at, customer_firstname, customer_lastname, vehicle_make, vehicle_model, vehicle_year, appointment_date, dealer_id, dealers(name, region_codes(timezone_id, timezones(name)))')
         .eq('status', 'completed')
         .in('dealer_id', assignedDealerIds)
         .order('updated_at', { ascending: false })
     : await supabase
         .from('demands')
-        .select('id, status, created_at, updated_at, customer_firstname, customer_lastname, vehicle_make, vehicle_model, vehicle_year, appointment_date, dealer_id, dealers(name, region_codes(timezone_id, timezones(name)))')
+        .select('id, demand_number, status, created_at, updated_at, customer_firstname, customer_lastname, vehicle_make, vehicle_model, vehicle_year, appointment_date, dealer_id, dealers(name, region_codes(timezone_id, timezones(name)))')
         .eq('status', 'completed')
         .eq('dealer_id', profile.dealer_id || '')
         .order('updated_at', { ascending: false })
@@ -101,13 +101,13 @@ export default async function SpecialistDetailsPage({ params }: { params: Promis
   const { data: pendingJobs } = assignedDealerIds.length > 0
     ? await supabase
         .from('demands')
-        .select('id, status, created_at, customer_firstname, customer_lastname, vehicle_make, vehicle_model, vehicle_year, appointment_date, dealer_id, dealers(name, region_codes(timezone_id, timezones(name)))')
+        .select('id, demand_number, status, created_at, customer_firstname, customer_lastname, vehicle_make, vehicle_model, vehicle_year, appointment_date, dealer_id, dealers(name, region_codes(timezone_id, timezones(name)))')
         .eq('status', 'approved')
         .in('dealer_id', assignedDealerIds)
         .order('appointment_date', { ascending: true })
     : await supabase
         .from('demands')
-        .select('id, status, created_at, customer_firstname, customer_lastname, vehicle_make, vehicle_model, vehicle_year, appointment_date, dealer_id, dealers(name, region_codes(timezone_id, timezones(name)))')
+        .select('id, demand_number, status, created_at, customer_firstname, customer_lastname, vehicle_make, vehicle_model, vehicle_year, appointment_date, dealer_id, dealers(name, region_codes(timezone_id, timezones(name)))')
         .eq('status', 'approved')
         .eq('dealer_id', profile.dealer_id || '')
         .order('appointment_date', { ascending: true })
@@ -169,6 +169,9 @@ export default async function SpecialistDetailsPage({ params }: { params: Promis
                                       <div>
                                           <p className="font-medium text-white">{job.vehicle_year} {job.vehicle_make} {job.vehicle_model}</p>
                                           <p className="text-sm text-gray-400">{job.customer_firstname} {job.customer_lastname}</p>
+                                          {(job as { demand_number?: number }).demand_number != null && (
+                                            <p className="text-xs text-gray-500 mt-1">Demand ID: #{(job as { demand_number?: number }).demand_number}</p>
+                                          )}
                                           {isAuroraManager && (job.dealers as any)?.name && (
                                             <p className="text-xs text-gray-500 mt-1">Dealer: {(job.dealers as any).name}</p>
                                           )}
@@ -200,6 +203,9 @@ export default async function SpecialistDetailsPage({ params }: { params: Promis
                                       <div>
                                           <p className="font-medium text-white">{job.vehicle_year} {job.vehicle_make} {job.vehicle_model}</p>
                                           <p className="text-sm text-gray-400">{job.customer_firstname} {job.customer_lastname}</p>
+                                          {(job as { demand_number?: number }).demand_number != null && (
+                                            <p className="text-xs text-gray-500 mt-1">Demand ID: #{(job as { demand_number?: number }).demand_number}</p>
+                                          )}
                                           {isAuroraManager && (job.dealers as any)?.name && (
                                             <p className="text-xs text-gray-500 mt-1">Dealer: {(job.dealers as any).name}</p>
                                           )}

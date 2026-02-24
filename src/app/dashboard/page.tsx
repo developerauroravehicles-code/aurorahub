@@ -23,7 +23,7 @@ export default async function DashboardPage() {
   if (profile.role === 'sales') {
     const { data: demands } = await supabase
       .from('demands')
-      .select('id, status, created_at, camera_model, vehicle_make, vehicle_model, vehicle_year, appointment_date, customer_firstname, customer_lastname')
+      .select('id, demand_number, status, created_at, camera_model, vehicle_make, vehicle_model, vehicle_year, appointment_date, customer_firstname, customer_lastname')
       .eq('created_by', user.id)
       .order('created_at', { ascending: false })
 
@@ -117,6 +117,9 @@ export default async function DashboardPage() {
                             <p className="font-semibold text-white">
                               {demand.customer_firstname} {demand.customer_lastname}
                             </p>
+                            {(demand as { demand_number?: number }).demand_number != null && (
+                              <span className="text-xs font-medium text-gray-500">#{(demand as { demand_number?: number }).demand_number}</span>
+                            )}
                             <span className={`px-2 py-1 rounded text-xs font-medium border ${statusColors[demand.status as keyof typeof statusColors] || 'bg-gray-900/50 text-gray-300 border-gray-800'}`}>
                               {demand.status.replace('_', ' ').toUpperCase()}
                             </span>
@@ -156,7 +159,7 @@ export default async function DashboardPage() {
     // Get assigned demands for this finance user (with dealer timezone for correct appointment display)
     const { data: assignedDemandsRaw } = await supabase
       .from('demands')
-      .select('id, status, created_at, customer_firstname, customer_lastname, vehicle_year, vehicle_make, vehicle_model, appointment_date, dealers(region_codes(timezone_id, timezones(name)))')
+      .select('id, demand_number, status, created_at, customer_firstname, customer_lastname, vehicle_year, vehicle_make, vehicle_model, appointment_date, dealers(region_codes(timezone_id, timezones(name)))')
       .eq('assigned_finance_id', user.id)
       .order('created_at', { ascending: false })
     const assignedDemands = assignedDemandsRaw ?? []
@@ -240,6 +243,9 @@ export default async function DashboardPage() {
                             <p className="font-semibold text-white">
                               {demand.customer_firstname} {demand.customer_lastname}
                             </p>
+                            {(demand as { demand_number?: number }).demand_number != null && (
+                              <span className="text-xs font-medium text-gray-500">#{(demand as { demand_number?: number }).demand_number}</span>
+                            )}
                             <span className={`px-2 py-1 rounded text-xs font-medium border ${statusColors[demand.status as keyof typeof statusColors] || 'bg-gray-900/50 text-gray-300 border-gray-800'}`}>
                               {demand.status.replace('_', ' ').toUpperCase()}
                             </span>
@@ -298,7 +304,7 @@ export default async function DashboardPage() {
     // Get demands assigned to this specialist (with dealer timezone for correct time display)
     const { data: assignedWorkRaw } = await supabase
       .from('demands')
-      .select('id, status, appointment_date, customer_firstname, customer_lastname, vehicle_make, vehicle_model, vehicle_year, camera_model, customer_address, stock_number, dealers(region_codes(timezone_id, timezones(name)))')
+      .select('id, demand_number, status, appointment_date, customer_firstname, customer_lastname, vehicle_make, vehicle_model, vehicle_year, camera_model, customer_address, stock_number, dealers(region_codes(timezone_id, timezones(name)))')
       .eq('assigned_specialist_id', user.id)
       .eq('status', 'approved')
       .order('appointment_date', { ascending: true })
@@ -323,7 +329,7 @@ export default async function DashboardPage() {
     // Get completed demands by this specialist (with dealer timezone for date display)
     const { data: completedWork } = await supabase
       .from('demands')
-      .select('id, status, updated_at, created_at, customer_firstname, customer_lastname, vehicle_make, vehicle_model, vehicle_year, camera_model, appointment_date, dealers(region_codes(timezone_id, timezones(name)))')
+      .select('id, demand_number, status, updated_at, created_at, customer_firstname, customer_lastname, vehicle_make, vehicle_model, vehicle_year, camera_model, appointment_date, dealers(region_codes(timezone_id, timezones(name)))')
       .eq('assigned_specialist_id', user.id)
       .eq('status', 'completed')
       .order('updated_at', { ascending: false })
@@ -335,7 +341,7 @@ export default async function DashboardPage() {
     if (dealerIds.length > 0) {
       const { data } = await supabase
         .from('demands')
-        .select('id, status, appointment_date, customer_firstname, customer_lastname, vehicle_make, vehicle_model, vehicle_year, camera_model, customer_address, dealers(region_codes(timezone_id, timezones(name)))')
+        .select('id, demand_number, status, appointment_date, customer_firstname, customer_lastname, vehicle_make, vehicle_model, vehicle_year, camera_model, customer_address, dealers(region_codes(timezone_id, timezones(name)))')
         .in('dealer_id', dealerIds)
         .eq('status', 'approved')
         .gte('appointment_date', todayStart)
@@ -470,6 +476,9 @@ export default async function DashboardPage() {
                           <p className="font-semibold text-white">
                             {demand.customer_firstname} {demand.customer_lastname}
                           </p>
+                          {(demand as { demand_number?: number }).demand_number != null && (
+                            <span className="text-xs font-medium text-gray-500">#{(demand as { demand_number?: number }).demand_number}</span>
+                          )}
                           <span className="px-2 py-1 rounded text-xs font-medium border bg-blue-900/50 text-blue-300 border-blue-800">
                             ASSIGNED
                           </span>
@@ -529,6 +538,9 @@ export default async function DashboardPage() {
                           <p className="font-semibold text-white">
                             {demand.customer_firstname} {demand.customer_lastname}
                           </p>
+                          {(demand as { demand_number?: number }).demand_number != null && (
+                            <span className="text-xs font-medium text-gray-500">#{(demand as { demand_number?: number }).demand_number}</span>
+                          )}
                           <span className="px-2 py-1 rounded text-xs font-medium border bg-green-900/50 text-green-300 border-green-800">
                             COMPLETED
                           </span>
@@ -576,7 +588,7 @@ export default async function DashboardPage() {
     // Get all demands for statistics (with dealer timezone for appointment display)
     const { data: allDemands } = await supabase
       .from('demands')
-      .select('id, status, created_at, customer_firstname, customer_lastname, vehicle_make, vehicle_model, vehicle_year, camera_model, appointment_date, dealers(region_codes(timezone_id, timezones(name)))')
+      .select('id, demand_number, status, created_at, customer_firstname, customer_lastname, vehicle_make, vehicle_model, vehicle_year, camera_model, appointment_date, dealers(region_codes(timezone_id, timezones(name)))')
       .order('created_at', { ascending: false })
 
     // Calculate demand statistics
@@ -691,6 +703,9 @@ export default async function DashboardPage() {
                             <p className="font-semibold text-white">
                               {demand.customer_firstname} {demand.customer_lastname}
                             </p>
+                            {(demand as { demand_number?: number }).demand_number != null && (
+                              <span className="text-xs font-medium text-gray-500">#{(demand as { demand_number?: number }).demand_number}</span>
+                            )}
                             <span className={`px-2 py-1 rounded text-xs font-medium border ${statusColors[demand.status as keyof typeof statusColors] || 'bg-gray-900/50 text-gray-300 border-gray-800'}`}>
                               {demand.status.replace('_', ' ').toUpperCase()}
                             </span>
@@ -750,7 +765,7 @@ export default async function DashboardPage() {
 
     const { data: todayAppointments } = await supabase
       .from('demands')
-      .select('id, status, appointment_date, customer_firstname, customer_lastname, vehicle_make, vehicle_model, vehicle_year, camera_model')
+      .select('id, demand_number, status, appointment_date, customer_firstname, customer_lastname, vehicle_make, vehicle_model, vehicle_year, camera_model')
       .eq('dealer_id', profile.dealer_id)
       .eq('status', 'approved')
       .gte('appointment_date', gmTodayStart)
@@ -869,6 +884,9 @@ export default async function DashboardPage() {
                           <p className="font-semibold text-white">
                             {demand.customer_firstname} {demand.customer_lastname}
                           </p>
+                          {(demand as { demand_number?: number }).demand_number != null && (
+                            <span className="text-xs font-medium text-gray-500">#{(demand as { demand_number?: number }).demand_number}</span>
+                          )}
                         </div>
                         <p className="text-sm text-gray-400">
                           {demand.vehicle_year} {demand.vehicle_make} {demand.vehicle_model}
@@ -922,6 +940,9 @@ export default async function DashboardPage() {
                             <p className="font-semibold text-white">
                               {demand.customer_firstname} {demand.customer_lastname}
                             </p>
+                            {(demand as { demand_number?: number }).demand_number != null && (
+                              <span className="text-xs font-medium text-gray-500">#{(demand as { demand_number?: number }).demand_number}</span>
+                            )}
                             <span className={`px-2 py-1 rounded text-xs font-medium border ${statusColors[demand.status as keyof typeof statusColors] || 'bg-gray-900/50 text-gray-300 border-gray-800'}`}>
                               {demand.status.replace('_', ' ').toUpperCase()}
                             </span>
