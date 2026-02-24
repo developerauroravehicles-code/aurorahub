@@ -35,7 +35,7 @@ export async function createDealer(formData: FormData): Promise<{ success: boole
       return { success: false, error: 'Missing fields' }
     }
 
-    const dealerData: { name: string; code: string; address?: string; phone?: string | null; region_code_id?: string } = { name, code, address: address || null, phone: phone?.trim() || null }
+    const dealerData: { name: string; code: string; address?: string; phone?: string; region_code_id?: string } = { name, code, address: address || undefined, phone: phone?.trim() || undefined }
     if (regionCodeId && regionCodeId !== 'none') {
       dealerData.region_code_id = regionCodeId
     }
