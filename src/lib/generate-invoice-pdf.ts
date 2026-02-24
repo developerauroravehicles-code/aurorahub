@@ -263,7 +263,12 @@ export function buildInvoicePdf(data: InvoiceRowData): jsPDF {
     bodyStyles: { fillColor: [248, 248, 248], textColor: [0, 0, 0], fontSize: 10 },
     tableLineColor: [200, 200, 200],
     tableLineWidth: 0.1,
-    rowStyles: totalRowIndex >= 0 ? { [totalRowIndex]: { fontStyle: 'bold', fillColor: [220, 220, 220] } } : {}
+    didParseCell: (data) => {
+      if (data.section === 'body' && data.row.index === totalRowIndex) {
+        data.cell.styles.fontStyle = 'bold'
+        data.cell.styles.fillColor = [220, 220, 220] as [number, number, number]
+      }
+    }
   })
   y = (doc as { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY ?? y
   y += 12
