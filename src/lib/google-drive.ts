@@ -92,9 +92,9 @@ export async function uploadInvoiceToDrive(
     return { success: false, error: 'Default Folder ID is required. Set it in System Management > API.' }
   }
 
-  let auth: google.auth.OAuth2 | ReturnType<typeof google.auth.GoogleAuth>
   const useOAuth = settings.useOAuth && settings.refreshToken && settings.clientId && settings.clientSecret
 
+  let auth
   if (useOAuth) {
     const oauth2 = new google.auth.OAuth2(settings.clientId, settings.clientSecret)
     oauth2.setCredentials({ refresh_token: settings.refreshToken })
