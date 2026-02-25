@@ -20,6 +20,8 @@ interface Demand {
   appointment_date: string
   dealers?: { name: string; region_codes?: { timezones?: { name: string } } } | null
   profiles?: { full_name: string } | null
+  assigned_specialist?: { full_name: string } | null
+  assigned_finance?: { full_name: string } | null
 }
 
 function getDealerTz(dealers: Demand['dealers']): string | null {
@@ -234,6 +236,10 @@ export function DemandsList({ demands }: DemandsListProps) {
                         </p>
                         <p className="text-xs text-gray-600 mt-1">
                           Dealer: {(demand.dealers as any)?.name || 'Unknown'} | Created by: {(demand.profiles as any)?.full_name || 'Unknown'}
+                          {' | Finance: '}
+                          {(demand.assigned_finance as any)?.full_name || '—'}
+                          {' | Specialist: '}
+                          {(demand.assigned_specialist as any)?.full_name || '—'}
                         </p>
                       </div>
                       <div>

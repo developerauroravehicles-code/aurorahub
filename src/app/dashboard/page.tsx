@@ -148,20 +148,28 @@ export default async function DashboardPage() {
     )
   }
 
-  // If finance user, fetch their statistics
+  // If finance user, fetch their statistics (only from their dealer)
   if (profile.role === 'finance') {
-    // Get all demands for statistics
-    const { data: allDemands } = await supabase
+    const dealerId = profile.dealer_id
+
+    // Get all demands from this dealer for statistics
+    const allDemandsQuery = supabase
       .from('demands')
       .select('id, status, created_at')
       .order('created_at', { ascending: false })
+    const { data: allDemands } = dealerId
+      ? await allDemandsQuery.eq('dealer_id', dealerId)
+      : await allDemandsQuery.eq('dealer_id', '00000000-0000-0000-0000-000000000000')
 
-    // Get assigned demands for this finance user (with dealer timezone for correct appointment display)
-    const { data: assignedDemandsRaw } = await supabase
+    // Get assigned demands for this finance user (from this dealer)
+    const assignedQuery = supabase
       .from('demands')
       .select('id, demand_number, status, created_at, customer_firstname, customer_lastname, vehicle_year, vehicle_make, vehicle_model, appointment_date, dealers(region_codes(timezone_id, timezones(name)))')
       .eq('assigned_finance_id', user.id)
       .order('created_at', { ascending: false })
+    const { data: assignedDemandsRaw } = dealerId
+      ? await assignedQuery.eq('dealer_id', dealerId)
+      : await assignedQuery.eq('dealer_id', '00000000-0000-0000-0000-000000000000')
     const assignedDemands = assignedDemandsRaw ?? []
 
     // Calculate statistics

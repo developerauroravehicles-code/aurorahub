@@ -8,6 +8,8 @@ import {
   DEFAULT_SMS_SETTINGS,
   SMS_PLACEHOLDERS,
 } from '@/lib/sms-settings'
+import { formatInTimeZone } from 'date-fns-tz'
+import { SYSTEM_DEFAULT_TIMEZONE } from '@/lib/timezone-defaults'
 import { Info, Send, History } from 'lucide-react'
 import { getDemandsForManualSms, getSmsLogs, sendManualSms, type DemandOption, type SmsLogEntry } from './actions'
 
@@ -33,6 +35,7 @@ export function SMSManagementContent() {
   const [smsLogs, setSmsLogs] = useState<SmsLogEntry[]>([])
   const [logsLoading, setLogsLoading] = useState(false)
   const [logFilters, setLogFilters] = useState({ dateFrom: '', dateTo: '', customerName: '' })
+  const [viewingLog, setViewingLog] = useState<SmsLogEntry | null>(null)
   const supabase = createClient()
 
   useEffect(() => {
@@ -442,16 +445,17 @@ export function SMSManagementContent() {
                 <th className="px-4 py-3 text-gray-400 font-medium">Phone</th>
                 <th className="px-4 py-3 text-gray-400 font-medium">Message type</th>
                 <th className="px-4 py-3 text-gray-400 font-medium">Trigger</th>
+                <th className="px-4 py-3 text-gray-400 font-medium w-24">Message</th>
               </tr>
             </thead>
             <tbody>
               {smsLogs.length === 0 && !logsLoading ? (
-                <tr><td colSpan={5} className="px-4 py-6 text-center text-gray-500">No logs yet. Send an SMS or click &quot;Apply filters&quot; to load.</td></tr>
+                <tr><td colSpan={6} className="px-4 py-6 text-center text-gray-500">No logs yet. Send an SMS or click &quot;Apply filters&quot; to load.</td></tr>
               ) : (
                 smsLogs.map((log) => (
                   <tr key={log.id} className="border-t border-gray-800 hover:bg-white/5">
                     <td className="px-4 py-2 text-gray-300">
-                      {new Date(log.sent_at).toLocaleString('en-CA', { dateStyle: 'short', timeStyle: 'short' })}
+                      {formatInTimeZone(new Date(log.sent_at), SYSTEM_DEFAULT_TIMEZONE, 'yyyy-MM-dd, h:mm a')}
                     </td>
                     <td className="px-4 py-2">
                       <span className="text-white">{log.recipient_name || '—'}</span>
@@ -464,12 +468,52 @@ export function SMSManagementContent() {
                         {log.triggered_by}
                       </span>
                     </td>
+                    <td className="px-4 py-2">
+                      <button
+                        type="button"
+                        onClick={() => setViewingLog(log)}
+                        className="text-[#C27E00] hover:underline text-sm font-medium"
+                      >
+                        View
+                      </button>
+                    </td>
                   </tr>
                 ))
               )}
             </tbody>
           </table>
         </div>
+
+        {/* Message content modal */}
+        {viewingLog && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+            onClick={() => setViewingLog(null)}
+          >
+            <div
+              className="bg-gray-900 border border-gray-700 rounded-lg max-w-lg w-full max-h-[80vh] overflow-hidden flex flex-col shadow-xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="px-4 py-3 border-b border-gray-700 flex justify-between items-center">
+                <h5 className="font-semibold text-white">
+                  Message — {viewingLog.recipient_name || '—'} ({viewingLog.message_type.replace(/_/g, ' ')})
+                </h5>
+                <button
+                  type="button"
+                  onClick={() => setViewingLog(null)}
+                  className="text-gray-400 hover:text-white text-2xl leading-none"
+                >
+                  ×
+                </button>
+              </div>
+              <div className="p-4 overflow-y-auto flex-1">
+                <pre className="text-sm text-gray-300 whitespace-pre-wrap break-words font-sans">
+                  {viewingLog.message_content ?? 'Message content was not recorded for this log entry.'}
+                </pre>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Actions */}

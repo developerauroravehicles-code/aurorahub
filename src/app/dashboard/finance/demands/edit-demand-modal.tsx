@@ -4,8 +4,8 @@ import { useState, useEffect } from 'react'
 import { updateDemand, revertDemandToPending } from './actions'
 import { getAvailableSlotsForEdit } from '@/app/dashboard/system-management/calendar/actions'
 import { useRouter } from 'next/navigation'
-import { format } from 'date-fns'
 import { formatInTimeZone } from 'date-fns-tz'
+import { SYSTEM_DEFAULT_TIMEZONE } from '@/lib/timezone-defaults'
 import { VEHICLE_MAKES_CA } from '@/lib/vehicle-makes'
 import { getModelsForMake, getTrimsForModel } from '@/lib/vehicle-models'
 
@@ -53,7 +53,7 @@ export function EditDemandModal({ demand, isOpen, onClose }: EditDemandModalProp
     camera_model: demand.camera_model,
   })
   const initialAppointment = new Date(demand.appointment_date)
-  const [selectedDate, setSelectedDate] = useState(() => format(initialAppointment, 'yyyy-MM-dd'))
+  const [selectedDate, setSelectedDate] = useState(() => formatInTimeZone(initialAppointment, SYSTEM_DEFAULT_TIMEZONE, 'yyyy-MM-dd'))
   const [selectedSlot, setSelectedSlot] = useState<string>(() => demand.appointment_date)
   const [availableSlots, setAvailableSlots] = useState<string[]>([])
   const [slotsTimezone, setSlotsTimezone] = useState<string | null>(null)
@@ -73,7 +73,7 @@ export function EditDemandModal({ demand, isOpen, onClose }: EditDemandModalProp
         camera_model: demand.camera_model,
       })
       const d = new Date(demand.appointment_date)
-      setSelectedDate(format(d, 'yyyy-MM-dd'))
+      setSelectedDate(formatInTimeZone(d, SYSTEM_DEFAULT_TIMEZONE, 'yyyy-MM-dd'))
       setSelectedSlot(demand.appointment_date)
       setError(null)
     }
@@ -90,7 +90,7 @@ export function EditDemandModal({ demand, isOpen, onClose }: EditDemandModalProp
         setAvailableSlots(slots)
         setSlotsTimezone(timezoneName)
         setSelectedSlot(prev => {
-          const prevDate = prev ? format(new Date(prev), 'yyyy-MM-dd') : ''
+          const prevDate = prev ? formatInTimeZone(new Date(prev), SYSTEM_DEFAULT_TIMEZONE, 'yyyy-MM-dd') : ''
           if (prevDate === selectedDate && slots.includes(prev)) return prev
           if (slots.length > 0) return slots[0]
           return ''
@@ -367,7 +367,7 @@ export function EditDemandModal({ demand, isOpen, onClose }: EditDemandModalProp
                       type="date"
                       value={selectedDate}
                       onChange={(e) => setSelectedDate(e.target.value)}
-                      min={format(new Date(), 'yyyy-MM-dd')}
+                      min={formatInTimeZone(new Date(), SYSTEM_DEFAULT_TIMEZONE, 'yyyy-MM-dd')}
                       className="w-full max-w-xs border border-gray-700 bg-black/50 py-2 px-3 rounded text-white focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00] [color-scheme:dark]"
                     />
                   </div>
@@ -380,9 +380,7 @@ export function EditDemandModal({ demand, isOpen, onClose }: EditDemandModalProp
                     ) : (
                       <div className="flex flex-wrap gap-2">
                         {availableSlots.map(slot => {
-                          const label = slotsTimezone
-                            ? formatInTimeZone(new Date(slot), slotsTimezone, 'h:mm a')
-                            : format(new Date(slot), 'h:mm a')
+                          const label = formatInTimeZone(new Date(slot), slotsTimezone ?? SYSTEM_DEFAULT_TIMEZONE, 'h:mm a')
                           return (
                             <button
                               key={slot}

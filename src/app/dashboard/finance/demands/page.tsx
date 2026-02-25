@@ -9,29 +9,57 @@ export default async function FinanceDemandsPage() {
   
   if (!user) return null
 
-  // Get unassigned demands (demand pool) — dealer timezone for correct appointment display
-  const { data: unassignedDemandsRaw } = await supabase
+  const { data: profile } = await supabase.from('profiles').select('dealer_id').eq('id', user.id).single()
+  const dealerId = profile?.dealer_id
+
+  const demandSelect = '*, dealers(name, region_codes(timezone_id, timezones(name))), profiles!demands_assigned_finance_id_fkey(full_name)'
+  const demandSelectShort = 'id, demand_number, status, created_at, dealer_id, customer_firstname, customer_lastname, customer_phone, customer_address, vehicle_make, vehicle_model, vehicle_year, stock_number, camera_model, appointment_date, assigned_specialist_id, dealers(name, region_codes(timezone_id, timezones(name))), profiles!demands_assigned_finance_id_fkey(full_name)'
+
+  // Finance sees all demands from their dealer (bayi). If no dealer_id, show empty.
+
+  // Get unassigned demands from this dealer
+  const unassignedQuery = supabase
     .from('demands')
-    .select('*, dealers(name, region_codes(timezone_id, timezones(name))), profiles!demands_assigned_finance_id_fkey(full_name)')
+    .select(demandSelect)
     .eq('status', 'pending_finance')
     .is('assigned_finance_id', null)
     .order('created_at', { ascending: true })
+  const { data: unassignedDemandsRaw } = dealerId
+    ? await unassignedQuery.eq('dealer_id', dealerId)
+    : await unassignedQuery.eq('dealer_id', '00000000-0000-0000-0000-000000000000') // no dealer = empty
 
-  // Get assigned demands for current user (with dealer timezone for correct appointment display)
-  const { data: myAssignedDemandsRaw } = await supabase
+  // Get assigned demands for current user (from this dealer)
+  const myAssignedQuery = supabase
     .from('demands')
-    .select('id, demand_number, status, created_at, dealer_id, customer_firstname, customer_lastname, customer_phone, customer_address, vehicle_make, vehicle_model, vehicle_year, stock_number, camera_model, appointment_date, assigned_specialist_id, dealers(name, region_codes(timezone_id, timezones(name))), profiles!demands_assigned_finance_id_fkey(full_name)')
+    .select(demandSelectShort)
     .eq('assigned_finance_id', user.id)
     .in('status', ['pending_finance', 'approved'])
     .order('created_at', { ascending: true })
+  const { data: myAssignedDemandsRaw } = dealerId
+    ? await myAssignedQuery.eq('dealer_id', dealerId)
+    : await myAssignedQuery.eq('dealer_id', '00000000-0000-0000-0000-000000000000')
 
-  // Get all assigned demands (for reference) — dealer timezone for correct appointment display
-  const { data: allAssignedDemandsRaw } = await supabase
+  // Get all other assigned demands (assigned to other finance, from this dealer) - pending_finance and approved
+  const allAssignedQuery = supabase
     .from('demands')
-    .select('*, dealers(name, region_codes(timezone_id, timezones(name))), profiles!demands_assigned_finance_id_fkey(full_name)')
-    .eq('status', 'pending_finance')
+    .select(demandSelect)
+    .in('status', ['pending_finance', 'approved'])
     .not('assigned_finance_id', 'is', null)
+    .neq('assigned_finance_id', user.id) // exclude my own (they're in myAssigned)
     .order('created_at', { ascending: true })
+  const { data: allAssignedDemandsRaw } = dealerId
+    ? await allAssignedQuery.eq('dealer_id', dealerId)
+    : await allAssignedQuery.eq('dealer_id', '00000000-0000-0000-0000-000000000000')
+
+  // Get completed demands from this dealer (for visibility)
+  const completedQuery = supabase
+    .from('demands')
+    .select(demandSelect)
+    .eq('status', 'completed')
+    .order('created_at', { ascending: false })
+  const { data: completedDemandsRaw } = dealerId
+    ? await completedQuery.eq('dealer_id', dealerId)
+    : await completedQuery.eq('dealer_id', '00000000-0000-0000-0000-000000000000')
 
   // Transform data — keep dealers with region_codes/timezone for correct appointment display
   const transformDemand = (demand: any) => {
@@ -52,6 +80,7 @@ export default async function FinanceDemandsPage() {
   const unassignedDemands = unassignedDemandsRaw?.map(transformDemand) || []
   const myAssignedDemands = myAssignedDemandsRaw?.map(transformDemand) || []
   const allAssignedDemands = allAssignedDemandsRaw?.map(transformDemand) || []
+  const completedDemands = completedDemandsRaw?.map(transformDemand) || []
 
   return (
     <div className="space-y-8">
@@ -73,6 +102,7 @@ export default async function FinanceDemandsPage() {
         myAssignedDemands={myAssignedDemands || []}
         unassignedDemands={unassignedDemands || []}
         allAssignedDemands={allAssignedDemands || []}
+        completedDemands={completedDemands || []}
       />
     </div>
   )

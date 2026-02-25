@@ -3,7 +3,9 @@ import { redirect } from 'next/navigation'
 import { Sidebar } from './sidebar'
 import { ErrorSignOut } from './error-signout'
 import { BackgroundLogo } from '@/components/background-logo'
-import { DealerClock } from '@/components/dealer-clock'
+import { TimezoneProvider } from '@/contexts/timezone-context'
+import { SystemTimeProvider } from '@/contexts/system-time-context'
+import { SYSTEM_DEFAULT_TIMEZONE } from '@/lib/timezone-defaults'
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
@@ -30,35 +32,27 @@ export default async function DashboardLayout({ children }: { children: React.Re
       )
   }
 
-  // Fetch dealer timezone if user has a dealer_id
-  let timezoneName: string | null = null
-  let timezoneDisplayName: string | undefined = undefined
-  
-  if (profile.dealer_id) {
-    const { data: dealer } = await supabase
-      .from('dealers')
-      .select('region_codes(timezone_id, timezones(name, display_name))')
-      .eq('id', profile.dealer_id)
-      .single()
-    
-    if (dealer?.region_codes && (dealer.region_codes as any).timezones) {
-      timezoneName = (dealer.region_codes as any).timezones.name
-      timezoneDisplayName = (dealer.region_codes as any).timezones.display_name
-    }
-  }
+  // System uses Pacific Time (PT) as base - sidebar clock and calendar use this
+  // Dealer timezone is for display of dealer-specific data only (appointment times in lists, etc.)
+  const systemTimezone = SYSTEM_DEFAULT_TIMEZONE
+  const systemTimezoneDisplayName = 'Pacific Time (PT)'
 
   return (
-    <div className="flex h-screen bg-black text-white relative overflow-hidden">
-      <Sidebar 
-        profile={profile} 
-        timezoneName={timezoneName}
-        timezoneDisplayName={timezoneDisplayName}
-      />
-      <main className="flex-1 overflow-y-auto p-8 bg-black relative z-10">
-        {children}
-      </main>
-      <BackgroundLogo />
-    </div>
+    <SystemTimeProvider>
+      <div className="flex h-screen bg-black text-white relative overflow-hidden">
+        <Sidebar 
+          profile={profile} 
+          timezoneName={systemTimezone}
+          timezoneDisplayName={systemTimezoneDisplayName}
+        />
+        <TimezoneProvider timezoneName={systemTimezone}>
+          <main className="flex-1 overflow-y-auto p-8 bg-black relative z-10">
+            {children}
+          </main>
+        </TimezoneProvider>
+        <BackgroundLogo />
+      </div>
+    </SystemTimeProvider>
   )
 }
 

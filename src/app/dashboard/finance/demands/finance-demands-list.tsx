@@ -45,9 +45,10 @@ interface FinanceDemandsListProps {
   myAssignedDemands: Demand[]
   unassignedDemands: Demand[]
   allAssignedDemands: Demand[]
+  completedDemands?: Demand[]
 }
 
-export function FinanceDemandsList({ myAssignedDemands, unassignedDemands, allAssignedDemands }: FinanceDemandsListProps) {
+export function FinanceDemandsList({ myAssignedDemands, unassignedDemands, allAssignedDemands, completedDemands = [] }: FinanceDemandsListProps) {
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [dateFilter, setDateFilter] = useState<string>('all')
   const [searchType, setSearchType] = useState<'customer' | 'demand_id'>('customer')
@@ -113,6 +114,7 @@ export function FinanceDemandsList({ myAssignedDemands, unassignedDemands, allAs
   const filteredMyAssigned = useMemo(() => filterDemands(myAssignedDemands), [myAssignedDemands, statusFilter, dateFilter, searchType, searchValue])
   const filteredUnassigned = useMemo(() => filterDemands(unassignedDemands), [unassignedDemands, statusFilter, dateFilter, searchType, searchValue])
   const filteredAllAssigned = useMemo(() => filterDemands(allAssignedDemands), [allAssignedDemands, statusFilter, dateFilter, searchType, searchValue])
+  const filteredCompleted = useMemo(() => filterDemands(completedDemands), [completedDemands, statusFilter, dateFilter, searchType, searchValue])
 
   const hasActiveFilters = statusFilter !== 'all' || dateFilter !== 'all' || searchValue.trim() !== ''
 
@@ -190,6 +192,7 @@ export function FinanceDemandsList({ myAssignedDemands, unassignedDemands, allAs
                 <option value="all" className="bg-black">All Status</option>
                 <option value="pending_finance" className="bg-black">Pending Finance</option>
                 <option value="approved" className="bg-black">Approved</option>
+                <option value="completed" className="bg-black">Completed</option>
               </select>
             </div>
 
@@ -331,6 +334,52 @@ export function FinanceDemandsList({ myAssignedDemands, unassignedDemands, allAs
           )}
         </div>
       </div>
+
+      {/* Completed Demands */}
+      {filteredCompleted.length > 0 && (
+        <div>
+          <h2 className="text-xl font-semibold text-white mb-4">
+            Completed ({filteredCompleted.length})
+          </h2>
+          <div className="bg-white/5 rounded-lg border border-gray-800 shadow overflow-hidden">
+            <ul className="divide-y divide-gray-800">
+              {filteredCompleted.map(demand => (
+                <li key={demand.id} className="p-4 sm:px-6 hover:bg-white/5 transition-colors">
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-2">
+                        <p className="text-lg font-medium text-gray-400">
+                          {demand.customer_firstname} {demand.customer_lastname}
+                        </p>
+                        {demand.demand_number != null && (
+                          <span className="text-xs font-medium text-gray-500">#{demand.demand_number}</span>
+                        )}
+                        <span className="px-2 py-1 rounded text-xs font-medium bg-green-900/50 text-green-300 border border-green-800">
+                          COMPLETED
+                        </span>
+                        {demand.profiles && (
+                          <span className="text-xs text-gray-500">
+                            Finance: {(demand.profiles as any)?.full_name || '—'}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-sm text-gray-500">
+                        {demand.vehicle_year} {demand.vehicle_make} {demand.vehicle_model}
+                      </p>
+                      <p className="text-sm text-gray-500">
+                        Appointment: {formatAppointment(demand.appointment_date, demand.dealers)}
+                      </p>
+                      <p className="text-sm text-gray-600 mt-1">
+                        Dealer: {(Array.isArray(demand.dealers) ? demand.dealers[0] : demand.dealers)?.name}
+                      </p>
+                    </div>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      )}
 
       {/* Other Assigned Demands (for reference) */}
       {filteredAllAssigned.length > 0 && (

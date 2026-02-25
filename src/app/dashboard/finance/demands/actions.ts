@@ -6,6 +6,7 @@ import { logSmsSent } from '@/lib/sms-logger'
 import { getSmsSettings } from '@/lib/sms-resolver'
 import { resolveAppointmentCreatedTemplate, resolveCancellationTemplate, resolveReminderTemplate } from '@/lib/sms-resolver'
 import { validateAppointmentSlot } from '@/app/dashboard/system-management/calendar/actions'
+import { getTimezoneFromDealer } from '@/lib/dealer-timezone'
 
 export async function assignDemandToMe(demandId: string) {
   const supabase = await createClient()
@@ -159,6 +160,7 @@ export async function approveDemand(demandId: string, sendSMSToCustomer: boolean
           demandId,
           messageType: 'appointment_created',
           triggeredBy: 'system',
+          messageContent: message,
         }).catch(() => {})
       }
     } catch (smsError) {
@@ -199,6 +201,7 @@ export async function approveDemand(demandId: string, sendSMSToCustomer: boolean
             demandId,
             messageType: 'appointment_created',
             triggeredBy: 'system',
+            messageContent: message,
           }).catch(() => {})
         }
       }
@@ -258,6 +261,7 @@ export async function cancelDemand(demandId: string) {
             demandId,
             messageType: 'cancellation_notice',
             triggeredBy: 'system',
+            messageContent: message,
           }).catch(() => {})
         }
       } catch (smsError) {
@@ -281,6 +285,7 @@ export async function cancelDemand(demandId: string) {
               demandId,
               messageType: 'cancellation_notice',
               triggeredBy: 'system',
+              messageContent: message,
             }).catch(() => {})
           }
         }
@@ -315,7 +320,7 @@ export async function updateDemand(demandId: string, formData: FormData) {
   // Check if demand is assigned to current user
   const { data: demand } = await supabase
     .from('demands')
-    .select('assigned_finance_id, status, appointment_date, customer_phone, customer_firstname, customer_lastname, dealer_id, assigned_specialist_id')
+    .select('assigned_finance_id, status, appointment_date, customer_phone, customer_firstname, customer_lastname, dealer_id, assigned_specialist_id, dealers(region_codes(timezone_id, timezones(name)))')
     .eq('id', demandId)
     .single()
 
@@ -386,9 +391,12 @@ export async function updateDemand(demandId: string, formData: FormData) {
   const smsSettings = await getSmsSettings()
   const rn = smsSettings.rescheduling_notice
   if (rn.enabled && appointmentDateChanged && (rn.sendToCustomer || rn.sendToSpecialist)) {
+    const timezoneName = getTimezoneFromDealer(demand.dealers as Parameters<typeof getTimezoneFromDealer>[0]) ?? undefined
     const message = resolveCancellationTemplate(rn.template, {
       phone: smsSettings.contactPhone,
       signature: smsSettings.signature,
+      appointmentDate: new Date(appointmentDate),
+      timezoneName,
     })
     if (rn.sendToCustomer && demand.customer_phone) {
       try {
@@ -401,6 +409,7 @@ export async function updateDemand(demandId: string, formData: FormData) {
             demandId,
             messageType: 'rescheduling_notice',
             triggeredBy: 'system',
+            messageContent: message,
           }).catch(() => {})
         }
       } catch (smsError) {
@@ -424,6 +433,7 @@ export async function updateDemand(demandId: string, formData: FormData) {
               demandId,
               messageType: 'rescheduling_notice',
               triggeredBy: 'system',
+              messageContent: message,
             }).catch(() => {})
           }
         }

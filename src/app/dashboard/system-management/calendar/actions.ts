@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { formatInTimeZone, fromZonedTime } from 'date-fns-tz'
+import { SYSTEM_DEFAULT_TIMEZONE } from '@/lib/timezone-defaults'
 import { getSlotMinutesFromConfig, CALENDAR_DEFAULTS } from '@/lib/calendar-defaults'
 
 export async function createCalendarSetting(formData: FormData) {
@@ -300,16 +301,15 @@ export async function validateAppointmentSlot(
 
   const { data: dealer } = await supabase
     .from('dealers')
-    .select('id, region_codes(timezone_id, timezones(name))')
+    .select('id')
     .eq('id', dealerId)
     .single()
   if (!dealer) return { valid: false, error: 'Dealer not found' }
-  const timezoneName = (dealer.region_codes as { timezone_id?: string; timezones?: { name: string } } | null)?.timezones?.name ?? null
-  if (!timezoneName) return { valid: false, error: 'Dealer timezone not set' }
 
-  const dateStr = formatInTimeZone(slotTime, timezoneName, 'yyyy-MM-dd')
-  const startMinutes = parseInt(formatInTimeZone(slotTime, timezoneName, 'H'), 10) * 60 +
-    parseInt(formatInTimeZone(slotTime, timezoneName, 'm'), 10)
+  // Appointments stored as Pacific Time (PT)
+  const dateStr = formatInTimeZone(slotTime, SYSTEM_DEFAULT_TIMEZONE, 'yyyy-MM-dd')
+  const startMinutes = parseInt(formatInTimeZone(slotTime, SYSTEM_DEFAULT_TIMEZONE, 'H'), 10) * 60 +
+    parseInt(formatInTimeZone(slotTime, SYSTEM_DEFAULT_TIMEZONE, 'm'), 10)
   const duration = CALENDAR_DEFAULTS.appointmentDurationMinutes
   const endMinutes = startMinutes + duration
 
@@ -352,6 +352,17 @@ export async function validateAppointmentSlot(
     return { valid: false, error: 'Selected slot is closed for this dealer.' }
   }
 
+  // Reject past dates and past slots - system base = Pacific (PT)
+  const now = new Date()
+  const slotDateInPacific = formatInTimeZone(slotTime, SYSTEM_DEFAULT_TIMEZONE, 'yyyy-MM-dd')
+  const todayInPacific = formatInTimeZone(now, SYSTEM_DEFAULT_TIMEZONE, 'yyyy-MM-dd')
+  if (slotDateInPacific < todayInPacific) {
+    return { valid: false, error: 'Cannot create appointments for past dates. Please select today or a future date.' }
+  }
+  if (slotDateInPacific === todayInPacific && slotTime.getTime() <= now.getTime()) {
+    return { valid: false, error: 'This time slot has already passed. Please select a future time.' }
+  }
+
   return { valid: true }
 }
 
@@ -387,6 +398,9 @@ export async function getAvailableSlotsForEdit(
   const { getTimezoneFromDealer } = await import('@/lib/dealer-timezone')
   const timezoneName = getTimezoneFromDealer(dealer as Parameters<typeof getTimezoneFromDealer>[0]) ?? null
 
+  // Appointments stored as Pacific Time (PT); slots generated in PT
+  const ptTz = SYSTEM_DEFAULT_TIMEZONE
+
   const { data: settings } = await supabase
     .from('dealer_calendar_settings')
     .select('start_hour, end_hour, slot_interval_minutes, appointment_duration_minutes')
@@ -408,31 +422,23 @@ export async function getAvailableSlotsForEdit(
   for (const startMinutes of slotMinutes) {
     const h = Math.floor(startMinutes / 60)
     const m = startMinutes % 60
-    if (timezoneName) {
-      const dateInTz = new Date(y, mo - 1, d, h, m, 0)
-      slots.push(fromZonedTime(dateInTz, timezoneName).toISOString())
-    } else {
-      slots.push(new Date(y, mo - 1, d, h, m, 0).toISOString())
-    }
+    const dateInPT = new Date(y, mo - 1, d, h, m, 0)
+    slots.push(fromZonedTime(dateInPT, ptTz).toISOString())
   }
 
   const blocks = await getDealerBlocksForDate(dealerId, dateStr)
   let availableSlots = slots.filter(slot => {
-    if (blocks.length === 0 || !timezoneName) return true
+    if (blocks.length === 0) return true
     const slotTime = new Date(slot)
-    const slotStartMinutes = parseInt(formatInTimeZone(slotTime, timezoneName, 'H'), 10) * 60 +
-      parseInt(formatInTimeZone(slotTime, timezoneName, 'm'), 10)
+    const slotStartMinutes = parseInt(formatInTimeZone(slotTime, ptTz, 'H'), 10) * 60 +
+      parseInt(formatInTimeZone(slotTime, ptTz, 'm'), 10)
     const slotEndMinutes = slotStartMinutes + duration
     const inBlock = blocks.some(b => slotStartMinutes < b.end_minutes && slotEndMinutes > b.start_minutes)
     return !inBlock
   })
 
-  const startOfDayISO = timezoneName
-    ? fromZonedTime(new Date(y, mo - 1, d, 0, 0, 0), timezoneName).toISOString()
-    : new Date(y, mo - 1, d, 0, 0, 0).toISOString()
-  const endOfDayISO = timezoneName
-    ? fromZonedTime(new Date(y, mo - 1, d, 23, 59, 59, 999), timezoneName).toISOString()
-    : new Date(y, mo - 1, d, 23, 59, 59, 999).toISOString()
+  const startOfDayISO = fromZonedTime(new Date(y, mo - 1, d, 0, 0, 0), ptTz).toISOString()
+  const endOfDayISO = fromZonedTime(new Date(y, mo - 1, d, 23, 59, 59, 999), ptTz).toISOString()
   let query = supabase
     .from('demands')
     .select('appointment_date')
@@ -456,6 +462,13 @@ export async function getAvailableSlotsForEdit(
     }
     return true
   })
+
+  // Filter out past slots for today - system base = Pacific (PT)
+  const now = Date.now()
+  const todayInPacific = formatInTimeZone(new Date(), SYSTEM_DEFAULT_TIMEZONE, 'yyyy-MM-dd')
+  if (dateStr === todayInPacific) {
+    availableSlots = availableSlots.filter(slot => new Date(slot).getTime() > now)
+  }
 
   return { slots: availableSlots, timezoneName }
 }

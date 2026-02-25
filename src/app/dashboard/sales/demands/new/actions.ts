@@ -117,12 +117,12 @@ export async function createDemand(prevState: ActionState, formData: FormData) {
 
 /**
  * Get appointment times already taken on a date (for that dealer).
- * When timezoneName is provided, the date is interpreted in the dealer's timezone so the same calendar day is used as in the slot list.
+ * Appointments are stored as Pacific Time (PT). dateStr is in Pacific (from calendar).
  */
 export async function getTakenSlots(
   dateStr: string,
   dealerId?: string | null,
-  timezoneName?: string | null
+  _timezoneName?: string | null
 ) {
   const supabase = await createClient()
   const match = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})/)
@@ -130,20 +130,10 @@ export async function getTakenSlots(
   const m = match ? parseInt(match[2], 10) : 1
   const d = match ? parseInt(match[3], 10) : 1
 
-  let start: string
-  let end: string
-  if (timezoneName) {
-    const startInTz = new Date(y, m - 1, d, 0, 0, 0)
-    const endInTz = new Date(y, m - 1, d, 23, 59, 59, 999)
-    start = fromZonedTime(startInTz, timezoneName).toISOString()
-    end = fromZonedTime(endInTz, timezoneName).toISOString()
-    } else {
-      const [y, mo, d] = dateStr.split(/[T\s]/)[0].split('-').map(Number)
-      const startInTz = new Date(y, (mo || 1) - 1, d || 1, 0, 0, 0)
-      const endInTz = new Date(y, (mo || 1) - 1, d || 1, 23, 59, 59, 999)
-      start = fromZonedTime(startInTz, SYSTEM_DEFAULT_TIMEZONE).toISOString()
-      end = fromZonedTime(endInTz, SYSTEM_DEFAULT_TIMEZONE).toISOString()
-    }
+  const startInPT = new Date(y, m - 1, d, 0, 0, 0)
+  const endInPT = new Date(y, m - 1, d, 23, 59, 59, 999)
+  const start = fromZonedTime(startInPT, SYSTEM_DEFAULT_TIMEZONE).toISOString()
+  const end = fromZonedTime(endInPT, SYSTEM_DEFAULT_TIMEZONE).toISOString()
 
   let query = supabase
     .from('demands')
@@ -211,23 +201,10 @@ export async function isTimeSlotTaken(
     const requestedStart = requestedTime.getTime()
     const requestedEnd = requestedStart + 75 * 60 * 1000
 
-    let dayStart: string
-    let dayEnd: string
-    if (timezoneName) {
-      const dateStr = formatInTimeZone(requestedTime, timezoneName, 'yyyy-MM-dd')
-      const [y, mo, d] = dateStr.split('-').map(Number)
-      const startInTz = new Date(y, mo - 1, d, 0, 0, 0)
-      const endInTz = new Date(y, mo - 1, d, 23, 59, 59, 999)
-      dayStart = fromZonedTime(startInTz, timezoneName).toISOString()
-      dayEnd = fromZonedTime(endInTz, timezoneName).toISOString()
-    } else {
-      const dateStr = formatInTimeZone(requestedTime, SYSTEM_DEFAULT_TIMEZONE, 'yyyy-MM-dd')
-      const [y, mo, d] = dateStr.split('-').map(Number)
-      const startInTz = new Date(y, mo - 1, d, 0, 0, 0)
-      const endInTz = new Date(y, mo - 1, d, 23, 59, 59, 999)
-      dayStart = fromZonedTime(startInTz, SYSTEM_DEFAULT_TIMEZONE).toISOString()
-      dayEnd = fromZonedTime(endInTz, SYSTEM_DEFAULT_TIMEZONE).toISOString()
-    }
+    const dateStr = formatInTimeZone(requestedTime, SYSTEM_DEFAULT_TIMEZONE, 'yyyy-MM-dd')
+    const [y, mo, d] = dateStr.split('-').map(Number)
+    const dayStart = fromZonedTime(new Date(y, mo - 1, d, 0, 0, 0), SYSTEM_DEFAULT_TIMEZONE).toISOString()
+    const dayEnd = fromZonedTime(new Date(y, mo - 1, d, 23, 59, 59, 999), SYSTEM_DEFAULT_TIMEZONE).toISOString()
 
     const { data, error } = await supabase
         .from('demands')

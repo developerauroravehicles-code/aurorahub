@@ -1,11 +1,12 @@
 import { createClient } from '@/lib/supabase/server'
+import type { SupabaseClient } from '@supabase/supabase-js'
 import { formatInTimeZone } from 'date-fns-tz'
 import { getEffectiveTimezone } from './timezone-defaults'
 import type { SMSSettings } from './sms-settings'
 import { DEFAULT_SMS_SETTINGS } from './sms-settings'
 
-export async function getSmsSettings(): Promise<SMSSettings> {
-  const supabase = await createClient()
+export async function getSmsSettings(supabaseClient?: SupabaseClient): Promise<SMSSettings> {
+  const supabase = supabaseClient ?? (await createClient())
   const { data } = await supabase
     .from('system_settings')
     .select('value')
@@ -43,11 +44,17 @@ export function resolveAppointmentCreatedTemplate(
 /** Resolve template for cancellation/rescheduling */
 export function resolveCancellationTemplate(
   template: string,
-  opts: { phone: string; signature: string }
+  opts: { phone: string; signature: string; appointmentDate?: Date; timezoneName?: string }
 ): string {
-  return template
+  let result = template
     .replace(/\{\{phone\}\}/g, opts.phone)
     .replace(/\{\{signature\}\}/g, opts.signature)
+  if (opts.appointmentDate) {
+    const tz = getEffectiveTimezone(opts.timezoneName ?? null)
+    const dateStr = formatInTimeZone(opts.appointmentDate, tz, "MMMM d, yyyy 'at' h:mm a")
+    result = result.replace(/\{\{date\}\}/g, dateStr)
+  }
+  return result
 }
 
 /** Resolve template for 4-hour reminder */

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { sendSMS } from '@/lib/twilio'
 import { isWithin4HoursBeforeWindow } from '@/lib/sms-messages'
 import { getSmsSettings } from '@/lib/sms-resolver'
@@ -12,26 +12,38 @@ import { logSmsSent } from '@/lib/sms-logger'
  * Called by cron every hour at the top of the hour.
  * Sends reminder exactly ~4 hours before each appointment in dealer local time
  * (e.g. 11:00 dealer time → send when it's ~07:00 dealer time).
- * Candidates: approved appointments in the next 0–6h; send only if 3.5h–4.5h before (by dealer time).
+ * Candidates: approved appointments in the next 0–7h; send only if 3.5h–4.5h before.
+ * Requires CRON_SECRET in env; Vercel sends it as Authorization: Bearer <secret>.
+ * Query param ?secret=<CRON_SECRET> also accepted for external cron services.
  */
 export async function GET(request: Request) {
+  const expectedSecret = process.env.CRON_SECRET
   const authHeader = request.headers.get('authorization')
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const url = new URL(request.url)
+  const querySecret = url.searchParams.get('secret')
+  const isAuthorized =
+    expectedSecret &&
+    (authHeader === `Bearer ${expectedSecret}` || querySecret === expectedSecret)
+  if (!isAuthorized) {
+    return NextResponse.json(
+      { error: 'Unauthorized. Set CRON_SECRET in Vercel env vars.' },
+      { status: 401 }
+    )
   }
 
   try {
-    const supabase = await createClient()
+    const supabase = createAdminClient()
     const now = new Date()
-    const sixHoursFromNow = new Date(now.getTime() + 6 * 60 * 60 * 1000)
+    const sevenHoursFromNow = new Date(now.getTime() + 7 * 60 * 60 * 1000)
 
-    // Fetch approved appointments in the next 6 hours (candidates); actual "4h before" is decided per dealer time below
+    // Fetch approved appointments in the next 7 hours that haven't received reminder yet
     const { data: demands, error } = await supabase
       .from('demands')
-      .select('id, appointment_date, customer_phone, customer_firstname, customer_lastname, customer_address, status, dealer_id, assigned_specialist_id, dealers(region_codes(timezone_id, timezones(name)))')
+      .select('id, appointment_date, customer_phone, customer_firstname, customer_lastname, customer_address, status, dealer_id, assigned_specialist_id, reminder_sent_at, dealers(region_codes(timezone_id, timezones(name)))')
       .eq('status', 'approved')
       .gte('appointment_date', now.toISOString())
-      .lte('appointment_date', sixHoursFromNow.toISOString())
+      .lte('appointment_date', sevenHoursFromNow.toISOString())
+      .is('reminder_sent_at', null)
       .not('customer_phone', 'is', null)
 
     if (error) {
@@ -54,10 +66,10 @@ export async function GET(request: Request) {
       const appointmentDate = new Date(demand.appointment_date)
       const timezoneName = getTimezoneFromDealer(demand.dealers as Parameters<typeof getTimezoneFromDealer>[0]) ?? null
 
-      // Only send if we're in the 3.5h–4.5h-before window (same in any TZ; dealer TZ used for consistency)
+      // Only send if we're in the 3.5h–4.5h-before window (dealer time: e.g. 11:00 appointment → send at ~07:00 dealer time)
       if (!isWithin4HoursBeforeWindow(appointmentDate, timezoneName)) continue
 
-      const smsSettings = await getSmsSettings()
+      const smsSettings = await getSmsSettings(supabase)
       const rh = smsSettings.four_hour_reminder
       if (!rh.enabled) continue
       if (!rh.sendToCustomer && !rh.sendToSpecialist) continue
@@ -69,12 +81,15 @@ export async function GET(request: Request) {
         signature: smsSettings.signature,
       })
 
+      let sentForThisDemand = false
+
       // Send to customer (same message as specialist)
       if (rh.sendToCustomer && demand.customer_phone) {
         try {
           const result = await sendSMS(demand.customer_phone, message)
           if (result.success) {
             sentCount++
+            sentForThisDemand = true
             logSmsSent({
               phoneNumber: demand.customer_phone,
               recipientType: 'customer',
@@ -82,7 +97,8 @@ export async function GET(request: Request) {
               demandId: demand.id,
               messageType: 'four_hour_reminder',
               triggeredBy: 'system',
-            }).catch(() => {})
+              messageContent: message,
+            }, supabase).catch(() => {})
             console.log(`Reminder sent to customer ${demand.customer_phone} for appointment ${demand.id}`)
           } else {
             errorCount++
@@ -106,6 +122,7 @@ export async function GET(request: Request) {
             const result = await sendSMS(specialist.phone, message)
             if (result.success) {
               sentCount++
+              sentForThisDemand = true
               logSmsSent({
                 phoneNumber: specialist.phone,
                 recipientType: 'specialist',
@@ -113,7 +130,8 @@ export async function GET(request: Request) {
                 demandId: demand.id,
                 messageType: 'four_hour_reminder',
                 triggeredBy: 'system',
-              }).catch(() => {})
+                messageContent: message,
+              }, supabase).catch(() => {})
               console.log(`Reminder sent to specialist ${specialist.phone} for appointment ${demand.id}`)
             } else {
               errorCount++
@@ -124,6 +142,14 @@ export async function GET(request: Request) {
           errorCount++
           console.error(`Error sending reminder to specialist for appointment ${demand.id}:`, error)
         }
+      }
+
+      // Mark reminder sent to prevent duplicates (only if we successfully sent to at least one recipient)
+      if (sentForThisDemand) {
+        await supabase
+          .from('demands')
+          .update({ reminder_sent_at: new Date().toISOString() })
+          .eq('id', demand.id)
       }
     }
 

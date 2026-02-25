@@ -2,14 +2,20 @@ import { fromZonedTime } from 'date-fns-tz'
 import { formatInTimeZone } from 'date-fns-tz'
 
 /**
- * System default timezone: Pacific Time (PST/PDT).
- * Used when dealer timezone is not available - no UTC or server local time.
+ * System base timezone: Pacific Time (America/Vancouver).
+ * All system-level date/time logic (today, now, past checks, SMS logs) uses this.
+ * Dealers convert for display only - if dealer is Pacific, no conversion needed.
  */
 export const SYSTEM_DEFAULT_TIMEZONE = 'America/Vancouver' as const
 
+/** Get Pacific "today" (yyyy-MM-dd) - used for past date/slot checks across the system */
+export function getSystemToday(): string {
+  return formatInTimeZone(new Date(), SYSTEM_DEFAULT_TIMEZONE, 'yyyy-MM-dd')
+}
+
 /**
- * Get effective timezone: dealer timezone if set, otherwise system default (PST).
- * Ensures we never fall back to UTC or server local.
+ * Display timezone: dealer timezone if set, otherwise Pacific.
+ * Use for formatting appointment times shown to users (dealer converts to their local time).
  */
 export function getEffectiveTimezone(dealerTz: string | null | undefined): string {
   return dealerTz && dealerTz.trim() ? dealerTz : SYSTEM_DEFAULT_TIMEZONE

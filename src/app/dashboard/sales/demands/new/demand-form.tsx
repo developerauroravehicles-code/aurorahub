@@ -4,9 +4,10 @@ import { useActionState, useState, useEffect } from 'react'
 import { createDemand, getTakenSlots } from './actions'
 import { getDealerBlocksForDate } from '@/app/dashboard/system-management/calendar/actions'
 import { getGlobalSlotMinutes, getSlotMinutesFromConfig, CALENDAR_DEFAULTS } from '@/lib/calendar-defaults'
-import { format } from 'date-fns'
 import { formatInTimeZone, fromZonedTime } from 'date-fns-tz'
 import { SYSTEM_DEFAULT_TIMEZONE } from '@/lib/timezone-defaults'
+import { useTimezone } from '@/contexts/timezone-context'
+import { useSystemTime } from '@/contexts/system-time-context'
 import { AppointmentCalendar } from '@/components/appointment-calendar'
 import { VEHICLE_MAKES_CA } from '@/lib/vehicle-makes'
 import { getModelsForMake, getTrimsForModel } from '@/lib/vehicle-models'
@@ -32,7 +33,10 @@ interface DemandFormProps {
   calendarSettings?: { weekday?: CalendarSetting; saturday?: CalendarSetting; sunday?: CalendarSetting }
 }
 
-export function DemandForm({ cameraModels, defaultAddress = '', timezoneName = null, dealerId = null, calendarSettings }: DemandFormProps) {
+export function DemandForm({ cameraModels, defaultAddress = '', timezoneName: propTimezone = null, dealerId = null, calendarSettings }: DemandFormProps) {
+  // Use layout timezone (same as top-left clock) when prop not provided
+  const contextTimezone = useTimezone()
+  const timezoneName = propTimezone ?? contextTimezone
   const [state, formAction, isPending] = useActionState(createDemand, null)
   const [selectedDate, setSelectedDate] = useState<string>('')
   const [availableSlots, setAvailableSlots] = useState<string[]>([])
@@ -62,6 +66,17 @@ export function DemandForm({ cameraModels, defaultAddress = '', timezoneName = n
     }
   }, [dealerId, selectedDate])
 
+  // Clear selected date if it becomes past - uses same system time as clock/calendar
+  const systemNow = useSystemTime()
+  useEffect(() => {
+    if (!selectedDate) return
+    const todayStr = formatInTimeZone(systemNow, SYSTEM_DEFAULT_TIMEZONE, 'yyyy-MM-dd')
+    if (selectedDate < todayStr) {
+      setSelectedDate('')
+      setSelectedSlot('')
+    }
+  }, [selectedDate, systemNow])
+
   useEffect(() => {
     if (!selectedDate) return
     const dateStr = selectedDate
@@ -81,10 +96,10 @@ export function DemandForm({ cameraModels, defaultAddress = '', timezoneName = n
     for (const startMinutes of slotMinutes) {
       const h = Math.floor(startMinutes / 60)
       const m = startMinutes % 60
-      const tz = timezoneName ?? SYSTEM_DEFAULT_TIMEZONE
-      const dateInTz = new Date(y, mo - 1, d, h, m, 0)
-      const utcDate = fromZonedTime(dateInTz, tz)
-      slots.push(utcDate.toISOString())
+      // Appointments stored as Pacific Time (PT) - system default
+      const dateInPT = new Date(y, mo - 1, d, h, m, 0)
+      const utcMoment = fromZonedTime(dateInPT, SYSTEM_DEFAULT_TIMEZONE)
+      slots.push(utcMoment.toISOString())
     }
     setAvailableSlots(slots)
   }, [selectedDate, timezoneName, calendarSettings])
@@ -321,9 +336,9 @@ export function DemandForm({ cameraModels, defaultAddress = '', timezoneName = n
         {/* Calendar View */}
         <div className="mb-6">
           <AppointmentCalendar
-            timezoneName={timezoneName}
+            timezoneName={SYSTEM_DEFAULT_TIMEZONE}
             onDateSelect={(date) => {
-              const dateStr = format(date, 'yyyy-MM-dd')
+              const dateStr = formatInTimeZone(date, SYSTEM_DEFAULT_TIMEZONE, 'yyyy-MM-dd')
               setSelectedDate(dateStr)
               setSelectedSlot('')
             }}
@@ -333,12 +348,23 @@ export function DemandForm({ cameraModels, defaultAddress = '', timezoneName = n
         </div>
 
         {selectedDate && (() => {
-            const appointmentDurationMinutes = CALENDAR_DEFAULTS.appointmentDurationMinutes
-            // Filter out blocked slots: existing appointments + dealer calendar blocks (closed days/slots)
+            const [y, mo, d] = selectedDate.split('-').map(Number)
+            const dayOfWeek = new Date(y, mo - 1, d).getDay()
+            const dayType = dayOfWeek === 6 ? 'saturday' : dayOfWeek === 0 ? 'sunday' : 'weekday'
+            const setting = calendarSettings?.[dayType]
+            const appointmentDurationMinutes = setting?.appointment_duration_minutes ?? CALENDAR_DEFAULTS.appointmentDurationMinutes
+            // Filter out blocked slots: past slots (today), existing appointments + dealer calendar blocks (closed days/slots)
+            // Same system time as clock/calendar
+            const todayInPacific = formatInTimeZone(systemNow, SYSTEM_DEFAULT_TIMEZONE, 'yyyy-MM-dd')
+            const nowMs = systemNow.getTime()
+
             const availableOnlySlots = availableSlots.filter(slot => {
                 const slotTime = new Date(slot)
                 const slotStart = slotTime.getTime()
                 const slotEnd = slotStart + appointmentDurationMinutes * 60 * 1000
+
+                // No retrospective appointments: exclude past slots for today (Pacific)
+                if (selectedDate === todayInPacific && slotStart <= nowMs) return false
 
                 const isTaken = takenSlots.some(takenSlot => {
                     const takenTime = new Date(takenSlot)
@@ -348,10 +374,10 @@ export function DemandForm({ cameraModels, defaultAddress = '', timezoneName = n
                 })
                 if (isTaken) return false
 
-                // Dealer calendar blocks: slot in dealer local time vs block [start_minutes, end_minutes]
-                if (dealerBlocks.length > 0 && timezoneName) {
-                    const slotStartMinutes = parseInt(formatInTimeZone(slotTime, timezoneName, 'H'), 10) * 60 +
-                      parseInt(formatInTimeZone(slotTime, timezoneName, 'm'), 10)
+                // Dealer calendar blocks: slot time in PT vs block [start_minutes, end_minutes] (blocks in PT)
+                if (dealerBlocks.length > 0) {
+                    const slotStartMinutes = parseInt(formatInTimeZone(slotTime, SYSTEM_DEFAULT_TIMEZONE, 'H'), 10) * 60 +
+                      parseInt(formatInTimeZone(slotTime, SYSTEM_DEFAULT_TIMEZONE, 'm'), 10)
                     const slotEndMinutes = slotStartMinutes + appointmentDurationMinutes
                     const inBlock = dealerBlocks.some(
                       b => slotStartMinutes < b.end_minutes && slotEndMinutes > b.start_minutes

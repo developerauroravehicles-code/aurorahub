@@ -10,6 +10,8 @@ import {
   resolveReminderTemplate,
 } from '@/lib/sms-resolver'
 import { getTimezoneFromDealer } from '@/lib/dealer-timezone'
+import { formatInTimeZone } from 'date-fns-tz'
+import { SYSTEM_DEFAULT_TIMEZONE } from '@/lib/timezone-defaults'
 import type { SMSTriggerType } from '@/lib/sms-settings'
 
 export interface DemandOption {
@@ -32,6 +34,7 @@ export interface SmsLogEntry {
   demand_id: string | null
   message_type: string
   triggered_by: string
+  message_content: string | null
 }
 
 export async function getSmsLogs(filters?: {
@@ -48,7 +51,7 @@ export async function getSmsLogs(filters?: {
 
   let query = supabase
     .from('sms_logs')
-    .select('id, sent_at, phone_number, recipient_type, recipient_name, demand_id, message_type, triggered_by')
+    .select('id, sent_at, phone_number, recipient_type, recipient_name, demand_id, message_type, triggered_by, message_content')
     .order('sent_at', { ascending: false })
     .limit(200)
 
@@ -92,17 +95,16 @@ export async function getDemandsForManualSms(): Promise<{ error?: string; demand
   if (!demands?.length) return { demands: [] }
 
   const options: DemandOption[] = demands.map((d: Record<string, unknown>) => {
-    const appointmentDate = new Date((d.appointment_date as string)).toLocaleDateString('en-CA', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    })
+    const timezoneName = getTimezoneFromDealer(d.dealers as Parameters<typeof getTimezoneFromDealer>[0]) ?? SYSTEM_DEFAULT_TIMEZONE
+    const appointmentDateStr = formatInTimeZone(
+      new Date(d.appointment_date as string),
+      timezoneName,
+      'MMM d, yyyy, h:mm a'
+    )
     const name = `${d.customer_firstname} ${d.customer_lastname}`.trim() || 'Unknown'
     return {
       id: d.id as string,
-      label: `${name} - ${appointmentDate}`,
+      label: `${name} - ${appointmentDateStr}`,
       customer_phone: d.customer_phone as string | null,
       customer_address: d.customer_address as string | null,
       appointment_date: d.appointment_date as string,
@@ -180,10 +182,17 @@ export async function sendManualSms(
       })
       break
     case 'cancellation_notice':
+      message = resolveCancellationTemplate(trigger.template, {
+        phone: smsSettings.contactPhone,
+        signature: smsSettings.signature,
+      })
+      break
     case 'rescheduling_notice':
       message = resolveCancellationTemplate(trigger.template, {
         phone: smsSettings.contactPhone,
         signature: smsSettings.signature,
+        appointmentDate: new Date(demand.appointment_date),
+        timezoneName: timezoneName ?? undefined,
       })
       break
     case 'four_hour_reminder':
@@ -213,6 +222,7 @@ export async function sendManualSms(
       demandId,
       messageType,
       triggeredBy: 'manual',
+      messageContent: message,
     }).catch(() => {})
     return { success: true }
   }

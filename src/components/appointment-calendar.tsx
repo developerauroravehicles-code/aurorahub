@@ -1,26 +1,33 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, startOfWeek, endOfWeek, isBefore, startOfDay } from 'date-fns'
+import { useState, useEffect, useCallback } from 'react'
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, startOfWeek, endOfWeek } from 'date-fns'
 import { formatInTimeZone } from 'date-fns-tz'
-import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Lock } from 'lucide-react'
+import { useTimezone } from '@/contexts/timezone-context'
+import { useSystemTime } from '@/contexts/system-time-context'
 
 interface AppointmentCalendarProps {
-  timezoneName: string | null
+  timezoneName?: string | null
   onDateSelect: (date: Date) => void
   selectedDate?: Date | null
   getTakenSlots: (dateStr: string) => Promise<string[]>
 }
 
 export function AppointmentCalendar({ 
-  timezoneName, 
+  timezoneName: propTimezone, 
   onDateSelect, 
   selectedDate,
   getTakenSlots 
 }: AppointmentCalendarProps) {
+  const now = useSystemTime()
+  const contextTz = useTimezone()
   const [currentMonth, setCurrentMonth] = useState(new Date())
   const [takenDates, setTakenDates] = useState<Set<string>>(new Set())
   const [loadingDates, setLoadingDates] = useState<Set<string>>(new Set())
+
+  // System timezone (Pacific) - must match top-left clock exactly
+  const systemTz = propTimezone ?? contextTz
 
   // Get all dates in the current month view (including previous/next month days for full weeks)
   const monthStart = startOfMonth(currentMonth)
@@ -43,9 +50,9 @@ export function AppointmentCalendar({
       const calendarEnd = endOfWeek(monthEnd, { weekStartsOn: 1 })
       const allDays = eachDayOfInterval({ start: calendarStart, end: calendarEnd })
       
-      // Load for each day in the visible calendar
+      // Load for each day - use Pacific date string for consistency with system
       for (const day of allDays) {
-        const dateStr = format(day, 'yyyy-MM-dd')
+        const dateStr = formatInTimeZone(day, systemTz, 'yyyy-MM-dd')
         setLoadingDates(prev => new Set(prev).add(dateStr))
         
         try {
@@ -69,41 +76,49 @@ export function AppointmentCalendar({
 
     loadTakenSlots()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentMonth])
+  }, [currentMonth, systemTz])
+
+  // Same "now" and timezone as DealerClock - calendar fully integrated with system
+  const getTodayInTz = useCallback(() => {
+    return formatInTimeZone(now, systemTz, 'yyyy-MM-dd')
+  }, [systemTz, now])
+
+  // All date logic in Pacific - avoid local-timezone drift (e.g. cell shows "24" but hover shows "25")
+  const getDateStrInPacific = (date: Date) => formatInTimeZone(date, systemTz, 'yyyy-MM-dd')
 
   const handleDateClick = (date: Date) => {
-    // Only allow selecting dates in the current month and not in the past
-    const today = startOfDay(new Date())
-    const selectedDay = startOfDay(date)
-    
-    if (isSameMonth(date, currentMonth) && !isBefore(selectedDay, today)) {
+    const dateStr = getDateStrInPacific(date)
+    const todayStr = getTodayInTz()
+    const isPast = dateStr < todayStr
+
+    if (isSameMonth(date, currentMonth) && !isPast) {
       onDateSelect(date)
     }
   }
 
   const isPastDate = (date: Date) => {
-    const today = startOfDay(new Date())
-    const selectedDay = startOfDay(date)
-    return isBefore(selectedDay, today)
+    const dateStr = getDateStrInPacific(date)
+    const todayStr = getTodayInTz()
+    return dateStr < todayStr
+  }
+
+  const isPastMonth = (month: Date) => {
+    const lastDayStr = formatInTimeZone(endOfMonth(month), systemTz, 'yyyy-MM-dd')
+    const todayStr = getTodayInTz()
+    return lastDayStr < todayStr
   }
 
   const formatDateForDisplay = (date: Date) => {
-    if (timezoneName) {
-      return formatInTimeZone(date, timezoneName, 'd')
-    }
-    return format(date, 'd')
+    return formatInTimeZone(date, systemTz, 'd')
   }
 
   const formatMonthYear = () => {
-    if (timezoneName) {
-      return formatInTimeZone(currentMonth, timezoneName, 'MMMM yyyy')
-    }
-    return format(currentMonth, 'MMMM yyyy')
+    return formatInTimeZone(currentMonth, systemTz, 'MMMM yyyy')
   }
 
   const isToday = (date: Date) => {
-    const today = new Date()
-    return isSameDay(date, today)
+    const dateStr = getDateStrInPacific(date)
+    return dateStr === getTodayInTz()
   }
 
   const isSelected = (date: Date) => {
@@ -111,12 +126,12 @@ export function AppointmentCalendar({
   }
 
   const isTaken = (date: Date) => {
-    const dateStr = format(date, 'yyyy-MM-dd')
+    const dateStr = getDateStrInPacific(date)
     return takenDates.has(dateStr)
   }
 
   const isLoading = (date: Date) => {
-    const dateStr = format(date, 'yyyy-MM-dd')
+    const dateStr = getDateStrInPacific(date)
     return loadingDates.has(dateStr)
   }
 
@@ -125,8 +140,10 @@ export function AppointmentCalendar({
       {/* Calendar Header */}
       <div className="flex items-center justify-between mb-4">
         <button
+          type="button"
           onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}
-          className="p-2 hover:bg-white/10 rounded transition-colors"
+          disabled={isPastMonth(subMonths(currentMonth, 1))}
+          className={`p-2 rounded transition-colors ${isPastMonth(subMonths(currentMonth, 1)) ? 'cursor-not-allowed opacity-40' : 'hover:bg-white/10'}`}
         >
           <ChevronLeft className="w-5 h-5 text-white" />
         </button>
@@ -165,11 +182,11 @@ export function AppointmentCalendar({
               onClick={() => handleDateClick(day)}
               disabled={!isCurrentMonth || dayIsLoading || dayIsPast}
               className={`
-                aspect-square p-2 rounded text-sm font-medium transition-colors
+                aspect-square p-2 rounded text-sm font-medium transition-colors relative
                 ${!isCurrentMonth 
                   ? 'text-gray-600 cursor-not-allowed' 
                   : dayIsPast
-                  ? 'text-gray-600 bg-white/5 cursor-not-allowed opacity-50'
+                  ? 'text-gray-500 bg-gray-900/50 cursor-not-allowed opacity-60 border border-gray-800'
                   : dayIsSelected
                   ? 'bg-[#C27E00] text-white'
                   : dayIsToday
@@ -182,14 +199,17 @@ export function AppointmentCalendar({
               `}
               title={
                 dayIsPast 
-                  ? 'Past dates cannot be selected' 
+                  ? 'Closed - past date' 
                   : dayIsTaken 
                   ? 'Has appointments' 
-                  : format(day, 'yyyy-MM-dd')
+                  : getDateStrInPacific(day)
               }
             >
               {formatDateForDisplay(day)}
-              {dayIsTaken && (
+              {dayIsPast && isCurrentMonth && (
+                <Lock className="w-2.5 h-2.5 text-gray-500 absolute top-1 right-1" />
+              )}
+              {dayIsTaken && !dayIsPast && (
                 <div className="w-1 h-1 bg-red-400 rounded-full mx-auto mt-1" />
               )}
             </button>
@@ -198,7 +218,7 @@ export function AppointmentCalendar({
       </div>
 
       {/* Legend */}
-      <div className="mt-4 flex items-center justify-center gap-4 text-xs text-gray-400">
+      <div className="mt-4 flex flex-wrap items-center justify-center gap-4 text-xs text-gray-400">
         <div className="flex items-center gap-1">
           <div className="w-3 h-3 bg-[#C27E00] rounded" />
           <span>Selected</span>
@@ -206,6 +226,12 @@ export function AppointmentCalendar({
         <div className="flex items-center gap-1">
           <div className="w-3 h-3 bg-blue-900/30 border border-blue-800 rounded" />
           <span>Today</span>
+        </div>
+        <div className="flex items-center gap-1">
+          <div className="w-3 h-3 bg-gray-900/50 border border-gray-800 rounded flex items-center justify-center">
+            <Lock className="w-2 h-2 text-gray-500" />
+          </div>
+          <span>Closed (past)</span>
         </div>
         <div className="flex items-center gap-1">
           <div className="w-3 h-3 bg-red-900/30 border border-red-800 rounded" />

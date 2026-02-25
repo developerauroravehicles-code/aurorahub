@@ -65,6 +65,7 @@ export async function sendAppointmentReminderSMS(demandId: string) {
           demandId,
           messageType: 'four_hour_reminder',
           triggeredBy: 'system',
+          messageContent: message,
         }).catch(() => {})
         return { success: true }
       } else {

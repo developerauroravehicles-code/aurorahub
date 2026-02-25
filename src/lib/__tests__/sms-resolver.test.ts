@@ -52,6 +52,19 @@ describe('Template resolvers', () => {
       })
       expect(result).toBe('555-1234 or 555-1234')
     })
+
+    it('replaces {{date}} when appointmentDate is provided (rescheduling)', () => {
+      const template = 'Rescheduled for {{date}}. {{signature}}'
+      const result = resolveCancellationTemplate(template, {
+        phone: '(604) 833-5801',
+        signature: 'Aurora Vehicles.',
+        appointmentDate: new Date('2026-02-25T20:00:00Z'),
+        timezoneName: 'America/Vancouver',
+      })
+      expect(result).not.toContain('{{date}}')
+      expect(result).toContain('Aurora Vehicles.')
+      expect(result).toMatch(/\d{1,2}:\d{2}\s*(AM|PM)/)
+    })
   })
 
   describe('resolveReminderTemplate', () => {

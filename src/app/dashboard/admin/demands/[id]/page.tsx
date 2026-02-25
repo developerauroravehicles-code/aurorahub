@@ -4,6 +4,8 @@ import { getEffectiveTimezone } from '@/lib/timezone-defaults'
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 import { DeleteDemandButton } from '../delete-demand-button'
+import { ChangeSpecialistForm } from '../change-specialist-form'
+import { ChangeFinanceForm } from '../change-finance-form'
 
 export default async function DemandDetailsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -53,6 +55,14 @@ export default async function DemandDetailsPage({ params }: { params: Promise<{ 
     const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
     isAuroraManager = profile?.role === 'aurora_manager'
   }
+
+  // Fetch specialists and finance users for Aurora Manager (change assignment)
+  const { data: specialists } = isAuroraManager
+    ? await supabase.from('profiles').select('id, full_name').eq('role', 'specialist').order('full_name')
+    : { data: [] }
+  const { data: financeUsers } = isAuroraManager
+    ? await supabase.from('profiles').select('id, full_name').eq('role', 'finance').order('full_name')
+    : { data: [] }
 
   const customerName = `${demand.customer_firstname} ${demand.customer_lastname}`
   const formattedAppointment = formatInTimeZone(
@@ -166,27 +176,41 @@ export default async function DemandDetailsPage({ params }: { params: Promise<{ 
                 <span className="text-gray-500 ml-2">({(demand.profiles as any)?.role || 'N/A'})</span>
               </p>
             </div>
-            {demand.assigned_finance_id && (
-              <div>
-                <p className="text-sm text-gray-400">Assigned Finance</p>
+            <div>
+              <p className="text-sm text-gray-400 mb-1">Assigned Finance</p>
+              {isAuroraManager && financeUsers && financeUsers.length > 0 ? (
+                <ChangeFinanceForm
+                  demandId={id}
+                  currentFinanceId={demand.assigned_finance_id}
+                  financeUsers={financeUsers}
+                />
+              ) : demand.assigned_finance_id ? (
                 <p className="text-white">
                   {(demand.assigned_finance as any)?.full_name || 'Unknown'}
                   <span className="text-gray-500 ml-2">({(demand.assigned_finance as any)?.role || 'N/A'})</span>
                 </p>
-              </div>
-            )}
-            {demand.assigned_specialist_id && (
-              <div>
-                <p className="text-sm text-gray-400">Assigned Specialist</p>
+              ) : (
+                <p className="text-gray-500 text-sm">Unassigned</p>
+              )}
+            </div>
+            <div>
+              <p className="text-sm text-gray-400 mb-1">Assigned Specialist</p>
+              {isAuroraManager && specialists && specialists.length > 0 ? (
+                <ChangeSpecialistForm
+                  demandId={id}
+                  currentSpecialistId={demand.assigned_specialist_id}
+                  currentSpecialistName={(demand.assigned_specialist as any)?.full_name}
+                  specialists={specialists}
+                />
+              ) : demand.assigned_specialist_id ? (
                 <p className="text-white">
                   {(demand.assigned_specialist as any)?.full_name || 'Unknown'}
                   <span className="text-gray-500 ml-2">({(demand.assigned_specialist as any)?.role || 'N/A'})</span>
                 </p>
-              </div>
-            )}
-            {!demand.assigned_finance_id && !demand.assigned_specialist_id && (
-              <p className="text-gray-500 text-sm">No assignments yet</p>
-            )}
+              ) : (
+                <p className="text-gray-500 text-sm">Unassigned</p>
+              )}
+            </div>
           </div>
         </div>
 
