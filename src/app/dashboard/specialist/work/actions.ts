@@ -1,6 +1,7 @@
 'use server'
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
+import { logDemandChange } from '@/lib/demand-logger'
 
 export async function assignWorkToMe(demandId: string) {
   const supabase = await createClient()
@@ -60,6 +61,14 @@ export async function assignWorkToMe(demandId: string) {
 
   if (error) return { error: error.message }
 
+  logDemandChange({
+    demandId,
+    actorId: user.id,
+    previousStatus: 'approved',
+    newStatus: 'approved',
+    notes: 'Assigned to specialist',
+  }).catch(() => {})
+
   revalidatePath('/dashboard/specialist/work')
   revalidatePath('/dashboard')
   return { success: true }
@@ -99,6 +108,14 @@ export async function completeDemand(demandId: string) {
     .eq('id', demandId)
   
   if (error) return { error: error.message }
+
+  logDemandChange({
+    demandId,
+    actorId: user.id,
+    previousStatus: 'approved',
+    newStatus: 'completed',
+    notes: 'Demand completed',
+  }).catch(() => {})
   
   revalidatePath('/dashboard/specialist/work')
   revalidatePath('/dashboard')

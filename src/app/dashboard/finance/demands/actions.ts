@@ -1,6 +1,7 @@
 'use server'
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
+import { logDemandChange } from '@/lib/demand-logger'
 import { sendSMS } from '@/lib/twilio'
 import { logSmsSent } from '@/lib/sms-logger'
 import { getSmsSettings } from '@/lib/sms-resolver'
@@ -49,6 +50,14 @@ export async function assignDemandToMe(demandId: string) {
     .eq('id', demandId)
 
   if (error) return { error: error.message }
+
+  logDemandChange({
+    demandId,
+    actorId: user.id,
+    previousStatus: 'pending_finance',
+    newStatus: 'pending_finance',
+    notes: 'Assigned to finance',
+  }).catch(() => {})
 
   revalidatePath('/dashboard/finance/demands')
   revalidatePath('/dashboard')
@@ -130,6 +139,14 @@ export async function approveDemand(demandId: string, sendSMSToCustomer: boolean
     .eq('id', demandId)
 
   if (updateError) return { error: updateError.message }
+
+  logDemandChange({
+    demandId,
+    actorId: user.id,
+    previousStatus: 'pending_finance',
+    newStatus: 'approved',
+    notes: assignedSpecialistId ? 'Approved and specialist assigned' : 'Approved',
+  }).catch(() => {})
 
   const smsSettings = await getSmsSettings()
   const ac = smsSettings.appointment_created
@@ -286,6 +303,14 @@ export async function cancelDemand(demandId: string) {
     .eq('id', demandId)
   
   if (error) return { error: error.message }
+
+  logDemandChange({
+    demandId,
+    actorId: user.id,
+    previousStatus: demand.status as 'pending_finance' | 'approved',
+    newStatus: 'cancelled',
+    notes: 'Demand cancelled',
+  }).catch(() => {})
   
   // Send cancellation notice SMS when demand is cancelled (always, no 24h condition)
   const smsSettings = await getSmsSettings()
@@ -432,6 +457,16 @@ export async function updateDemand(demandId: string, formData: FormData) {
 
   if (updateError) return { error: updateError.message }
 
+  if (appointmentDateChanged) {
+    logDemandChange({
+      demandId,
+      actorId: user.id,
+      previousStatus: 'approved',
+      newStatus: 'approved',
+      notes: 'Appointment date rescheduled',
+    }).catch(() => {})
+  }
+
   // Send rescheduling notice SMS when appointment date changed (always, no 24h condition)
   const smsSettings = await getSmsSettings()
   const rn = smsSettings.rescheduling_notice
@@ -537,6 +572,14 @@ export async function revertDemandToPending(demandId: string) {
     .eq('id', demandId)
 
   if (updateError) return { error: updateError.message }
+
+  logDemandChange({
+    demandId,
+    actorId: user.id,
+    previousStatus: 'approved',
+    newStatus: 'pending_finance',
+    notes: 'Reverted to pending finance',
+  }).catch(() => {})
 
   revalidatePath('/dashboard/finance/demands')
   revalidatePath('/dashboard')

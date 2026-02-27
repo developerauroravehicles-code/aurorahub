@@ -7,7 +7,8 @@ import { formatInTimeZone } from 'date-fns-tz'
 import { SYSTEM_DEFAULT_TIMEZONE } from '@/lib/timezone-defaults'
 import { exportReportToPdf, type ExportReportOptions } from '@/lib/export-report-pdf'
 import { SendReportEmailModal } from '@/components/send-report-email-modal'
-import { FileDown, Mail } from 'lucide-react'
+import { ReportPreviewModal } from '@/components/report-preview-modal'
+import { FileDown, Mail, Eye } from 'lucide-react'
 
 interface Demand {
   id: string
@@ -27,7 +28,9 @@ export default function FinanceReportsPage() {
   const [demands, setDemands] = useState<Demand[]>([])
   const [loading, setLoading] = useState(true)
   const [emailModalOpen, setEmailModalOpen] = useState(false)
+  const [previewModalOpen, setPreviewModalOpen] = useState(false)
   const [reportOptionsForEmail, setReportOptionsForEmail] = useState<ExportReportOptions | null>(null)
+  const [reportOptionsForPreview, setReportOptionsForPreview] = useState<ExportReportOptions | null>(null)
   const [startDate, setStartDate] = useState(format(startOfMonth(new Date()), 'yyyy-MM-dd'))
   const [endDate, setEndDate] = useState(format(endOfMonth(new Date()), 'yyyy-MM-dd'))
   const supabase = createClient()
@@ -124,6 +127,12 @@ export default function FinanceReportsPage() {
     setEmailModalOpen(true)
   }
 
+  const handleOpenPreview = async () => {
+    const opts = await getReportOptions()
+    setReportOptionsForPreview(opts)
+    setPreviewModalOpen(true)
+  }
+
   const setDateRange = (months: number) => {
     const end = new Date()
     const start = subMonths(end, months)
@@ -139,6 +148,14 @@ export default function FinanceReportsPage() {
           <p className="text-gray-400">View detailed reports of your assigned demands and appointments</p>
         </div>
         <div className="flex gap-2">
+          <button
+            onClick={handleOpenPreview}
+            disabled={loading}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 border border-gray-600 text-white rounded-md font-medium text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <Eye className="w-4 h-4" />
+            View Sample
+          </button>
           <button
             onClick={handleExportPdf}
             disabled={loading}
@@ -157,6 +174,12 @@ export default function FinanceReportsPage() {
           </button>
         </div>
       </div>
+
+      <ReportPreviewModal
+        isOpen={previewModalOpen}
+        onClose={() => { setPreviewModalOpen(false); setReportOptionsForPreview(null) }}
+        reportOptions={reportOptionsForPreview}
+      />
 
       {/* Date Filter */}
       <div className="bg-white/5 border border-gray-800 p-6 rounded-lg">

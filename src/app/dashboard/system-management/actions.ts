@@ -168,7 +168,7 @@ export async function createUser(prevState: ActionState, formData: FormData) {
   if (authError) {
     const msg = authError.message || ''
     if (msg.toLowerCase().includes('already') || msg.toLowerCase().includes('registered') || msg.toLowerCase().includes('duplicate') || msg.includes('users_email_key')) {
-      return { error: 'Bu e-posta adresi daha önce kullanılmış. Silinen kullanıcıların e-postası Supabase tarafında bir süre rezerve kalabilir. Farklı bir e-posta deneyin veya Supabase Dashboard > Authentication > Users üzerinden ilgili kullanıcıyı kalıcı silin.' }
+      return { error: 'This email address has already been used. Deleted users\' emails may remain reserved in Supabase for a while. Try a different email or permanently delete the user via Supabase Dashboard > Authentication > Users.' }
     }
     return { error: authError.message }
   }
@@ -410,7 +410,10 @@ export async function assignCameraToDealer(cameraId: string, dealerId: string) {
     }
     return { error: error.message }
   }
-  
+
+  const { notifyCameraDealerAssignment } = await import('@/lib/camera-dealer-notify')
+  notifyCameraDealerAssignment('assigned', dealerId, cameraId).catch(() => {})
+
   revalidatePath('/dashboard/system-management/cameras')
   return { success: 'Camera assigned to dealer successfully!' }
 }
@@ -428,7 +431,10 @@ export async function removeCameraFromDealer(cameraId: string, dealerId: string)
   if (error) {
     return { error: error.message }
   }
-  
+
+  const { notifyCameraDealerAssignment } = await import('@/lib/camera-dealer-notify')
+  notifyCameraDealerAssignment('removed', dealerId, cameraId).catch(() => {})
+
   revalidatePath('/dashboard/system-management/cameras')
   return { success: 'Camera removed from dealer successfully!' }
 }

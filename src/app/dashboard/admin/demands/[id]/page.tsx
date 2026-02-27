@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { formatInTimeZone } from 'date-fns-tz'
 import { getEffectiveTimezone } from '@/lib/timezone-defaults'
 import Link from 'next/link'
@@ -36,12 +37,26 @@ export default async function DemandDetailsPage({ params }: { params: Promise<{ 
     )
   }
 
-  // Fetch demand logs
-  const { data: logs } = await supabase
+  // Fetch demand logs (admin client - user already verified access via demand fetch)
+  const admin = createAdminClient()
+  const { data: logsRows } = await admin
     .from('demand_logs')
-    .select('*, profiles!demand_logs_actor_id_fkey(full_name, role)')
+    .select('id, demand_id, actor_id, previous_status, new_status, notes, created_at')
     .eq('demand_id', id)
     .order('created_at', { ascending: false })
+  const actorIds = [...new Set((logsRows ?? []).map((l: { actor_id?: string }) => l.actor_id).filter(Boolean))]
+  let actorProfiles: Record<string, { full_name?: string; role?: string }> = {}
+  if (actorIds.length > 0) {
+    const { data: profiles } = await admin.from('profiles').select('id, full_name, role').in('id', actorIds)
+    actorProfiles = (profiles ?? []).reduce((acc, p) => {
+      acc[p.id] = { full_name: p.full_name, role: p.role }
+      return acc
+    }, {} as Record<string, { full_name?: string; role?: string }>)
+  }
+  const logs = (logsRows ?? []).map((l: Record<string, unknown>) => ({
+    ...l,
+    profiles: l.actor_id ? actorProfiles[l.actor_id as string] : null,
+  }))
 
   const statusColors = {
     pending_finance: 'bg-yellow-900/50 text-yellow-300 border-yellow-800',
@@ -251,10 +266,14 @@ export default async function DemandDetailsPage({ params }: { params: Promise<{ 
                       {(log.profiles as any)?.full_name || 'System'} 
                       <span className="text-gray-500 ml-2">({(log.profiles as any)?.role || 'N/A'})</span>
                     </p>
-                    {log.previous_status && log.new_status && (
+                    {log.previous_status !== log.new_status && log.new_status && (
                       <p className="text-sm text-gray-400 mt-1">
-                        Changed status from <span className="text-gray-300">{log.previous_status.replace('_', ' ')}</span> to{' '}
-                        <span className="text-gray-300">{log.new_status.replace('_', ' ')}</span>
+                        {log.previous_status ? (
+                          <>Changed status from <span className="text-gray-300">{String(log.previous_status).replace('_', ' ')}</span> to{' '}
+                          <span className="text-gray-300">{String(log.new_status).replace('_', ' ')}</span></>
+                        ) : (
+                          <>Status: <span className="text-gray-300">{String(log.new_status).replace('_', ' ')}</span></>
+                        )}
                       </p>
                     )}
                     {log.notes && (

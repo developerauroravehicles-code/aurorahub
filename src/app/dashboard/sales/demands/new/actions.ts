@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { logDemandChange } from '@/lib/demand-logger'
 import { redirect } from 'next/navigation'
 import { z } from 'zod'
 import { fromZonedTime, formatInTimeZone } from 'date-fns-tz'
@@ -111,6 +112,14 @@ export async function createDemand(prevState: ActionState, formData: FormData) {
       }
       return { error: error.message || 'Failed to create demand. Please check your permissions.' }
   }
+
+  logDemandChange({
+    demandId: demand.id,
+    actorId: user.id,
+    previousStatus: null,
+    newStatus: 'pending_finance',
+    notes: 'Demand created',
+  }).catch(() => {})
 
   // SMS will be sent when finance approves the demand
   // Removed SMS sending from demand creation

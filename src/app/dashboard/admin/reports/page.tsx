@@ -7,7 +7,8 @@ import { formatInTimeZone, fromZonedTime } from 'date-fns-tz'
 import { getEffectiveTimezone, SYSTEM_DEFAULT_TIMEZONE } from '@/lib/timezone-defaults'
 import { exportReportToPdf, type ExportReportOptions } from '@/lib/export-report-pdf'
 import { SendReportEmailModal } from '@/components/send-report-email-modal'
-import { FileDown, Mail } from 'lucide-react'
+import { ReportPreviewModal } from '@/components/report-preview-modal'
+import { FileDown, Mail, Eye } from 'lucide-react'
 
 // Supabase may return dealers as single object or array; timezones/region_codes can be arrays
 type DealerRelation =
@@ -69,7 +70,9 @@ export default function AdminReportsPage() {
   const [selectedDealerId, setSelectedDealerId] = useState<string>('all')
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>('all')
   const [emailModalOpen, setEmailModalOpen] = useState(false)
+  const [previewModalOpen, setPreviewModalOpen] = useState(false)
   const [reportOptionsForEmail, setReportOptionsForEmail] = useState<ExportReportOptions | null>(null)
+  const [reportOptionsForPreview, setReportOptionsForPreview] = useState<ExportReportOptions | null>(null)
   const supabase = createClient()
 
   useEffect(() => {
@@ -283,6 +286,12 @@ export default function AdminReportsPage() {
     setEmailModalOpen(true)
   }
 
+  const handleOpenPreview = async () => {
+    const opts = await getReportOptions()
+    setReportOptionsForPreview(opts)
+    setPreviewModalOpen(true)
+  }
+
   const setDateRange = (months: number) => {
     const end = new Date()
     const start = subMonths(end, months)
@@ -329,6 +338,14 @@ export default function AdminReportsPage() {
         </div>
         <div className="flex gap-2">
           <button
+            onClick={handleOpenPreview}
+            disabled={loading}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 border border-gray-600 text-white rounded-md font-medium text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <Eye className="w-4 h-4" />
+            View Sample
+          </button>
+          <button
             onClick={handleExportPdf}
             disabled={loading}
             className="inline-flex items-center gap-2 px-4 py-2 bg-[#C27E00] hover:bg-[#a06900] text-white rounded-md font-medium text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
@@ -346,6 +363,12 @@ export default function AdminReportsPage() {
           </button>
         </div>
       </div>
+
+      <ReportPreviewModal
+        isOpen={previewModalOpen}
+        onClose={() => { setPreviewModalOpen(false); setReportOptionsForPreview(null) }}
+        reportOptions={reportOptionsForPreview}
+      />
 
       {/* Filters */}
       <div className="bg-white/5 border border-gray-800 p-6 rounded-lg">

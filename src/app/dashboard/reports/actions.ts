@@ -184,5 +184,7 @@ export async function sendReportEmailAction(
     dateRange,
     pdfBase64,
     optionalMessage,
+    senderId: user.id,
+    mailType: 'report',
   })
 }

@@ -1,18 +1,18 @@
 import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { sendSMS } from '@/lib/twilio'
-import { isWithin4HoursBeforeWindow } from '@/lib/sms-messages'
+import { isWithinHoursBeforeWindow } from '@/lib/sms-messages'
 import { getSmsSettings } from '@/lib/sms-resolver'
 import { resolveReminderTemplate } from '@/lib/sms-resolver'
 import { getTimezoneFromDealer } from '@/lib/dealer-timezone'
 import { logSmsSent } from '@/lib/sms-logger'
+import { getReminderAutomationConfig } from '@/lib/automation-settings'
 
 /**
  * API Route for sending reminder SMS
  * Called by cron every hour at the top of the hour.
- * Sends reminder exactly ~4 hours before each appointment in dealer local time
- * (e.g. 11:00 dealer time → send when it's ~07:00 dealer time).
- * Candidates: approved appointments in the next 0–7h; send only if 3.5h–4.5h before.
+ * Sends reminder X hours before each appointment (X from Automation settings: 2, 4, or 6).
+ * Candidates: approved appointments in the next 0–7h; send only if in X-0.5h to X+0.5h window.
  * Requires CRON_SECRET in env; Vercel sends it as Authorization: Bearer <secret>.
  * Query param ?secret=<CRON_SECRET> also accepted for external cron services.
  */
@@ -33,6 +33,16 @@ export async function GET(request: Request) {
 
   try {
     const supabase = createAdminClient()
+    const reminderConfig = await getReminderAutomationConfig(supabase)
+    if (!reminderConfig.enabled) {
+      return NextResponse.json({
+        success: true,
+        message: 'Reminder automation is disabled',
+        sent: 0,
+        errors: 0,
+      })
+    }
+
     const now = new Date()
     const sevenHoursFromNow = new Date(now.getTime() + 7 * 60 * 60 * 1000)
 
@@ -64,19 +74,19 @@ export async function GET(request: Request) {
 
     for (const demand of demands) {
       const appointmentDate = new Date(demand.appointment_date)
-      const timezoneName = getTimezoneFromDealer(demand.dealers as Parameters<typeof getTimezoneFromDealer>[0]) ?? null
 
-      // Only send if we're in the 3.5h–4.5h-before window (dealer time: e.g. 11:00 appointment → send at ~07:00 dealer time)
-      if (!isWithin4HoursBeforeWindow(appointmentDate, timezoneName)) continue
+      // Only send if we're in the configurable hours-before window (e.g. 3.5h–4.5h for 4h)
+      if (!isWithinHoursBeforeWindow(appointmentDate, reminderConfig.hoursBefore)) continue
 
       const smsSettings = await getSmsSettings(supabase)
       const rh = smsSettings.four_hour_reminder
-      if (!rh.enabled) continue
       if (!rh.sendToCustomer && !rh.sendToSpecialist) continue
+      if (!reminderConfig.sendToCustomer && !reminderConfig.sendToSpecialist) continue
 
+      const hoursText = reminderConfig.hoursBefore === 1 ? '1 hour' : `${reminderConfig.hoursBefore} hours`
       const address = demand.customer_address || 'the specified location'
       const message = resolveReminderTemplate(rh.template, {
-        hoursText: '4 hours',
+        hoursText,
         address,
         signature: smsSettings.signature,
       })
@@ -84,7 +94,7 @@ export async function GET(request: Request) {
       let sentForThisDemand = false
 
       // Send to customer (same message as specialist)
-      if (rh.sendToCustomer && demand.customer_phone) {
+      if (reminderConfig.sendToCustomer && demand.customer_phone) {
         try {
           const result = await sendSMS(demand.customer_phone, message)
           if (result.success) {
@@ -111,7 +121,7 @@ export async function GET(request: Request) {
       }
 
       // Send to assigned specialist (same message, same time)
-      if (rh.sendToSpecialist && (demand as { assigned_specialist_id?: string }).assigned_specialist_id) {
+      if (reminderConfig.sendToSpecialist && (demand as { assigned_specialist_id?: string }).assigned_specialist_id) {
         try {
           const { data: specialist } = await supabase
             .from('profiles')

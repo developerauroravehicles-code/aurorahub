@@ -186,7 +186,10 @@ export async function addCameraToDealer(dealerId: string, cameraModelId: string)
       }
       return { success: false, error: error.message }
     }
-    
+
+    const { notifyCameraDealerAssignment } = await import('@/lib/camera-dealer-notify')
+    notifyCameraDealerAssignment('assigned', dealerId, cameraModelId).catch(() => {})
+
     revalidatePath('/dashboard/system-management/dealer')
     return { success: true }
   } catch (error) {
@@ -208,7 +211,10 @@ export async function removeCameraFromDealer(dealerId: string, cameraModelId: st
     if (error) {
       return { success: false, error: error.message }
     }
-    
+
+    const { notifyCameraDealerAssignment } = await import('@/lib/camera-dealer-notify')
+    notifyCameraDealerAssignment('removed', dealerId, cameraModelId).catch(() => {})
+
     revalidatePath('/dashboard/system-management/dealer')
     return { success: true }
   } catch (error) {

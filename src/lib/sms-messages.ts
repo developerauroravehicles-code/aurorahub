@@ -105,3 +105,20 @@ export function isWithin4HoursBeforeWindow(appointmentDate: Date, _timezoneName?
   return diffInHours > 3.5 && diffInHours <= 4.5
 }
 
+/**
+ * Check if appointment is within the configurable "hours before" reminder window.
+ * Window: hoursBefore-0.5 to hoursBefore+0.5 so hourly cron catches the right appointments.
+ */
+export function isWithinHoursBeforeWindow(
+  appointmentDate: Date,
+  hoursBefore: number
+): boolean {
+  const now = new Date()
+  const appointment = new Date(appointmentDate)
+  const diffInMs = appointment.getTime() - now.getTime()
+  const diffInHours = diffInMs / (1000 * 60 * 60)
+  const low = hoursBefore - 0.5
+  const high = hoursBefore + 0.5
+  return diffInHours > low && diffInHours <= high
+}
+

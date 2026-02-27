@@ -92,17 +92,21 @@ export function DemandForm({ cameraModels, defaultAddress = '', timezoneName: pr
           appointmentDurationMinutes: setting.appointment_duration_minutes,
         })
       : getGlobalSlotMinutes()
+    const tz = timezoneName ?? SYSTEM_DEFAULT_TIMEZONE
+    const nowInTz = systemNow
     const slots: string[] = []
     for (const startMinutes of slotMinutes) {
       const h = Math.floor(startMinutes / 60)
       const m = startMinutes % 60
-      // Appointments stored as Pacific Time (PT) - system default
       const dateInPT = new Date(y, mo - 1, d, h, m, 0)
-      const utcMoment = fromZonedTime(dateInPT, SYSTEM_DEFAULT_TIMEZONE)
-      slots.push(utcMoment.toISOString())
+      const utcMoment = fromZonedTime(dateInPT, tz)
+      // calendar_past_slots_lock: exclude slots that are already in the past (dealer timezone)
+      if (utcMoment.getTime() > nowInTz.getTime()) {
+        slots.push(utcMoment.toISOString())
+      }
     }
     setAvailableSlots(slots)
-  }, [selectedDate, timezoneName, calendarSettings])
+  }, [selectedDate, timezoneName, calendarSettings, systemNow])
 
   return (
     <form action={formAction} className="space-y-6 max-w-4xl bg-white/5 p-8 rounded-lg shadow border border-gray-800">

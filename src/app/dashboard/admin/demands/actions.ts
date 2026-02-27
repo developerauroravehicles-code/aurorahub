@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
+import { logDemandChange } from '@/lib/demand-logger'
 
 export async function updateAssignedSpecialist(
   demandId: string,
@@ -21,12 +22,27 @@ export async function updateAssignedSpecialist(
     return { success: false, error: 'Only Aurora Manager can change specialist assignment' }
   }
 
+  const { data: demand } = await supabase
+    .from('demands')
+    .select('status')
+    .eq('id', demandId)
+    .single()
+
   const { error } = await supabase
     .from('demands')
     .update({ assigned_specialist_id: specialistId })
     .eq('id', demandId)
 
   if (error) return { success: false, error: error.message }
+
+  const status = (demand?.status ?? 'approved') as 'pending_finance' | 'approved' | 'completed' | 'cancelled'
+  logDemandChange({
+    demandId,
+    actorId: user.id,
+    previousStatus: status,
+    newStatus: status,
+    notes: specialistId ? 'Specialist changed' : 'Specialist unassigned',
+  }).catch(() => {})
 
   revalidatePath('/dashboard/admin/demands')
   revalidatePath(`/dashboard/admin/demands/${demandId}`)
@@ -51,12 +67,27 @@ export async function updateAssignedFinance(
     return { success: false, error: 'Only Aurora Manager can change finance assignment' }
   }
 
+  const { data: demand } = await supabase
+    .from('demands')
+    .select('status')
+    .eq('id', demandId)
+    .single()
+
   const { error } = await supabase
     .from('demands')
     .update({ assigned_finance_id: financeId })
     .eq('id', demandId)
 
   if (error) return { success: false, error: error.message }
+
+  const status = (demand?.status ?? 'pending_finance') as 'pending_finance' | 'approved' | 'completed' | 'cancelled'
+  logDemandChange({
+    demandId,
+    actorId: user.id,
+    previousStatus: status,
+    newStatus: status,
+    notes: financeId ? 'Finance changed' : 'Finance unassigned',
+  }).catch(() => {})
 
   revalidatePath('/dashboard/admin/demands')
   revalidatePath(`/dashboard/admin/demands/${demandId}`)

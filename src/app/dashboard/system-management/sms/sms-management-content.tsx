@@ -358,7 +358,7 @@ export function SMSManagementContent() {
                             onChange={(e) => updateTrigger(trigger, { sendToCustomer: e.target.checked })}
                             className="rounded border-gray-600 bg-black/50 text-[#C27E00] focus:ring-[#C27E00]"
                           />
-                          <span className="text-sm text-gray-300">Customer (Müşteri)</span>
+                          <span className="text-sm text-gray-300">Customer</span>
                         </label>
                         <label className="flex items-center gap-2 cursor-pointer">
                           <input
@@ -402,10 +402,18 @@ export function SMSManagementContent() {
 
       {/* SMS Tracking */}
       <div className="bg-black/30 rounded-lg border border-gray-800 p-6 space-y-4">
-        <h4 className="text-md font-semibold text-white flex items-center gap-2">
-          <History className="w-5 h-5 text-[#C27E00]" />
-          SMS Log / Tracking
-        </h4>
+        <div className="flex items-center justify-between">
+          <h4 className="text-md font-semibold text-white flex items-center gap-2">
+            <History className="w-5 h-5 text-[#C27E00]" />
+            SMS Log / Tracking
+          </h4>
+          <a
+            href="/dashboard/system-management/logs?type=sms"
+            className="text-sm text-[#C27E00] hover:text-[#a06900] hover:underline"
+          >
+            View all logs on Logs page →
+          </a>
+        </div>
         <p className="text-sm text-gray-400">
           View sent SMS history. Filter by date range or customer name.
         </p>
