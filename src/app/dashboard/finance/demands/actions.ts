@@ -55,7 +55,7 @@ export async function assignDemandToMe(demandId: string) {
   return { success: true }
 }
 
-export async function approveDemand(demandId: string, sendSMSToCustomer: boolean = false, sendSMSToSpecialist: boolean = false) {
+export async function approveDemand(demandId: string, sendSMSToCustomer: boolean = false, sendSMSToSpecialist: boolean = false, sendSMSToAuroraManager: boolean = false) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   
@@ -207,6 +207,51 @@ export async function approveDemand(demandId: string, sendSMSToCustomer: boolean
       }
     } catch (smsError) {
       console.error('Failed to send SMS to specialist:', smsError)
+    }
+  }
+
+  // Send SMS to Aurora Manager(s) if requested and enabled in settings
+  if (ac.enabled && ac.sendToAuroraManager && sendSMSToAuroraManager) {
+    try {
+      const { data: auroraManagers } = await supabase
+        .from('profiles')
+        .select('id, phone, full_name')
+        .eq('role', 'aurora_manager')
+        .not('phone', 'is', null)
+      if (auroraManagers?.length) {
+        const { data: dealer } = await supabase
+          .from('dealers')
+          .select('name, address, region_codes(timezone_id, timezones(name))')
+          .eq('id', demand.dealer_id)
+          .single()
+        const appointmentDate = new Date(demand.appointment_date)
+        const location = demand.customer_address || dealer?.address || dealer?.name || 'Authorized Dealer'
+        const timezoneName = (dealer?.region_codes as { timezones?: { name: string } })?.timezones?.name || undefined
+        const message = resolveAppointmentCreatedTemplate(ac.template, {
+          appointmentDate,
+          address: location,
+          timezoneName,
+          signature: smsSettings.signature,
+        })
+        for (const am of auroraManagers) {
+          if (am.phone) {
+            const result = await sendSMS(am.phone, message)
+            if (result.success) {
+              logSmsSent({
+                phoneNumber: am.phone,
+                recipientType: 'aurora_manager',
+                recipientName: am.full_name ?? undefined,
+                demandId,
+                messageType: 'appointment_created',
+                triggeredBy: 'system',
+                messageContent: message,
+              }).catch(() => {})
+            }
+          }
+        }
+      }
+    } catch (smsError) {
+      console.error('Failed to send SMS to Aurora Manager:', smsError)
     }
   }
 

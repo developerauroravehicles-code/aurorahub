@@ -19,6 +19,7 @@ export function ApproveConfirmationModal({ demandId, isOpen, onClose, hasAssigne
   const [sendSMSToCustomer, setSendSMSToCustomer] = useState(true)
   // Auto-check specialist SMS since demand will be auto-assigned to dealer's specialist when approved
   const [sendSMSToSpecialist, setSendSMSToSpecialist] = useState(true)
+  const [sendSMSToAuroraManager, setSendSMSToAuroraManager] = useState(true)
 
   const handleApprove = async () => {
     if (!confirmApprove) {
@@ -29,7 +30,7 @@ export function ApproveConfirmationModal({ demandId, isOpen, onClose, hasAssigne
     setLoading(true)
     setError(null)
 
-    const result = await approveDemand(demandId, sendSMSToCustomer, sendSMSToSpecialist)
+    const result = await approveDemand(demandId, sendSMSToCustomer, sendSMSToSpecialist, sendSMSToAuroraManager)
     
     if (result?.error) {
       setError(result.error)
@@ -96,6 +97,20 @@ export function ApproveConfirmationModal({ demandId, isOpen, onClose, hasAssigne
               <label htmlFor="sendSMSToSpecialist" className="text-white cursor-not-allowed opacity-75">
                 Send information to Specialist
                 <span className="text-xs text-gray-500 ml-2">(Will be auto-assigned to dealer's specialist)</span>
+              </label>
+            </div>
+
+            {/* Aurora Manager SMS Confirmation */}
+            <div className="flex items-start gap-3">
+              <input
+                type="checkbox"
+                id="sendSMSToAuroraManager"
+                checked={sendSMSToAuroraManager}
+                onChange={(e) => setSendSMSToAuroraManager(e.target.checked)}
+                className="mt-1 w-5 h-5 rounded border-gray-700 bg-black/50 text-[#C27E00] focus:ring-[#C27E00] focus:ring-offset-gray-900"
+              />
+              <label htmlFor="sendSMSToAuroraManager" className="text-white cursor-pointer">
+                Send demand created notification to Aurora Manager(s)
               </label>
             </div>
           </div>

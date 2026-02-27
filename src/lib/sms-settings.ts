@@ -9,6 +9,7 @@ export interface SMSTriggerSetting {
   enabled: boolean
   sendToCustomer: boolean
   sendToSpecialist?: boolean // for appointment_created, four_hour_reminder, cancellation_notice, rescheduling_notice
+  sendToAuroraManager?: boolean // for appointment_created - notify Aurora Managers when demand is approved
   template: string
   /** Display description */
   description?: string
@@ -30,12 +31,13 @@ export const DEFAULT_SMS_SETTINGS: SMSSettings = {
     enabled: true,
     sendToCustomer: true,
     sendToSpecialist: true,
+    sendToAuroraManager: true,
     template: `Appointment Created
 
 A dashcam installation appointment has been scheduled for {{date}} at {{address}}.
 
 {{signature}}`,
-    description: 'Sent when Finance approves a demand. Recipients: Customer, Assigned Specialist.',
+    description: 'Sent when Finance approves a demand. Recipients: Customer, Assigned Specialist, Aurora Manager(s).',
   },
   cancellation_notice: {
     enabled: true,

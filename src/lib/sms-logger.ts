@@ -5,7 +5,7 @@ export type SmsMessageType = 'appointment_created' | 'cancellation_notice' | 're
 
 export interface LogSmsParams {
   phoneNumber: string
-  recipientType: 'customer' | 'specialist'
+  recipientType: 'customer' | 'specialist' | 'aurora_manager'
   recipientName?: string
   demandId?: string
   messageType: SmsMessageType

@@ -369,6 +369,17 @@ export function SMSManagementContent() {
                           />
                           <span className="text-sm text-gray-300">Assigned Specialist</span>
                         </label>
+                        {trigger === 'appointment_created' && (
+                          <label className="flex items-center gap-2 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={s.sendToAuroraManager ?? false}
+                              onChange={(e) => updateTrigger(trigger, { sendToAuroraManager: e.target.checked })}
+                              className="rounded border-gray-600 bg-black/50 text-[#C27E00] focus:ring-[#C27E00]"
+                            />
+                            <span className="text-sm text-gray-300">Aurora Manager(s)</span>
+                          </label>
+                        )}
                       </div>
                     </div>
                   </div>
