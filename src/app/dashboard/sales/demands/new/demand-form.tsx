@@ -421,6 +421,16 @@ export function DemandForm({ cameraModels, defaultAddress = '', timezoneName: pr
             )
         })()}
         <input type="hidden" name="appointmentDate" value={selectedSlot} />
+
+        <div className="mt-6">
+          <label className="block text-sm font-medium text-gray-300">Comment</label>
+          <textarea
+            name="comment"
+            rows={3}
+            placeholder="Optional note from the person creating this demand..."
+            className="mt-1 block w-full rounded-md border border-gray-700 bg-black/50 py-2 px-3 shadow-sm focus:border-[#C27E00] focus:outline-none focus:ring-[#C27E00] sm:text-sm text-white"
+          />
+        </div>
       </div>
 
       <div className="pt-5">

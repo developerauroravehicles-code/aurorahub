@@ -161,6 +161,14 @@ export default async function DemandDetailsPage({ params }: { params: Promise<{ 
           </div>
         </div>
 
+        {/* Creator Comment (if any) */}
+        {demand.comment && (
+          <div className="bg-white/5 border border-gray-800 p-6 rounded-lg lg:col-span-2">
+            <h2 className="text-lg font-semibold text-white mb-4">Comment (from creator)</h2>
+            <p className="text-gray-300 whitespace-pre-wrap">{demand.comment}</p>
+          </div>
+        )}
+
         {/* Assignment Information */}
         <div className="bg-white/5 border border-gray-800 p-6 rounded-lg">
           <h2 className="text-lg font-semibold text-white mb-4">Assignment Information</h2>

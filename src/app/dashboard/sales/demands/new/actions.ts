@@ -30,6 +30,7 @@ const schema = z.object({
   stockNumber: z.string().min(1, 'Stock number is required'),
   cameraModel: z.string().min(1),
   appointmentDate: z.string().min(1, 'Please select a time slot'),
+  comment: z.string().optional(),
 })
 
 type ActionState = { error?: string; fieldErrors?: Record<string, string[]> } | null
@@ -57,6 +58,7 @@ export async function createDemand(prevState: ActionState, formData: FormData) {
     stockNumber: formData.get('stockNumber'),
     cameraModel: formData.get('cameraModel'),
     appointmentDate: formData.get('appointmentDate'),
+    comment: formData.get('comment'),
   }
 
   const result = schema.safeParse(rawData)
@@ -96,6 +98,7 @@ export async function createDemand(prevState: ActionState, formData: FormData) {
     appointment_date: data.appointmentDate,
     status: 'pending_finance' as const,
     ...(profile.role === 'finance' && { assigned_finance_id: profile.id }),
+    ...(data.comment && data.comment.trim() && { comment: data.comment.trim() }),
   }
 
   const { data: demand, error } = await supabase.from('demands').insert(insertData).select().single()

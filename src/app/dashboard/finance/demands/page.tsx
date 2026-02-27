@@ -13,7 +13,7 @@ export default async function FinanceDemandsPage() {
   const dealerId = profile?.dealer_id
 
   const demandSelect = '*, dealers(name, region_codes(timezone_id, timezones(name))), profiles!demands_assigned_finance_id_fkey(full_name)'
-  const demandSelectShort = 'id, demand_number, status, created_at, dealer_id, customer_firstname, customer_lastname, customer_phone, customer_address, vehicle_make, vehicle_model, vehicle_year, stock_number, camera_model, appointment_date, assigned_specialist_id, dealers(name, region_codes(timezone_id, timezones(name))), profiles!demands_assigned_finance_id_fkey(full_name)'
+  const demandSelectShort = 'id, demand_number, status, created_at, dealer_id, customer_firstname, customer_lastname, customer_phone, customer_address, vehicle_make, vehicle_model, vehicle_year, stock_number, camera_model, appointment_date, assigned_specialist_id, comment, dealers(name, region_codes(timezone_id, timezones(name))), profiles!demands_assigned_finance_id_fkey(full_name)'
 
   // Finance sees all demands from their dealer (bayi). If no dealer_id, show empty.
 

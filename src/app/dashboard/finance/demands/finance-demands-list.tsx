@@ -26,6 +26,7 @@ interface Demand {
   camera_model: string
   appointment_date: string
   assigned_specialist_id?: string | null
+  comment?: string | null
   dealers?: DealerRow | DealerRow[] | null
   profiles?: { full_name: string } | null
 }
@@ -256,6 +257,9 @@ export function FinanceDemandsList({ myAssignedDemands, unassignedDemands, allAs
                       <p className="text-sm text-gray-500 mt-1">
                         Dealer: {(Array.isArray(demand.dealers) ? demand.dealers[0] : demand.dealers)?.name}
                       </p>
+                      {demand.comment && (
+                        <p className="text-sm text-gray-400 mt-1 italic">Comment: {demand.comment}</p>
+                      )}
                     </div>
                     <DemandActions 
                       demandId={demand.id} 
@@ -322,6 +326,9 @@ export function FinanceDemandsList({ myAssignedDemands, unassignedDemands, allAs
                       <p className="text-sm text-gray-500 mt-1">
                         Dealer: {(Array.isArray(demand.dealers) ? demand.dealers[0] : demand.dealers)?.name}
                       </p>
+                      {demand.comment && (
+                        <p className="text-sm text-gray-400 mt-1 italic">Comment: {demand.comment}</p>
+                      )}
                       <p className="text-xs text-gray-600 mt-1">
                         Created: {formatInTimeZone(new Date(demand.created_at), getEffectiveTimezone(getDealerTimezone(demand.dealers) ?? null), 'PPP h:mm a')}
                       </p>
@@ -372,6 +379,9 @@ export function FinanceDemandsList({ myAssignedDemands, unassignedDemands, allAs
                       <p className="text-sm text-gray-600 mt-1">
                         Dealer: {(Array.isArray(demand.dealers) ? demand.dealers[0] : demand.dealers)?.name}
                       </p>
+                      {demand.comment && (
+                        <p className="text-sm text-gray-400 mt-1 italic">Comment: {demand.comment}</p>
+                      )}
                     </div>
                   </div>
                 </li>
@@ -413,6 +423,9 @@ export function FinanceDemandsList({ myAssignedDemands, unassignedDemands, allAs
                       <p className="text-sm text-gray-600 mt-1">
                         Dealer: {(Array.isArray(demand.dealers) ? demand.dealers[0] : demand.dealers)?.name}
                       </p>
+                      {demand.comment && (
+                        <p className="text-sm text-gray-400 mt-1 italic">Comment: {demand.comment}</p>
+                      )}
                     </div>
                   </div>
                 </li>

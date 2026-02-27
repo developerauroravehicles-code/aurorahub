@@ -17,6 +17,7 @@ interface Demand {
   vehicle_make: string
   vehicle_model: string
   appointment_date: string
+  comment?: string | null
 }
 
 interface DemandsListProps {
@@ -249,6 +250,9 @@ export function DemandsList({ demands, timezoneName = null }: DemandsListProps) 
                         </p>
                       </div>
                     </div>
+                    {demand.comment && (
+                      <p className="mt-1 text-sm text-gray-400 italic">Comment: {demand.comment}</p>
+                    )}
                   </div>
                 </li>
               )
