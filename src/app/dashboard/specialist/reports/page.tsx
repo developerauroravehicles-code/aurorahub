@@ -127,6 +127,12 @@ export default function SpecialistReportsPage() {
     setEmailModalOpen(true)
   }
 
+  const handleOpenPreview = async () => {
+    const opts = await getReportOptions()
+    setReportOptionsForPreview(opts)
+    setPreviewModalOpen(true)
+  }
+
   const setDateRange = (months: number) => {
     const end = new Date()
     const start = subMonths(end, months)
