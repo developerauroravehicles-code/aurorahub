@@ -1,13 +1,11 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import Link from 'next/link'
 import {
   getAutomationSettings,
   saveAutomation,
   addAutomation,
   removeAutomation,
-  saveSmsTriggerContent,
   getDealersAndCameras,
   getReportPreviewData,
   type AutomationItem,
@@ -16,25 +14,21 @@ import {
   AUTOMATION_TEMPLATES,
   AUTOMATION_CATEGORIES,
   getTemplateById,
-  getSmsTriggerForTemplate,
   type TemplateId,
   type AutomationCategory,
 } from '@/lib/automation-templates'
-import { SMS_PLACEHOLDERS } from '@/lib/sms-settings'
-import { Clock, MousePointerClick, MessageSquare, Plus, Pencil, Trash2, FileText, Calendar, Camera, Info, Eye } from 'lucide-react'
+import { Clock, MousePointerClick, Plus, Pencil, Trash2, FileText, Calendar, Camera, Eye } from 'lucide-react'
 import { ReportPreviewModal } from '@/components/report-preview-modal'
 import type { ExportReportOptions } from '@/lib/export-report-pdf'
 
 export function AutomationContent() {
   const [automations, setAutomations] = useState<AutomationItem[]>([])
-  const [smsSettings, setSmsSettings] = useState<import('@/lib/sms-settings').SMSSettings | null>(null)
   const [loading, setLoading] = useState(true)
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editForm, setEditForm] = useState<{
     enabled: boolean
     params: Record<string, unknown>
-    smsContent?: { template: string; sendToCustomer: boolean; sendToSpecialist: boolean; sendToAuroraManager?: boolean }
   } | null>(null)
   const [showAddModal, setShowAddModal] = useState(false)
   const [addTemplateId, setAddTemplateId] = useState<TemplateId | ''>('')
@@ -58,7 +52,6 @@ export function AutomationContent() {
       return
     }
     setAutomations(res.automations)
-    if (res.smsSettings) setSmsSettings(res.smsSettings)
   }
 
   useEffect(() => {
@@ -77,20 +70,9 @@ export function AutomationContent() {
       if (res.dealers) setDealers(res.dealers)
       if (res.cameras) setCameras(res.cameras)
     }
-    const triggerKey = getSmsTriggerForTemplate(item.templateId)
-    const smsContent =
-      smsSettings && triggerKey
-        ? {
-            template: smsSettings[triggerKey].template,
-            sendToCustomer: smsSettings[triggerKey].sendToCustomer,
-            sendToSpecialist: smsSettings[triggerKey].sendToSpecialist ?? false,
-            sendToAuroraManager: (smsSettings[triggerKey] as { sendToAuroraManager?: boolean }).sendToAuroraManager ?? false,
-          }
-        : undefined
     setEditForm({
       enabled: item.enabled,
       params: { ...item.params },
-      smsContent,
     })
   }
 
@@ -117,41 +99,16 @@ export function AutomationContent() {
 
   const handleSaveEdit = async () => {
     if (!editingId || !editForm) return
-    const editingItem = automations.find((a) => a.id === editingId)
-    if (!editingItem) return
     setSaving(true)
     setMessage(null)
-    const params = { ...editForm.params }
-    if (editForm.smsContent && ['sms_reminder_4h', 'sms_reminder_24h'].includes(editingItem.templateId)) {
-      params.sendToCustomer = editForm.smsContent.sendToCustomer
-      params.sendToSpecialist = editForm.smsContent.sendToSpecialist
-    }
     const res = await saveAutomation(editingId, {
       enabled: editForm.enabled,
-      params,
+      params: editForm.params,
     })
     if (!res.success) {
       setSaving(false)
       setMessage({ type: 'error', text: res.error ?? 'Failed to save' })
       return
-    }
-    if (editForm.smsContent) {
-      const triggerKey = getSmsTriggerForTemplate(editingItem.templateId)
-      if (triggerKey) {
-        const smsRes = await saveSmsTriggerContent(triggerKey, {
-          template: editForm.smsContent.template,
-          sendToCustomer: editForm.smsContent.sendToCustomer,
-          sendToSpecialist: editForm.smsContent.sendToSpecialist,
-          ...(editingItem.templateId === 'sms_appointment_created' && {
-            sendToAuroraManager: editForm.smsContent.sendToAuroraManager,
-          }),
-        })
-        if (!smsRes.success) {
-          setSaving(false)
-          setMessage({ type: 'error', text: smsRes.error ?? 'Failed to save SMS content' })
-          return
-        }
-      }
     }
     setSaving(false)
     setMessage({ type: 'success', text: 'Automation updated' })
@@ -180,7 +137,7 @@ export function AutomationContent() {
     }
     const template = getTemplateById(addTemplateId as TemplateId)
     if (!template || template.type === 'event') {
-      setMessage({ type: 'error', text: 'Event automations are built-in. Use SMS Management.' })
+      setMessage({ type: 'error', text: 'Event automations are built-in.' })
       return
     }
     setSaving(true)
@@ -203,14 +160,13 @@ export function AutomationContent() {
   )
   const editingItem = editingId ? automations.find((a) => a.id === editingId) : null
 
-  const categoriesOrder: AutomationCategory[] = ['sms', 'reporting', 'calendar', 'camera_dealer']
+  const categoriesOrder: AutomationCategory[] = ['reporting', 'calendar', 'camera_dealer']
   const automationsByCategory = categoriesOrder.map((cat) => ({
     category: cat,
     items: automations.filter((a) => a.category === cat),
   })).filter((g) => g.items.length > 0)
 
   const categoryIcons: Record<AutomationCategory, React.ComponentType<{ className?: string }>> = {
-    sms: MessageSquare,
     reporting: FileText,
     calendar: Calendar,
     camera_dealer: Camera,
@@ -296,11 +252,6 @@ export function AutomationContent() {
               {item.description && (
                 <p className="text-sm text-gray-400 ml-8">{item.description}</p>
               )}
-              {item.type === 'scheduled' && item.params?.hoursBefore != null && (
-                <p className="text-sm text-gray-500 ml-8 mt-1">
-                  Sent {String(item.params.hoursBefore)} hours before appointment
-                </p>
-              )}
               {item.templateId === 'camera_low_stock_alert' && (
                 <p className="text-sm text-gray-500 ml-8 mt-1">
                   Threshold: {String(item.params?.threshold ?? 5)} items • Dealer and camera model configurable
@@ -313,15 +264,6 @@ export function AutomationContent() {
               )}
             </div>
             <div className="flex items-center gap-2 shrink-0">
-              {item.smsSettingKey && (
-                <Link
-                  href="/dashboard/system-management/sms"
-                  className="text-sm text-[#C27E00] hover:underline flex items-center gap-1"
-                >
-                  <MessageSquare className="w-4 h-4" />
-                  SMS Settings
-                </Link>
-              )}
               {isReportingTemplate(item.templateId) && (
                 <button
                   type="button"
@@ -380,93 +322,6 @@ export function AutomationContent() {
                     />
                     <span className="text-sm text-gray-300">Enabled</span>
                   </label>
-
-                  {editForm.smsContent && (
-                    <>
-                      <div>
-                        <p className="text-xs font-medium text-gray-400 mb-2">Recipients</p>
-                        <div className="flex flex-wrap gap-6">
-                          <label className="flex items-center gap-2 cursor-pointer">
-                            <input
-                              type="checkbox"
-                              checked={editForm.smsContent.sendToCustomer}
-                              onChange={(e) =>
-                                setEditForm((f) =>
-                                  f?.smsContent
-                                    ? { ...f, smsContent: { ...f.smsContent, sendToCustomer: e.target.checked } }
-                                    : f
-                                )
-                              }
-                              className="rounded border-gray-600 bg-black/50 text-[#C27E00] focus:ring-[#C27E00]"
-                            />
-                            <span className="text-sm text-gray-300">Customer</span>
-                          </label>
-                          <label className="flex items-center gap-2 cursor-pointer">
-                            <input
-                              type="checkbox"
-                              checked={editForm.smsContent.sendToSpecialist}
-                              onChange={(e) =>
-                                setEditForm((f) =>
-                                  f?.smsContent
-                                    ? { ...f, smsContent: { ...f.smsContent, sendToSpecialist: e.target.checked } }
-                                    : f
-                                )
-                              }
-                              className="rounded border-gray-600 bg-black/50 text-[#C27E00] focus:ring-[#C27E00]"
-                            />
-                            <span className="text-sm text-gray-300">Specialist</span>
-                          </label>
-                          {editingItem.templateId === 'sms_appointment_created' && (
-                            <label className="flex items-center gap-2 cursor-pointer">
-                              <input
-                                type="checkbox"
-                                checked={editForm.smsContent.sendToAuroraManager ?? false}
-                                onChange={(e) =>
-                                  setEditForm((f) =>
-                                    f?.smsContent
-                                      ? { ...f, smsContent: { ...f.smsContent, sendToAuroraManager: e.target.checked } }
-                                      : f
-                                  )
-                                }
-                                className="rounded border-gray-600 bg-black/50 text-[#C27E00] focus:ring-[#C27E00]"
-                              />
-                              <span className="text-sm text-gray-300">Aurora Manager</span>
-                            </label>
-                          )}
-                        </div>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-300 mb-2">Message template</label>
-                        <textarea
-                          value={editForm.smsContent.template}
-                          onChange={(e) =>
-                            setEditForm((f) =>
-                              f?.smsContent
-                                ? { ...f, smsContent: { ...f.smsContent, template: e.target.value } }
-                                : f
-                            )
-                          }
-                          rows={6}
-                          className="w-full border border-gray-700 bg-black/50 text-white rounded px-3 py-2 text-sm font-mono focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]"
-                          placeholder="Message template..."
-                        />
-                        <div className="mt-2 flex flex-wrap gap-2 text-xs text-gray-500">
-                          {Object.entries(SMS_PLACEHOLDERS).slice(0, 4).map(([ph, desc]) => (
-                            <span key={ph} title={desc}>
-                              <code className="text-[#C27E00]">{ph}</code>
-                            </span>
-                          ))}
-                          <Link
-                            href="/dashboard/system-management/sms"
-                            className="text-[#C27E00] hover:underline flex items-center gap-1"
-                          >
-                            <Info className="w-3 h-3" />
-                            All placeholders
-                          </Link>
-                        </div>
-                      </div>
-                    </>
-                  )}
 
                   {isReportingTemplate(editingItem.templateId) && (
                     <div className="space-y-4">
@@ -637,45 +492,6 @@ export function AutomationContent() {
                       </div>
                     </div>
                   )}
-
-                  {editingItem.type === 'scheduled' && editingItem.params?.hoursBefore !== undefined && (() => {
-                    const template = getTemplateById(editingItem.templateId)
-                    const hoursParam = template?.params.find((p) => p.key === 'hoursBefore')
-                    const options = hoursParam?.type === 'select' && hoursParam.options
-                      ? hoursParam.options
-                      : [{ value: 2, label: '2 hours' }, { value: 4, label: '4 hours' }, { value: 6, label: '6 hours' }]
-                    const defaultHours = hoursParam?.default ?? 4
-                    return (
-                      <div>
-                        <label className="block text-sm font-medium text-gray-300 mb-1">
-                          Hours before appointment to send
-                        </label>
-                        <select
-                          value={String(editForm.params?.hoursBefore ?? defaultHours)}
-                          onChange={(e) =>
-                            setEditForm((f) =>
-                              f
-                                ? {
-                                    ...f,
-                                    params: {
-                                      ...f.params,
-                                      hoursBefore: Number(e.target.value),
-                                    },
-                                  }
-                                : null
-                            )
-                          }
-                          className="w-full border border-gray-700 bg-black/50 text-white rounded px-3 py-2 text-sm"
-                        >
-                          {options.map((opt) => (
-                            <option key={opt.value} value={opt.value}>
-                              {opt.label}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                    )
-                  })()}
                 </div>
                 <div className="flex justify-end gap-3 mt-6">
                   <button
@@ -744,38 +560,7 @@ export function AutomationContent() {
 
               {addTemplateId && addableTemplates.some((t) => t.id === addTemplateId) && (
                 <>
-                  {(addTemplateId === 'sms_reminder_4h' || addTemplateId === 'sms_reminder_24h') && (
-                    <div className="flex flex-wrap gap-6">
-                      <label className="flex items-center gap-2 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={Boolean(addParams.sendToCustomer ?? true)}
-                          onChange={(e) =>
-                            setAddParams((p) => ({ ...p, sendToCustomer: e.target.checked }))
-                          }
-                          className="rounded border-gray-600 bg-black/50 text-[#C27E00] focus:ring-[#C27E00]"
-                        />
-                        <span className="text-sm text-gray-300">Send to customer</span>
-                      </label>
-                      <label className="flex items-center gap-2 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={Boolean(addParams.sendToSpecialist ?? true)}
-                          onChange={(e) =>
-                            setAddParams((p) => ({ ...p, sendToSpecialist: e.target.checked }))
-                          }
-                          className="rounded border-gray-600 bg-black/50 text-[#C27E00] focus:ring-[#C27E00]"
-                        />
-                        <span className="text-sm text-gray-300">Send to specialist</span>
-                      </label>
-                    </div>
-                  )}
-                  {addTemplateId === 'sms_reminder_24h' && (
-                    <p className="text-xs text-gray-500">
-                      Note: 24-hour reminder requires daily cron. Currently only 4-hour reminder works with hourly cron.
-                    </p>
-                  )}
-                  {addTemplateId && addableTemplates.some((t) => t.id === addTemplateId) && isReportingTemplate(addTemplateId) && (
+                  {isReportingTemplate(addTemplateId) && (
                     <div className="space-y-4">
                       <div>
                         <label className="block text-sm font-medium text-gray-300 mb-1">Send time (HH:mm)</label>

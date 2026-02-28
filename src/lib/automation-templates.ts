@@ -6,14 +6,9 @@
 
 export type AutomationType = 'scheduled' | 'event'
 
-export type AutomationCategory = 'reporting' | 'sms' | 'calendar' | 'camera_dealer'
+export type AutomationCategory = 'reporting' | 'calendar' | 'camera_dealer'
 
 export type TemplateId =
-  | 'sms_reminder_4h'
-  | 'sms_reminder_24h'
-  | 'sms_appointment_created'
-  | 'sms_cancellation'
-  | 'sms_rescheduling'
   | 'daily_report_email'
   | 'weekly_summary'
   | 'daily_report_sales'
@@ -59,10 +54,6 @@ export const AUTOMATION_CATEGORIES: Record<
     name: 'Reporting',
     description: 'Email reports, daily/weekly summaries',
   },
-  sms: {
-    name: 'SMS',
-    description: 'Reminder, approval, cancellation, rescheduling SMS',
-  },
   calendar: {
     name: 'Calendar',
     description: 'Calendar blocks, slot synchronization',
@@ -74,77 +65,7 @@ export const AUTOMATION_CATEGORIES: Record<
 }
 
 export const AUTOMATION_TEMPLATES: AutomationTemplate[] = [
-  // SMS category
-  {
-    id: 'sms_reminder_4h',
-    category: 'sms',
-    name: '4 Hour SMS Reminder',
-    description: 'Sends reminder SMS to customer and specialist 2, 4, or 6 hours before appointment.',
-    type: 'scheduled',
-    apiIdentifier: 'send-reminders',
-    params: [
-      {
-        key: 'hoursBefore',
-        label: 'Hours before to send',
-        type: 'select',
-        options: [
-          { value: 2, label: '2 hours before' },
-          { value: 4, label: '4 hours before' },
-          { value: 6, label: '6 hours before' },
-        ],
-        default: 4,
-      },
-      { key: 'sendToCustomer', label: 'Send to customer', type: 'boolean', default: true },
-      { key: 'sendToSpecialist', label: "Send to specialist", type: 'boolean', default: true },
-    ],
-  },
-  {
-    id: 'sms_reminder_24h',
-    category: 'sms',
-    name: '24 Hour SMS Reminder',
-    description: 'Sends reminder SMS to customer and specialist 24 hours before appointment.',
-    type: 'scheduled',
-    apiIdentifier: 'send-reminders-24h',
-    params: [
-      {
-        key: 'hoursBefore',
-        label: 'Hours before to send',
-        type: 'select',
-        options: [{ value: 24, label: '24 hours before' }],
-        default: 24,
-      },
-      { key: 'sendToCustomer', label: 'Send to customer', type: 'boolean', default: true },
-      { key: 'sendToSpecialist', label: "Send to specialist", type: 'boolean', default: true },
-    ],
-  },
-  {
-    id: 'sms_appointment_created',
-    category: 'sms',
-    name: 'Appointment Approval SMS',
-    description: 'Sends SMS to customer, specialist and Aurora Manager when Finance approves the demand.',
-    type: 'event',
-    smsSettingKey: 'appointment_created',
-    params: [],
-  },
-  {
-    id: 'sms_cancellation',
-    category: 'sms',
-    name: 'Cancellation Notification SMS',
-    description: 'Sends notification SMS to customer and specialist when demand is cancelled.',
-    type: 'event',
-    smsSettingKey: 'cancellation_notice',
-    params: [],
-  },
-  {
-    id: 'sms_rescheduling',
-    category: 'sms',
-    name: 'Appointment Rescheduling SMS',
-    description: 'Sends notification SMS to customer and specialist when appointment date is changed.',
-    type: 'event',
-    smsSettingKey: 'rescheduling_notice',
-    params: [],
-  },
-  // Reporting category - full template set per plan
+  // Reporting category
   {
     id: 'daily_report_email',
     category: 'reporting',
@@ -337,19 +258,6 @@ export function getTemplateById(id: TemplateId): AutomationTemplate | undefined 
 
 export function getTemplatesByCategory(category: AutomationCategory): AutomationTemplate[] {
   return AUTOMATION_TEMPLATES.filter((t) => t.category === category)
-}
-
-/** Maps automation templateId to SMS trigger key for fetching/editing message content */
-export const TEMPLATE_TO_SMS_TRIGGER: Partial<Record<TemplateId, 'appointment_created' | 'cancellation_notice' | 'rescheduling_notice' | 'four_hour_reminder'>> = {
-  sms_reminder_4h: 'four_hour_reminder',
-  sms_reminder_24h: 'four_hour_reminder',
-  sms_appointment_created: 'appointment_created',
-  sms_cancellation: 'cancellation_notice',
-  sms_rescheduling: 'rescheduling_notice',
-}
-
-export function getSmsTriggerForTemplate(templateId: TemplateId): 'appointment_created' | 'cancellation_notice' | 'rescheduling_notice' | 'four_hour_reminder' | null {
-  return TEMPLATE_TO_SMS_TRIGGER[templateId] ?? null
 }
 
 export function getDefaultParams(templateId: TemplateId): Record<string, unknown> {

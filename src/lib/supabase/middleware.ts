@@ -46,9 +46,14 @@ export async function updateSession(request: NextRequest) {
   // supabase.auth.getUser(). A simple mistake could make it very hard to debug
   // issues with users being randomly logged out.
 
-  // Cron API routes use CRON_SECRET; skip auth redirect for them
+  // Cron API routes use CRON_SECRET; skip auth entirely - return immediately
   const cronPaths = ['/api/send-reminders', '/api/send-scheduled-reports', '/api/check-low-stock']
-  const isCronApi = cronPaths.some((p) => request.nextUrl.pathname === p)
+  const isCronApi = cronPaths.some((p) =>
+    request.nextUrl.pathname === p || request.nextUrl.pathname.startsWith(p + '/')
+  )
+  if (isCronApi) {
+    return supabaseResponse
+  }
 
   const {
     data: { user },
@@ -58,8 +63,7 @@ export async function updateSession(request: NextRequest) {
     !user &&
     !request.nextUrl.pathname.startsWith('/login') &&
     !request.nextUrl.pathname.startsWith('/auth') &&
-    request.nextUrl.pathname !== '/' && // Allow access to landing page
-    !isCronApi
+    request.nextUrl.pathname !== '/' // Allow access to landing page
   ) {
     // no user, potentially redirect to login
     const url = request.nextUrl.clone()

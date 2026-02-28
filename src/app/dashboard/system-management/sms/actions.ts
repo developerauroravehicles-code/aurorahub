@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import type { SMSSettings } from '@/lib/sms-settings'
 import { sendSMS } from '@/lib/twilio'
 import { logSmsSent } from '@/lib/sms-logger'
 import { getSmsSettings } from '@/lib/sms-resolver'
@@ -35,6 +36,40 @@ export interface SmsLogEntry {
   message_type: string
   triggered_by: string
   message_content: string | null
+}
+
+export async function getSmsSettingsAction(): Promise<{ settings?: SMSSettings; error?: string }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Unauthorized' }
+
+  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+  if (profile?.role !== 'aurora_manager') return { error: 'Only Aurora Managers can view SMS settings' }
+
+  const settings = await getSmsSettings(supabase)
+  return { settings }
+}
+
+export async function saveSmsSettingsAction(settings: SMSSettings): Promise<{ error?: string }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Unauthorized' }
+
+  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+  if (profile?.role !== 'aurora_manager') return { error: 'Only Aurora Managers can save SMS settings' }
+
+  const { error } = await supabase
+    .from('system_settings')
+    .upsert(
+      {
+        key: 'sms_settings',
+        value: JSON.stringify(settings),
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: 'key' }
+    )
+  if (error) return { error: error.message }
+  return {}
 }
 
 export async function getSmsLogs(filters?: {

@@ -2,10 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
-import { getSmsSettings } from '@/lib/sms-resolver'
-import type { SMSTriggerType } from '@/lib/sms-settings'
 import {
-  AUTOMATION_TEMPLATES,
   getTemplateById,
   getDefaultParams,
   type TemplateId,
@@ -36,19 +33,7 @@ export interface AutomationSettings {
 }
 
 const DEFAULT_AUTOMATION_SETTINGS: AutomationSettings = {
-  automations: [
-    {
-      id: 'sms_reminder_4h_default',
-      type: 'scheduled',
-      category: 'sms',
-      templateId: 'sms_reminder_4h',
-      enabled: true,
-      name: '4 Hour SMS Reminder',
-      description: 'Sends reminder to customer and specialist 4 hours before appointment.',
-      params: { hoursBefore: 4, sendToCustomer: true, sendToSpecialist: true },
-      builtIn: true,
-    },
-  ],
+  automations: [],
 }
 
 async function verifyAuroraManager() {
@@ -135,13 +120,11 @@ export async function getDealersAndCameras(): Promise<{
 
 export async function getAutomationSettings(): Promise<{
   automations: AutomationItem[]
-  smsSettings?: import('@/lib/sms-settings').SMSSettings
   error?: string
 }> {
   try {
     await verifyAuroraManager()
     const supabase = await createClient()
-    const smsSettings = await getSmsSettings(supabase)
 
     const { data } = await supabase
       .from('system_settings')
@@ -156,7 +139,7 @@ export async function getAutomationSettings(): Promise<{
         const raw = parsed.automations ?? []
         scheduled = raw.map((a) => {
           const template = a.templateId ? getTemplateById(a.templateId) : undefined
-          const category = a.category ?? template?.category ?? 'sms'
+          const category = a.category ?? template?.category ?? 'reporting'
           return { ...a, category } as AutomationItem
         }).filter((a): a is AutomationItem => !!a.id && !!a.templateId && !!a.type)
       } catch {
@@ -172,42 +155,6 @@ export async function getAutomationSettings(): Promise<{
 
     const eventAutomations: AutomationItem[] = [
       {
-        id: 'sms_appointment_created',
-        type: 'event',
-        category: 'sms',
-        templateId: 'sms_appointment_created',
-        enabled: smsSettings.appointment_created.enabled,
-        name: 'Appointment Approval SMS',
-        description: 'Sends SMS to customer, specialist and Aurora Manager when Finance approves the demand.',
-        params: {},
-        smsSettingKey: 'appointment_created',
-        builtIn: true,
-      },
-      {
-        id: 'sms_cancellation',
-        type: 'event',
-        category: 'sms',
-        templateId: 'sms_cancellation',
-        enabled: smsSettings.cancellation_notice.enabled,
-        name: 'Cancellation Notification SMS',
-        description: 'Notification to customer and specialist when demand is cancelled.',
-        params: {},
-        smsSettingKey: 'cancellation_notice',
-        builtIn: true,
-      },
-      {
-        id: 'sms_rescheduling',
-        type: 'event',
-        category: 'sms',
-        templateId: 'sms_rescheduling',
-        enabled: smsSettings.rescheduling_notice.enabled,
-        name: 'Appointment Rescheduling SMS',
-        description: 'Notification to customer and specialist when appointment date is changed.',
-        params: {},
-        smsSettingKey: 'rescheduling_notice',
-        builtIn: true,
-      },
-      {
         id: 'camera_dealer_assignment_notify',
         type: 'event',
         category: 'camera_dealer',
@@ -220,7 +167,7 @@ export async function getAutomationSettings(): Promise<{
       },
     ]
 
-    return { automations: [...scheduled, ...eventAutomations], smsSettings }
+    return { automations: [...scheduled, ...eventAutomations] }
   } catch (err) {
     return {
       automations: [],
@@ -236,11 +183,9 @@ export async function saveAutomation(
   try {
     await verifyAuroraManager()
     const supabase = await createClient()
-    const smsSettings = await getSmsSettings(supabase)
 
-    const eventIds = ['sms_appointment_created', 'sms_cancellation', 'sms_rescheduling', 'camera_dealer_assignment_notify']
-    if (eventIds.includes(id)) {
-      if (id === 'camera_dealer_assignment_notify' && typeof updates.enabled === 'boolean') {
+    if (id === 'camera_dealer_assignment_notify') {
+      if (typeof updates.enabled === 'boolean') {
         const { data } = await supabase
           .from('system_settings')
           .select('value')
@@ -279,32 +224,6 @@ export async function saveAutomation(
         revalidatePath('/dashboard/system-management/automation')
         return { success: true }
       }
-      type TriggerKey = 'appointment_created' | 'cancellation_notice' | 'rescheduling_notice'
-      const keyMap: Record<string, TriggerKey> = {
-        sms_appointment_created: 'appointment_created',
-        sms_cancellation: 'cancellation_notice',
-        sms_rescheduling: 'rescheduling_notice',
-      }
-      const key = keyMap[id]
-      const existing = key ? smsSettings[key] : null
-      if (key && existing && typeof updates.enabled === 'boolean') {
-        const updated = { ...existing, enabled: updates.enabled }
-        const newSettings = { ...smsSettings, [key]: updated }
-        const { error } = await supabase
-          .from('system_settings')
-          .upsert(
-            {
-              key: 'sms_settings',
-              value: JSON.stringify(newSettings),
-              updated_at: new Date().toISOString(),
-            },
-            { onConflict: 'key' }
-          )
-        if (error) return { success: false, error: error.message }
-      }
-      revalidatePath('/dashboard/system-management/automation')
-      revalidatePath('/dashboard/system-management/sms')
-      return { success: true }
     }
 
     const { data } = await supabase
@@ -363,7 +282,7 @@ export async function addAutomation(
     if (!template) return { success: false, error: 'Invalid template' }
 
     if (template.type === 'event') {
-      return { success: false, error: 'Event automations are built-in. Use SMS Management to configure.' }
+      return { success: false, error: 'Event automations are built-in.' }
     }
 
     const supabase = await createClient()
@@ -382,7 +301,7 @@ export async function addAutomation(
     }
 
     const exists = automations.some((a) => a.templateId === templateId)
-    if (exists && (templateId === 'sms_reminder_4h' || templateId === 'sms_reminder_24h')) {
+    if (exists) {
       return { success: false, error: 'This automation type is already added' }
     }
 
@@ -419,47 +338,6 @@ export async function addAutomation(
     return {
       success: false,
       error: err instanceof Error ? err.message : 'Failed to add automation',
-    }
-  }
-}
-
-export async function saveSmsTriggerContent(
-  triggerKey: SMSTriggerType,
-  updates: { template?: string; sendToCustomer?: boolean; sendToSpecialist?: boolean; sendToAuroraManager?: boolean }
-): Promise<{ success: boolean; error?: string }> {
-  try {
-    await verifyAuroraManager()
-    const supabase = await createClient()
-    const smsSettings = await getSmsSettings(supabase)
-    const existing = smsSettings[triggerKey]
-    if (!existing) return { success: false, error: 'Trigger not found' }
-
-    const updated = {
-      ...existing,
-      ...(typeof updates.template === 'string' && { template: updates.template }),
-      ...(typeof updates.sendToCustomer === 'boolean' && { sendToCustomer: updates.sendToCustomer }),
-      ...(typeof updates.sendToSpecialist === 'boolean' && { sendToSpecialist: updates.sendToSpecialist }),
-      ...(typeof updates.sendToAuroraManager === 'boolean' && { sendToAuroraManager: updates.sendToAuroraManager }),
-    }
-    const newSettings = { ...smsSettings, [triggerKey]: updated }
-    const { error } = await supabase
-      .from('system_settings')
-      .upsert(
-        {
-          key: 'sms_settings',
-          value: JSON.stringify(newSettings),
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: 'key' }
-      )
-    if (error) return { success: false, error: error.message }
-    revalidatePath('/dashboard/system-management/automation')
-    revalidatePath('/dashboard/system-management/sms')
-    return { success: true }
-  } catch (err) {
-    return {
-      success: false,
-      error: err instanceof Error ? err.message : 'Failed to save',
     }
   }
 }

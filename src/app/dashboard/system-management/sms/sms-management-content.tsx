@@ -1,7 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { createClient } from '@/lib/supabase/client'
+import { useState, useEffect, useCallback } from 'react'
 import {
   type SMSSettings,
   type SMSTriggerType,
@@ -10,8 +9,9 @@ import {
 } from '@/lib/sms-settings'
 import { formatInTimeZone } from 'date-fns-tz'
 import { SYSTEM_DEFAULT_TIMEZONE } from '@/lib/timezone-defaults'
-import { Info, Send, History } from 'lucide-react'
-import { getDemandsForManualSms, getSmsLogs, sendManualSms, type DemandOption, type SmsLogEntry } from './actions'
+import { Info, Send, History, RotateCcw, ChevronDown, ChevronUp, Eye } from 'lucide-react'
+import { getDemandsForManualSms, getSmsLogs, sendManualSms, getSmsSettingsAction, saveSmsSettingsAction, type DemandOption, type SmsLogEntry } from './actions'
+import { previewSmsTemplate, getSmsSegmentCount } from '@/lib/sms-preview'
 
 const TRIGGER_LABELS: Record<SMSTriggerType, string> = {
   appointment_created: 'Appointment Created',
@@ -25,7 +25,7 @@ export function SMSManagementContent() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
-  const [expandedTrigger, setExpandedTrigger] = useState<SMSTriggerType | null>('appointment_created')
+  const [expandedTriggers, setExpandedTriggers] = useState<SMSTriggerType[]>(['appointment_created'])
   const [showManualSend, setShowManualSend] = useState(false)
   const [demands, setDemands] = useState<DemandOption[]>([])
   const [manualDemandId, setManualDemandId] = useState('')
@@ -36,35 +36,22 @@ export function SMSManagementContent() {
   const [logsLoading, setLogsLoading] = useState(false)
   const [logFilters, setLogFilters] = useState({ dateFrom: '', dateTo: '', customerName: '' })
   const [viewingLog, setViewingLog] = useState<SmsLogEntry | null>(null)
-  const supabase = createClient()
+  const [initialSettings, setInitialSettings] = useState<SMSSettings | null>(null)
+
+  const loadSettings = useCallback(async () => {
+    const res = await getSmsSettingsAction()
+    if (res.settings) {
+      setSettings(res.settings)
+      setInitialSettings(res.settings)
+    } else if (res.error) {
+      setMessage({ type: 'error', text: res.error })
+    }
+    setLoading(false)
+  }, [])
 
   useEffect(() => {
-    async function load() {
-      const { data } = await supabase
-        .from('system_settings')
-        .select('value')
-        .eq('key', 'sms_settings')
-        .single()
-      if (data?.value) {
-        try {
-          const parsed = JSON.parse(data.value) as Partial<SMSSettings>
-          setSettings((prev) => ({
-            ...DEFAULT_SMS_SETTINGS,
-            ...prev,
-            ...parsed,
-            appointment_created: { ...DEFAULT_SMS_SETTINGS.appointment_created, ...parsed.appointment_created },
-            cancellation_notice: { ...DEFAULT_SMS_SETTINGS.cancellation_notice, ...parsed.cancellation_notice },
-            rescheduling_notice: { ...DEFAULT_SMS_SETTINGS.rescheduling_notice, ...parsed.rescheduling_notice },
-            four_hour_reminder: { ...DEFAULT_SMS_SETTINGS.four_hour_reminder, ...parsed.four_hour_reminder },
-          }))
-        } catch {
-          // use defaults
-        }
-      }
-      setLoading(false)
-    }
-    load()
-  }, [])
+    loadSettings()
+  }, [loadSettings])
 
   useEffect(() => {
     getSmsLogs({}).then((res) => {
@@ -75,27 +62,27 @@ export function SMSManagementContent() {
   const saveSettings = async () => {
     setSaving(true)
     setMessage(null)
-    try {
-      const { error } = await supabase
-        .from('system_settings')
-        .upsert(
-          {
-            key: 'sms_settings',
-            value: JSON.stringify(settings),
-            updated_at: new Date().toISOString(),
-          },
-          { onConflict: 'key' }
-        )
-      if (error) throw error
+    const res = await saveSmsSettingsAction(settings)
+    setSaving(false)
+    if (res.error) {
+      setMessage({ type: 'error', text: res.error })
+    } else {
+      setInitialSettings(settings)
       setMessage({ type: 'success', text: 'SMS settings saved successfully!' })
-    } catch (err) {
-      setMessage({
-        type: 'error',
-        text: err instanceof Error ? err.message : 'Failed to save settings',
-      })
-    } finally {
-      setSaving(false)
     }
+  }
+
+  const hasUnsavedChanges = initialSettings
+    ? JSON.stringify(settings) !== JSON.stringify(initialSettings)
+    : false
+
+  const triggerKeys = Object.keys(TRIGGER_LABELS) as SMSTriggerType[]
+  const expandAll = () => setExpandedTriggers([...triggerKeys])
+  const collapseAll = () => setExpandedTriggers([])
+  const toggleTrigger = (t: SMSTriggerType) => {
+    setExpandedTriggers((prev) =>
+      prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t]
+    )
   }
 
   const updateTrigger = (key: SMSTriggerType, updates: Partial<SMSSettings[SMSTriggerType]>) => {
@@ -109,6 +96,16 @@ export function SMSManagementContent() {
     if (confirm('Reset all SMS settings to defaults? This cannot be undone.')) {
       setSettings(DEFAULT_SMS_SETTINGS)
       setMessage({ type: 'success', text: 'Settings reset to defaults. Click Save to apply.' })
+    }
+  }
+
+  const resetTriggerToDefault = (key: SMSTriggerType) => {
+    if (confirm(`Reset "${TRIGGER_LABELS[key]}" to default template and settings?`)) {
+      setSettings((prev) => ({
+        ...prev,
+        [key]: { ...DEFAULT_SMS_SETTINGS[key] },
+      }))
+      setMessage({ type: 'success', text: `"${TRIGGER_LABELS[key]}" reset to default. Click Save to apply.` })
     }
   }
 
@@ -167,7 +164,7 @@ export function SMSManagementContent() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 pb-20">
       <div>
         <h3 className="text-lg font-semibold text-white mb-2">SMS Management</h3>
         <p className="text-sm text-gray-400 mb-4">
@@ -314,15 +311,41 @@ export function SMSManagementContent() {
 
       {/* Per-trigger settings */}
       <div className="space-y-4">
-        <h4 className="text-md font-semibold text-white">SMS Triggers & Templates</h4>
-        {(Object.keys(TRIGGER_LABELS) as SMSTriggerType[]).map((trigger) => {
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h4 className="text-md font-semibold text-white">SMS Triggers & Templates</h4>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={expandAll}
+              className="text-xs text-gray-400 hover:text-white px-2 py-1 rounded border border-gray-600 hover:border-gray-500 flex items-center gap-1"
+            >
+              <ChevronDown className="w-3 h-3" />
+              Expand all
+            </button>
+            <button
+              type="button"
+              onClick={collapseAll}
+              className="text-xs text-gray-400 hover:text-white px-2 py-1 rounded border border-gray-600 hover:border-gray-500 flex items-center gap-1"
+            >
+              <ChevronUp className="w-3 h-3" />
+              Collapse all
+            </button>
+          </div>
+        </div>
+        {triggerKeys.map((trigger) => {
           const s = settings[trigger]
-          const isExpanded = expandedTrigger === trigger
+          const isExpanded = expandedTriggers.includes(trigger)
+          const previewText = previewSmsTemplate(trigger, s.template, {
+            signature: settings.signature,
+            contactPhone: settings.contactPhone,
+            hoursBefore: (s as { hoursBefore?: number }).hoursBefore ?? 4,
+          })
+          const segmentInfo = getSmsSegmentCount(previewText)
           return (
             <div key={trigger} className="bg-black/30 rounded-lg border border-gray-800 overflow-hidden">
               <button
                 type="button"
-                onClick={() => setExpandedTrigger(isExpanded ? null : trigger)}
+                onClick={() => toggleTrigger(trigger)}
                 className="w-full flex items-center justify-between p-4 text-left hover:bg-white/5 transition-colors"
               >
                 <div className="flex items-center gap-3">
@@ -349,7 +372,7 @@ export function SMSManagementContent() {
                       <span className="text-sm text-gray-300">Enable this SMS</span>
                     </label>
                     <div>
-                      <p className="text-xs font-medium text-gray-400 mb-2">Recipients (Kimlere gidecek)</p>
+                      <p className="text-xs font-medium text-gray-400 mb-2">Recipients</p>
                       <div className="flex flex-wrap gap-6">
                         <label className="flex items-center gap-2 cursor-pointer">
                           <input
@@ -382,9 +405,33 @@ export function SMSManagementContent() {
                         )}
                       </div>
                     </div>
+                    {trigger === 'four_hour_reminder' && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-300 mb-1">Hours before appointment</label>
+                        <select
+                          value={String((s as { hoursBefore?: number }).hoursBefore ?? 4)}
+                          onChange={(e) => updateTrigger(trigger, { hoursBefore: Number(e.target.value) })}
+                          className="w-full max-w-xs border border-gray-700 bg-black/50 text-white rounded px-3 py-2 text-sm"
+                        >
+                          <option value={2}>2 hours before</option>
+                          <option value={4}>4 hours before</option>
+                          <option value={6}>6 hours before</option>
+                        </select>
+                      </div>
+                    )}
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">Message template</label>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <label className="block text-sm font-medium text-gray-300">Message template</label>
+                      <button
+                        type="button"
+                        onClick={() => resetTriggerToDefault(trigger)}
+                        className="text-xs text-gray-400 hover:text-[#C27E00] flex items-center gap-1"
+                      >
+                        <RotateCcw className="w-3 h-3" />
+                        Reset to default
+                      </button>
+                    </div>
                     <textarea
                       value={s.template}
                       onChange={(e) => updateTrigger(trigger, { template: e.target.value })}
@@ -392,6 +439,20 @@ export function SMSManagementContent() {
                       className="w-full border border-gray-700 bg-black/50 text-white rounded px-3 py-2 text-sm font-mono focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]"
                       placeholder="Enter message template..."
                     />
+                    <div className="flex flex-wrap items-center gap-4 text-xs text-gray-400">
+                      <span title="Character and segment count for preview">
+                        {previewText.length} chars · {segmentInfo} segment{segmentInfo !== 1 ? 's' : ''}
+                      </span>
+                      <details className="group">
+                        <summary className="cursor-pointer text-[#C27E00] hover:underline flex items-center gap-1">
+                          <Eye className="w-3 h-3" />
+                          Preview
+                        </summary>
+                        <pre className="mt-2 p-3 bg-black/50 rounded text-gray-300 text-xs whitespace-pre-wrap break-words font-sans border border-gray-700">
+                          {previewText || '(Empty)'}
+                        </pre>
+                      </details>
+                    </div>
                   </div>
                 </div>
               )}
@@ -552,7 +613,39 @@ export function SMSManagementContent() {
         >
           Reset to Defaults
         </button>
+        {hasUnsavedChanges && (
+          <span className="text-xs text-amber-400 flex items-center">Unsaved changes</span>
+        )}
       </div>
+
+      {/* Sticky save bar when unsaved */}
+      {hasUnsavedChanges && (
+        <div className="fixed bottom-0 left-0 right-0 z-40 bg-gray-900/95 border-t border-gray-700 py-3 px-4 shadow-lg">
+          <div className="max-w-4xl mx-auto flex items-center justify-between">
+            <span className="text-sm text-amber-400">You have unsaved changes</span>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  if (initialSettings) setSettings(initialSettings)
+                  setMessage({ type: 'success', text: 'Changes discarded' })
+                }}
+                className="text-sm text-gray-400 hover:text-white px-4 py-2 rounded border border-gray-600 hover:border-gray-500"
+              >
+                Discard
+              </button>
+              <button
+                type="button"
+                onClick={saveSettings}
+                disabled={saving}
+                className="bg-[#C27E00] hover:bg-[#a06900] text-white px-6 py-2 rounded font-medium text-sm disabled:opacity-50"
+              >
+                {saving ? 'Saving...' : 'Save'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

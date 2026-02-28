@@ -13,6 +13,8 @@ export interface SMSTriggerSetting {
   template: string
   /** Display description */
   description?: string
+  /** For four_hour_reminder: hours before appointment (2, 4, or 6) */
+  hoursBefore?: number
 }
 
 export interface SMSSettings {
@@ -65,12 +67,13 @@ Your appointment has been rescheduled. For questions within 24 hours of your app
     enabled: true,
     sendToCustomer: true,
     sendToSpecialist: true,
+    hoursBefore: 4,
     template: `Appointment Reminder
 
 This is a reminder that your dashcam installation appointment is scheduled to take place in {{hours}} at {{address}}.
 
 {{signature}}`,
-    description: 'Sent ~4 hours before appointment (automated cron). Recipients: Customer and Assigned Specialist (same message, same time).',
+    description: 'Sent before appointment (automated cron). Configure hours (2, 4, or 6) and recipients below.',
   },
   contactPhone: '(604) 833-5801',
   signature: 'Aurora Vehicles.',

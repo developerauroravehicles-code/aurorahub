@@ -158,16 +158,18 @@ export function buildInvoicePdf(data: InvoiceRowData): jsPDF {
     ['Warranty End', data.warrantyEnd]
   ]
 
+  const invoiceTableWidth = pageWidth - 2 * margin
   autoTable(doc, {
     startY: y,
     head: [['Field', 'Value']],
     body: tableData,
     theme: 'grid',
     headStyles: { fillColor: [194, 126, 0], textColor: [255, 255, 255], fontStyle: 'bold' },
-    margin: { left: margin },
+    margin: { left: margin, right: margin },
+    tableWidth: invoiceTableWidth,
     columnStyles: {
-      0: { cellWidth: 50, fontStyle: 'bold' },
-      1: { cellWidth: 120 }
+      0: { cellWidth: invoiceTableWidth * 0.28, fontStyle: 'bold' },
+      1: { cellWidth: invoiceTableWidth * 0.72 }
     },
     tableLineColor: [60, 60, 60],
     tableLineWidth: 0.2
@@ -190,7 +192,8 @@ export function buildInvoicePdf(data: InvoiceRowData): jsPDF {
       body: extraTableData,
       showHead: 'never' as const,
       theme: 'grid',
-      margin: { left: margin },
+      margin: { left: margin, right: margin },
+      tableWidth: pageWidth - 2 * margin,
       columnStyles: {
         0: { cellWidth: (pageWidth - 2 * margin) / 2 },
         1: { cellWidth: (pageWidth - 2 * margin) / 2 }
@@ -273,14 +276,23 @@ export function buildInvoicePdf(data: InvoiceRowData): jsPDF {
   y = (doc as { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY ?? y
   y += 12
 
-  // Footer
+  // Footer section - payment notice and thank you
+  const pageHeight = doc.internal.pageSize.getHeight()
+  doc.setFont('helvetica', 'normal')
+  doc.setFontSize(10)
+  doc.setTextColor(0, 0, 0)
+  doc.text('Make all checks payable to ONATCA AUTO', pageWidth / 2, pageHeight - 22, { align: 'center' })
+  doc.setFont('helvetica', 'bold')
+  doc.text('THANK YOU FOR YOUR BUSINESS!', pageWidth / 2, pageHeight - 14, { align: 'center' })
+
+  // Technical footer
   doc.setFontSize(8)
   doc.setFont('helvetica', 'normal')
   doc.setTextColor(128, 128, 128)
   doc.text(
     `AuroraHub Invoice - Generated ${new Date().toLocaleDateString()} - ${data.demand_number ?? 'Invoice'}`,
     pageWidth / 2,
-    doc.internal.pageSize.getHeight() - 10,
+    pageHeight - 6,
     { align: 'center' }
   )
 

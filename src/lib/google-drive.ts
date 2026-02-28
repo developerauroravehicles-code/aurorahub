@@ -155,3 +155,91 @@ export async function uploadInvoiceToDrive(
     return { success: false, error: `Drive upload failed: ${msg}` }
   }
 }
+
+/**
+ * Upload a Statement PDF to Google Drive.
+ * Creates folder structure: rootFolder / Statements / DealerName / Year
+ * @param pdfBuffer - PDF file as Buffer or Uint8Array
+ * @param fileName - e.g. Statement_DealerName_2025-01-01_2025-01-31.pdf
+ * @param dealerName - dealer name for folder
+ * @param dateFrom - start date (used to determine year folder)
+ * @param settings - Google Drive credentials from system_settings
+ */
+export async function uploadStatementToDrive(
+  pdfBuffer: Buffer | Uint8Array,
+  fileName: string,
+  dealerName: string,
+  dateFrom: string,
+  settings: GoogleDriveSettings
+): Promise<{ success: true; fileId: string; webViewLink?: string } | { success: false; error: string }> {
+  if (!settings.enabled) {
+    return { success: false, error: 'Google Drive integration is disabled' }
+  }
+
+  const rootFolderId = settings.defaultFolderId?.trim()
+  if (!rootFolderId) {
+    return { success: false, error: 'Default Folder ID is required. Set it in System Management > API.' }
+  }
+
+  const useOAuth = settings.useOAuth && settings.refreshToken && settings.clientId && settings.clientSecret
+
+  let auth
+  if (useOAuth) {
+    const oauth2 = new google.auth.OAuth2(settings.clientId, settings.clientSecret)
+    oauth2.setCredentials({ refresh_token: settings.refreshToken })
+    auth = oauth2
+  } else {
+    const email = settings.serviceAccountEmail || settings.clientEmail
+    const privateKey = settings.serviceAccountPrivateKey || settings.privateKey
+    if (!email || !privateKey) {
+      return { success: false, error: 'Google Drive not configured. Use OAuth (Connect to Google) or Service Account in System Management > API.' }
+    }
+    auth = new google.auth.GoogleAuth({
+      credentials: {
+        client_email: email,
+        private_key: privateKey.replace(/\\n/g, '\n')
+      },
+      scopes: ['https://www.googleapis.com/auth/drive']
+    })
+  }
+
+  try {
+    const drive = google.drive({ version: 'v3', auth })
+
+    // Statements subfolder under root
+    const statementsFolderId = await findOrCreateFolder(drive, rootFolderId, 'Statements')
+
+    // Dealer folder under Statements
+    const dealerFolderId = await findOrCreateFolder(drive, statementsFolderId, sanitizeFolderName(dealerName) || 'Unknown Dealer')
+
+    // Year folder (from dateFrom, e.g. 2025)
+    const year = dateFrom ? new Date(dateFrom).getFullYear().toString() : new Date().getFullYear().toString()
+    const yearFolderId = await findOrCreateFolder(drive, dealerFolderId, year)
+
+    const buffer = Buffer.isBuffer(pdfBuffer) ? pdfBuffer : Buffer.from(pdfBuffer)
+    const sanitizedFileName = fileName.replace(/[<>:"/\\|?*]/g, '_') || 'statement.pdf'
+
+    const { Readable } = await import('stream')
+    const { data: file } = await drive.files.create({
+      requestBody: {
+        name: sanitizedFileName,
+        parents: [yearFolderId]
+      },
+      media: {
+        mimeType: 'application/pdf',
+        body: Readable.from(buffer)
+      },
+      fields: 'id, webViewLink',
+      supportsAllDrives: true
+    })
+
+    return {
+      success: true,
+      fileId: file.id!,
+      webViewLink: file.webViewLink ?? undefined
+    }
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err)
+    return { success: false, error: `Drive upload failed: ${msg}` }
+  }
+}

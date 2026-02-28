@@ -78,10 +78,10 @@ export async function GET(request: Request) {
       // Only send if we're in the configurable hours-before window (e.g. 3.5h–4.5h for 4h)
       if (!isWithinHoursBeforeWindow(appointmentDate, reminderConfig.hoursBefore)) continue
 
+      if (!reminderConfig.sendToCustomer && !reminderConfig.sendToSpecialist) continue
+
       const smsSettings = await getSmsSettings(supabase)
       const rh = smsSettings.four_hour_reminder
-      if (!rh.sendToCustomer && !rh.sendToSpecialist) continue
-      if (!reminderConfig.sendToCustomer && !reminderConfig.sendToSpecialist) continue
 
       const hoursText = reminderConfig.hoursBefore === 1 ? '1 hour' : `${reminderConfig.hoursBefore} hours`
       const address = demand.customer_address || 'the specified location'
