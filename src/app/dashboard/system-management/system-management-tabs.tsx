@@ -15,6 +15,7 @@ import {
   Zap,
   Mail,
   FileText,
+  BookOpen,
 } from 'lucide-react'
 import Link from 'next/link'
 
@@ -48,6 +49,7 @@ const CATEGORIES = {
       { id: 'logo', name: 'Logo', href: '/dashboard/system-management/logo', icon: Image },
       { id: 'mail', name: 'Mail Settings', href: '/dashboard/system-management/mail-settings', icon: Mail },
       { id: 'automation', name: 'Automation', href: '/dashboard/system-management/automation', icon: Zap },
+      { id: 'whitepaper', name: 'Whitepaper', href: '/dashboard/system-management/whitepaper', icon: BookOpen },
     ],
   },
   logs: {
@@ -74,6 +76,7 @@ function getCategoryAndTabFromPath(pathname: string, searchParams?: string): { c
     '/dashboard/system-management/api': { categoryId: 'system', tabId: 'api' },
     '/dashboard/system-management/logo': { categoryId: 'system', tabId: 'logo' },
     '/dashboard/system-management/mail-settings': { categoryId: 'system', tabId: 'mail' },
+    '/dashboard/system-management/whitepaper': { categoryId: 'system', tabId: 'whitepaper' },
   }
 
   const basePath = pathname.split('?')[0]

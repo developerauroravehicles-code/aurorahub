@@ -1,10 +1,10 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { format } from 'date-fns'
 import { addYears } from 'date-fns'
-import { Download, Eye, X, Save, Plus, Trash2, HardDrive } from 'lucide-react'
+import { Download, Eye, X, Save, Plus, Trash2, HardDrive, ArrowUpDown } from 'lucide-react'
 import { updateInvoiceFields, uploadInvoiceToDriveAction } from './actions'
 import { downloadInvoicePdf, getInvoicePdfBlobUrl } from '@/lib/generate-invoice-pdf'
 import type { InvoiceRowData } from '@/lib/generate-invoice-pdf'
@@ -25,8 +25,20 @@ interface InvoiceRow {
   vehicle_model: string
   camera_model: string
   updated_at: string
+  completed_at: string | null
   invoice_total_amount: number | null
   invoice_comments: string | null
+  invoice_extra_rows?: { col1: string; col2: string }[] | null
+  invoice_financial_summary?: {
+    gstEnabled: boolean
+    gstPercent: number
+    pstEnabled: boolean
+    pstPercent: number
+    salesTaxEnabled: boolean
+    salesTaxPercent: number
+    otherEnabled: boolean
+    otherAmount: number
+  } | null
   dealers: DealerRow | DealerRow[] | null
 }
 
@@ -61,6 +73,24 @@ export function InvoiceTable({ invoices, logoDataUrl }: InvoiceTableProps) {
   const [previewPdfUrl, setPreviewPdfUrl] = useState<string | null>(null)
   const [driveUploading, setDriveUploading] = useState(false)
   const [driveMessage, setDriveMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+  const [sortBy, setSortBy] = useState<'id' | 'completeDate'>('completeDate')
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
+
+  const sortedInvoices = useMemo(() => {
+    const arr = [...invoices]
+    arr.sort((a, b) => {
+      if (sortBy === 'id') {
+        const idA = a.demand_number ?? ''
+        const idB = b.demand_number ?? ''
+        const cmp = idA.localeCompare(idB, undefined, { numeric: true })
+        return sortDir === 'asc' ? cmp : -cmp
+      }
+      const dateA = new Date(a.completed_at ?? a.updated_at).getTime()
+      const dateB = new Date(b.completed_at ?? b.updated_at).getTime()
+      return sortDir === 'asc' ? dateA - dateB : dateB - dateA
+    })
+    return arr
+  }, [invoices, sortBy, sortDir])
 
   const startEdit = (id: string, field: 'amount' | 'comments', row: InvoiceRow) => {
     setEditing({ id, field })
@@ -90,7 +120,7 @@ export function InvoiceTable({ invoices, logoDataUrl }: InvoiceTableProps) {
     const currentAmount = v?.amount ?? (row.invoice_total_amount != null ? String(row.invoice_total_amount) : '')
     const currentComments = v?.comments ?? (row.invoice_comments ?? '')
     const dealer = getDealer(row)
-    const completionDate = new Date(row.updated_at)
+    const completionDate = new Date(row.completed_at ?? row.updated_at)
     const warrantyEnd = addYears(completionDate, 3)
     const phone = dealer?.phone ?? row.customer_phone ?? ''
     return {
@@ -102,8 +132,8 @@ export function InvoiceTable({ invoices, logoDataUrl }: InvoiceTableProps) {
         customerAddress: dealer?.address ?? '—',
         vehicleInfo: `${row.vehicle_year} ${row.vehicle_make} ${row.vehicle_model} - Stock ${row.stock_number ?? '—'}`,
         productModel: row.camera_model,
-        orderDate: format(completionDate, 'yyyy-MM-dd'),
-        warrantyEnd: format(warrantyEnd, 'yyyy-MM-dd'),
+        completeDate: format(completionDate, 'd MMMM yyyy'),
+        warrantyEnd: format(warrantyEnd, 'd MMMM yyyy'),
         totalAmount: currentAmount ? `$${(parseFloat(currentAmount.replace(/[^0-9.-]/g, '')) || 0).toFixed(2)}` : '$0.00',
         comments: currentComments,
         logoDataUrl: logoDataUrl ?? null
@@ -130,7 +160,7 @@ export function InvoiceTable({ invoices, logoDataUrl }: InvoiceTableProps) {
   const buildPreviewData = useCallback((): InvoiceRowData | null => {
     if (!previewRow) return null
     const dealer = getDealer(previewRow)
-    const completionDate = new Date(previewRow.updated_at)
+    const completionDate = new Date(previewRow.completed_at ?? previewRow.updated_at)
     const warrantyEnd = addYears(completionDate, 3)
     const totalNum = getCalculatedTotal()
     const totalAmount = `$${totalNum.toFixed(2)}`
@@ -142,8 +172,8 @@ export function InvoiceTable({ invoices, logoDataUrl }: InvoiceTableProps) {
       customerAddress: dealer?.address ?? '—',
       vehicleInfo: `${previewRow.vehicle_year} ${previewRow.vehicle_make} ${previewRow.vehicle_model} - Stock ${previewRow.stock_number ?? '—'}`,
       productModel: previewRow.camera_model,
-      orderDate: format(completionDate, 'yyyy-MM-dd'),
-      warrantyEnd: format(warrantyEnd, 'yyyy-MM-dd'),
+      completeDate: format(completionDate, 'd MMMM yyyy'),
+      warrantyEnd: format(warrantyEnd, 'd MMMM yyyy'),
       totalAmount,
       comments: previewComments ?? '—',
       logoDataUrl: logoDataUrl ?? null,
@@ -173,10 +203,21 @@ export function InvoiceTable({ invoices, logoDataUrl }: InvoiceTableProps) {
       router.refresh()
     }
     const rowData = invoices.find(r => r.id === row.id) ?? row
+    const savedExtraRows = rowData.invoice_extra_rows
+    const savedFinancialSummary = rowData.invoice_financial_summary
+    const defaultExtraRows = [{ col1: '', col2: '' }]
+    const defaultFinancialSummary = { gstEnabled: true, gstPercent: 5, pstEnabled: false, pstPercent: 7, salesTaxEnabled: false, salesTaxPercent: 0, otherEnabled: false, otherAmount: 0 }
+    const parsedExtraRows = Array.isArray(savedExtraRows) && savedExtraRows.length > 0
+      ? savedExtraRows.map(r => ({ col1: String(r?.col1 ?? ''), col2: String(r?.col2 ?? '') }))
+      : defaultExtraRows
     setPreviewRow(rowData)
     setPreviewComments(currentComments)
-    setPreviewExtraRows([{ col1: '', col2: '' }])
-    setPreviewFinancialSummary({ gstEnabled: true, gstPercent: 5, pstEnabled: false, pstPercent: 7, salesTaxEnabled: false, salesTaxPercent: 0, otherEnabled: false, otherAmount: 0 })
+    setPreviewExtraRows(parsedExtraRows)
+    setPreviewFinancialSummary(
+      savedFinancialSummary && typeof savedFinancialSummary === 'object'
+        ? { ...defaultFinancialSummary, ...savedFinancialSummary }
+        : defaultFinancialSummary
+    )
   }
 
   const closePreview = () => {
@@ -191,7 +232,7 @@ export function InvoiceTable({ invoices, logoDataUrl }: InvoiceTableProps) {
     if (!previewRow) return
     const calculatedTotal = getCalculatedTotal()
     setPending(p => new Set(p).add(previewRow.id))
-    await updateInvoiceFields(previewRow.id, String(calculatedTotal) || null, previewComments || null)
+    await updateInvoiceFields(previewRow.id, String(calculatedTotal) || null, previewComments || null, previewExtraRows, previewFinancialSummary)
     setPending(p => { const n = new Set(p); n.delete(previewRow.id); return n })
     setValues(v => ({
       ...v,
@@ -247,6 +288,26 @@ export function InvoiceTable({ invoices, logoDataUrl }: InvoiceTableProps) {
 
   return (
     <>
+    <div className="flex items-center gap-4 px-4 pt-4 pb-2 flex-wrap">
+      <div className="flex items-center gap-2">
+        <ArrowUpDown className="w-4 h-4 text-gray-400" />
+        <span className="text-sm text-gray-400">Sort by:</span>
+      </div>
+      <select
+        value={`${sortBy}-${sortDir}`}
+        onChange={e => {
+          const [by, dir] = e.target.value.split('-') as ['id' | 'completeDate', 'asc' | 'desc']
+          setSortBy(by)
+          setSortDir(dir)
+        }}
+        className="border border-gray-600 bg-black/50 text-white rounded px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-[#C27E00]"
+      >
+        <option value="id-asc" className="bg-gray-900">ID (A→Z)</option>
+        <option value="id-desc" className="bg-gray-900">ID (Z→A)</option>
+        <option value="completeDate-desc" className="bg-gray-900">Complete Date (New→Old)</option>
+        <option value="completeDate-asc" className="bg-gray-900">Complete Date (Old→New)</option>
+      </select>
+    </div>
     <div className="overflow-x-auto">
       <table className="min-w-full divide-y divide-gray-800">
         <thead className="bg-white/5">
@@ -258,7 +319,7 @@ export function InvoiceTable({ invoices, logoDataUrl }: InvoiceTableProps) {
             <th className="px-3 py-2.5 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Customer Address</th>
             <th className="px-3 py-2.5 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Vehicle & Stock</th>
             <th className="px-3 py-2.5 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Product Model</th>
-            <th className="px-3 py-2.5 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Order Date</th>
+            <th className="px-3 py-2.5 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Complete Date</th>
             <th className="px-3 py-2.5 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Warranty End</th>
             <th className="px-3 py-2.5 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Total Amount</th>
             <th className="px-3 py-2.5 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Comments</th>
@@ -266,9 +327,9 @@ export function InvoiceTable({ invoices, logoDataUrl }: InvoiceTableProps) {
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-800">
-          {invoices.map(row => {
+          {sortedInvoices.map(row => {
             const dealer = getDealer(row)
-            const completionDate = new Date(row.updated_at)
+            const completionDate = new Date(row.completed_at ?? row.updated_at)
             const warrantyEnd = addYears(completionDate, 3)
             const isEditingAmount = editing?.id === row.id && editing?.field === 'amount'
             const isEditingComments = editing?.id === row.id && editing?.field === 'comments'
@@ -298,10 +359,10 @@ export function InvoiceTable({ invoices, logoDataUrl }: InvoiceTableProps) {
                   {row.camera_model}
                 </td>
                 <td className="px-3 py-2.5 text-sm text-gray-300 whitespace-nowrap">
-                  {format(completionDate, 'yyyy-MM-dd')}
+                  {format(completionDate, 'd MMMM yyyy')}
                 </td>
                 <td className="px-3 py-2.5 text-sm text-gray-300 whitespace-nowrap">
-                  {format(warrantyEnd, 'yyyy-MM-dd')}
+                  {format(warrantyEnd, 'd MMMM yyyy')}
                 </td>
                 <td className="px-3 py-2.5 text-sm">
                   {isEditingAmount ? (
@@ -383,52 +444,59 @@ export function InvoiceTable({ invoices, logoDataUrl }: InvoiceTableProps) {
 
     {/* Preview modal with editable fields */}
     {previewRow && (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
-        <div className="bg-gray-900 border border-gray-700 rounded-lg shadow-xl w-[98vw] max-w-7xl max-h-[98vh] flex flex-col">
-          <div className="flex items-center justify-between p-4 border-b border-gray-700">
-            <h2 className="text-lg font-semibold text-white">
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/70 backdrop-blur-sm overflow-y-auto">
+        <div
+          className="bg-gray-900 border border-gray-700 rounded-lg shadow-xl flex flex-col my-auto"
+          style={{
+            width: 'clamp(320px, 95vw, 1100px)',
+            height: 'clamp(400px, 85dvh, 92dvh)',
+          }}
+        >
+          <div className="flex items-center justify-between p-2 sm:p-3 border-b border-gray-700 flex-shrink-0">
+            <h2 className="text-base sm:text-lg font-semibold text-white truncate pr-2">
               Invoice Preview — {previewRow.demand_number ? `#${previewRow.demand_number}` : 'Invoice'}
             </h2>
             <button
               type="button"
               onClick={closePreview}
-              className="p-2 rounded-lg hover:bg-white/10 text-gray-400 hover:text-white transition-colors"
+              className="p-2 rounded-lg hover:bg-white/10 text-gray-400 hover:text-white transition-colors flex-shrink-0"
             >
               <X className="w-5 h-5" />
             </button>
           </div>
 
-          <div className="p-4 border-b border-gray-700 space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="flex-1 min-h-0 flex flex-col lg:flex-row overflow-hidden">
+          <div className="lg:w-[clamp(200px,22vw,300px)] lg:min-w-[180px] lg:border-r lg:border-b-0 border-b border-gray-700 p-3 space-y-3 overflow-y-auto flex-shrink-0">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-3">
               <div>
-                <label className="block text-sm font-medium text-gray-400 mb-1">Calculated Total (Column 2 + taxes)</label>
-                <div className="flex items-center gap-2 px-3 py-2 rounded border border-gray-600 bg-black/30 text-[#C27E00] font-semibold">
+                <label className="block text-xs font-medium text-gray-400 mb-1">Calculated Total (Column 2 + taxes)</label>
+                <div className="flex items-center gap-2 px-2 py-1.5 rounded border border-gray-600 bg-black/30 text-[#C27E00] font-semibold text-sm">
                   $ {getCalculatedTotal().toFixed(2)} CAD
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-400 mb-1">Comments</label>
+                <label className="block text-xs font-medium text-gray-400 mb-1">Comments</label>
                 <input
                   type="text"
                   value={previewComments}
                   onChange={e => setPreviewComments(e.target.value)}
-                  className="w-full border border-gray-600 bg-black/50 text-white rounded px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#C27E00]"
+                  className="w-full border border-gray-600 bg-black/50 text-white rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-[#C27E00]"
                   placeholder="Add expenses / comments..."
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-400 mb-2">Financial summary (bottom right)</label>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 p-3 rounded-lg border border-gray-600 bg-black/30">
-                <label className="flex items-center gap-3 cursor-pointer">
+              <label className="block text-xs font-medium text-gray-400 mb-1.5">Financial summary (bottom right)</label>
+              <div className="flex flex-col gap-3 p-3 rounded-lg border border-gray-600 bg-black/30">
+                <label className="flex items-center gap-3 cursor-pointer min-w-0">
                   <input
                     type="checkbox"
                     checked={previewFinancialSummary.gstEnabled}
                     onChange={e => setPreviewFinancialSummary(f => ({ ...f, gstEnabled: e.target.checked }))}
-                    className="rounded border-gray-500 bg-black/50 text-[#C27E00] focus:ring-[#C27E00]"
+                    className="rounded border-gray-500 bg-black/50 text-[#C27E00] focus:ring-[#C27E00] shrink-0"
                   />
-                  <span className="text-sm text-gray-300">GST</span>
+                  <span className="text-sm text-gray-300 w-20 shrink-0">GST</span>
                   <input
                     type="number"
                     min={0}
@@ -437,18 +505,18 @@ export function InvoiceTable({ invoices, logoDataUrl }: InvoiceTableProps) {
                     value={previewFinancialSummary.gstPercent}
                     onChange={e => setPreviewFinancialSummary(f => ({ ...f, gstPercent: parseFloat(e.target.value) || 0 }))}
                     disabled={!previewFinancialSummary.gstEnabled}
-                    className="w-14 px-2 py-1 text-sm border border-gray-600 bg-black/50 text-white rounded focus:outline-none focus:ring-1 focus:ring-[#C27E00] disabled:opacity-50"
+                    className="w-16 px-2 py-1 text-sm border border-gray-600 bg-black/50 text-white rounded focus:outline-none focus:ring-1 focus:ring-[#C27E00] disabled:opacity-50"
                   />
                   <span className="text-xs text-gray-500">%</span>
                 </label>
-                <label className="flex items-center gap-3 cursor-pointer">
+                <label className="flex items-center gap-3 cursor-pointer min-w-0">
                   <input
                     type="checkbox"
                     checked={previewFinancialSummary.pstEnabled}
                     onChange={e => setPreviewFinancialSummary(f => ({ ...f, pstEnabled: e.target.checked }))}
-                    className="rounded border-gray-500 bg-black/50 text-[#C27E00] focus:ring-[#C27E00]"
+                    className="rounded border-gray-500 bg-black/50 text-[#C27E00] focus:ring-[#C27E00] shrink-0"
                   />
-                  <span className="text-sm text-gray-300">PST</span>
+                  <span className="text-sm text-gray-300 w-20 shrink-0">PST</span>
                   <input
                     type="number"
                     min={0}
@@ -457,18 +525,18 @@ export function InvoiceTable({ invoices, logoDataUrl }: InvoiceTableProps) {
                     value={previewFinancialSummary.pstPercent}
                     onChange={e => setPreviewFinancialSummary(f => ({ ...f, pstPercent: parseFloat(e.target.value) || 0 }))}
                     disabled={!previewFinancialSummary.pstEnabled}
-                    className="w-14 px-2 py-1 text-sm border border-gray-600 bg-black/50 text-white rounded focus:outline-none focus:ring-1 focus:ring-[#C27E00] disabled:opacity-50"
+                    className="w-16 px-2 py-1 text-sm border border-gray-600 bg-black/50 text-white rounded focus:outline-none focus:ring-1 focus:ring-[#C27E00] disabled:opacity-50"
                   />
                   <span className="text-xs text-gray-500">%</span>
                 </label>
-                <label className="flex items-center gap-3 cursor-pointer">
+                <label className="flex items-center gap-3 cursor-pointer min-w-0">
                   <input
                     type="checkbox"
                     checked={previewFinancialSummary.salesTaxEnabled}
                     onChange={e => setPreviewFinancialSummary(f => ({ ...f, salesTaxEnabled: e.target.checked }))}
-                    className="rounded border-gray-500 bg-black/50 text-[#C27E00] focus:ring-[#C27E00]"
+                    className="rounded border-gray-500 bg-black/50 text-[#C27E00] focus:ring-[#C27E00] shrink-0"
                   />
-                  <span className="text-sm text-gray-300">SALES TAX</span>
+                  <span className="text-sm text-gray-300 w-20 shrink-0">SALES TAX</span>
                   <input
                     type="number"
                     min={0}
@@ -477,18 +545,18 @@ export function InvoiceTable({ invoices, logoDataUrl }: InvoiceTableProps) {
                     value={previewFinancialSummary.salesTaxPercent}
                     onChange={e => setPreviewFinancialSummary(f => ({ ...f, salesTaxPercent: parseFloat(e.target.value) || 0 }))}
                     disabled={!previewFinancialSummary.salesTaxEnabled}
-                    className="w-14 px-2 py-1 text-sm border border-gray-600 bg-black/50 text-white rounded focus:outline-none focus:ring-1 focus:ring-[#C27E00] disabled:opacity-50"
+                    className="w-16 px-2 py-1 text-sm border border-gray-600 bg-black/50 text-white rounded focus:outline-none focus:ring-1 focus:ring-[#C27E00] disabled:opacity-50"
                   />
                   <span className="text-xs text-gray-500">%</span>
                 </label>
-                <label className="flex items-center gap-3 cursor-pointer">
+                <label className="flex items-center gap-3 cursor-pointer min-w-0">
                   <input
                     type="checkbox"
                     checked={previewFinancialSummary.otherEnabled}
                     onChange={e => setPreviewFinancialSummary(f => ({ ...f, otherEnabled: e.target.checked }))}
-                    className="rounded border-gray-500 bg-black/50 text-[#C27E00] focus:ring-[#C27E00]"
+                    className="rounded border-gray-500 bg-black/50 text-[#C27E00] focus:ring-[#C27E00] shrink-0"
                   />
-                  <span className="text-sm text-gray-300">OTHER $</span>
+                  <span className="text-sm text-gray-300 w-20 shrink-0">OTHER $</span>
                   <input
                     type="number"
                     min={0}
@@ -503,8 +571,8 @@ export function InvoiceTable({ invoices, logoDataUrl }: InvoiceTableProps) {
             </div>
 
             <div>
-              <div className="flex items-center justify-between mb-2">
-                <label className="block text-sm font-medium text-gray-400">Additional table (optional)</label>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="block text-xs font-medium text-gray-400">Additional table (optional)</label>
                 <button
                   type="button"
                   onClick={() => setPreviewExtraRows(rows => [...rows, { col1: '', col2: '' }])}
@@ -516,8 +584,8 @@ export function InvoiceTable({ invoices, logoDataUrl }: InvoiceTableProps) {
               </div>
               <div className="border border-gray-600 rounded overflow-hidden">
                 <div className="grid grid-cols-2 bg-[#C27E00]/20 border-b border-gray-600">
-                  <div className="px-3 py-2 text-xs font-bold text-gray-300">Description</div>
-                  <div className="px-3 py-2 text-xs font-bold text-gray-300 border-l border-gray-600">Amount (CAD)</div>
+                  <div className="px-2 py-1.5 text-xs font-bold text-gray-300">Description</div>
+                  <div className="px-2 py-1.5 text-xs font-bold text-gray-300 border-l border-gray-600">Amount (CAD)</div>
                 </div>
                 {previewExtraRows.map((row, i) => (
                   <div key={i} className="grid grid-cols-[1fr_auto] border-b border-gray-600 last:border-b-0">
@@ -526,21 +594,21 @@ export function InvoiceTable({ invoices, logoDataUrl }: InvoiceTableProps) {
                         type="text"
                         value={row.col1}
                         onChange={e => setPreviewExtraRows(rows => rows.map((r, j) => j === i ? { ...r, col1: e.target.value } : r))}
-                        className="px-3 py-2 bg-black/30 text-white text-sm focus:outline-none focus:ring-1 focus:ring-[#C27E00] min-w-0"
+                        className="px-2 py-1.5 bg-black/30 text-white text-sm focus:outline-none focus:ring-1 focus:ring-[#C27E00] min-w-0"
                         placeholder="..."
                       />
                       <input
                         type="text"
                         value={row.col2}
                         onChange={e => setPreviewExtraRows(rows => rows.map((r, j) => j === i ? { ...r, col2: e.target.value } : r))}
-                        className="px-3 py-2 bg-black/30 text-white text-sm focus:outline-none focus:ring-1 focus:ring-[#C27E00] min-w-0"
+                        className="px-2 py-1.5 bg-black/30 text-white text-sm focus:outline-none focus:ring-1 focus:ring-[#C27E00] min-w-0"
                         placeholder="..."
                       />
                     </div>
                     <button
                       type="button"
                       onClick={() => setPreviewExtraRows(rows => rows.length > 1 ? rows.filter((_, j) => j !== i) : [{ col1: '', col2: '' }])}
-                      className="px-3 py-2 text-gray-400 hover:text-red-400 hover:bg-white/5 transition-colors"
+                      className="px-2 py-1.5 text-gray-400 hover:text-red-400 hover:bg-white/5 transition-colors"
                       title="Delete row"
                     >
                       <Trash2 className="w-4 h-4" />
@@ -551,18 +619,19 @@ export function InvoiceTable({ invoices, logoDataUrl }: InvoiceTableProps) {
             </div>
           </div>
 
-          <div className="flex-1 overflow-hidden min-h-[520px]">
+          <div className="flex-1 min-h-0 p-2 sm:p-3 flex flex-col">
             {previewPdfUrl && (
               <iframe
                 src={previewPdfUrl}
                 title="Invoice PDF Preview"
-                className="w-full h-full min-h-[520px] bg-white"
+                className="w-full flex-1 min-h-[260px] bg-white rounded xl:min-h-[400px]"
               />
             )}
           </div>
+          </div>
 
           {driveMessage && (
-            <div className={`px-4 py-2 mx-4 rounded-md text-sm ${
+            <div className={`px-4 py-2 mx-4 rounded-md text-sm flex-shrink-0 ${
               driveMessage.type === 'success'
                 ? 'bg-green-900/50 border border-green-800 text-green-200'
                 : 'bg-red-900/50 border border-red-800 text-red-200'
@@ -570,31 +639,32 @@ export function InvoiceTable({ invoices, logoDataUrl }: InvoiceTableProps) {
               {driveMessage.text}
             </div>
           )}
-          <div className="flex items-center justify-end gap-3 p-4 border-t border-gray-700">
+          <div className="flex flex-wrap items-center justify-end gap-2 p-2 sm:p-3 border-t border-gray-700 flex-shrink-0 bg-gray-900">
             <button
               type="button"
               onClick={handlePreviewSave}
               disabled={pending.has(previewRow.id)}
-              className="inline-flex items-center gap-2 bg-gray-600 hover:bg-gray-500 text-white px-4 py-2 rounded-lg font-medium transition-colors disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 bg-gray-600 hover:bg-gray-500 text-white px-3 py-1.5 rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
             >
-              <Save className="w-4 h-4" />
-              Save Changes
+              <Save className="w-4 h-4 shrink-0" />
+              Save
             </button>
             <button
               type="button"
               onClick={handlePreviewDownload}
-              className="inline-flex items-center gap-2 bg-[#C27E00] hover:bg-[#a06900] text-white px-4 py-2 rounded-lg font-medium transition-colors"
+              className="inline-flex items-center gap-1.5 bg-[#C27E00] hover:bg-[#a06900] text-white px-3 py-1.5 rounded-lg text-sm font-medium transition-colors"
             >
-              <Download className="w-4 h-4" />
-              Download PDF
+              <Download className="w-4 h-4 shrink-0" />
+              <span className="sm:hidden">PDF</span>
+              <span className="hidden sm:inline">Download PDF</span>
             </button>
             <button
               type="button"
               onClick={handlePreviewDrive}
               disabled={driveUploading}
-              className="inline-flex items-center gap-2 bg-gray-600 hover:bg-gray-500 text-white px-4 py-2 rounded-lg font-medium transition-colors disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 bg-gray-600 hover:bg-gray-500 text-white px-3 py-1.5 rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
             >
-              <HardDrive className="w-4 h-4" />
+              <HardDrive className="w-4 h-4 shrink-0" />
               {driveUploading ? 'Uploading...' : 'Drive'}
             </button>
           </div>

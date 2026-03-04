@@ -52,17 +52,28 @@ export function StatementContent({ dealers, logoDataUrl }: StatementContentProps
     ? (dealers.find((d) => d.id === dealerId)?.name ?? (rows.length > 0 ? getDealerName(rows[0]) : 'Unknown Dealer'))
     : 'All Dealers'
 
+  // Period: use filter dates when set, otherwise derive from rows' completed_at
+  const completedTimestamps = rows.filter((r) => r.completed_at).map((r) => new Date(r.completed_at!).getTime())
+  const effectiveDateFrom = dateFrom || (completedTimestamps.length > 0
+    ? format(new Date(Math.min(...completedTimestamps)), 'yyyy-MM-dd')
+    : '')
+  const effectiveDateTo = dateTo || (completedTimestamps.length > 0
+    ? format(new Date(Math.max(...completedTimestamps)), 'yyyy-MM-dd')
+    : '')
+
   const statementData: StatementPdfData = {
     dealerName,
-    dateFrom,
-    dateTo,
+    dateFrom: effectiveDateFrom,
+    dateTo: effectiveDateTo,
     rows: rows.map((d) => {
       const price = d.invoice_total_amount ?? 0
       const tax = price * 0.05
       const vehicleModel = `${d.vehicle_year} ${d.vehicle_make} ${d.vehicle_model}`.trim() || '—'
+      // Talebin gerçek tamamlanma tarihi (completed_at); yoksa updated_at fallback (eski veriler için)
+      const dateValue = d.completed_at ?? d.updated_at
       return {
         demand_number: d.demand_number,
-        date: format(new Date(d.updated_at), 'yyyy-MM-dd'),
+        date: format(new Date(dateValue), 'd MMMM yyyy'),
         vehicleModel,
         stockNumber: d.stock_number ?? '—',
         price,
@@ -219,7 +230,7 @@ export function StatementContent({ dealers, logoDataUrl }: StatementContentProps
               <thead className="bg-white/5">
                 <tr>
                   <th className="px-3 py-2.5 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Invoice No</th>
-                  <th className="px-3 py-2.5 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Date</th>
+                  <th className="px-3 py-2.5 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Complete Date</th>
                   <th className="px-3 py-2.5 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Vehicle Model</th>
                   <th className="px-3 py-2.5 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Stok No</th>
                   <th className="px-3 py-2.5 text-right text-xs font-medium text-gray-400 uppercase tracking-wider">Price</th>
@@ -237,7 +248,7 @@ export function StatementContent({ dealers, logoDataUrl }: StatementContentProps
                         {row.demand_number ?? '—'}
                       </td>
                       <td className="px-3 py-2.5 text-sm text-gray-300 whitespace-nowrap">
-                        {format(new Date(row.updated_at), 'yyyy-MM-dd')}
+                        {format(new Date(row.completed_at ?? row.updated_at), 'd MMMM yyyy')}
                       </td>
                       <td className="px-3 py-2.5 text-sm text-white">{vehicleModel || '—'}</td>
                       <td className="px-3 py-2.5 text-sm text-gray-300">{row.stock_number ?? '—'}</td>

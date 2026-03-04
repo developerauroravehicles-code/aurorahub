@@ -34,8 +34,11 @@ export default async function InvoicesPage() {
       vehicle_model,
       camera_model,
       updated_at,
+      completed_at,
       invoice_total_amount,
       invoice_comments,
+      invoice_extra_rows,
+      invoice_financial_summary,
       dealers(name, address, phone)
     `)
     .eq('status', 'completed')

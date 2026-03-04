@@ -104,7 +104,7 @@ export async function completeDemand(demandId: string) {
 
   const { error } = await supabase
     .from('demands')
-    .update({ status: 'completed' })
+    .update({ status: 'completed', completed_at: new Date().toISOString() })
     .eq('id', demandId)
   
   if (error) return { error: error.message }

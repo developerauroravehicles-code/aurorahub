@@ -1,5 +1,33 @@
+import { parse } from 'date-fns'
 import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
+
+const MONTH_TO_NUM: Record<string, string> = {
+  january: '01', february: '02', march: '03', april: '04', may: '05', june: '06',
+  july: '07', august: '08', september: '09', october: '10', november: '11', december: '12'
+}
+
+/** Returns YYYY-MM-DD from completeDate (e.g. "4 March 2026") - parse from string to avoid timezone issues */
+function getCompleteDateStr(data: InvoiceRowData): string {
+  const s = data.completeDate?.trim()
+  if (!s) return new Date().toISOString().slice(0, 10)
+  const match = s.match(/^(\d{1,2})\s+(\w+)\s+(\d{4})$/)
+  if (match) {
+    const [, day, monthName, year] = match
+    const m = MONTH_TO_NUM[monthName.toLowerCase()]
+    if (m && year && day) return `${year}-${m}-${day.padStart(2, '0')}`
+  }
+  try {
+    const d = parse(s, 'd MMMM yyyy', new Date())
+    if (!isNaN(d.getTime())) {
+      const y = d.getFullYear()
+      const m = String(d.getMonth() + 1).padStart(2, '0')
+      const day = String(d.getDate()).padStart(2, '0')
+      return `${y}-${m}-${day}`
+    }
+  } catch { /* fallthrough */ }
+  return new Date().toISOString().slice(0, 10)
+}
 
 export interface InvoiceRowData {
   demand_number: string | null
@@ -9,7 +37,7 @@ export interface InvoiceRowData {
   customerAddress: string
   vehicleInfo: string
   productModel: string
-  orderDate: string
+  completeDate: string
   warrantyEnd: string
   totalAmount: string
   comments: string
@@ -135,7 +163,7 @@ export function buildInvoicePdf(data: InvoiceRowData): jsPDF {
   const addressBottomBaseline = yLeft - 9 // baseline of last address line
   doc.setFont('helvetica', 'normal')
   doc.setFontSize(10)
-  doc.text(`Issue Date: ${data.orderDate}`, invRightX, addressBottomBaseline, { align: 'right' })
+  doc.text(`Complete Date: ${data.completeDate}`, invRightX, addressBottomBaseline, { align: 'right' })
   doc.text(`Invoice No: ${data.demand_number ?? '—'}`, invRightX, addressBottomBaseline - 6, { align: 'right' })
   yRight = addressBottomBaseline + 8
 
@@ -301,7 +329,8 @@ export function buildInvoicePdf(data: InvoiceRowData): jsPDF {
 
 export function downloadInvoicePdf(data: InvoiceRowData): void {
   const doc = buildInvoicePdf(data)
-  const fileName = `Invoice_${data.demand_number ?? 'invoice'}_${new Date().toISOString().slice(0, 10)}.pdf`
+  const dateStr = getCompleteDateStr(data)
+  const fileName = `Invoice_${data.demand_number ?? 'invoice'}_${dateStr}.pdf`
   doc.save(fileName)
 }
 

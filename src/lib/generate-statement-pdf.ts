@@ -131,7 +131,7 @@ export function buildStatementPdf(data: StatementPdfData): jsPDF {
   const tableWidth = pageWidth - 2 * margin
   autoTable(doc, {
     startY: y,
-    head: [['Invoice No', 'Date', 'Vehicle Model', 'Stok No', 'Price', 'Tax']],
+    head: [['Invoice No', 'Complete Date', 'Vehicle Model', 'Stok No', 'Price', 'Tax']],
     body: tableBodyWithTotal,
     theme: 'grid',
     headStyles: { fillColor: [194, 126, 0], textColor: [255, 255, 255], fontStyle: 'bold' },

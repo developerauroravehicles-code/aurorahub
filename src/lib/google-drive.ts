@@ -6,6 +6,22 @@
 
 import { google } from 'googleapis'
 
+const MONTH_TO_NUM: Record<string, string> = {
+  january: '01', february: '02', march: '03', april: '04', may: '05', june: '06',
+  july: '07', august: '08', september: '09', october: '10', november: '11', december: '12'
+}
+
+/** Parse "d MMMM yyyy" (e.g. "4 March 2026") to { year, month } - avoids timezone issues */
+function parseCompleteDateToParts(str: string): { year: string; month: string } | null {
+  const match = str.trim().match(/^(\d{1,2})\s+(\w+)\s+(\d{4})$/)
+  if (match) {
+    const [, , monthName, year] = match
+    const m = MONTH_TO_NUM[monthName?.toLowerCase() ?? '']
+    if (m && year) return { year, month: m }
+  }
+  return null
+}
+
 export interface GoogleDriveSettings {
   enabled: boolean
   clientId?: string
@@ -71,17 +87,20 @@ async function findOrCreateFolder(
 
 /**
  * Upload a PDF buffer to Google Drive.
- * Creates folder structure: rootFolder / Dealer / Year / Month
+ * Creates folder structure: rootFolder / Finance / Dealer / Year / Month
+ * Year and Month are from completeDate when provided (demand's completed_at); otherwise current date.
  * @param pdfBuffer - PDF file as Buffer or Uint8Array
  * @param fileName - e.g. Invoice_#ARR-001_2025-02-09.pdf
  * @param dealerName - dealer name for folder
  * @param settings - Google Drive credentials from system_settings
+ * @param completeDate - ISO date string or "d MMMM yyyy" (e.g. "2 February 2026") for folder path
  */
 export async function uploadInvoiceToDrive(
   pdfBuffer: Buffer | Uint8Array,
   fileName: string,
   dealerName: string,
-  settings: GoogleDriveSettings
+  settings: GoogleDriveSettings,
+  completeDate?: string | null
 ): Promise<{ success: true; fileId: string; webViewLink?: string } | { success: false; error: string }> {
   if (!settings.enabled) {
     return { success: false, error: 'Google Drive integration is disabled' }
@@ -117,15 +136,41 @@ export async function uploadInvoiceToDrive(
   try {
     const drive = google.drive({ version: 'v3', auth })
 
-    // Dealer folder
-    const dealerFolderId = await findOrCreateFolder(drive, rootFolderId, sanitizeFolderName(dealerName) || 'Unknown Dealer')
+    // Finance folder (Invoice renamed to Finance) - root is typically Invoice-Storage, Finance is inside
+    const financeFolderId = await findOrCreateFolder(drive, rootFolderId, 'Finance')
 
-    // Year folder (e.g. 2025)
-    const year = new Date().getFullYear().toString()
+    // Dealer folder under Finance
+    const dealerFolderId = await findOrCreateFolder(drive, financeFolderId, sanitizeFolderName(dealerName) || 'Unknown Dealer')
+
+    // Year and Month from complete date (demand's completed_at); otherwise current date
+    let year: string
+    let month: string
+    if (completeDate?.trim()) {
+      const s = completeDate.trim()
+      const iso = /^\d{4}-\d{2}-\d{2}/.test(s)
+      if (iso) {
+        year = s.slice(0, 4)
+        month = s.slice(5, 7)
+      } else {
+        const parts = parseCompleteDateToParts(s)
+        if (parts) {
+          year = parts.year
+          month = parts.month
+        } else {
+          const now = new Date()
+          year = now.getUTCFullYear().toString()
+          month = String(now.getUTCMonth() + 1).padStart(2, '0')
+        }
+      }
+    } else {
+      const now = new Date()
+      year = now.getUTCFullYear().toString()
+      month = String(now.getUTCMonth() + 1).padStart(2, '0')
+    }
+
     const yearFolderId = await findOrCreateFolder(drive, dealerFolderId, year)
 
-    // Month folder (e.g. 01, 02, ... 12)
-    const month = String(new Date().getMonth() + 1).padStart(2, '0')
+    // Month folder (01, 02, ... 12)
     const monthFolderId = await findOrCreateFolder(drive, yearFolderId, month)
 
     const buffer = Buffer.isBuffer(pdfBuffer) ? pdfBuffer : Buffer.from(pdfBuffer)
@@ -206,8 +251,11 @@ export async function uploadStatementToDrive(
   try {
     const drive = google.drive({ version: 'v3', auth })
 
-    // Statements subfolder under root
-    const statementsFolderId = await findOrCreateFolder(drive, rootFolderId, 'Statements')
+    // Finance folder (Invoice renamed to Finance)
+    const financeFolderId = await findOrCreateFolder(drive, rootFolderId, 'Finance')
+
+    // Statements subfolder under Finance
+    const statementsFolderId = await findOrCreateFolder(drive, financeFolderId, 'Statements')
 
     // Dealer folder under Statements
     const dealerFolderId = await findOrCreateFolder(drive, statementsFolderId, sanitizeFolderName(dealerName) || 'Unknown Dealer')

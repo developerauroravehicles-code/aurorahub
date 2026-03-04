@@ -14,6 +14,7 @@ export interface StatementDemandRow {
   id: string
   demand_number: string | null
   updated_at: string
+  completed_at: string | null
   vehicle_year: number
   vehicle_make: string
   vehicle_model: string
@@ -71,6 +72,7 @@ export async function getStatementDataAction(
       id,
       demand_number,
       updated_at,
+      completed_at,
       vehicle_year,
       vehicle_make,
       vehicle_model,
@@ -79,16 +81,24 @@ export async function getStatementDataAction(
       dealers(name)
     `)
     .eq('status', 'completed')
+    .order('completed_at', { ascending: false })
     .order('updated_at', { ascending: false })
 
   if (dealerId) {
     query = query.eq('dealer_id', dealerId)
   }
-  if (dateFrom) {
-    query = query.gte('updated_at', `${dateFrom}T00:00:00.000Z`)
-  }
-  if (dateTo) {
-    query = query.lte('updated_at', `${dateTo}T23:59:59.999Z`)
+  if (dateFrom && dateTo) {
+    const from = `${dateFrom}T00:00:00.000Z`
+    const to = `${dateTo}T23:59:59.999Z`
+    query = query.or(
+      `and(completed_at.gte.${from},completed_at.lte.${to}),and(completed_at.is.null,updated_at.gte.${from},updated_at.lte.${to})`
+    )
+  } else if (dateFrom) {
+    const from = `${dateFrom}T00:00:00.000Z`
+    query = query.or(`completed_at.gte.${from},and(completed_at.is.null,updated_at.gte.${from})`)
+  } else if (dateTo) {
+    const to = `${dateTo}T23:59:59.999Z`
+    query = query.or(`completed_at.lte.${to},and(completed_at.is.null,updated_at.lte.${to})`)
   }
 
   const { data: demands, error } = await query
