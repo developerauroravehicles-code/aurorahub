@@ -59,6 +59,7 @@ export async function updateInvoiceFields(
     invoice_comments?: string | null
     invoice_extra_rows?: { col1: string; col2: string }[]
     invoice_financial_summary?: typeof DEFAULT_FINANCIAL_SUMMARY
+    invoice_saved_at?: string
   } = {}
   if (numVal !== undefined && numVal !== '') {
     const parsed = parseFloat(numVal.replace(/[^0-9.-]/g, ''))
@@ -74,6 +75,7 @@ export async function updateInvoiceFields(
   if (financialSummary !== undefined) {
     updateData.invoice_financial_summary = financialSummary
   }
+  updateData.invoice_saved_at = new Date().toISOString()
 
   const { error } = await supabase
     .from('demands')
@@ -85,9 +87,80 @@ export async function updateInvoiceFields(
   return { success: true }
 }
 
+export async function recordInvoiceDownloadAction(demandId: string): Promise<{ error?: string }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Unauthorized' }
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single()
+
+  if (!profile || profile.role !== 'aurora_manager') {
+    return { error: 'Unauthorized' }
+  }
+
+  const { error } = await supabase
+    .from('demands')
+    .update({ invoice_downloaded_at: new Date().toISOString() })
+    .eq('id', demandId)
+
+  if (error) return { error: error.message }
+  revalidatePath('/dashboard/admin/invoices')
+  return {}
+}
+
+export async function updateInvoiceStatusAction(
+  demandId: string,
+  updates: {
+    invoice_saved_at?: boolean
+    invoice_downloaded_at?: boolean
+    invoice_drive_uploaded_at?: boolean
+  }
+): Promise<{ error?: string }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Unauthorized' }
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single()
+
+  if (!profile || profile.role !== 'aurora_manager') {
+    return { error: 'Unauthorized' }
+  }
+
+  const updateData: Record<string, string | null> = {}
+  if (updates.invoice_saved_at !== undefined) {
+    updateData.invoice_saved_at = updates.invoice_saved_at ? new Date().toISOString() : null
+  }
+  if (updates.invoice_downloaded_at !== undefined) {
+    updateData.invoice_downloaded_at = updates.invoice_downloaded_at ? new Date().toISOString() : null
+  }
+  if (updates.invoice_drive_uploaded_at !== undefined) {
+    updateData.invoice_drive_uploaded_at = updates.invoice_drive_uploaded_at ? new Date().toISOString() : null
+  }
+
+  if (Object.keys(updateData).length === 0) return {}
+
+  const { error } = await supabase
+    .from('demands')
+    .update(updateData)
+    .eq('id', demandId)
+
+  if (error) return { error: error.message }
+  revalidatePath('/dashboard/admin/invoices')
+  return {}
+}
+
 export async function uploadInvoiceToDriveAction(
   invoiceData: InvoiceRowData,
-  dealerName: string
+  dealerName: string,
+  demandId: string
 ): Promise<{ success: true; fileId: string; webViewLink?: string } | { success: false; error: string }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -130,11 +203,33 @@ export async function uploadInvoiceToDriveAction(
   const fileName = `Invoice_${invoiceData.demand_number ?? 'invoice'}_${dateStr}.pdf`
   const pdfBuffer = Buffer.from(buffer)
 
-  return uploadInvoiceToDrive(
+  const { data: demand } = await supabase
+    .from('demands')
+    .select('invoice_drive_file_id')
+    .eq('id', demandId)
+    .single()
+
+  const existingFileId = demand?.invoice_drive_file_id ?? null
+
+  const result = await uploadInvoiceToDrive(
     pdfBuffer,
     fileName,
     dealerName || 'Unknown Dealer',
     settings,
-    invoiceData.completeDate
+    invoiceData.completeDate,
+    existingFileId
   )
+
+  if (result.success) {
+    await supabase
+      .from('demands')
+      .update({
+        invoice_drive_uploaded_at: new Date().toISOString(),
+        invoice_drive_file_id: result.fileId
+      })
+      .eq('id', demandId)
+    revalidatePath('/dashboard/admin/invoices')
+  }
+
+  return result
 }

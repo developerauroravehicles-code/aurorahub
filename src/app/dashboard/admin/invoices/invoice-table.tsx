@@ -4,8 +4,8 @@ import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { format } from 'date-fns'
 import { addYears } from 'date-fns'
-import { Download, Eye, X, Save, Plus, Trash2, HardDrive, ArrowUpDown } from 'lucide-react'
-import { updateInvoiceFields, uploadInvoiceToDriveAction } from './actions'
+import { Download, Eye, X, Save, Plus, Trash2, HardDrive, ArrowUpDown, ChevronDown, ChevronsDown, ChevronsUp } from 'lucide-react'
+import { updateInvoiceFields, uploadInvoiceToDriveAction, recordInvoiceDownloadAction, updateInvoiceStatusAction } from './actions'
 import { downloadInvoicePdf, getInvoicePdfBlobUrl } from '@/lib/generate-invoice-pdf'
 import type { InvoiceRowData } from '@/lib/generate-invoice-pdf'
 
@@ -29,6 +29,9 @@ interface InvoiceRow {
   invoice_total_amount: number | null
   invoice_comments: string | null
   invoice_extra_rows?: { col1: string; col2: string }[] | null
+  invoice_saved_at?: string | null
+  invoice_downloaded_at?: string | null
+  invoice_drive_uploaded_at?: string | null
   invoice_financial_summary?: {
     gstEnabled: boolean
     gstPercent: number
@@ -75,6 +78,9 @@ export function InvoiceTable({ invoices, logoDataUrl }: InvoiceTableProps) {
   const [driveMessage, setDriveMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
   const [sortBy, setSortBy] = useState<'id' | 'completeDate'>('completeDate')
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
+  const [statusMenuOpen, setStatusMenuOpen] = useState<string | null>(null)
+  const [tableExpanded, setTableExpanded] = useState(false)
+  const [optimisticStatus, setOptimisticStatus] = useState<Record<string, { invoice_saved_at?: string | null; invoice_downloaded_at?: string | null; invoice_drive_uploaded_at?: string | null }>>({})
 
   const sortedInvoices = useMemo(() => {
     const arr = [...invoices]
@@ -91,6 +97,16 @@ export function InvoiceTable({ invoices, logoDataUrl }: InvoiceTableProps) {
     })
     return arr
   }, [invoices, sortBy, sortDir])
+
+  const getRowWithOptimisticStatus = useCallback((row: InvoiceRow) => {
+    const opt = optimisticStatus[row.id]
+    if (!opt) return row
+    return { ...row, ...opt }
+  }, [optimisticStatus])
+
+  const INITIAL_ROW_COUNT = 15
+  const displayInvoices = tableExpanded ? sortedInvoices : sortedInvoices.slice(0, INITIAL_ROW_COUNT)
+  const hasMoreRows = sortedInvoices.length > INITIAL_ROW_COUNT
 
   const startEdit = (id: string, field: 'amount' | 'comments', row: InvoiceRow) => {
     setEditing({ id, field })
@@ -242,9 +258,12 @@ export function InvoiceTable({ invoices, logoDataUrl }: InvoiceTableProps) {
     router.refresh()
   }
 
-  const handlePreviewDownload = () => {
+  const handlePreviewDownload = async () => {
     const data = buildPreviewData()
-    if (data) downloadInvoicePdf(data)
+    if (!data || !previewRow) return
+    downloadInvoicePdf(data)
+    await recordInvoiceDownloadAction(previewRow.id)
+    router.refresh()
   }
 
   const handlePreviewDrive = async () => {
@@ -254,7 +273,7 @@ export function InvoiceTable({ invoices, logoDataUrl }: InvoiceTableProps) {
     const dealerName = dealer?.name ?? 'Unknown Dealer'
     setDriveUploading(true)
     setDriveMessage(null)
-    const result = await uploadInvoiceToDriveAction(data, dealerName)
+    const result = await uploadInvoiceToDriveAction(data, dealerName, previewRow.id)
     setDriveUploading(false)
     if (result.success) {
       setDriveMessage({ type: 'success', text: result.webViewLink ? `Uploaded! Open in Drive` : 'Uploaded to Drive successfully' })
@@ -274,6 +293,8 @@ export function InvoiceTable({ invoices, logoDataUrl }: InvoiceTableProps) {
       router.refresh()
     }
     downloadInvoicePdf(data)
+    await recordInvoiceDownloadAction(row.id)
+    router.refresh()
   }
 
   const cancelEdit = () => setEditing(null)
@@ -288,7 +309,8 @@ export function InvoiceTable({ invoices, logoDataUrl }: InvoiceTableProps) {
 
   return (
     <>
-    <div className="flex items-center gap-4 px-4 pt-4 pb-2 flex-wrap">
+    <div className="flex flex-col min-h-[calc(100vh-12rem)]">
+    <div className="flex items-center gap-4 px-4 pt-4 pb-2 flex-wrap flex-shrink-0">
       <div className="flex items-center gap-2">
         <ArrowUpDown className="w-4 h-4 text-gray-400" />
         <span className="text-sm text-gray-400">Sort by:</span>
@@ -308,7 +330,7 @@ export function InvoiceTable({ invoices, logoDataUrl }: InvoiceTableProps) {
         <option value="completeDate-asc" className="bg-gray-900">Complete Date (Old→New)</option>
       </select>
     </div>
-    <div className="overflow-x-auto">
+    <div className="flex-1 min-h-0 overflow-x-auto">
       <table className="min-w-full divide-y divide-gray-800">
         <thead className="bg-white/5">
           <tr>
@@ -323,17 +345,19 @@ export function InvoiceTable({ invoices, logoDataUrl }: InvoiceTableProps) {
             <th className="px-3 py-2.5 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Warranty End</th>
             <th className="px-3 py-2.5 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Total Amount</th>
             <th className="px-3 py-2.5 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Comments</th>
+            <th className="px-3 py-2.5 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Invoice Status</th>
             <th className="px-3 py-2.5 text-right text-xs font-medium text-gray-400 uppercase tracking-wider">Actions</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-800">
-          {sortedInvoices.map(row => {
-            const dealer = getDealer(row)
+          {displayInvoices.map(row => {
+            const displayRow = getRowWithOptimisticStatus(row)
+            const dealer = getDealer(displayRow)
             const completionDate = new Date(row.completed_at ?? row.updated_at)
             const warrantyEnd = addYears(completionDate, 3)
             const isEditingAmount = editing?.id === row.id && editing?.field === 'amount'
             const isEditingComments = editing?.id === row.id && editing?.field === 'comments'
-            const v = values[row.id] ?? { amount: row.invoice_total_amount != null ? String(row.invoice_total_amount) : '', comments: row.invoice_comments ?? '' }
+            const v = values[row.id] ?? { amount: displayRow.invoice_total_amount != null ? String(displayRow.invoice_total_amount) : '', comments: displayRow.invoice_comments ?? '' }
 
             return (
               <tr key={row.id} className="hover:bg-white/5 transition-colors">
@@ -410,6 +434,32 @@ export function InvoiceTable({ invoices, logoDataUrl }: InvoiceTableProps) {
                     </button>
                   )}
                 </td>
+                <td className="px-3 py-2.5 text-sm">
+                  {(() => {
+                    const edited = !!displayRow.invoice_saved_at
+                    const downloaded = !!displayRow.invoice_downloaded_at
+                    const drive = !!displayRow.invoice_drive_uploaded_at
+                    const count = [edited, downloaded, drive].filter(Boolean).length
+                    const labels: string[] = []
+                    labels.push(edited ? 'Edited' : 'Waiting')
+                    if (downloaded) labels.push('Downloaded locally')
+                    if (drive) labels.push('Saved to Drive')
+                    const isOpen = statusMenuOpen === row.id
+                    return (
+                      <button
+                        type="button"
+                        onClick={() => setStatusMenuOpen(isOpen ? null : row.id)}
+                        className={`flex items-center gap-1.5 px-2 py-1 -mx-2 -my-1 rounded hover:bg-white/10 transition-colors text-left w-full ${count === 3 ? 'text-[#C27E00] font-medium' : 'text-gray-400'}`}
+                      >
+                        <span>
+                          {labels.join(' / ')}
+                          {count === 3 ? ` (${count})` : ''}
+                        </span>
+                        <ChevronDown className={`w-4 h-4 shrink-0 transition-transform ${isOpen ? 'rotate-180' : ''}`} aria-hidden />
+                      </button>
+                    )
+                  })()}
+                </td>
                 <td className="px-3 py-2.5 text-right whitespace-nowrap">
                   <div className="flex items-center justify-end gap-2">
                     <button
@@ -441,6 +491,103 @@ export function InvoiceTable({ invoices, logoDataUrl }: InvoiceTableProps) {
         </tbody>
       </table>
     </div>
+
+    {hasMoreRows && (
+      <div className="flex justify-center py-4 border-t border-gray-800 flex-shrink-0">
+        <button
+          type="button"
+          onClick={() => setTableExpanded(!tableExpanded)}
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-600 bg-black/30 text-gray-300 hover:bg-gray-800 hover:text-white transition-colors text-sm font-medium"
+        >
+          {tableExpanded ? (
+            <>
+              <ChevronsUp className="w-4 h-4" />
+              Collapse
+            </>
+          ) : (
+            <>
+              <ChevronsDown className="w-4 h-4" />
+              Expand ({sortedInvoices.length - INITIAL_ROW_COUNT} more)
+            </>
+          )}
+        </button>
+      </div>
+    )}
+    </div>
+
+    {/* Edit Status - centered popup */}
+    {statusMenuOpen && (() => {
+      const row = sortedInvoices.find(r => r.id === statusMenuOpen)
+      if (!row) return null
+      const displayRow = getRowWithOptimisticStatus(row)
+      const edited = !!displayRow.invoice_saved_at
+      const downloaded = !!displayRow.invoice_downloaded_at
+      const drive = !!displayRow.invoice_drive_uploaded_at
+      return (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
+          onClick={() => setStatusMenuOpen(null)}
+        >
+          <div
+            className="bg-gray-900 border border-gray-700 rounded-xl shadow-2xl w-full max-w-sm overflow-hidden"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="px-4 py-3 border-b border-gray-700">
+              <h3 className="text-sm font-semibold text-white uppercase">Edit Status</h3>
+              <p className="text-xs text-gray-400 mt-0.5">
+                {row.demand_number ? `#${row.demand_number}` : 'Invoice'}
+              </p>
+            </div>
+            <div className="p-2">
+              {[
+                { key: 'waiting' as const, label: 'Waiting', checked: !edited },
+                { key: 'invoice_saved_at' as const, label: 'Edited', checked: edited },
+                { key: 'invoice_downloaded_at' as const, label: 'Downloaded locally', checked: downloaded },
+                { key: 'invoice_drive_uploaded_at' as const, label: 'Saved to Drive', checked: drive }
+              ].map(({ key, label, checked }) => (
+                <label
+                  key={key}
+                  className="flex items-center gap-3 px-3 py-3 hover:bg-white/5 rounded-lg cursor-pointer transition-colors"
+                >
+                  <input
+                    type="checkbox"
+                    checked={checked}
+                    onChange={async (e) => {
+                      const prev = { invoice_saved_at: displayRow.invoice_saved_at, invoice_downloaded_at: displayRow.invoice_downloaded_at, invoice_drive_uploaded_at: displayRow.invoice_drive_uploaded_at }
+                      const updates: { invoice_saved_at?: string | null; invoice_downloaded_at?: string | null; invoice_drive_uploaded_at?: string | null } = {}
+                      if (key === 'waiting') updates.invoice_saved_at = e.target.checked ? null : new Date().toISOString()
+                      else if (key === 'invoice_saved_at') updates.invoice_saved_at = e.target.checked ? new Date().toISOString() : null
+                      else if (key === 'invoice_downloaded_at') updates.invoice_downloaded_at = e.target.checked ? new Date().toISOString() : null
+                      else if (key === 'invoice_drive_uploaded_at') updates.invoice_drive_uploaded_at = e.target.checked ? new Date().toISOString() : null
+
+                      setOptimisticStatus(s => ({ ...s, [row.id]: { ...s[row.id], ...updates } }))
+                      setStatusMenuOpen(null)
+
+                      const res = key === 'waiting'
+                        ? await updateInvoiceStatusAction(row.id, { invoice_saved_at: !e.target.checked })
+                        : await updateInvoiceStatusAction(row.id, { [key]: e.target.checked })
+                      if (res.error) setOptimisticStatus(s => ({ ...s, [row.id]: prev }))
+                      else router.refresh()
+                    }}
+                    className="rounded border-gray-500 bg-black/50 text-[#C27E00] focus:ring-[#C27E00] w-4 h-4"
+                  />
+                  <span className="text-sm text-gray-200">{label}</span>
+                </label>
+              ))}
+            </div>
+            <div className="p-3 border-t border-gray-700">
+              <button
+                type="button"
+                onClick={() => setStatusMenuOpen(null)}
+                className="w-full py-2 rounded-lg bg-gray-700 hover:bg-gray-600 text-white text-sm font-medium transition-colors"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )
+    })()}
 
     {/* Preview modal with editable fields */}
     {previewRow && (

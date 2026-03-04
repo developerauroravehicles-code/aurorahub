@@ -39,6 +39,9 @@ export default async function InvoicesPage() {
       invoice_comments,
       invoice_extra_rows,
       invoice_financial_summary,
+      invoice_saved_at,
+      invoice_downloaded_at,
+      invoice_drive_uploaded_at,
       dealers(name, address, phone)
     `)
     .eq('status', 'completed')
@@ -53,7 +56,7 @@ export default async function InvoicesPage() {
         <h1 className="text-2xl font-semibold text-white mb-2">Invoice</h1>
         <p className="text-gray-400">Completed demands as invoices. Total amount and comments are editable.</p>
       </div>
-      <div className="bg-white/5 rounded-lg border border-gray-800 shadow overflow-hidden">
+      <div className="bg-white/5 rounded-lg border border-gray-800 shadow flex flex-col min-h-[calc(100vh-14rem)]">
         <InvoiceTable invoices={(demands ?? []) as Parameters<typeof InvoiceTable>[0]['invoices']} logoDataUrl={logoUrl} />
       </div>
     </div>

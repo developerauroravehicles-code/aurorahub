@@ -609,11 +609,49 @@ export default async function DashboardPage() {
     // Get recent demands (last 10)
     const recentDemands = allDemands?.slice(0, 10) || []
 
+    // Dashboard overview data for widgets
+    const { getDashboardOverviewData } = await import('./admin/dashboard/actions')
+    const overviewData = await getDashboardOverviewData()
+
+    const { DemandOverview } = await import('./admin/dashboard/demand-overview')
+    const { DemandTrends } = await import('./admin/dashboard/demand-trends')
+    const { InvoiceOverview } = await import('./admin/dashboard/invoice-overview')
+    const { StatementOverview } = await import('./admin/dashboard/statement-overview')
+    const { FinanceOverview } = await import('./admin/dashboard/finance-overview')
+    const { EmployeeOverview } = await import('./admin/dashboard/employee-overview')
+    const { DealerAlertsWidget } = await import('./admin/dashboard/dealer-alerts')
+    const { ManagerNotesWidget } = await import('./admin/dashboard/manager-notes')
+
     return (
       <div className="space-y-8">
         <div>
           <h1 className="text-2xl font-semibold text-white mb-2">Aurora Manager Dashboard</h1>
-          <p className="text-gray-400">System-wide overview of dealers, specialists, and demands.</p>
+          <p className="text-gray-400">System-wide overview of demand tracking, invoices, statements, employees, and dealer alerts.</p>
+        </div>
+
+        {/* Quick Navigation */}
+        <div className="flex flex-wrap gap-2">
+          <Link href="/dashboard/admin/demands" className="px-4 py-2 rounded-lg bg-white/5 border border-gray-700 text-white hover:bg-white/10 transition-colors text-sm font-medium">
+            Demand Tracking
+          </Link>
+          <Link href="/dashboard/admin/invoices" className="px-4 py-2 rounded-lg bg-white/5 border border-gray-700 text-white hover:bg-white/10 transition-colors text-sm font-medium">
+            Invoice
+          </Link>
+          <Link href="#finance-overview" className="px-4 py-2 rounded-lg bg-white/5 border border-gray-700 text-white hover:bg-white/10 transition-colors text-sm font-medium">
+            Finance
+          </Link>
+          <Link href="/dashboard/admin/statements" className="px-4 py-2 rounded-lg bg-white/5 border border-gray-700 text-white hover:bg-white/10 transition-colors text-sm font-medium">
+            Statement Tracking
+          </Link>
+          <Link href="/dashboard/admin/employees" className="px-4 py-2 rounded-lg bg-white/5 border border-gray-700 text-white hover:bg-white/10 transition-colors text-sm font-medium">
+            Employee Tracking
+          </Link>
+          <a href="#dealer-alerts" className="px-4 py-2 rounded-lg bg-white/5 border border-gray-700 text-white hover:bg-white/10 transition-colors text-sm font-medium">
+            Dealer Alerts
+          </a>
+          <a href="#manager-notes" className="px-4 py-2 rounded-lg bg-white/5 border border-gray-700 text-white hover:bg-white/10 transition-colors text-sm font-medium">
+            Notes & Reminders
+          </a>
         </div>
 
         {/* Main Statistics Cards */}
@@ -640,105 +678,42 @@ export default async function DashboardPage() {
           </div>
         </div>
 
-        {/* Demand Status Breakdown */}
-        <div className="bg-white/5 border border-gray-800 p-6 rounded-lg">
-          <h2 className="text-lg font-semibold text-white mb-4">Demand Status Breakdown</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="p-4 rounded-lg border bg-yellow-900/50 text-yellow-300 border-yellow-800">
-              <p className="text-sm font-medium mb-1">PENDING FINANCE</p>
-              <p className="text-2xl font-bold">{pendingFinance}</p>
-              <p className="text-xs mt-1 opacity-75">
-                {totalDemands > 0 ? Math.round((pendingFinance / totalDemands) * 100) : 0}% of total
-              </p>
-            </div>
-            <div className="p-4 rounded-lg border bg-blue-900/50 text-blue-300 border-blue-800">
-              <p className="text-sm font-medium mb-1">APPROVED</p>
-              <p className="text-2xl font-bold">{approved}</p>
-              <p className="text-xs mt-1 opacity-75">
-                {totalDemands > 0 ? Math.round((approved / totalDemands) * 100) : 0}% of total
-              </p>
-            </div>
-            <div className="p-4 rounded-lg border bg-green-900/50 text-green-300 border-green-800">
-              <p className="text-sm font-medium mb-1">COMPLETED</p>
-              <p className="text-2xl font-bold">{completed}</p>
-              <p className="text-xs mt-1 opacity-75">
-                {totalDemands > 0 ? Math.round((completed / totalDemands) * 100) : 0}% of total
-              </p>
-            </div>
-            <div className="p-4 rounded-lg border bg-red-900/50 text-red-300 border-red-800">
-              <p className="text-sm font-medium mb-1">CANCELLED</p>
-              <p className="text-2xl font-bold">{cancelled}</p>
-              <p className="text-xs mt-1 opacity-75">
-                {totalDemands > 0 ? Math.round((cancelled / totalDemands) * 100) : 0}% of total
-              </p>
-            </div>
-          </div>
+        {/* Demand Overview with Pie Chart */}
+        <div id="demand-overview">
+          <DemandOverview
+            counts={overviewData.demandCounts}
+            recentDemands={recentDemands.map(d => ({
+              id: d.id,
+              demand_number: (d as { demand_number?: number }).demand_number,
+              customer_firstname: d.customer_firstname,
+              customer_lastname: d.customer_lastname,
+              status: d.status
+            }))}
+          />
         </div>
 
-        {/* Recent Demands */}
-        <div>
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-semibold text-white">Recent Demands</h2>
-            <Link 
-              href="/dashboard/admin/demands" 
-              className="text-sm text-[#C27E00] hover:text-[#a06900] transition-colors"
-            >
-              View All →
-            </Link>
+        {/* Demand Analytics - Monthly Trend & Dealer Comparison */}
+        <DemandTrends monthlyTrend={overviewData.monthlyTrend} dealerDemands={overviewData.dealerDemands} />
+
+        {/* Invoice / Statement / Employee Overviews */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <InvoiceOverview summary={overviewData.invoiceSummary} />
+          <StatementOverview summary={overviewData.statementSummary} />
+          <EmployeeOverview counts={overviewData.employeeRoleCounts} />
+        </div>
+
+        {/* Finance Overview */}
+        <div id="finance-overview">
+          <FinanceOverview summary={overviewData.financeSummary} />
+        </div>
+
+        {/* Dealer Alerts & Notes */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div id="dealer-alerts">
+            <DealerAlertsWidget />
           </div>
-          
-          <div className="bg-white/5 rounded-lg border border-gray-800 shadow overflow-hidden">
-            {recentDemands.length === 0 ? (
-              <div className="p-8 text-center">
-                <p className="text-gray-400">No demands found.</p>
-              </div>
-            ) : (
-              <ul className="divide-y divide-gray-800">
-                {recentDemands.map(demand => {
-                  const statusColors = {
-                    pending_finance: 'bg-yellow-900/50 text-yellow-300 border-yellow-800',
-                    approved: 'bg-blue-900/50 text-blue-300 border-blue-800',
-                    completed: 'bg-green-900/50 text-green-300 border-green-800',
-                    cancelled: 'bg-red-900/50 text-red-300 border-red-800'
-                  }
-                  const amDealers = (demand as { dealers?: { region_codes?: { timezones?: { name: string } } } | null }).dealers
-                  const amTz = (Array.isArray(amDealers) ? amDealers[0] : amDealers)?.region_codes?.timezones?.name ?? null
-                  return (
-                    <li key={demand.id} className="p-4 hover:bg-white/5 transition-colors">
-                      <div className="flex justify-between items-start">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-3 mb-2">
-                            <p className="font-semibold text-white">
-                              {demand.customer_firstname} {demand.customer_lastname}
-                            </p>
-                            {(demand as { demand_number?: number }).demand_number != null && (
-                              <span className="text-xs font-medium text-gray-500">#{(demand as { demand_number?: number }).demand_number}</span>
-                            )}
-                            <span className={`px-2 py-1 rounded text-xs font-medium border ${statusColors[demand.status as keyof typeof statusColors] || 'bg-gray-900/50 text-gray-300 border-gray-800'}`}>
-                              {demand.status.replace('_', ' ').toUpperCase()}
-                            </span>
-                          </div>
-                          <p className="text-sm text-gray-400">
-                            {demand.vehicle_year} {demand.vehicle_make} {demand.vehicle_model}
-                          </p>
-                          <p className="text-sm text-gray-400">
-                            Camera: {demand.camera_model}
-                          </p>
-                          <p className="text-xs text-gray-500 mt-1">
-                            Appointment: {formatInTimeZone(new Date(demand.appointment_date), getEffectiveTimezone(amTz ?? null), 'PPP h:mm a')}
-                          </p>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-xs text-gray-500">
-                            {formatInTimeZone(new Date(demand.created_at), getEffectiveTimezone(amTz ?? null), 'MMM d, yyyy')}
-                          </p>
-                        </div>
-                      </div>
-                    </li>
-                  )
-                })}
-              </ul>
-            )}
+          <div id="manager-notes">
+            <ManagerNotesWidget />
           </div>
         </div>
       </div>

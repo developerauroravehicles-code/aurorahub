@@ -88,19 +88,21 @@ async function findOrCreateFolder(
 /**
  * Upload a PDF buffer to Google Drive.
  * Creates folder structure: rootFolder / Finance / Dealer / Year / Month
- * Year and Month are from completeDate when provided (demand's completed_at); otherwise current date.
+ * If existingFileId is provided, deletes that file first (replace/update flow).
  * @param pdfBuffer - PDF file as Buffer or Uint8Array
  * @param fileName - e.g. Invoice_#ARR-001_2025-02-09.pdf
  * @param dealerName - dealer name for folder
  * @param settings - Google Drive credentials from system_settings
  * @param completeDate - ISO date string or "d MMMM yyyy" (e.g. "2 February 2026") for folder path
+ * @param existingFileId - if set, delete this file before uploading (replace previous upload)
  */
 export async function uploadInvoiceToDrive(
   pdfBuffer: Buffer | Uint8Array,
   fileName: string,
   dealerName: string,
   settings: GoogleDriveSettings,
-  completeDate?: string | null
+  completeDate?: string | null,
+  existingFileId?: string | null
 ): Promise<{ success: true; fileId: string; webViewLink?: string } | { success: false; error: string }> {
   if (!settings.enabled) {
     return { success: false, error: 'Google Drive integration is disabled' }
@@ -135,6 +137,22 @@ export async function uploadInvoiceToDrive(
 
   try {
     const drive = google.drive({ version: 'v3', auth })
+
+    // Delete previous file if re-uploading (replace flow)
+    if (existingFileId?.trim()) {
+      try {
+        await drive.files.delete({
+          fileId: existingFileId.trim(),
+          supportsAllDrives: true
+        })
+      } catch (delErr) {
+        // If file not found or already deleted, proceed with upload
+        const msg = delErr instanceof Error ? delErr.message : String(delErr)
+        if (!msg.includes('404') && !msg.includes('not found')) {
+          console.warn('Drive delete previous file failed:', msg)
+        }
+      }
+    }
 
     // Finance folder (Invoice renamed to Finance) - root is typically Invoice-Storage, Finance is inside
     const financeFolderId = await findOrCreateFolder(drive, rootFolderId, 'Finance')
