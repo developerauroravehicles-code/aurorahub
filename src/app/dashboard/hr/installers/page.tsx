@@ -14,7 +14,7 @@ export default async function InstallersPage() {
   const completionMap = new Map((completionRes.data || []).map((r) => [r.personnel_id, r.completion_rate]))
   const installersWithCompletion = (installers || []).map((i) => ({
     ...i,
-    completion_rate: completionMap.get(i.personnel_id) ?? i.completion_rate,
+    completion_rate: completionMap.get(i.personnel_id) ?? null,
   }))
 
   return (

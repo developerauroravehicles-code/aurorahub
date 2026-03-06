@@ -118,6 +118,28 @@ export default async function AnalyticsPage() {
       .map(([month, count]) => ({ month: month.slice(0, 7), count })),
   }
 
+  // Normalize personnel relation (Supabase may return array for FK)
+  const normPersonnel = (p: unknown) => {
+    if (!p) return null
+    const arr = Array.isArray(p) ? p : [p]
+    const first = arr[0] as { full_name?: string } | undefined
+    return first ? { full_name: first.full_name ?? '' } : null
+  }
+  const certsExpiringList = certsExpiring.slice(0, 10).map((c) => ({
+    id: c.id,
+    personnel_id: c.personnel_id,
+    expiry_date: c.expiry_date,
+    certification_type: c.certification_type ?? null,
+    personnel: normPersonnel(c.personnel),
+  }))
+  const complianceExpiringList = complianceExpiring.slice(0, 10).map((c) => ({
+    id: c.id,
+    personnel_id: c.personnel_id,
+    expiry_date: c.expiry_date,
+    document_type: c.document_type ?? null,
+    personnel: normPersonnel(c.personnel),
+  }))
+
   const summary = {
     totalPersonnel: personnel.length,
     activePersonnel: statusCounts.active ?? 0,
@@ -136,8 +158,8 @@ export default async function AnalyticsPage() {
     totalReviews: reviews.length,
     completedReviews: reviewByStatus.completed ?? 0,
     totalCompletedDemands: completedDemands.length,
-    certsExpiringList: certsExpiring.slice(0, 10),
-    complianceExpiringList: complianceExpiring.slice(0, 10),
+    certsExpiringList,
+    complianceExpiringList,
   }
 
   return (

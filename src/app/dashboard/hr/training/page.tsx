@@ -1,6 +1,20 @@
 import { createClient } from '@/lib/supabase/server'
 import { TrainingContent } from './training-content'
 
+function normPersonnel(p: unknown): { full_name: string } | null {
+  if (!p) return null
+  const arr = Array.isArray(p) ? p : [p]
+  const first = arr[0] as { full_name?: string } | undefined
+  return first ? { full_name: first.full_name ?? '' } : null
+}
+
+function normTrainingPrograms(t: unknown): { name: string } | null {
+  if (!t) return null
+  const arr = Array.isArray(t) ? t : [t]
+  const first = arr[0] as { name?: string } | undefined
+  return first ? { name: first.name ?? '' } : null
+}
+
 export default async function TrainingPage() {
   const supabase = await createClient()
 
@@ -22,6 +36,17 @@ export default async function TrainingPage() {
     supabase.from('personnel').select('id, full_name').order('full_name'),
   ])
 
+  const normCompletions = (completions ?? []).map((c: Record<string, unknown>) => ({
+    ...c,
+    personnel: normPersonnel(c.personnel),
+    training_programs: normTrainingPrograms(c.training_programs),
+  })) as Parameters<typeof TrainingContent>[0]['completions']
+
+  const normCertifications = (certifications ?? []).map((c: Record<string, unknown>) => ({
+    ...c,
+    personnel: normPersonnel(c.personnel),
+  })) as Parameters<typeof TrainingContent>[0]['certifications']
+
   return (
     <div className="space-y-8">
       <div>
@@ -30,8 +55,8 @@ export default async function TrainingPage() {
       </div>
       <TrainingContent
         programs={programs ?? []}
-        completions={completions ?? []}
-        certifications={certifications ?? []}
+        completions={normCompletions}
+        certifications={normCertifications}
         personnel={personnel ?? []}
       />
     </div>

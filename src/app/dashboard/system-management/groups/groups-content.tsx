@@ -50,11 +50,13 @@ export function GroupsContent({
   const [addingGroupId, setAddingGroupId] = useState<string | null>(null)
 
   const [createState, createAction, createPending] = useActionState(
-    async (_: unknown, fd: FormData) => {
+    async (_prev: { error?: string; success?: boolean }, fd: FormData) => {
       const r = await createGroup(fd)
-      return r
+      if ('error' in r) return { error: r.error }
+      if ('success' in r) return { success: r.success }
+      return r as { error: string }
     },
-    {} as { error?: string; success?: boolean }
+    { success: false }
   )
 
   useEffect(() => {
@@ -69,7 +71,7 @@ export function GroupsContent({
     setDeletingId(id)
     const r = await deleteGroup(id)
     setDeletingId(null)
-    if (!r?.error) {
+    if (!(r && 'error' in r && r.error)) {
       setExpandedId(null)
       setEditingId(null)
       router.refresh()
@@ -81,7 +83,7 @@ export function GroupsContent({
     setAddingGroupId(groupId)
     const r = await addMemberToGroup(groupId, userId)
     setAddingGroupId(null)
-    if (!r?.error) {
+    if (!(r && 'error' in r && r.error)) {
       setAddUserGroupId(null)
       router.refresh()
     } else {
@@ -95,7 +97,7 @@ export function GroupsContent({
     setAddingGroupId(groupId)
     const r = await addMembersToGroup(groupId, Array.from(selectedUserIds))
     setAddingGroupId(null)
-    if (!r?.error) {
+    if (!(r && 'error' in r && r.error)) {
       setBulkAddGroupId(null)
       setSelectedUserIds(new Set())
       router.refresh()
@@ -116,7 +118,7 @@ export function GroupsContent({
 
   const handleRemoveMember = async (groupId: string, userId: string) => {
     const r = await removeMemberFromGroup(groupId, userId)
-    if (!r?.error) router.refresh()
+    if (!(r && 'error' in r && r.error)) router.refresh()
   }
 
   const currentMembers = (gid: string) => initialMembers[gid] ?? []
@@ -315,7 +317,7 @@ export function GroupsContent({
                     currentMembers(g.id).map((m) => (
                       <li key={m.user_id} className="flex items-center justify-between text-sm text-gray-300 py-1">
                         <div>
-                          <span className="font-medium">{m.profile?.full_name || m.profile?.email || m.user_id.slice(0, 8)}</span>
+                          <span className="font-medium">{m.profile?.full_name ?? (m.profile as { email?: string })?.email ?? m.user_id.slice(0, 8)}</span>
                           {(m.profile as { dealer_code?: string | null })?.dealer_code && (
                             <span className="ml-2 text-xs text-gray-500">({(m.profile as { dealer_code?: string | null }).dealer_code})</span>
                           )}
@@ -360,14 +362,14 @@ function GroupEditForm({
   const [state, formAction, isPending] = useActionState(
     async (_: unknown, fd: FormData) => {
       const r = await updateGroup(group.id, fd)
-      if (!r.error) onSuccess()
+      if (!(r && 'error' in r && r.error)) onSuccess()
       return r
     },
     {} as { error?: string }
   )
   return (
     <form action={formAction} className="space-y-3">
-      {state?.error && <p className="text-sm text-red-400">{state.error}</p>}
+      {'error' in (state ?? {}) && (state as { error?: string }).error ? <p className="text-sm text-red-400">{(state as { error: string }).error}</p> : null}
       <input name="name" defaultValue={group.name} required className="w-full rounded border border-gray-700 bg-black/30 px-3 py-2 text-white text-sm" />
       <input name="description" defaultValue={group.description ?? ''} className="w-full rounded border border-gray-700 bg-black/30 px-3 py-2 text-gray-300 text-sm" />
       <div className="flex gap-2">

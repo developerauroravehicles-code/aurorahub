@@ -4,6 +4,13 @@ import { SelfPortalContent } from './self-portal-content'
 
 export const dynamic = 'force-dynamic'
 
+function normEquipmentTypes(e: unknown): { name: string } | null {
+  if (!e) return null
+  const arr = Array.isArray(e) ? e : [e]
+  const first = arr[0] as { name?: string } | undefined
+  return first ? { name: first.name ?? '' } : null
+}
+
 export default async function SelfPortalPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -25,6 +32,9 @@ export default async function SelfPortalPage() {
     .single()
 
   const personnelId = personnel?.id
+
+  type Payments = Parameters<typeof SelfPortalContent>[0]['payments']
+  type Equipment = Parameters<typeof SelfPortalContent>[0]['equipment']
 
   const [
     leaveRes,
@@ -50,6 +60,11 @@ export default async function SelfPortalPage() {
     supabase.from('onboarding_tasks').select('id, title, status, due_date, completed_at').eq('profile_id', user.id).order('sort_order'),
   ])
 
+  const normEquipment: Equipment = ((equipmentRes.data ?? []) as Record<string, unknown>[]).map((e) => ({
+    ...e,
+    equipment_types: normEquipmentTypes(e.equipment_types),
+  })) as Equipment
+
   return (
     <div className="space-y-8">
       <div>
@@ -60,15 +75,15 @@ export default async function SelfPortalPage() {
         profile={profile}
         personnel={personnel}
         leaveRequests={leaveRes.data ?? []}
-        payments={(paymentsRes as { data: unknown[] }).data ?? []}
-        equipment={(equipmentRes as { data: unknown[] }).data ?? []}
-        certifications={(certsRes as { data: unknown[] }).data ?? []}
-        complianceDocuments={(complianceDocsRes as { data: unknown[] }).data ?? []}
-        complianceChecklists={(complianceChecklistsRes as { data: unknown[] }).data ?? []}
-        availability={(availabilityRes as { data: unknown[] }).data ?? []}
-        feedback={(feedbackRes as { data: unknown[] }).data ?? []}
-        leaveBlocks={(leaveBlocksRes as { data: unknown[] }).data ?? []}
-        onboardingTasks={(onboardingRes as { data: unknown[] }).data ?? []}
+        payments={(paymentsRes.data ?? []) as Payments}
+        equipment={normEquipment}
+        certifications={(certsRes.data ?? []) as Parameters<typeof SelfPortalContent>[0]['certifications']}
+        complianceDocuments={(complianceDocsRes.data ?? []) as Parameters<typeof SelfPortalContent>[0]['complianceDocuments']}
+        complianceChecklists={(complianceChecklistsRes.data ?? []) as Parameters<typeof SelfPortalContent>[0]['complianceChecklists']}
+        availability={(availabilityRes.data ?? []) as Parameters<typeof SelfPortalContent>[0]['availability']}
+        feedback={(feedbackRes.data ?? []) as Parameters<typeof SelfPortalContent>[0]['feedback']}
+        leaveBlocks={(leaveBlocksRes.data ?? []) as Parameters<typeof SelfPortalContent>[0]['leaveBlocks']}
+        onboardingTasks={(onboardingRes.data ?? []) as Parameters<typeof SelfPortalContent>[0]['onboardingTasks']}
       />
     </div>
   )

@@ -707,7 +707,7 @@ export default async function DashboardPage() {
     const slaBreachCount = slaBreachRes.data?.length ?? 0
     const myTickets = myTicketsRes.data ?? []
     const openTickets = tickets.filter((t: { status: string }) => !['resolved', 'closed'].includes(t.status))
-    const criticalTickets = tickets.filter((t: { priority: string }) => t.priority === 'critical' && !['resolved', 'closed'].includes((t as { status: string }).status))
+    const criticalTickets = tickets.filter((t: { priority: string; status: string }) => t.priority === 'critical' && !['resolved', 'closed'].includes(t.status))
     const criticalIncidents = incidents.filter((i: { severity: string; status: string }) => i.severity === 'critical' && !['resolved', 'closed'].includes(i.status))
     const recentAlerts = recentAlertsRes.data ?? []
 

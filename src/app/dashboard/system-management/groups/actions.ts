@@ -1,6 +1,13 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
+
+function dealerCode(d: unknown): string | null {
+  if (!d) return null
+  const arr = Array.isArray(d) ? d : [d]
+  const first = arr[0] as { code?: string } | undefined
+  return first?.code ?? null
+}
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 import { requirePermission } from '@/lib/permissions'
@@ -88,7 +95,7 @@ export async function getGroupMembers(groupId: string) {
     user_id: p.id,
     profile: {
       ...p,
-      dealer_code: (p as { dealers?: { code: string } | null })?.dealers?.code ?? null,
+      dealer_code: dealerCode((p as { dealers?: unknown }).dealers) ?? null,
     },
   }))
 }
@@ -109,11 +116,11 @@ export async function getProfilesForGroup(dealerId?: string | null) {
     full_name: r.full_name ?? null,
     email: (r as { email?: string }).email ?? null,
     role: r.role ?? null,
-    dealer_code: (r as { dealers?: { code: string } | null })?.dealers?.code ?? null,
+    dealer_code: dealerCode((r as { dealers?: unknown }).dealers) ?? null,
   }))
 }
 
-export async function addMemberToGroup(groupId: string, userId: string) {
+export async function addMemberToGroup(groupId: string, userId: string): Promise<{ error?: string }> {
   const perm = await requirePermission('identity.groups.manage')
   if (perm !== true) return perm
   const supabase = await createClient()

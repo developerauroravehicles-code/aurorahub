@@ -116,7 +116,7 @@ export function AnalyticsContent({
                         <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
                       ))}
                     </Pie>
-                    <Tooltip contentStyle={{ backgroundColor: '#1f2937', border: '1px solid #374151', borderRadius: '8px' }} formatter={(v: number) => [`${v}`, '']} />
+                    <Tooltip contentStyle={{ backgroundColor: '#1f2937', border: '1px solid #374151', borderRadius: '8px' }} formatter={(v) => [`${v ?? ''}`, '']} />
                     <Legend wrapperStyle={{ fontSize: '11px' }} formatter={(v) => <span className="text-gray-300">{v}</span>} />
                   </PieChart>
                 </ResponsiveContainer>
@@ -132,7 +132,7 @@ export function AnalyticsContent({
                     <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.5} />
                     <XAxis type="number" tick={{ fill: '#9ca3af', fontSize: 11 }} />
                     <YAxis type="category" dataKey="label" width={70} tick={{ fill: '#9ca3af', fontSize: 10 }} />
-                    <Tooltip contentStyle={{ backgroundColor: '#1f2937', border: '1px solid #374151', borderRadius: '8px' }} formatter={(v: number) => [v, '']} />
+                    <Tooltip contentStyle={{ backgroundColor: '#1f2937', border: '1px solid #374151', borderRadius: '8px' }} formatter={(v) => [v ?? '', '']} />
                     <Bar dataKey="count" fill="#C27E00" radius={4} />
                   </BarChart>
                 </ResponsiveContainer>
@@ -157,7 +157,7 @@ export function AnalyticsContent({
                         <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
                       ))}
                     </Pie>
-                    <Tooltip contentStyle={{ backgroundColor: '#1f2937', border: '1px solid #374151', borderRadius: '8px' }} formatter={(v: number) => [`${v}`, '']} />
+                    <Tooltip contentStyle={{ backgroundColor: '#1f2937', border: '1px solid #374151', borderRadius: '8px' }} formatter={(v) => [`${v ?? ''}`, '']} />
                     <Legend wrapperStyle={{ fontSize: '11px' }} formatter={(v) => <span className="text-gray-300">{v}</span>} />
                   </PieChart>
                 </ResponsiveContainer>

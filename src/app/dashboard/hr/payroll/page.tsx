@@ -1,13 +1,20 @@
 import { createClient } from '@/lib/supabase/server'
 import { PayrollContent } from './payroll-content'
 
+function normPersonnel(p: unknown): { full_name: string } | null {
+  if (!p) return null
+  const arr = Array.isArray(p) ? p : [p]
+  const first = arr[0] as { full_name?: string } | undefined
+  return first ? { full_name: first.full_name ?? '' } : null
+}
+
 export default async function PayrollPage() {
   const supabase = await createClient()
 
   const [
-    { data: structures },
-    { data: perCompletedTiers },
-    { data: payments },
+    { data: structuresRaw },
+    { data: perCompletedTiersRaw },
+    { data: paymentsRaw },
     { data: personnel },
   ] = await Promise.all([
     supabase.from('compensation_structures').select('id, personnel_id, payment_type, amount, effective_from, effective_to, notes, personnel(full_name)').order('effective_from', { ascending: false }),
@@ -16,6 +23,10 @@ export default async function PayrollPage() {
     supabase.from('personnel').select('id, full_name').order('full_name'),
   ])
 
+  const structures = (structuresRaw ?? []).map((s) => ({ ...s, personnel: normPersonnel(s.personnel) }))
+  const perCompletedTiers = (perCompletedTiersRaw ?? []).map((t) => ({ ...t, personnel: normPersonnel(t.personnel) }))
+  const payments = (paymentsRaw ?? []).map((p) => ({ ...p, personnel: normPersonnel(p.personnel) }))
+
   return (
     <div className="space-y-8">
       <div>
@@ -23,9 +34,9 @@ export default async function PayrollPage() {
         <p className="text-gray-400">Salary, hourly, per-completed tiered pay, Canadian payroll (bodro) with CPP, EI, taxes.</p>
       </div>
       <PayrollContent
-        structures={structures ?? []}
-        perCompletedTiers={perCompletedTiers ?? []}
-        payments={payments ?? []}
+        structures={structures}
+        perCompletedTiers={perCompletedTiers}
+        payments={payments}
         personnel={personnel ?? []}
       />
     </div>

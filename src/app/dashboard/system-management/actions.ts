@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@supabase/supabase-js'
-import type { SystemData } from '@/types/system-management'
+import type { SystemData, Profile } from '@/types/system-management'
 
 // Helper to get a fresh admin client every time with explicit schema
 function getAdminClient() {
@@ -121,7 +121,7 @@ export async function getSystemData(): Promise<SystemData> {
 
   return {
     dealers: dealers || [],
-    profiles,
+    profiles: profiles as unknown as Profile[],
     cameras: cameras || [],
     projectUrl: process.env.NEXT_PUBLIC_SUPABASE_URL,
     errors: {

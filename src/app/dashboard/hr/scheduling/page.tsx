@@ -1,6 +1,13 @@
 import { createClient } from '@/lib/supabase/server'
 import { SchedulingContent } from './scheduling-content'
 
+function normPersonnel(p: unknown): { full_name: string } | null {
+  if (!p) return null
+  const arr = Array.isArray(p) ? p : [p]
+  const first = arr[0] as { full_name?: string } | undefined
+  return first ? { full_name: first.full_name ?? '' } : null
+}
+
 export default async function SchedulingPage() {
   const supabase = await createClient()
 
@@ -20,6 +27,16 @@ export default async function SchedulingPage() {
     supabase.from('personnel').select('id, full_name').order('full_name'),
   ])
 
+  const normAvailability = (availability ?? []).map((a: Record<string, unknown>) => ({
+    ...a,
+    personnel: normPersonnel(a.personnel),
+  })) as Parameters<typeof SchedulingContent>[0]['availability']
+
+  const normLeaveBlocks = (leaveBlocks ?? []).map((b: Record<string, unknown>) => ({
+    ...b,
+    personnel: normPersonnel(b.personnel),
+  })) as Parameters<typeof SchedulingContent>[0]['leaveBlocks']
+
   return (
     <div className="space-y-8">
       <div>
@@ -27,8 +44,8 @@ export default async function SchedulingPage() {
         <p className="text-gray-400">Field technician availability, time slots, vacation, dispatch integration.</p>
       </div>
       <SchedulingContent
-        availability={availability ?? []}
-        leaveBlocks={leaveBlocks ?? []}
+        availability={normAvailability}
+        leaveBlocks={normLeaveBlocks}
         personnel={personnel ?? []}
       />
     </div>

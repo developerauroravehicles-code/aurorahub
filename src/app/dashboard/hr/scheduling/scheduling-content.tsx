@@ -345,7 +345,7 @@ function AvailabilityForm({
       {!isEdit && (
         <div>
           <label className="block text-xs text-gray-400 mb-1">Personnel</label>
-          <select name="personnel_id" required defaultValue={availability?.personnel_id ?? ''} className="w-full rounded bg-gray-900 border border-gray-700 px-3 py-2 text-white text-sm [&>option]:bg-gray-900" style={{ colorScheme: 'dark' }}>
+          <select name="personnel_id" required defaultValue="" className="w-full rounded bg-gray-900 border border-gray-700 px-3 py-2 text-white text-sm [&>option]:bg-gray-900" style={{ colorScheme: 'dark' }}>
             <option value="">Select...</option>
             {personnel.map((p) => (
               <option key={p.id} value={p.id}>{p.full_name}</option>
@@ -446,7 +446,7 @@ function LeaveBlockForm({
       {!isEdit && (
         <div>
           <label className="block text-xs text-gray-400 mb-1">Personnel</label>
-          <select name="personnel_id" required defaultValue={leaveBlock?.personnel_id ?? ''} className="w-full rounded bg-gray-900 border border-gray-700 px-3 py-2 text-white text-sm [&>option]:bg-gray-900" style={{ colorScheme: 'dark' }}>
+          <select name="personnel_id" required defaultValue="" className="w-full rounded bg-gray-900 border border-gray-700 px-3 py-2 text-white text-sm [&>option]:bg-gray-900" style={{ colorScheme: 'dark' }}>
             <option value="">Select...</option>
             {personnel.map((p) => (
               <option key={p.id} value={p.id}>{p.full_name}</option>

@@ -423,7 +423,7 @@ function CompensationForm({ personnel, structure, onClose, onSuccess }: {
           </div>
           <div>
             <label className="block text-xs text-gray-400 mb-1">Payment Type</label>
-            <select name="payment_type" defaultValue={structure?.payment_type ?? 'salary'} className="w-full rounded bg-gray-900 border border-gray-700 px-3 py-2 text-white text-sm">
+            <select name="payment_type" defaultValue="salary" className="w-full rounded bg-gray-900 border border-gray-700 px-3 py-2 text-white text-sm">
               {Object.entries(PAYMENT_TYPE_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
             </select>
           </div>

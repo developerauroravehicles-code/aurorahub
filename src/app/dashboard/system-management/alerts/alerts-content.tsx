@@ -215,7 +215,7 @@ export function AlertsContent() {
                         {log.success ? (
                           <CheckCircle className="h-4 w-4 text-green-400" />
                         ) : (
-                          <XCircle className="h-4 w-4 text-red-400" title={log.error_message ?? 'Failed'} />
+                          <span title={log.error_message ?? 'Failed'}><XCircle className="h-4 w-4 text-red-400" /></span>
                         )}
                       </div>
                     </td>
