@@ -326,7 +326,7 @@ export default function AdminReportsPage() {
   const roleLabels: Record<string, string> = {
     sales: 'Sales',
     finance: 'Finance',
-    specialist: 'Specialist'
+    specialist: 'Technical Support'
   }
 
   return (

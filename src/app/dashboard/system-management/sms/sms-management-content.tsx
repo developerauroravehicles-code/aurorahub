@@ -469,7 +469,7 @@ export function SMSManagementContent() {
             SMS Log / Tracking
           </h4>
           <a
-            href="/dashboard/system-management/logs?type=sms"
+            href="/dashboard/observability/logs?type=sms"
             className="text-sm text-[#C27E00] hover:text-[#a06900] hover:underline"
           >
             View all logs on Logs page →

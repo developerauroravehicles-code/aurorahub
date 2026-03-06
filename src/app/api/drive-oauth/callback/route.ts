@@ -9,8 +9,7 @@ export async function GET(request: Request) {
   const code = searchParams.get('code')
   const error = searchParams.get('error')
 
-  const redirectUrl = new URL('/dashboard/system-management/api', request.url)
-  redirectUrl.searchParams.set('drive', 'settings')
+  const redirectUrl = new URL('/dashboard/integrations/external-apis', request.url)
 
   if (error) {
     redirectUrl.searchParams.set('drive_error', `oauth_${error}`)
@@ -33,20 +32,28 @@ export async function GET(request: Request) {
     .select('role')
     .eq('id', user.id)
     .single()
-  if (!profile || profile.role !== 'aurora_manager') {
+  if (!['aurora_manager', 'it'].includes(profile?.role ?? '')) {
     redirectUrl.searchParams.set('drive_error', 'unauthorized')
     return NextResponse.redirect(redirectUrl)
   }
 
-  const { data: row } = await supabase
-    .from('system_settings')
-    .select('value')
-    .eq('key', 'google_drive_settings')
-    .single()
+  let stateData: { connectionId?: string | null } = {}
+  try {
+    const stateParam = searchParams.get('state')
+    if (stateParam) stateData = JSON.parse(Buffer.from(stateParam, 'base64url').toString())
+  } catch { /* ignore */ }
+  const connectionId = stateData.connectionId
 
-  const settings = row?.value ? JSON.parse(row.value) : {}
-  const clientId = settings.clientId?.trim()
-  const clientSecret = settings.clientSecret?.trim()
+  let settings: Record<string, unknown> = {}
+  if (connectionId) {
+    const { data: conn } = await supabase.from('external_api_connections').select('config').eq('id', connectionId).single()
+    settings = (conn?.config as Record<string, unknown>) ?? {}
+  } else {
+    const { data: row } = await supabase.from('system_settings').select('value').eq('key', 'google_drive_settings').single()
+    settings = row?.value ? (JSON.parse(row.value) as Record<string, unknown>) : {}
+  }
+  const clientId = (settings.clientId as string)?.trim()
+  const clientSecret = (settings.clientSecret as string)?.trim()
   if (!clientId || !clientSecret) {
     redirectUrl.searchParams.set('drive_error', 'no_credentials')
     return NextResponse.redirect(redirectUrl)
@@ -80,20 +87,27 @@ export async function GET(request: Request) {
     return NextResponse.redirect(redirectUrl)
   }
 
-  const updatedSettings = {
-    ...settings,
-    refreshToken,
-    useOAuth: true
+  if (connectionId) {
+    const updatedConfig = { ...settings, refreshToken, useOAuth: true }
+    await supabase
+      .from('external_api_connections')
+      .update({
+        config: updatedConfig,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', connectionId)
+    redirectUrl.searchParams.set('drive', 'connection_ok')
+    redirectUrl.searchParams.set('connection_id', connectionId)
+  } else {
+    const updatedSettings = { ...settings, refreshToken, useOAuth: true }
+    await supabase
+      .from('system_settings')
+      .upsert({
+        key: 'google_drive_settings',
+        value: JSON.stringify(updatedSettings),
+        updated_at: new Date().toISOString(),
+      }, { onConflict: 'key' })
+    redirectUrl.searchParams.set('drive', 'connected')
   }
-
-  await supabase
-    .from('system_settings')
-    .upsert({
-      key: 'google_drive_settings',
-      value: JSON.stringify(updatedSettings),
-      updated_at: new Date().toISOString()
-    }, { onConflict: 'key' })
-
-  redirectUrl.searchParams.set('drive', 'connected')
   return NextResponse.redirect(redirectUrl)
 }

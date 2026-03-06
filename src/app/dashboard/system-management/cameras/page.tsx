@@ -1,5 +1,6 @@
 import { getSystemData } from '../actions'
 import { SystemManagementTabs } from '../system-management-tabs'
+import { SystemManagementTitle } from '../system-management-title'
 import { CameraManagementContent } from './camera-management-content-new'
 
 export const dynamic = 'force-dynamic'
@@ -10,7 +11,7 @@ export default async function CameraManagementPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-semibold mb-6 text-white">System Management</h1>
+        <SystemManagementTitle />
         
         <SystemManagementTabs activeTab="cameras" />
 

@@ -1,4 +1,5 @@
 import { SystemManagementTabs } from '../system-management-tabs'
+import { SystemManagementTitle } from '../system-management-title'
 import { AutomationContent } from './automation-content'
 
 export const dynamic = 'force-dynamic'
@@ -7,7 +8,7 @@ export default async function AutomationPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-semibold mb-6 text-white">System Management</h1>
+        <SystemManagementTitle />
 
         <SystemManagementTabs activeTab="automation" />
 

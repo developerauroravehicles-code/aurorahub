@@ -1,8 +1,10 @@
 'use server'
 
+import { headers } from 'next/headers'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { logIdentityEvent } from '@/lib/identity-audit'
 import { z } from 'zod'
 
 const loginSchema = z.object({
@@ -80,6 +82,15 @@ export async function login(prevState: ActionState, formData: FormData) {
       return { error: 'Dealer code does not match your account.' }
     }
   }
+
+  const h = await headers()
+  await logIdentityEvent({
+    eventType: 'login_success',
+    userId: user.user.id,
+    email: user.user.email ?? undefined,
+    ipAddress: h.get('x-forwarded-for') ?? h.get('x-real-ip') ?? null,
+    userAgent: h.get('user-agent') ?? null,
+  })
 
   revalidatePath('/', 'layout')
   redirect('/dashboard')

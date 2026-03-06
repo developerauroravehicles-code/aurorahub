@@ -59,9 +59,11 @@ export function CreateEmployeeForm({ dealers, currentUserRole }: CreateEmployeeF
             <option value="finance" className="bg-black text-white">Finance</option>
             {currentUserRole !== 'general_manager' && (
               <>
-                <option value="specialist" className="bg-black text-white">Specialist</option>
+                <option value="specialist" className="bg-black text-white">Technical Support</option>
                 <option value="aurora_manager" className="bg-black text-white">Aurora Manager</option>
                 <option value="general_manager" className="bg-black text-white">General Manager</option>
+                <option value="hr" className="bg-black text-white">HR</option>
+                <option value="it" className="bg-black text-white">IT</option>
               </>
             )}
           </select>
@@ -70,7 +72,7 @@ export function CreateEmployeeForm({ dealers, currentUserRole }: CreateEmployeeF
         <div className="col-span-2 sm:col-span-1">
           <label className="block text-sm font-medium text-gray-300">Dealer</label>
           <select name="dealerId" className="border border-gray-700 bg-white/5 p-2 w-full rounded text-white focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]">
-            <option value="" className="bg-black text-white">None (HQ)</option>
+            <option value="" className="bg-black text-white">Platform (Aurora)</option>
             {dealers?.map(d => (
               <option key={d.id} value={d.id} className="bg-black text-white">{d.name}</option>
             ))}

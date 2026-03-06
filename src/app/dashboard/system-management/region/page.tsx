@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { SystemManagementTabs } from '../system-management-tabs'
+import { SystemManagementTitle } from '../system-management-title'
 import { RegionManagementContent } from './region-management-content'
 import { createRegionCode, updateRegionCode, deleteRegionCode } from './actions'
 
@@ -33,7 +34,7 @@ export default async function RegionManagementPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-semibold mb-6 text-white">System Management</h1>
+        <SystemManagementTitle />
         
         <SystemManagementTabs activeTab="region" />
 

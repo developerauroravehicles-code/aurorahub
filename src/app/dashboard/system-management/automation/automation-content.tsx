@@ -156,7 +156,10 @@ export function AutomationContent() {
   }
 
   const addableTemplates = AUTOMATION_TEMPLATES.filter(
-    (t) => t.type === 'scheduled' && !automations.some((a) => a.templateId === t.id)
+    (t) =>
+      t.type === 'scheduled' &&
+      t.id !== 'four_hour_reminder' &&
+      !automations.some((a) => a.templateId === t.id)
   )
   const editingItem = editingId ? automations.find((a) => a.id === editingId) : null
 
@@ -228,7 +231,11 @@ export function AutomationContent() {
                 <h4 className="font-semibold">{catInfo.name}</h4>
               </div>
               <div className="space-y-4">
-                {items.map((item) => (
+                {items.map((item) => {
+                  const template = getTemplateById(item.templateId)
+                  const displayName = template?.name ?? item.name
+                  const displayDescription = template?.description ?? item.description
+                  return (
           <div
             key={item.id}
             className="bg-black/30 rounded-lg border border-gray-800 p-4 flex items-start justify-between gap-4"
@@ -240,7 +247,7 @@ export function AutomationContent() {
                 ) : (
                   <MousePointerClick className="w-5 h-5 text-blue-400 shrink-0" />
                 )}
-                <span className="font-medium text-white">{item.name}</span>
+                <span className="font-medium text-white">{displayName}</span>
                 <span
                   className={`text-xs px-2 py-0.5 rounded ${
                     item.enabled ? 'bg-green-900/50 text-green-300' : 'bg-gray-700 text-gray-400'
@@ -249,8 +256,8 @@ export function AutomationContent() {
                   {item.enabled ? 'Enabled' : 'Disabled'}
                 </span>
               </div>
-              {item.description && (
-                <p className="text-sm text-gray-400 ml-8">{item.description}</p>
+              {displayDescription && (
+                <p className="text-sm text-gray-400 ml-8">{displayDescription}</p>
               )}
               {item.templateId === 'camera_low_stock_alert' && (
                 <p className="text-sm text-gray-500 ml-8 mt-1">
@@ -296,7 +303,8 @@ export function AutomationContent() {
               )}
             </div>
           </div>
-        ))}
+                  )
+                })}
               </div>
             </div>
           )

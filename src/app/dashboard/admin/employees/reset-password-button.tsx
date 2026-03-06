@@ -2,11 +2,12 @@
 
 import { useState } from 'react'
 import { resetEmployeePassword } from './actions'
-import { KeyRound, X, Check, Loader2 } from 'lucide-react'
+import { KeyRound, X, Check, Loader2, Eye, EyeOff } from 'lucide-react'
 
 export function ResetPasswordButton({ userId, userName }: { userId: string, userName: string }) {
   const [isOpen, setIsOpen] = useState(false)
   const [newPassword, setNewPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
   const [errorMessage, setErrorMessage] = useState('')
 
@@ -35,7 +36,7 @@ export function ResetPasswordButton({ userId, userName }: { userId: string, user
       <button 
         onClick={() => setIsOpen(true)}
         className="text-gray-400 hover:text-[#C27E00] transition-colors p-1"
-        title="Reset Password"
+        title="Assign Password"
       >
         <KeyRound className="w-4 h-4" />
       </button>
@@ -46,33 +47,42 @@ export function ResetPasswordButton({ userId, userName }: { userId: string, user
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
       <div className="bg-[#1a1a1a] border border-gray-800 rounded-lg p-6 w-full max-w-sm shadow-xl">
         <div className="flex justify-between items-center mb-4">
-          <h3 className="text-lg font-semibold text-white">Reset Password</h3>
+          <h3 className="text-lg font-semibold text-white">Assign Password</h3>
           <button onClick={() => setIsOpen(false)} className="text-gray-400 hover:text-white">
             <X className="w-5 h-5" />
           </button>
         </div>
         
         <p className="text-sm text-gray-400 mb-4">
-          Enter a new password for <span className="text-[#C27E00]">{userName}</span>.
+          Assign a password for <span className="text-[#C27E00]">{userName}</span>. The user can log in with this password.
         </p>
 
         {status === 'success' ? (
           <div className="bg-green-500/10 border border-green-500/20 text-green-500 p-3 rounded flex items-center justify-center">
             <Check className="w-5 h-5 mr-2" />
-            Password updated!
+            Password assigned! User can now log in.
           </div>
         ) : (
           <form onSubmit={handleReset} className="space-y-4">
-            <div>
+            <div className="relative">
               <input
-                type="text"
+                type={showPassword ? 'text' : 'password'}
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
-                placeholder="New Password"
-                className="w-full bg-black/50 border border-gray-700 rounded px-3 py-2 text-white focus:outline-none focus:border-[#C27E00]"
+                placeholder="New Password (min 6 characters)"
+                className="w-full bg-black/50 border border-gray-700 rounded px-3 py-2 pr-10 text-white focus:outline-none focus:border-[#C27E00]"
                 required
                 minLength={6}
+                autoComplete="new-password"
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white p-1"
+                title={showPassword ? 'Hide password' : 'Show password'}
+              >
+                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
             </div>
             
             {status === 'error' && (
@@ -84,7 +94,7 @@ export function ResetPasswordButton({ userId, userName }: { userId: string, user
               disabled={status === 'loading'}
               className="w-full bg-[#C27E00] hover:bg-[#a06900] text-white font-medium py-2 rounded transition-colors disabled:opacity-50 flex items-center justify-center"
             >
-              {status === 'loading' ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Update Password'}
+              {status === 'loading' ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Assign Password'}
             </button>
           </form>
         )}

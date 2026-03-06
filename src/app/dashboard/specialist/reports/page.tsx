@@ -94,7 +94,7 @@ export default function SpecialistReportsPage() {
       : { data: null }
     const dateRangeStr = `${format(new Date(startDate), 'MMM d, yyyy')} - ${format(new Date(endDate), 'MMM d, yyyy')}`
     return {
-      reportTitle: 'Specialist Reports',
+      reportTitle: 'Technical Support Reports',
       dateRange: dateRangeStr,
       exporterFullName: profile?.full_name ?? 'N/A',
       exporterEmail: user?.email ?? 'N/A',
@@ -144,7 +144,7 @@ export default function SpecialistReportsPage() {
     <div className="space-y-8">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold text-white mb-2">Specialist Reports</h1>
+          <h1 className="text-2xl font-semibold text-white mb-2">Technical Support Reports</h1>
           <p className="text-gray-400">View detailed reports of your assigned work and appointments</p>
         </div>
         <div className="flex gap-2">

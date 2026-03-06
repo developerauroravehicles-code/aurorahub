@@ -125,7 +125,7 @@ export async function uploadStatementToDriveAction(
     .single()
 
   if (!settingsRow?.value) {
-    return { success: false, error: 'Google Drive not configured. Configure in System Management > API.' }
+    return { success: false, error: 'Google Drive not configured. Configure in Integrations > External APIs.' }
   }
 
   const settings = JSON.parse(settingsRow.value) as GoogleDriveSettings

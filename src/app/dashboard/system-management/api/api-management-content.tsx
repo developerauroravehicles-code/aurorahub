@@ -85,7 +85,7 @@ export function APIManagementContent() {
     const err = searchParams.get('drive_error')
     if (drive === 'connected') {
       setMessage({ type: 'success', text: 'Google Drive connected successfully!' })
-      window.history.replaceState({}, '', '/dashboard/system-management/api')
+      window.history.replaceState({}, '', '/dashboard/infrastructure/api')
       // Refetch to show Connected badge
       supabase.from('system_settings').select('value').eq('key', 'google_drive_settings').single().then(({ data }) => {
         if (data?.value) {
@@ -105,7 +105,7 @@ export function APIManagementContent() {
         token_exchange_failed: 'Failed to exchange authorization code.'
       }
       setMessage({ type: 'error', text: msg[err] ?? err })
-      window.history.replaceState({}, '', '/dashboard/system-management/api')
+      window.history.replaceState({}, '', '/dashboard/infrastructure/api')
     }
   }, [searchParams])
 

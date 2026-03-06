@@ -30,19 +30,21 @@
    This will create the necessary tables, enums, and RLS policies.
 
 4. **Initial User Setup**
-   Since the app uses a custom Dealer Login flow, you need to create at least one Admin or Manager and a Dealer to start.
+   Since the app uses a custom Dealer Login flow, you need to create at least one Aurora Manager (platform) and one Dealer to start.
    
-   - Create a Dealer in `dealers` table.
+   - **Aurora (Platform)**: The service provider—not a dealer. Aurora Manager users have `dealer_id = NULL` and log in with code `HQ`.
+   - **Dealers**: Create actual dealer clients in `dealers` table.
    - Create a User in Supabase Auth.
-   - Create a Profile in `profiles` table linked to that User and Dealer (if applicable) with role `aurora_manager` to access the Admin Dashboard.
+   - Create a Profile in `profiles` table with role `aurora_manager` and `dealer_id = NULL` for platform access.
 
-   Example SQL to create an initial Admin:
+   Example SQL:
    ```sql
-   -- Create Dealer (HQ)
-   insert into dealers (code, name, address) values ('HQ', 'Aurora HQ', 'Main Office');
+   -- Create your first dealer (client)
+   insert into dealers (code, name, address) values ('DEALER1', 'First Dealer', 'Address');
    
+   -- Create Aurora Manager (platform user - dealer_id = NULL, login code: HQ)
    -- (After creating user in Auth manually via Dashboard or script)
-   -- insert into profiles (id, dealer_id, role, full_name) values ('USER_UUID', 'DEALER_UUID', 'aurora_manager', 'Admin User');
+   -- insert into profiles (id, dealer_id, role, full_name) values ('USER_UUID', NULL, 'aurora_manager', 'Admin User');
    ```
 
 5. **Run Development Server**
@@ -52,7 +54,7 @@
 
 ## Features
 
-- **Login**: Dealer Code + Email + Password.
+- **Login**: Dealer Code + Email + Password. Platform users (Aurora Manager) use code `HQ`; dealers use their own dealer code.
 - **Roles**: Sales, Finance, Specialist, Managers.
 - **Dashboards**:
   - Sales: Create Demands (with Calendar), View Reports.

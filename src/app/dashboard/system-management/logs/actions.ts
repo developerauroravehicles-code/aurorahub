@@ -50,9 +50,11 @@ export async function getSmsLogsForLogsPage(filters?: {
   if (!user) return { error: 'Unauthorized' }
 
   const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
-  if (profile?.role !== 'aurora_manager') return { error: 'Only Aurora Managers can view SMS logs' }
+  if (!['aurora_manager', 'it'].includes(profile?.role ?? '')) return { error: 'Only Aurora Managers or IT can view SMS logs' }
 
-  let query = supabase
+  // Use admin client to bypass RLS (auth already verified above; sms_logs RLS only allows aurora_manager)
+  const admin = createAdminClient()
+  let query = admin
     .from('sms_logs')
     .select('id, sent_at, phone_number, recipient_type, recipient_name, demand_id, message_type, triggered_by, message_content')
     .order('sent_at', { ascending: false })
@@ -85,7 +87,7 @@ export async function getDemandLogsForLogsPage(filters?: {
   if (!user) return { error: 'Unauthorized' }
 
   const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
-  if (profile?.role !== 'aurora_manager') return { error: 'Only Aurora Managers can view demand logs' }
+  if (!['aurora_manager', 'it'].includes(profile?.role ?? '')) return { error: 'Only Aurora Managers or IT can view demand logs' }
 
   // Use admin client to bypass RLS (auth already verified above)
   const admin = createAdminClient()
@@ -166,9 +168,11 @@ export async function getMailLogsForLogsPage(filters?: {
   if (!user) return { error: 'Unauthorized' }
 
   const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
-  if (profile?.role !== 'aurora_manager') return { error: 'Only Aurora Managers can view mail logs' }
+  if (!['aurora_manager', 'it'].includes(profile?.role ?? '')) return { error: 'Only Aurora Managers or IT can view mail logs' }
 
-  let query = supabase
+  // Use admin client to bypass RLS (auth already verified above; mail_logs RLS only allows aurora_manager)
+  const admin = createAdminClient()
+  let query = admin
     .from('mail_logs')
     .select('id, sent_at, recipient_emails, subject, mail_type, report_title, sender_id, success, error_message')
     .order('sent_at', { ascending: false })

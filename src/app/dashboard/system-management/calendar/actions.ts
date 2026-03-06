@@ -19,8 +19,8 @@ export async function createCalendarSetting(formData: FormData) {
     .eq('id', user.id)
     .single()
 
-  if (!profile || profile.role !== 'aurora_manager') {
-    return { success: false, error: 'Only Aurora Managers can manage calendar settings' }
+  if (!profile || !['aurora_manager', 'it'].includes(profile.role)) {
+    return { success: false, error: 'Only Aurora Managers or IT can manage calendar settings' }
   }
 
   const dealerId = formData.get('dealerId') as string
@@ -70,7 +70,7 @@ export async function createCalendarSetting(formData: FormData) {
     return { success: false, error: error.message }
   }
 
-  revalidatePath('/dashboard/system-management/calendar')
+  revalidatePath('/dashboard/configuration/calendar')
   return { success: true }
 }
 
@@ -93,8 +93,8 @@ export async function updateCalendarSetting(
     .eq('id', user.id)
     .single()
 
-  if (!profile || profile.role !== 'aurora_manager') {
-    return { success: false, error: 'Only Aurora Managers can manage calendar settings' }
+  if (!profile || !['aurora_manager', 'it'].includes(profile.role)) {
+    return { success: false, error: 'Only Aurora Managers or IT can manage calendar settings' }
   }
 
   if (startHour >= endHour) {
@@ -116,7 +116,7 @@ export async function updateCalendarSetting(
     return { success: false, error: error.message }
   }
 
-  revalidatePath('/dashboard/system-management/calendar')
+  revalidatePath('/dashboard/configuration/calendar')
   return { success: true }
 }
 
@@ -133,8 +133,8 @@ export async function deleteCalendarSetting(settingId: string) {
     .eq('id', user.id)
     .single()
 
-  if (!profile || profile.role !== 'aurora_manager') {
-    return { success: false, error: 'Only Aurora Managers can manage calendar settings' }
+  if (!profile || !['aurora_manager', 'it'].includes(profile.role)) {
+    return { success: false, error: 'Only Aurora Managers or IT can manage calendar settings' }
   }
 
   const { error } = await supabase
@@ -147,7 +147,7 @@ export async function deleteCalendarSetting(settingId: string) {
     return { success: false, error: error.message }
   }
 
-  revalidatePath('/dashboard/system-management/calendar')
+  revalidatePath('/dashboard/configuration/calendar')
   return { success: true }
 }
 
@@ -212,8 +212,8 @@ export async function createCalendarBlock(formData: FormData): Promise<{ success
   if (!user) return { success: false, error: 'Unauthorized' }
 
   const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
-  if (!profile || profile.role !== 'aurora_manager') {
-    return { success: false, error: 'Only Aurora Managers can manage calendar blocks' }
+  if (!profile || !['aurora_manager', 'it'].includes(profile.role)) {
+    return { success: false, error: 'Only Aurora Managers or IT can manage calendar blocks' }
   }
 
   const dealerId = formData.get('dealerId') as string
@@ -235,7 +235,7 @@ export async function createCalendarBlock(formData: FormData): Promise<{ success
   })
 
   if (error) return { success: false, error: error.message }
-  revalidatePath('/dashboard/system-management/calendar')
+  revalidatePath('/dashboard/configuration/calendar')
   return { success: true }
 }
 
@@ -250,8 +250,8 @@ export async function createCalendarBlocks(
   if (!user) return { success: false, error: 'Unauthorized' }
 
   const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
-  if (!profile || profile.role !== 'aurora_manager') {
-    return { success: false, error: 'Only Aurora Managers can manage calendar blocks' }
+  if (!profile || !['aurora_manager', 'it'].includes(profile.role)) {
+    return { success: false, error: 'Only Aurora Managers or IT can manage calendar blocks' }
   }
 
   if (!dealerId || !blockDate || !blocks.length) {
@@ -267,7 +267,7 @@ export async function createCalendarBlocks(
 
   const { error } = await supabase.from('dealer_calendar_blocks').insert(rows)
   if (error) return { success: false, error: error.message }
-  revalidatePath('/dashboard/system-management/calendar')
+  revalidatePath('/dashboard/configuration/calendar')
   return { success: true }
 }
 
@@ -277,13 +277,13 @@ export async function deleteCalendarBlock(blockId: string): Promise<{ success: b
   if (!user) return { success: false, error: 'Unauthorized' }
 
   const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
-  if (!profile || profile.role !== 'aurora_manager') {
-    return { success: false, error: 'Only Aurora Managers can manage calendar blocks' }
+  if (!profile || !['aurora_manager', 'it'].includes(profile.role)) {
+    return { success: false, error: 'Only Aurora Managers or IT can manage calendar blocks' }
   }
 
   const { error } = await supabase.from('dealer_calendar_blocks').delete().eq('id', blockId)
   if (error) return { success: false, error: error.message }
-  revalidatePath('/dashboard/system-management/calendar')
+  revalidatePath('/dashboard/configuration/calendar')
   return { success: true }
 }
 

@@ -8,7 +8,7 @@ const ROLE_COLORS = ['#3B82F6', '#22C55E', '#EAB308', '#8B5CF6']
 const ROLE_LABELS: Record<keyof EmployeeRoleCounts, string> = {
   sales: 'Sales',
   finance: 'Finance',
-  specialist: 'Specialist',
+  specialist: 'Technical Support',
   aurora_manager: 'Aurora Manager'
 }
 

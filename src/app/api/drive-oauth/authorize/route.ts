@@ -19,25 +19,28 @@ export async function GET(request: Request) {
     .select('role')
     .eq('id', user.id)
     .single()
-  if (!profile || profile.role !== 'aurora_manager') {
-    return NextResponse.redirect(new URL('/dashboard/system-management/api?drive_error=unauthorized', request.url))
+  if (!['aurora_manager', 'it'].includes(profile?.role ?? '')) {
+    return NextResponse.redirect(new URL('/dashboard/integrations/external-apis?drive_error=unauthorized', request.url))
   }
 
-  const { data: row } = await supabase
-    .from('system_settings')
-    .select('value')
-    .eq('key', 'google_drive_settings')
-    .single()
-
-  const settings = row?.value ? JSON.parse(row.value) : {}
-  const clientId = settings.clientId?.trim()
+  const { searchParams } = new URL(request.url)
+  const connectionId = searchParams.get('connection_id')
+  let settings: Record<string, unknown> = {}
+  if (connectionId) {
+    const { data: conn } = await supabase.from('external_api_connections').select('config').eq('id', connectionId).single()
+    settings = (conn?.config as Record<string, unknown>) ?? {}
+  } else {
+    const { data: row } = await supabase.from('system_settings').select('value').eq('key', 'google_drive_settings').single()
+    settings = row?.value ? (JSON.parse(row.value) as Record<string, unknown>) : {}
+  }
+  const clientId = (settings.clientId as string)?.trim()
   if (!clientId) {
-    return NextResponse.redirect(new URL('/dashboard/system-management/api?drive_error=no_client_id', request.url))
+    return NextResponse.redirect(new URL('/dashboard/integrations/external-apis?drive_error=no_client_id', request.url))
   }
 
   const origin = new URL(request.url).origin
   const redirectUri = `${origin}/api/drive-oauth/callback`
-  const state = Buffer.from(JSON.stringify({ ts: Date.now() })).toString('base64url')
+  const state = Buffer.from(JSON.stringify({ ts: Date.now(), connectionId: connectionId ?? null })).toString('base64url')
 
   const params = new URLSearchParams({
     client_id: clientId,

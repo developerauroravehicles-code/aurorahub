@@ -367,7 +367,7 @@ export default async function DashboardPage() {
     return (
       <div className="space-y-8">
         <div>
-          <h1 className="text-2xl font-semibold text-white mb-2">Specialist Dashboard</h1>
+          <h1 className="text-2xl font-semibold text-white mb-2">Technical Support Dashboard</h1>
           <p className="text-gray-400">Welcome back! Here's an overview of your work.</p>
         </div>
 
@@ -580,9 +580,274 @@ export default async function DashboardPage() {
     )
   }
 
-  // If aurora_manager user, fetch system-wide statistics
+  // HR role: dedicated HR dashboard (platform users only)
+  if (profile.role === 'hr') {
+    const { count: totalPersonnel } = await supabase.from('personnel').select('*', { count: 'exact', head: true })
+    const { data: platformEmployees } = await supabase
+      .from('profiles')
+      .select('role')
+      .is('dealer_id', null)
+    const employeeCounts = {
+      specialist: platformEmployees?.filter(e => e.role === 'specialist').length || 0,
+      aurora_manager: platformEmployees?.filter(e => e.role === 'aurora_manager').length || 0,
+      hr: platformEmployees?.filter(e => e.role === 'hr').length || 0,
+      it: platformEmployees?.filter(e => e.role === 'it').length || 0,
+    }
+    const totalEmployees = platformEmployees?.length || 0
+
+    const { data: platformProfiles } = await supabase
+      .from('profiles')
+      .select('id')
+      .is('dealer_id', null)
+    const platformIds = platformProfiles?.map(p => p.id) ?? []
+
+    const { count: pendingLeave } = platformIds.length > 0
+      ? await supabase
+          .from('leave_requests')
+          .select('*', { count: 'exact', head: true })
+          .eq('status', 'pending')
+          .in('profile_id', platformIds)
+      : { count: 0 }
+
+    const { count: openPositions } = await supabase
+      .from('recruitment_positions')
+      .select('*', { count: 'exact', head: true })
+      .in('status', ['open', 'interviewing', 'offer'])
+      .is('dealer_id', null)
+
+    const { data: incompleteTasks } = await supabase
+      .from('onboarding_tasks')
+      .select('profile_id')
+      .neq('status', 'completed')
+    const onboardingInProgress = platformIds.length > 0 && (incompleteTasks?.length ?? 0) > 0
+      ? (incompleteTasks?.filter((t: { profile_id: string }) => platformIds.includes(t.profile_id)).length ?? 0)
+      : 0
+
+    return (
+      <div className="space-y-8">
+        <div>
+          <h1 className="text-2xl font-semibold text-white mb-2">HR Dashboard</h1>
+          <p className="text-gray-400">Employee management, leave, recruitment, and onboarding overview.</p>
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          <Link href="/dashboard/hr/personnel" className="px-4 py-2 rounded-lg bg-white/5 border border-gray-700 text-white hover:bg-white/10 transition-colors text-sm font-medium">
+            Personnel Registry
+          </Link>
+          <Link href="/dashboard/hr/installers" className="px-4 py-2 rounded-lg bg-white/5 border border-gray-700 text-white hover:bg-white/10 transition-colors text-sm font-medium">
+            Installer Network
+          </Link>
+          <Link href="/dashboard/hr/employees" className="px-4 py-2 rounded-lg bg-white/5 border border-gray-700 text-white hover:bg-white/10 transition-colors text-sm font-medium">
+            Employees
+          </Link>
+          <Link href="/dashboard/hr/leave" className="px-4 py-2 rounded-lg bg-white/5 border border-gray-700 text-white hover:bg-white/10 transition-colors text-sm font-medium">
+            Leave
+          </Link>
+          <Link href="/dashboard/hr/recruitment" className="px-4 py-2 rounded-lg bg-white/5 border border-gray-700 text-white hover:bg-white/10 transition-colors text-sm font-medium">
+            Recruitment
+          </Link>
+          <Link href="/dashboard/hr/onboarding" className="px-4 py-2 rounded-lg bg-white/5 border border-gray-700 text-white hover:bg-white/10 transition-colors text-sm font-medium">
+            Onboarding
+          </Link>
+          <Link href="/dashboard/hr/analytics" className="px-4 py-2 rounded-lg bg-white/5 border border-gray-700 text-white hover:bg-white/10 transition-colors text-sm font-medium">
+            Analytics
+          </Link>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="bg-white/5 border border-gray-800 p-6 rounded-lg">
+            <h3 className="text-sm font-medium text-gray-400 mb-2">Total Personnel</h3>
+            <p className="text-3xl font-bold text-white">{totalPersonnel ?? 0}</p>
+            <p className="text-xs text-gray-500 mt-1">All worker types</p>
+          </div>
+          <div className="bg-white/5 border border-gray-800 p-6 rounded-lg">
+            <h3 className="text-sm font-medium text-gray-400 mb-2">Platform Employees</h3>
+            <p className="text-3xl font-bold text-white">{totalEmployees}</p>
+            <p className="text-xs text-gray-500 mt-1">
+              {employeeCounts.specialist} Technical Support, {employeeCounts.aurora_manager} Aurora Manager, {employeeCounts.hr} HR, {employeeCounts.it} IT
+            </p>
+          </div>
+          <div className="bg-white/5 border border-gray-800 p-6 rounded-lg">
+            <h3 className="text-sm font-medium text-gray-400 mb-2">Pending Leave</h3>
+            <p className="text-3xl font-bold text-yellow-500">{pendingLeave ?? 0}</p>
+            <p className="text-xs text-gray-500 mt-1">Awaiting approval</p>
+          </div>
+          <div className="bg-white/5 border border-gray-800 p-6 rounded-lg">
+            <h3 className="text-sm font-medium text-gray-400 mb-2">Open Positions</h3>
+            <p className="text-3xl font-bold text-blue-500">{openPositions ?? 0}</p>
+            <p className="text-xs text-gray-500 mt-1">Active recruitment</p>
+          </div>
+          <div className="bg-white/5 border border-gray-800 p-6 rounded-lg">
+            <h3 className="text-sm font-medium text-gray-400 mb-2">Onboarding Tasks</h3>
+            <p className="text-3xl font-bold text-[#C27E00]">{onboardingInProgress ?? 0}</p>
+            <p className="text-xs text-gray-500 mt-1">In progress</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // IT role: dedicated IT Dashboard
+  if (profile.role === 'it') {
+    const admin = (await import('@/lib/supabase/admin')).createAdminClient()
+
+    const [ticketsRes, incidentsRes, slaBreachRes, myTicketsRes, profilesRes, smsLogsRes, mailLogsRes, recentAlertsRes] = await Promise.all([
+      admin.from('it_tickets').select('id, ticket_number, title, status, priority, sla_due_at'),
+      admin.from('it_incidents').select('id, incident_number, title, severity, status'),
+      admin.from('it_tickets').select('id').not('sla_due_at', 'is', null).not('status', 'in', '("resolved","closed")').lt('sla_due_at', new Date().toISOString()),
+      admin.from('it_tickets').select('id, ticket_number, title, priority, status, created_at').eq('assigned_to', user.id).not('status', 'in', '("resolved","closed")').order('created_at', { ascending: false }).limit(10),
+      admin.from('profiles').select('id', { count: 'exact', head: true }),
+      admin.from('sms_logs').select('id', { count: 'exact', head: true }),
+      admin.from('mail_logs').select('id', { count: 'exact', head: true }),
+      admin.from('alert_logs').select('id, alert_type, subject, success, created_at').order('created_at', { ascending: false }).limit(5),
+    ])
+
+    const tickets = ticketsRes.data ?? []
+    const incidents = incidentsRes.data ?? []
+    const slaBreachCount = slaBreachRes.data?.length ?? 0
+    const myTickets = myTicketsRes.data ?? []
+    const openTickets = tickets.filter((t: { status: string }) => !['resolved', 'closed'].includes(t.status))
+    const criticalTickets = tickets.filter((t: { priority: string }) => t.priority === 'critical' && !['resolved', 'closed'].includes((t as { status: string }).status))
+    const criticalIncidents = incidents.filter((i: { severity: string; status: string }) => i.severity === 'critical' && !['resolved', 'closed'].includes(i.status))
+    const recentAlerts = recentAlertsRes.data ?? []
+
+    return (
+      <div className="space-y-8">
+        <div>
+          <h1 className="text-2xl font-semibold text-white mb-2">IT Dashboard</h1>
+          <p className="text-gray-400">Service desk, incidents, system health, and observability overview.</p>
+        </div>
+
+        {/* Quick Navigation */}
+        <div className="flex flex-wrap gap-2">
+          <Link href="/dashboard/operations/service-desk" className="px-4 py-2 rounded-lg bg-white/5 border border-gray-700 text-white hover:bg-white/10 transition-colors text-sm font-medium">
+            Service Desk
+          </Link>
+          <Link href="/dashboard/observability/logs" className="px-4 py-2 rounded-lg bg-white/5 border border-gray-700 text-white hover:bg-white/10 transition-colors text-sm font-medium">
+            Logs
+          </Link>
+          <Link href="/dashboard/observability/monitoring" className="px-4 py-2 rounded-lg bg-white/5 border border-gray-700 text-white hover:bg-white/10 transition-colors text-sm font-medium">
+            Monitoring
+          </Link>
+          <Link href="/dashboard/observability/alerts" className="px-4 py-2 rounded-lg bg-white/5 border border-gray-700 text-white hover:bg-white/10 transition-colors text-sm font-medium">
+            Alerts
+          </Link>
+          <Link href="/dashboard/identity" className="px-4 py-2 rounded-lg bg-white/5 border border-gray-700 text-white hover:bg-white/10 transition-colors text-sm font-medium">
+            Identity
+          </Link>
+          <Link href="/dashboard/infrastructure/database" className="px-4 py-2 rounded-lg bg-white/5 border border-gray-700 text-white hover:bg-white/10 transition-colors text-sm font-medium">
+            Infrastructure
+          </Link>
+          <Link href="/dashboard/integrations/webhooks" className="px-4 py-2 rounded-lg bg-white/5 border border-gray-700 text-white hover:bg-white/10 transition-colors text-sm font-medium">
+            Integrations
+          </Link>
+          <Link href="/dashboard/configuration/settings" className="px-4 py-2 rounded-lg bg-white/5 border border-gray-700 text-white hover:bg-white/10 transition-colors text-sm font-medium">
+            Configuration
+          </Link>
+        </div>
+
+        {/* IT Statistics */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+          <Link href="/dashboard/operations/service-desk?tab=tickets" className="bg-white/5 border border-gray-800 p-6 rounded-lg hover:bg-white/10 transition-colors">
+            <h3 className="text-sm font-medium text-gray-400 mb-2">Open Tickets</h3>
+            <p className="text-3xl font-bold text-white">{openTickets.length}</p>
+            <p className="text-xs text-gray-500 mt-1">Active tickets</p>
+          </Link>
+          <Link href="/dashboard/operations/service-desk?tab=tickets" className="bg-white/5 border border-gray-800 p-6 rounded-lg hover:bg-white/10 transition-colors">
+            <h3 className="text-sm font-medium text-gray-400 mb-2">Critical Tickets</h3>
+            <p className="text-3xl font-bold text-red-500">{criticalTickets.length}</p>
+            <p className="text-xs text-gray-500 mt-1">Requires attention</p>
+          </Link>
+          <Link href="/dashboard/operations/service-desk?tab=tickets" className="bg-white/5 border border-gray-800 p-6 rounded-lg hover:bg-white/10 transition-colors">
+            <h3 className="text-sm font-medium text-gray-400 mb-2">SLA Breaches</h3>
+            <p className="text-3xl font-bold text-amber-500">{slaBreachCount}</p>
+            <p className="text-xs text-gray-500 mt-1">Past due</p>
+          </Link>
+          <Link href="/dashboard/operations/service-desk?tab=incidents" className="bg-white/5 border border-gray-800 p-6 rounded-lg hover:bg-white/10 transition-colors">
+            <h3 className="text-sm font-medium text-gray-400 mb-2">Critical Incidents</h3>
+            <p className="text-3xl font-bold text-red-500">{criticalIncidents.length}</p>
+            <p className="text-xs text-gray-500 mt-1">Open critical</p>
+          </Link>
+          <div className="bg-white/5 border border-gray-800 p-6 rounded-lg">
+            <h3 className="text-sm font-medium text-gray-400 mb-2">My Assigned</h3>
+            <p className="text-3xl font-bold text-blue-500">{myTickets.length}</p>
+            <p className="text-xs text-gray-500 mt-1">Tickets assigned to me</p>
+          </div>
+        </div>
+
+        {/* System Health */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <Link href="/dashboard/identity/users" className="bg-white/5 border border-gray-800 p-4 rounded-lg hover:bg-white/10 transition-colors">
+            <h3 className="text-sm font-medium text-gray-400 mb-1">Users</h3>
+            <p className="text-2xl font-bold text-white">{profilesRes.count ?? 0}</p>
+          </Link>
+          <Link href="/dashboard/observability/logs?type=sms" className="bg-white/5 border border-gray-800 p-4 rounded-lg hover:bg-white/10 transition-colors">
+            <h3 className="text-sm font-medium text-gray-400 mb-1">SMS Sent</h3>
+            <p className="text-2xl font-bold text-white">{smsLogsRes.count ?? 0}</p>
+          </Link>
+          <Link href="/dashboard/observability/logs?type=mail" className="bg-white/5 border border-gray-800 p-4 rounded-lg hover:bg-white/10 transition-colors">
+            <h3 className="text-sm font-medium text-gray-400 mb-1">Emails Sent</h3>
+            <p className="text-2xl font-bold text-white">{mailLogsRes.count ?? 0}</p>
+          </Link>
+          <div className="bg-white/5 border border-green-900/30 p-4 rounded-lg">
+            <h3 className="text-sm font-medium text-gray-400 mb-1">Database</h3>
+            <p className="text-2xl font-bold text-green-500">Healthy</p>
+          </div>
+        </div>
+
+        {/* My Assigned Tickets & Recent Alerts */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="bg-white/5 rounded-lg border border-gray-800 p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-lg font-semibold text-white">My Assigned Tickets</h2>
+              <Link href="/dashboard/operations/service-desk?tab=tickets" className="text-sm text-[#C27E00] hover:underline">View All →</Link>
+            </div>
+            {myTickets.length === 0 ? (
+              <p className="text-gray-500">No tickets assigned to you.</p>
+            ) : (
+              <ul className="divide-y divide-gray-800 space-y-0">
+                {myTickets.slice(0, 5).map((t: { id: string; ticket_number: string; title: string; priority: string; status: string }) => (
+                  <li key={t.id} className="py-3">
+                    <Link href="/dashboard/operations/service-desk?tab=tickets" className="block hover:bg-white/5 -mx-2 px-2 py-1 rounded">
+                      <div className="flex justify-between items-start">
+                        <span className="font-medium text-white">{t.ticket_number}: {t.title}</span>
+                        <span className={`px-2 py-0.5 rounded text-xs ${t.priority === 'critical' ? 'bg-red-500/20 text-red-400' : 'bg-gray-700 text-gray-400'}`}>{t.priority}</span>
+                      </div>
+                      <p className="text-xs text-gray-500 mt-0.5">{t.status}</p>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+          <div className="bg-white/5 rounded-lg border border-gray-800 p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-lg font-semibold text-white">Recent Alerts</h2>
+              <Link href="/dashboard/observability/alerts" className="text-sm text-[#C27E00] hover:underline">Configure →</Link>
+            </div>
+            {recentAlerts.length === 0 ? (
+              <p className="text-gray-500">No recent alerts.</p>
+            ) : (
+              <ul className="divide-y divide-gray-800 space-y-0">
+                {recentAlerts.map((a: { id: string; alert_type: string; subject: string | null; success: boolean; created_at: string }) => (
+                  <li key={a.id} className="py-3 flex justify-between items-start">
+                    <div>
+                      <p className="text-sm text-white truncate max-w-[200px]">{a.subject ?? a.alert_type}</p>
+                      <p className="text-xs text-gray-500">{new Date(a.created_at).toLocaleString()}</p>
+                    </div>
+                    <span className={`px-2 py-0.5 rounded text-xs ${a.success ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>{a.success ? 'Sent' : 'Failed'}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Aurora Manager: platform admin dashboard
   if (profile.role === 'aurora_manager') {
-    // Get total dealers count
     const { count: totalDealers } = await supabase
       .from('dealers')
       .select('*', { count: 'exact', head: true })
@@ -662,7 +927,7 @@ export default async function DashboardPage() {
             <p className="text-xs text-gray-500 mt-1">Active dealers in system</p>
           </div>
           <div className="bg-white/5 border border-gray-800 p-6 rounded-lg">
-            <h3 className="text-sm font-medium text-gray-400 mb-2">Total Specialists</h3>
+            <h3 className="text-sm font-medium text-gray-400 mb-2">Total Technical Support</h3>
             <p className="text-3xl font-bold text-[#C27E00]">{totalSpecialists || 0}</p>
             <p className="text-xs text-gray-500 mt-1">Active specialists</p>
           </div>
@@ -787,7 +1052,7 @@ export default async function DashboardPage() {
             <h3 className="text-sm font-medium text-gray-400 mb-2">Total Employees</h3>
             <p className="text-3xl font-bold text-white">{totalEmployees}</p>
             <p className="text-xs text-gray-500 mt-1">
-              {salesCount} Sales, {financeCount} Finance, {specialistCount} Specialist
+              {salesCount} Sales, {financeCount} Finance, {specialistCount} Technical Support
             </p>
           </div>
           <div className="bg-white/5 border border-gray-800 p-6 rounded-lg">

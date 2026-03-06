@@ -2,6 +2,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { logDemandChange } from '@/lib/demand-logger'
+import { dispatchWebhooks } from '@/lib/webhook-dispatch'
 
 export async function assignWorkToMe(demandId: string) {
   const supabase = await createClient()
@@ -115,6 +116,18 @@ export async function completeDemand(demandId: string) {
     previousStatus: 'approved',
     newStatus: 'completed',
     notes: 'Demand completed',
+  }).catch(() => {})
+
+  dispatchWebhooks(supabase, 'appointment_completed', {
+    demand_id: demandId,
+    previous_status: 'approved',
+    new_status: 'completed',
+  }).catch(() => {})
+
+  dispatchWebhooks(supabase, 'demand_status_change', {
+    demand_id: demandId,
+    previous_status: 'approved',
+    new_status: 'completed',
   }).catch(() => {})
   
   revalidatePath('/dashboard/specialist/work')

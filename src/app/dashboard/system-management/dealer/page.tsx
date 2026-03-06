@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { SystemManagementTabs } from '../system-management-tabs'
+import { SystemManagementTitle } from '../system-management-title'
 import { DealerManagementContent } from './dealer-management-content-new'
 import { updateDealerRegionCode, addCameraToDealer, removeCameraFromDealer } from '../region/actions'
 import type { Dealer } from '@/types/system-management'
@@ -59,7 +60,7 @@ export default async function DealerManagementPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-semibold mb-6 text-white">System Management</h1>
+        <SystemManagementTitle />
         
         <SystemManagementTabs activeTab="dealer" />
 

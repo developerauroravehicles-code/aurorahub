@@ -68,7 +68,7 @@ export async function saveMailSettings(settings: Partial<MailSettings>): Promise
   if (!user) return { error: 'Unauthorized' }
 
   const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
-  if (profile?.role !== 'aurora_manager') return { error: 'Only Aurora Managers can save mail settings' }
+  if (!['aurora_manager', 'it'].includes(profile?.role ?? '')) return { error: 'Only Aurora Managers or IT can save mail settings' }
 
   const { data: existing } = await supabase
     .from('system_settings')

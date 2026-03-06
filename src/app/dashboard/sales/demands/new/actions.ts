@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { logDemandChange } from '@/lib/demand-logger'
+import { dispatchWebhooks } from '@/lib/webhook-dispatch'
 import { redirect } from 'next/navigation'
 import { z } from 'zod'
 import { fromZonedTime, formatInTimeZone } from 'date-fns-tz'
@@ -119,6 +120,18 @@ export async function createDemand(prevState: ActionState, formData: FormData) {
     previousStatus: null,
     newStatus: 'pending_finance',
     notes: 'Demand created',
+  }).catch(() => {})
+
+  dispatchWebhooks(supabase, 'demand_created', {
+    demand_id: demand.id,
+    demand_number: demand.demand_number,
+    status: demand.status,
+    customer_firstname: demand.customer_firstname,
+    customer_lastname: demand.customer_lastname,
+    vehicle_make: demand.vehicle_make,
+    vehicle_model: demand.vehicle_model,
+    appointment_date: demand.appointment_date,
+    dealer_id: demand.dealer_id,
   }).catch(() => {})
 
   // SMS will be sent when finance approves the demand

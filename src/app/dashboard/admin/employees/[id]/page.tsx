@@ -30,7 +30,7 @@ export default async function SpecialistDetailsPage({ params }: { params: Promis
     .eq('id', id)
     .single()
 
-  if (!profile) return <div className="text-white">Specialist not found</div>
+  if (!profile) return <div className="text-white">Technical Support not found</div>
 
   // Fetch assigned dealers for this specialist (only if Aurora Manager)
   const { data: assignedDealersRaw } = isAuroraManager

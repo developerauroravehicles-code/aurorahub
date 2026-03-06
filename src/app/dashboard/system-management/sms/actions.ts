@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { requirePermission } from '@/lib/permissions'
 import type { SMSSettings } from '@/lib/sms-settings'
 import { sendSMS } from '@/lib/twilio'
 import { logSmsSent } from '@/lib/sms-logger'
@@ -43,8 +44,8 @@ export async function getSmsSettingsAction(): Promise<{ settings?: SMSSettings; 
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Unauthorized' }
 
-  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
-  if (profile?.role !== 'aurora_manager') return { error: 'Only Aurora Managers can view SMS settings' }
+  const perm = await requirePermission('comm.sms.view')
+  if (perm !== true) return { error: perm.error }
 
   const settings = await getSmsSettings(supabase)
   return { settings }
@@ -55,8 +56,8 @@ export async function saveSmsSettingsAction(settings: SMSSettings): Promise<{ er
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Unauthorized' }
 
-  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
-  if (profile?.role !== 'aurora_manager') return { error: 'Only Aurora Managers can save SMS settings' }
+  const perm = await requirePermission('comm.sms.save')
+  if (perm !== true) return { error: perm.error }
 
   const { error } = await supabase
     .from('system_settings')
@@ -81,8 +82,8 @@ export async function getSmsLogs(filters?: {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Unauthorized' }
 
-  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
-  if (profile?.role !== 'aurora_manager') return { error: 'Only Aurora Managers can view SMS logs' }
+  const perm = await requirePermission('comm.sms.logs')
+  if (perm !== true) return { error: perm.error }
 
   let query = supabase
     .from('sms_logs')
@@ -111,8 +112,8 @@ export async function getDemandsForManualSms(): Promise<{ error?: string; demand
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Unauthorized' }
 
-  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
-  if (profile?.role !== 'aurora_manager') return { error: 'Only Aurora Managers can send manual SMS' }
+  const perm = await requirePermission('comm.sms.send')
+  if (perm !== true) return { error: perm.error }
 
   const thirtyDaysAgo = new Date()
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 90)
@@ -160,8 +161,8 @@ export async function sendManualSms(
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { success: false, error: 'Unauthorized' }
 
-  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
-  if (profile?.role !== 'aurora_manager') return { success: false, error: 'Only Aurora Managers can send manual SMS' }
+  const perm = await requirePermission('comm.sms.send')
+  if (perm !== true) return { success: false, error: perm.error }
 
   const { data: demand, error: demandError } = await supabase
     .from('demands')

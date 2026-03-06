@@ -9,6 +9,7 @@ export type AutomationType = 'scheduled' | 'event'
 export type AutomationCategory = 'reporting' | 'calendar' | 'camera_dealer'
 
 export type TemplateId =
+  | 'four_hour_reminder'
   | 'daily_report_email'
   | 'weekly_summary'
   | 'daily_report_sales'
@@ -66,6 +67,14 @@ export const AUTOMATION_CATEGORIES: Record<
 
 export const AUTOMATION_TEMPLATES: AutomationTemplate[] = [
   // Reporting category
+  {
+    id: 'four_hour_reminder',
+    category: 'reporting',
+    name: '4-Hour SMS Reminder',
+    description: 'Sends a reminder to the customer and specialist a configurable number of hours before the appointment.',
+    type: 'scheduled',
+    params: [],
+  },
   {
     id: 'daily_report_email',
     category: 'reporting',

@@ -1,0 +1,58 @@
+// Pure calculation utils - not Server Actions (can be used client & server)
+
+export function calculatePerCompletedAmount(
+  baseCompleted: number,
+  baseAmount: number,
+  perCompletedAmount: number,
+  completedCount: number
+): number {
+  if (completedCount <= 0) return 0
+  if (completedCount <= baseCompleted) return baseAmount
+  return baseAmount + (completedCount - baseCompleted) * perCompletedAmount
+}
+
+/** @deprecated use calculatePerCompletedAmount */
+export const calculatePerCompletedGross = calculatePerCompletedAmount
+
+// Canadian payroll deduction constants (bi-weekly)
+const CPP_RATE = 0.0595
+const CPP_EXEMPTION_ANNUAL = 3500
+const EI_RATE = 0.0166
+const EI_MAX_ANNUAL = 1049
+
+export function calculateDeductions(gross: number, payPeriodsPerYear: number = 26): {
+  cpp: number
+  ei: number
+  federalTax: number
+  provincialTax: number
+  totalDeductions: number
+  net: number
+} {
+  const cppExemptionPerPeriod = CPP_EXEMPTION_ANNUAL / payPeriodsPerYear
+  const taxableCpp = Math.max(0, gross - cppExemptionPerPeriod)
+  const cppAnnualMax = 3867
+  const cpp = Math.min(taxableCpp * CPP_RATE, cppAnnualMax / payPeriodsPerYear)
+  const ei = Math.min(gross * EI_RATE, EI_MAX_ANNUAL / payPeriodsPerYear)
+  const federalBasicPersonal = 15000 / payPeriodsPerYear
+  const provincialBasicPersonal = 11265 / payPeriodsPerYear
+  const taxableFederal = Math.max(0, gross - federalBasicPersonal)
+  const taxableProvincial = Math.max(0, gross - provincialBasicPersonal)
+  const federalTax = taxableFederal * 0.15
+  const provincialTax = taxableProvincial * 0.0505
+  const totalDeductions = cpp + ei + federalTax + provincialTax
+  const net = Math.max(0, gross - totalDeductions)
+  return { cpp, ei, federalTax, provincialTax, totalDeductions, net }
+}
+
+/** Calculate Gross from target Net (after CPP, EI, taxes) */
+export function calculateGrossFromNet(targetNet: number, payPeriodsPerYear: number = 26): number {
+  if (targetNet <= 0) return 0
+  let gross = targetNet * 1.25 // initial guess: net ~80%
+  for (let i = 0; i < 30; i++) {
+    const d = calculateDeductions(gross, payPeriodsPerYear)
+    const diff = targetNet - d.net
+    if (Math.abs(diff) < 0.01) return Math.round(gross * 100) / 100
+    gross = gross + diff
+  }
+  return Math.round(gross * 100) / 100
+}

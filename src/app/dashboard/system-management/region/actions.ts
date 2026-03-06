@@ -16,8 +16,8 @@ async function verifyAuroraManager() {
     .eq('id', user.id)
     .single()
 
-  if (profile?.role !== 'aurora_manager') {
-    throw new Error('Unauthorized: Only Aurora Manager can access System Management')
+  if (!['aurora_manager', 'it'].includes(profile?.role ?? '')) {
+    throw new Error('Unauthorized: Only Aurora Manager or IT can access System Management')
   }
 }
 
@@ -45,7 +45,7 @@ export async function createDealer(formData: FormData): Promise<{ success: boole
       return { success: false, error: error.message }
     }
     
-    revalidatePath('/dashboard/system-management/dealer')
+    revalidatePath('/dashboard/configuration/dealers')
     return { success: true }
   } catch (error) {
     return { success: false, error: error instanceof Error ? error.message : 'Failed to create dealer' }
@@ -83,7 +83,7 @@ export async function createRegionCode(formData: FormData): Promise<{ success: b
       return { success: false, error: error.message }
     }
     
-    revalidatePath('/dashboard/system-management/region')
+    revalidatePath('/dashboard/configuration/region')
     return { success: true }
   } catch (error) {
     return { success: false, error: error instanceof Error ? error.message : 'Failed to create region code' }
@@ -109,7 +109,7 @@ export async function updateDealerRegionCode(dealerId: string, regionCodeId: str
     return { success: false, error: error.message }
   }
   
-  revalidatePath('/dashboard/system-management/dealer')
+  revalidatePath('/dashboard/configuration/dealers')
   return { success: true }
 }
 
@@ -135,7 +135,7 @@ export async function updateRegionCode(regionCodeId: string, code: string, name:
       return { success: false, error: error.message }
     }
     
-    revalidatePath('/dashboard/system-management/region')
+    revalidatePath('/dashboard/configuration/region')
     return { success: true }
   } catch (error) {
     return { success: false, error: error instanceof Error ? error.message : 'Failed to update region code' }
@@ -163,7 +163,7 @@ export async function deleteRegionCode(regionCodeId: string): Promise<{ success:
       return { success: false, error: error.message }
     }
     
-    revalidatePath('/dashboard/system-management/region')
+    revalidatePath('/dashboard/configuration/region')
     return { success: true }
   } catch (error) {
     return { success: false, error: error instanceof Error ? error.message : 'Failed to delete region code' }
@@ -190,7 +190,7 @@ export async function addCameraToDealer(dealerId: string, cameraModelId: string)
     const { notifyCameraDealerAssignment } = await import('@/lib/camera-dealer-notify')
     notifyCameraDealerAssignment('assigned', dealerId, cameraModelId).catch(() => {})
 
-    revalidatePath('/dashboard/system-management/dealer')
+    revalidatePath('/dashboard/configuration/dealers')
     return { success: true }
   } catch (error) {
     return { success: false, error: error instanceof Error ? error.message : 'Failed to add camera to dealer' }
@@ -215,7 +215,7 @@ export async function removeCameraFromDealer(dealerId: string, cameraModelId: st
     const { notifyCameraDealerAssignment } = await import('@/lib/camera-dealer-notify')
     notifyCameraDealerAssignment('removed', dealerId, cameraModelId).catch(() => {})
 
-    revalidatePath('/dashboard/system-management/dealer')
+    revalidatePath('/dashboard/configuration/dealers')
     return { success: true }
   } catch (error) {
     return { success: false, error: error instanceof Error ? error.message : 'Failed to remove camera from dealer' }
@@ -257,7 +257,7 @@ export async function updateDealer(formData: FormData): Promise<{ success: boole
       return { success: false, error: error.message }
     }
     
-    revalidatePath('/dashboard/system-management/dealer')
+    revalidatePath('/dashboard/configuration/dealers')
     return { success: true }
   } catch (error) {
     return { success: false, error: error instanceof Error ? error.message : 'Failed to update dealer' }
@@ -285,7 +285,7 @@ export async function deleteDealer(dealerId: string): Promise<{ success: boolean
       return { success: false, error: error.message }
     }
     
-    revalidatePath('/dashboard/system-management/dealer')
+    revalidatePath('/dashboard/configuration/dealers')
     return { success: true }
   } catch (error) {
     return { success: false, error: error instanceof Error ? error.message : 'Failed to delete dealer' }

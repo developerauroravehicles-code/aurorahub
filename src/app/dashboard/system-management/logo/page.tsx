@@ -1,6 +1,7 @@
 import { LogoUploadForm } from './logo-upload-form'
 import { getSystemLogo } from './actions'
 import { SystemManagementTabs } from '../system-management-tabs'
+import { SystemManagementTitle } from '../system-management-title'
 
 export default async function LogoManagementPage() {
   const currentLogo = await getSystemLogo()
@@ -8,7 +9,7 @@ export default async function LogoManagementPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-semibold mb-6 text-white">System Management</h1>
+        <SystemManagementTitle />
         
         <SystemManagementTabs activeTab="logo" />
 

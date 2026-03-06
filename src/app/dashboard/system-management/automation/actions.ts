@@ -49,8 +49,8 @@ async function verifyAuroraManager() {
     .eq('id', user.id)
     .single()
 
-  if (profile?.role !== 'aurora_manager') {
-    throw new Error('Only Aurora Managers can manage automations')
+  if (!['aurora_manager', 'it'].includes(profile?.role ?? '')) {
+    throw new Error('Only Aurora Managers or IT can manage automations')
   }
 }
 
@@ -221,7 +221,7 @@ export async function saveAutomation(
             { onConflict: 'key' }
           )
         if (error) return { success: false, error: error.message }
-        revalidatePath('/dashboard/system-management/automation')
+        revalidatePath('/dashboard/infrastructure/automation')
         return { success: true }
       }
     }
@@ -262,7 +262,7 @@ export async function saveAutomation(
       )
 
     if (error) return { success: false, error: error.message }
-    revalidatePath('/dashboard/system-management/automation')
+    revalidatePath('/dashboard/infrastructure/automation')
     return { success: true }
   } catch (err) {
     return {
@@ -332,7 +332,7 @@ export async function addAutomation(
       )
 
     if (error) return { success: false, error: error.message }
-    revalidatePath('/dashboard/system-management/automation')
+    revalidatePath('/dashboard/infrastructure/automation')
     return { success: true }
   } catch (err) {
     return {
@@ -381,7 +381,7 @@ export async function removeAutomation(id: string): Promise<{ success: boolean; 
       )
 
     if (error) return { success: false, error: error.message }
-    revalidatePath('/dashboard/system-management/automation')
+    revalidatePath('/dashboard/infrastructure/automation')
     return { success: true }
   } catch (err) {
     return {

@@ -22,8 +22,8 @@ export default async function SystemManagementLayout({
     .eq('id', user.id)
     .single()
 
-  // Only Aurora Manager can access System Management
-  if (profile?.role !== 'aurora_manager') {
+  // Only Aurora Manager and IT can access System Management (HR has separate HR pages)
+  if (!['aurora_manager', 'it'].includes(profile?.role ?? '')) {
     redirect('/dashboard')
   }
 

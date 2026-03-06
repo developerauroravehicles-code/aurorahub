@@ -1,0 +1,75 @@
+import { createClient } from '@/lib/supabase/server'
+import { redirect } from 'next/navigation'
+import { SelfPortalContent } from './self-portal-content'
+
+export const dynamic = 'force-dynamic'
+
+export default async function SelfPortalPage() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/login')
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('id, full_name, phone, role, dealer_id')
+    .eq('id', user.id)
+    .single()
+
+  if (!profile) redirect('/dashboard')
+  if (profile.dealer_id) redirect('/dashboard') // Dealers excluded - Self Portal is Platform only
+
+  const { data: personnel } = await supabase
+    .from('personnel')
+    .select('id, full_name, phone, email, position, status, start_date, province')
+    .eq('profile_id', user.id)
+    .single()
+
+  const personnelId = personnel?.id
+
+  const [
+    leaveRes,
+    paymentsRes,
+    equipmentRes,
+    certsRes,
+    complianceDocsRes,
+    complianceChecklistsRes,
+    availabilityRes,
+    feedbackRes,
+    leaveBlocksRes,
+    onboardingRes,
+  ] = await Promise.all([
+    supabase.from('leave_requests').select('id, leave_type, start_date, end_date, status, notes').eq('profile_id', user.id).order('start_date', { ascending: false }),
+    personnelId ? supabase.from('payment_records').select('id, amount, period_start, period_end, status, paid_at, payment_type, completed_count').eq('personnel_id', personnelId).order('period_start', { ascending: false }).limit(24) : Promise.resolve({ data: [] }),
+    personnelId ? supabase.from('equipment_assignments').select('id, item_name, serial_number, assigned_at, returned_at, condition, equipment_types(name)').eq('personnel_id', personnelId).is('returned_at', null) : Promise.resolve({ data: [] }),
+    personnelId ? supabase.from('personnel_certifications').select('id, certification_type, name, institution, issue_date, expiry_date, status').eq('personnel_id', personnelId).order('expiry_date', { ascending: false }) : Promise.resolve({ data: [] }),
+    personnelId ? supabase.from('compliance_documents').select('id, document_type, title, expiry_date, verified_at, document_url').eq('personnel_id', personnelId).order('expiry_date', { ascending: false }) : Promise.resolve({ data: [] }),
+    personnelId ? supabase.from('compliance_checklists').select('id, item_name, completed, completed_at, notes').eq('personnel_id', personnelId) : Promise.resolve({ data: [] }),
+    personnelId ? supabase.from('personnel_availability').select('id, day_of_week, start_time, end_time, is_available').eq('personnel_id', personnelId) : Promise.resolve({ data: [] }),
+    personnelId ? supabase.from('performance_feedback').select('id, feedback_type, source, rating, comment, created_at').eq('personnel_id', personnelId).order('created_at', { ascending: false }).limit(20) : Promise.resolve({ data: [] }),
+    personnelId ? supabase.from('personnel_leave_blocks').select('id, start_date, end_date, reason').eq('personnel_id', personnelId).order('start_date', { ascending: false }) : Promise.resolve({ data: [] }),
+    supabase.from('onboarding_tasks').select('id, title, status, due_date, completed_at').eq('profile_id', user.id).order('sort_order'),
+  ])
+
+  return (
+    <div className="space-y-8">
+      <div>
+        <h1 className="text-2xl font-semibold text-white mb-2">Self Portal</h1>
+        <p className="text-gray-400">Your profile, leave, pay, IT support, documents, and more.</p>
+      </div>
+      <SelfPortalContent
+        profile={profile}
+        personnel={personnel}
+        leaveRequests={leaveRes.data ?? []}
+        payments={(paymentsRes as { data: unknown[] }).data ?? []}
+        equipment={(equipmentRes as { data: unknown[] }).data ?? []}
+        certifications={(certsRes as { data: unknown[] }).data ?? []}
+        complianceDocuments={(complianceDocsRes as { data: unknown[] }).data ?? []}
+        complianceChecklists={(complianceChecklistsRes as { data: unknown[] }).data ?? []}
+        availability={(availabilityRes as { data: unknown[] }).data ?? []}
+        feedback={(feedbackRes as { data: unknown[] }).data ?? []}
+        leaveBlocks={(leaveBlocksRes as { data: unknown[] }).data ?? []}
+        onboardingTasks={(onboardingRes as { data: unknown[] }).data ?? []}
+      />
+    </div>
+  )
+}

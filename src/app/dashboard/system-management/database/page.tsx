@@ -1,5 +1,6 @@
 import { getSystemData } from '../actions'
 import { SystemManagementTabs } from '../system-management-tabs'
+import { SystemManagementTitle } from '../system-management-title'
 import { DatabaseManagementContent } from './database-management-content'
 
 export const dynamic = 'force-dynamic'
@@ -10,7 +11,7 @@ export default async function DatabaseManagementPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-semibold mb-6 text-white">System Management</h1>
+        <SystemManagementTitle />
         
         <SystemManagementTabs activeTab="database" />
 

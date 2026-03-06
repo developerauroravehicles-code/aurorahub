@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { SystemManagementTabs } from '../system-management-tabs'
+import { SystemManagementTitle } from '../system-management-title'
 import { CalendarManagementContent } from './calendar-management-content'
 import { createCalendarSetting, updateCalendarSetting, deleteCalendarSetting, getCalendarBlocksInRange, createCalendarBlock, createCalendarBlocks, deleteCalendarBlock } from './actions'
 
@@ -29,7 +30,7 @@ export default async function CalendarManagementPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-semibold mb-6 text-white">System Management</h1>
+        <SystemManagementTitle />
         
         <SystemManagementTabs activeTab="calendar" />
 

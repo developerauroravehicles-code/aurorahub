@@ -18,8 +18,8 @@ async function verifyAuroraManager() {
     .eq('id', user.id)
     .single()
 
-  if (profile?.role !== 'aurora_manager') {
-    throw new Error('Unauthorized: Only Aurora Manager can access System Management')
+  if (!['aurora_manager', 'it'].includes(profile?.role ?? '')) {
+    throw new Error('Unauthorized: Only Aurora Manager or IT can access System Management')
   }
 }
 
@@ -59,8 +59,8 @@ export async function uploadLogo(prevState: ActionState, formData: FormData) {
     return { error: 'Failed to save logo: ' + error.message }
   }
 
-  revalidatePath('/dashboard/system-management')
-  revalidatePath('/dashboard/system-management/logo')
+  revalidatePath('/dashboard/identity')
+  revalidatePath('/dashboard/configuration/branding')
   return { success: 'Logo uploaded successfully!' }
 }
 

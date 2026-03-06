@@ -2,6 +2,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { logDemandChange } from '@/lib/demand-logger'
+import { dispatchWebhooks } from '@/lib/webhook-dispatch'
 import { sendSMS } from '@/lib/twilio'
 import { logSmsSent } from '@/lib/sms-logger'
 import { getSmsSettings } from '@/lib/sms-resolver'
@@ -146,6 +147,19 @@ export async function approveDemand(demandId: string, sendSMSToCustomer: boolean
     previousStatus: 'pending_finance',
     newStatus: 'approved',
     notes: assignedSpecialistId ? 'Approved and specialist assigned' : 'Approved',
+  }).catch(() => {})
+
+  dispatchWebhooks(supabase, 'demand_approved', {
+    demand_id: demandId,
+    previous_status: 'pending_finance',
+    new_status: 'approved',
+    assigned_specialist_id: assignedSpecialistId ?? demand.assigned_specialist_id,
+  }).catch(() => {})
+
+  dispatchWebhooks(supabase, 'demand_status_change', {
+    demand_id: demandId,
+    previous_status: 'pending_finance',
+    new_status: 'approved',
   }).catch(() => {})
 
   const smsSettings = await getSmsSettings()
@@ -310,6 +324,18 @@ export async function cancelDemand(demandId: string) {
     previousStatus: demand.status as 'pending_finance' | 'approved',
     newStatus: 'cancelled',
     notes: 'Demand cancelled',
+  }).catch(() => {})
+
+  dispatchWebhooks(supabase, 'demand_cancelled', {
+    demand_id: demandId,
+    previous_status: demand.status,
+    new_status: 'cancelled',
+  }).catch(() => {})
+
+  dispatchWebhooks(supabase, 'demand_status_change', {
+    demand_id: demandId,
+    previous_status: demand.status,
+    new_status: 'cancelled',
   }).catch(() => {})
   
   // Send cancellation notice SMS when demand is cancelled (always, no 24h condition)

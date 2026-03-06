@@ -3,7 +3,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 
-type UserRole = 'sales' | 'finance' | 'specialist' | 'aurora_manager' | 'general_manager'
+type UserRole = 'sales' | 'finance' | 'specialist' | 'aurora_manager' | 'general_manager' | 'hr' | 'it'
 
 type ActionState = { error?: string; success?: boolean } | null
 
@@ -40,7 +40,7 @@ export async function createEmployee(prevState: ActionState, formData: FormData)
     }
 
     // Validate role
-    const validRoles: UserRole[] = ['sales', 'finance', 'specialist', 'aurora_manager', 'general_manager']
+    const validRoles: UserRole[] = ['sales', 'finance', 'specialist', 'aurora_manager', 'general_manager', 'hr', 'it']
     if (!validRoles.includes(role as UserRole)) {
       return { error: 'Invalid role' }
     }
@@ -68,7 +68,6 @@ export async function createEmployee(prevState: ActionState, formData: FormData)
     }
 
     // 2. Create Profile
-    // dealerId might be empty string -> null
     const { error: profileError } = await supabaseAdmin.from('profiles').insert({
       id: user.user.id,
       role: role as UserRole,
@@ -107,5 +106,6 @@ export async function resetEmployeePassword(userId: string, newPassword: string)
   }
 
   revalidatePath('/dashboard/admin/employees')
+  revalidatePath('/dashboard/identity/users')
   return { success: true }
 }
