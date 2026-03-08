@@ -31,6 +31,7 @@ interface Demand {
   vehicle_model: string
   appointment_date: string
   is_external?: boolean | null
+  vin_last6?: string | null
   dealers?: { name: string; region_codes?: { timezones?: { name: string } } } | null
   profiles?: { full_name: string } | null
   assigned_specialist?: { full_name: string } | null
@@ -318,8 +319,8 @@ export function DemandsList({ demands, dealers, specialists, selectedDealerId, c
                         </p>
                         <p className="text-xs text-gray-600 mt-1">
                           Dealer: {(demand.dealers as any)?.name || 'Unknown'} | Created by: {(demand.profiles as any)?.full_name || 'Unknown'}
-                          {(demand as { vin_last6?: string | null }).vin_last6
-                            ? ` | VIN: ${(demand as { vin_last6: string }).vin_last6.toUpperCase()}`
+                          {demand.vin_last6
+                            ? ` | VIN: ${demand.vin_last6.toUpperCase()}`
                             : ' | VIN: —'}
                           {' | Finance: '}
                           {(demand.assigned_finance as any)?.full_name || '—'}

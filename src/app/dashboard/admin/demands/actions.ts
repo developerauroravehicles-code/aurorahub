@@ -2,7 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
-import { logDemandChange } from '@/lib/demand-logger'
+import { logDemandChange, type DemandStatus } from '@/lib/demand-logger'
 
 export async function updateAssignedSpecialist(
   demandId: string,
@@ -35,7 +35,7 @@ export async function updateAssignedSpecialist(
 
   if (error) return { success: false, error: error.message }
 
-  const status = (demand?.status ?? 'approved') as 'pending_finance' | 'approved' | 'completed' | 'cancelled'
+  const status: DemandStatus = (demand?.status ?? 'approved') as DemandStatus
   logDemandChange({
     demandId,
     actorId: user.id,
@@ -80,7 +80,7 @@ export async function updateAssignedFinance(
 
   if (error) return { success: false, error: error.message }
 
-  const status = (demand?.status ?? 'pending_finance') as 'pending_finance' | 'approved' | 'completed' | 'cancelled'
+  const status: DemandStatus = (demand?.status ?? 'pending_finance') as DemandStatus
   logDemandChange({
     demandId,
     actorId: user.id,
@@ -137,7 +137,7 @@ export async function updateCustomerInfo(
 
   if (error) return { success: false, error: error.message }
 
-  const status = (demand?.status ?? 'pending_finance') as string
+  const status: DemandStatus = (demand?.status ?? 'pending_finance') as DemandStatus
   logDemandChange({
     demandId,
     actorId: user.id,
@@ -187,7 +187,7 @@ export async function updateVinLast6(
 
   if (error) return { success: false, error: error.message }
 
-  const status = (demand?.status ?? 'pending_finance') as string
+  const status: DemandStatus = (demand?.status ?? 'pending_finance') as DemandStatus
   logDemandChange({
     demandId,
     actorId: user.id,
