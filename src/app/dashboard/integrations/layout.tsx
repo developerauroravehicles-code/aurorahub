@@ -22,7 +22,8 @@ export default async function IntegrationsLayout({
     .eq('id', user.id)
     .single()
 
-  if (!['aurora_manager', 'it'].includes(profile?.role ?? '')) {
+  // Only IT can access Integrations (IT-only section)
+  if (profile?.role !== 'it') {
     redirect('/dashboard')
   }
 

@@ -1,11 +1,23 @@
 'use client'
 
 import { useState, useMemo } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { format } from 'date-fns'
 import { formatInTimeZone } from 'date-fns-tz'
 import { getEffectiveTimezone } from '@/lib/timezone-defaults'
-import { Filter, X } from 'lucide-react'
+import { Filter, X, Plus } from 'lucide-react'
 import Link from 'next/link'
+import { CreateExternalDemandForm } from './create-external-demand-form'
+
+interface Dealer {
+  id: string
+  name: string
+}
+
+interface Specialist {
+  id: string
+  full_name: string | null
+}
 
 interface Demand {
   id: string
@@ -18,6 +30,7 @@ interface Demand {
   vehicle_make: string
   vehicle_model: string
   appointment_date: string
+  is_external?: boolean | null
   dealers?: { name: string; region_codes?: { timezones?: { name: string } } } | null
   profiles?: { full_name: string } | null
   assigned_specialist?: { full_name: string } | null
@@ -30,14 +43,37 @@ function getDealerTz(dealers: Demand['dealers']): string | null {
 
 interface DemandsListProps {
   demands: Demand[]
+  dealers: Dealer[]
+  specialists: Specialist[]
+  selectedDealerId: string
+  canCreateExternal?: boolean
 }
 
-export function DemandsList({ demands }: DemandsListProps) {
+export function DemandsList({ demands, dealers, specialists, selectedDealerId, canCreateExternal }: DemandsListProps) {
+  const [createModalOpen, setCreateModalOpen] = useState(false)
+  const router = useRouter()
+
+  const handleCreateSuccess = () => {
+    setCreateModalOpen(false)
+    router.refresh()
+  }
+  const searchParams = useSearchParams()
+
+  const handleDealerChange = (dealerId: string) => {
+    const params = new URLSearchParams(searchParams.toString())
+    if (dealerId === 'all') {
+      params.delete('dealer')
+    } else {
+      params.set('dealer', dealerId)
+    }
+    router.push(`/dashboard/admin/demands?${params.toString()}`)
+  }
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [dateFilter, setDateFilter] = useState<string>('all')
   const [searchType, setSearchType] = useState<'customer' | 'demand_id'>('customer')
   const [searchValue, setSearchValue] = useState<string>('')
   const [showFilters, setShowFilters] = useState(false)
+  const dealerFilterActive = selectedDealerId !== 'all'
 
   const filteredDemands = useMemo(() => {
     let filtered = [...demands]
@@ -95,16 +131,60 @@ export function DemandsList({ demands }: DemandsListProps) {
     return filtered
   }, [demands, statusFilter, dateFilter, searchType, searchValue])
 
-  const hasActiveFilters = statusFilter !== 'all' || dateFilter !== 'all' || searchValue.trim() !== ''
+  const hasActiveFilters = statusFilter !== 'all' || dateFilter !== 'all' || searchValue.trim() !== '' || dealerFilterActive
 
   const clearFilters = () => {
     setStatusFilter('all')
     setDateFilter('all')
     setSearchValue('')
+    if (dealerFilterActive) handleDealerChange('all')
   }
 
   return (
     <div className="space-y-4">
+      {/* Dealer filter and Create External button */}
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div className="flex items-center gap-4">
+          <label className="text-sm font-medium text-gray-400">Dealer:</label>
+        <select
+          value={selectedDealerId}
+          onChange={(e) => handleDealerChange(e.target.value)}
+          className="border border-gray-700 bg-white/5 px-3 py-2 rounded text-white text-sm focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00] min-w-[200px]"
+        >
+          <option value="all" className="bg-black">All Dealers</option>
+          {dealers.map((d) => (
+            <option key={d.id} value={d.id} className="bg-black">{d.name}</option>
+          ))}
+        </select>
+        </div>
+        {canCreateExternal && (
+          <button
+            type="button"
+            onClick={() => setCreateModalOpen(true)}
+            className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-white bg-[#C27E00] hover:bg-[#a06900] rounded-md"
+          >
+            <Plus className="w-4 h-4" />
+            Create External Demand
+          </button>
+        )}
+      </div>
+
+      {/* Create External Demand Modal */}
+      {createModalOpen && canCreateExternal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70">
+          <div className="bg-gray-900 border border-gray-800 rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <CreateExternalDemandForm
+                dealers={dealers}
+                specialists={specialists}
+                onSuccess={handleCreateSuccess}
+                onCancel={() => setCreateModalOpen(false)}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Filters */}
       <div className="bg-white/5 rounded-lg border border-gray-800 p-4">
         <div className="flex items-center justify-between mb-4">
@@ -232,10 +312,15 @@ export function DemandsList({ demands }: DemandsListProps) {
                           {demand.vehicle_year} {demand.vehicle_make} {demand.vehicle_model}
                         </p>
                         <p className="text-sm text-gray-500">
-                          Appointment: {formatInTimeZone(new Date(demand.appointment_date), getEffectiveTimezone(getDealerTz(demand.dealers) ?? null), 'PPP h:mm a')}
+                          Appointment: {demand.is_external
+                            ? formatInTimeZone(new Date(demand.appointment_date), getEffectiveTimezone(getDealerTz(demand.dealers) ?? null), 'PPP') + ' (External)'
+                            : formatInTimeZone(new Date(demand.appointment_date), getEffectiveTimezone(getDealerTz(demand.dealers) ?? null), 'PPP h:mm a')}
                         </p>
                         <p className="text-xs text-gray-600 mt-1">
                           Dealer: {(demand.dealers as any)?.name || 'Unknown'} | Created by: {(demand.profiles as any)?.full_name || 'Unknown'}
+                          {(demand as { vin_last6?: string | null }).vin_last6
+                            ? ` | VIN: ${(demand as { vin_last6: string }).vin_last6.toUpperCase()}`
+                            : ' | VIN: —'}
                           {' | Finance: '}
                           {(demand.assigned_finance as any)?.full_name || '—'}
                           {' | Specialist: '}

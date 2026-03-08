@@ -45,6 +45,7 @@ export function Sidebar({
     observability: true,
     operations: true,
     configuration: true,
+    platform: true,
   })
 
   const handleSignOut = async () => {
@@ -155,9 +156,24 @@ export function Sidebar({
       links.push({ name: 'Leave', href: '/dashboard/hr/leave', icon: CalendarDays })
       links.push({ name: 'Invoice', href: '/dashboard/admin/invoices', icon: Receipt })
       links.push({ name: 'Statement', href: '/dashboard/admin/statements', icon: FileText })
-      links.push({ name: 'System Management', href: '/dashboard/identity', icon: Settings })
     }
   }
+
+  // Platform Manager (Aurora) sections - Dealers, Region, Calendar, etc.
+  const platformSections: NavSection[] = [
+    {
+      title: 'PLATFORM MANAGEMENT',
+      links: [
+        { name: 'Dealers', href: '/dashboard/configuration/dealers', icon: Building2 },
+        { name: 'Region', href: '/dashboard/configuration/region', icon: MapPin },
+        { name: 'Calendar', href: '/dashboard/configuration/calendar', icon: CalendarDays },
+        { name: 'Cameras', href: '/dashboard/configuration/cameras', icon: Camera },
+        { name: 'Settings', href: '/dashboard/configuration/settings', icon: Settings },
+        { name: 'Branding', href: '/dashboard/configuration/branding', icon: Image },
+        { name: 'Documents', href: '/dashboard/configuration/documents', icon: BookOpen },
+      ],
+    },
+  ]
 
   return (
     <div className="flex w-64 flex-col bg-black text-white border-r border-gray-800">
@@ -170,7 +186,7 @@ export function Sidebar({
         )}
         
         <nav className="flex-1 space-y-1 px-4 py-6">
-          {role === 'it' || role === 'aurora_manager' ? (
+          {role === 'it' ? (
             <>
               {links.map((link) => {
                 const Icon = link.icon
@@ -195,6 +211,66 @@ export function Sidebar({
               })}
               {itSections.map((sec) => {
                 const sectionKey = sec.title.toLowerCase().replace(/\s+/g, '')
+                const isExpanded = expandedSections[sectionKey] ?? true
+                return (
+                  <div key={sec.title} className="pt-2 mt-2 border-t border-gray-800">
+                    <button
+                      onClick={() => toggleSection(sectionKey)}
+                      className="flex items-center w-full px-3 py-2 text-xs font-semibold uppercase tracking-wider text-gray-500 hover:text-gray-300"
+                    >
+                      {isExpanded ? <ChevronDown className="w-4 h-4 mr-1" /> : <ChevronRight className="w-4 h-4 mr-1" />}
+                      {sec.title}
+                    </button>
+                    {isExpanded && (
+                      <div className="mt-1 space-y-0.5">
+                        {sec.links.map((link) => {
+                          const Icon = link.icon
+                          const isActive = pathname.startsWith(link.href.split('?')[0])
+                          return (
+                            <Link
+                              key={link.name}
+                              href={link.href}
+                              className={clsx(
+                                isActive ? 'bg-white/10 text-white' : 'text-gray-400 hover:bg-white/5 hover:text-white',
+                                'group flex items-center rounded-md px-3 py-2 text-sm font-medium transition-colors ml-1'
+                              )}
+                            >
+                              <Icon className={clsx("mr-2 h-4 w-4 flex-shrink-0", isActive ? "text-[#C27E00]" : "text-gray-500 group-hover:text-gray-300")} />
+                              {link.name}
+                            </Link>
+                          )
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+            </>
+          ) : role === 'aurora_manager' ? (
+            <>
+              {links.map((link) => {
+                const Icon = link.icon
+                return (
+                  <Link
+                    key={link.name}
+                    href={link.href}
+                    className={clsx(
+                      pathname.startsWith(link.href) && link.href !== '/dashboard' || (pathname === '/dashboard' && link.href === '/dashboard')
+                        ? 'bg-white/10 text-white'
+                        : 'text-gray-400 hover:bg-white/5 hover:text-white',
+                      'group flex items-center rounded-md px-3 py-2.5 text-sm font-medium transition-colors'
+                    )}
+                  >
+                    <Icon className={clsx(
+                      "mr-3 h-5 w-5 flex-shrink-0 transition-colors",
+                      pathname.startsWith(link.href) ? "text-[#C27E00]" : "text-gray-500 group-hover:text-gray-300"
+                    )} />
+                    {link.name}
+                  </Link>
+                )
+              })}
+              {platformSections.map((sec) => {
+                const sectionKey = 'platform'
                 const isExpanded = expandedSections[sectionKey] ?? true
                 return (
                   <div key={sec.title} className="pt-2 mt-2 border-t border-gray-800">

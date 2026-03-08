@@ -22,7 +22,8 @@ export default async function ObservabilityLayout({
     .eq('id', user.id)
     .single()
 
-  if (!['aurora_manager', 'it'].includes(profile?.role ?? '')) {
+  // Only IT can access Observability (IT-only section)
+  if (profile?.role !== 'it') {
     redirect('/dashboard')
   }
 

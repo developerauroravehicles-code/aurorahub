@@ -30,6 +30,10 @@ const schema = z.object({
   vehicleModel: z.string().min(1),
   vehicleYear: z.coerce.number().min(1900),
   stockNumber: z.string().min(1, 'Stock number is required'),
+  vinLast6: z.string().min(1, 'VIN last 6 digits is required').refine(
+    v => (v || '').trim().replace(/\s/g, '').length >= 6,
+    'VIN last 6 digits is required (at least 6 characters)'
+  ).transform(v => (v || '').trim().replace(/\s/g, '').slice(-6).toUpperCase()),
   cameraModel: z.string().min(1),
   appointmentDate: z.string().min(1, 'Please select a time slot'),
   comment: z.string().optional(),
@@ -58,6 +62,7 @@ export async function createDemand(prevState: ActionState, formData: FormData) {
     vehicleModel: formData.get('vehicleModel'),
     vehicleYear: formData.get('vehicleYear'),
     stockNumber: formData.get('stockNumber'),
+    vinLast6: formData.get('vinLast6'),
     cameraModel: formData.get('cameraModel'),
     appointmentDate: formData.get('appointmentDate'),
     comment: formData.get('comment'),
@@ -96,6 +101,7 @@ export async function createDemand(prevState: ActionState, formData: FormData) {
     vehicle_model: data.vehicleModel,
     vehicle_year: data.vehicleYear,
     stock_number: data.stockNumber,
+    vin_last6: data.vinLast6,
     camera_model: data.cameraModel,
     appointment_date: data.appointmentDate,
     status: 'pending_finance' as const,
@@ -141,12 +147,13 @@ export async function createDemand(prevState: ActionState, formData: FormData) {
 }
 
 /**
- * Get appointment times already taken on a date (for that dealer).
+ * Get appointment times already taken on a date (across ALL dealers).
+ * When any dealer books a slot, it is hidden from all other dealers - shared system.
  * Appointments are stored as Pacific Time (PT). dateStr is in Pacific (from calendar).
  */
 export async function getTakenSlots(
   dateStr: string,
-  dealerId?: string | null,
+  _dealerId?: string | null,
   _timezoneName?: string | null
 ) {
   const supabase = await createClient()
@@ -160,16 +167,13 @@ export async function getTakenSlots(
   const start = fromZonedTime(startInPT, SYSTEM_DEFAULT_TIMEZONE).toISOString()
   const end = fromZonedTime(endInPT, SYSTEM_DEFAULT_TIMEZONE).toISOString()
 
-  let query = supabase
+  const { data } = await supabase
     .from('demands')
     .select('appointment_date')
     .gte('appointment_date', start)
     .lte('appointment_date', end)
     .neq('status', 'cancelled')
-  if (dealerId) {
-    query = query.eq('dealer_id', dealerId)
-  }
-  const { data } = await query
+    .or('is_external.is.null,is_external.eq.false')
 
   if (!data || data.length === 0) return []
   return data.map((r: { appointment_date: string }) => r.appointment_date)
@@ -186,11 +190,12 @@ export async function isSlotBlocked(slotDate: string): Promise<boolean> {
     const slotStart = new Date(slotTime)
     const slotEnd = new Date(slotTime.getTime() + 75 * 60 * 1000) // 75 minutes
     
-    // Get all non-cancelled appointments
+    // Get all non-cancelled, non-external appointments
     const { data, error } = await supabase
         .from('demands')
         .select('appointment_date')
         .neq('status', 'cancelled')
+        .or('is_external.is.null,is_external.eq.false')
     
     if (error || !data || data.length === 0) {
         return false
@@ -211,16 +216,14 @@ export async function isSlotBlocked(slotDate: string): Promise<boolean> {
 }
 
 /**
- * Check if a specific time slot is already taken for a dealer.
- * Single calendar per dealer: only one appointment per slot per dealer. Appointments are 75 minutes.
- * When timezoneName is provided, day boundaries use dealer timezone (fixes server-TZ mismatch).
+ * Check if a specific time slot is already taken (by ANY dealer).
+ * Shared system: one slot taken = blocked for all dealers. Appointments are 75 minutes.
  */
 export async function isTimeSlotTaken(
   appointmentDate: string,
-  dealerId: string | null,
-  timezoneName?: string | null
+  _dealerId: string | null,
+  _timezoneName?: string | null
 ): Promise<boolean> {
-    if (!dealerId) return false
     const supabase = await createClient()
     const requestedTime = new Date(appointmentDate)
     const requestedStart = requestedTime.getTime()
@@ -234,10 +237,10 @@ export async function isTimeSlotTaken(
     const { data, error } = await supabase
         .from('demands')
         .select('appointment_date')
-        .eq('dealer_id', dealerId)
         .gte('appointment_date', dayStart)
         .lte('appointment_date', dayEnd)
         .neq('status', 'cancelled')
+        .or('is_external.is.null,is_external.eq.false')
 
     if (error) {
         console.error('Error checking time slot:', error)

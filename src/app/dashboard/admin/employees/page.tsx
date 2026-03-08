@@ -3,8 +3,13 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { ResetPasswordButton } from './reset-password-button'
 import { CreateEmployeeForm } from './create-employee-form'
+import { EmployeesDealerFilter } from './employees-dealer-filter'
 
-export default async function EmployeesPage() {
+export default async function EmployeesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ dealer?: string }>
+}) {
   const supabase = await createClient()
   
   const { data: { user } } = await supabase.auth.getUser()
@@ -24,6 +29,9 @@ export default async function EmployeesPage() {
     redirect('/dashboard/identity')
   }
 
+  const params = await searchParams
+  const dealerFilter = params.dealer && params.dealer !== 'platform' ? params.dealer : 'platform'
+
   // Fetch profiles with dealer info
   let query = supabase
     .from('profiles')
@@ -37,25 +45,31 @@ export default async function EmployeesPage() {
       .in('role', ['sales', 'finance'])
   }
 
-  // If platform admin, show all platform users (dealer_id null)
-  if (['aurora_manager', 'hr', 'it'].includes(currentUserProfile.role ?? '')) {
-    query = query.is('dealer_id', null)
+  // If platform admin (Aurora Manager, HR): support dealer filter
+  if (['aurora_manager', 'hr'].includes(currentUserProfile.role ?? '')) {
+    if (dealerFilter === 'platform') {
+      query = query.is('dealer_id', null)
+    } else {
+      query = query
+        .eq('dealer_id', dealerFilter)
+        .in('role', ['sales', 'finance'])
+    }
   }
 
   const { data: employees } = await query
 
-  // For specialists, fetch their assigned dealers (only if Aurora Manager)
+  // For specialists, fetch their assigned dealers (only if Aurora Manager/HR and platform view)
   const specialistIds = employees?.filter(e => e.role === 'specialist').map(e => e.id) || []
-  const { data: specialistDealers } = (specialistIds.length > 0 && ['aurora_manager', 'hr', 'it'].includes(currentUserProfile.role ?? ''))
+  const { data: specialistDealers } = (specialistIds.length > 0 && ['aurora_manager', 'hr'].includes(currentUserProfile.role ?? '') && dealerFilter === 'platform')
     ? await supabase
         .from('specialist_dealers')
         .select('specialist_id, dealer_id, dealers(name)')
         .in('specialist_id', specialistIds)
     : { data: null }
 
-  // Create a map of specialist_id -> dealers[] (only for Aurora Manager)
+  // Create a map of specialist_id -> dealers[] (only for Aurora Manager/HR, platform view)
   const specialistDealersMap = new Map<string, Array<{ name: string }>>()
-  if (['aurora_manager', 'hr', 'it'].includes(currentUserProfile.role ?? '')) {
+  if (['aurora_manager', 'hr'].includes(currentUserProfile.role ?? '') && dealerFilter === 'platform') {
     specialistDealers?.forEach(sd => {
       if (!specialistDealersMap.has(sd.specialist_id)) {
         specialistDealersMap.set(sd.specialist_id, [])
@@ -71,7 +85,7 @@ export default async function EmployeesPage() {
     })
   }
 
-  // Fetch dealers for dropdown
+  // Fetch dealers for dropdown (for Aurora Manager/HR dealer filter)
   let dealersQuery = supabase.from('dealers').select('id, name').order('name')
   
   // If General Manager, filter dropdown to own dealer
@@ -81,10 +95,18 @@ export default async function EmployeesPage() {
 
   const { data: dealers } = await dealersQuery
 
+  const showDealerFilter = ['aurora_manager', 'hr'].includes(currentUserProfile.role ?? '')
+
   return (
     <div className="space-y-8">
       <div>
         <h1 className="text-2xl font-semibold mb-4 text-white">Employees</h1>
+        {showDealerFilter && (
+          <EmployeesDealerFilter
+            dealers={dealers ?? []}
+            selectedDealerId={dealerFilter}
+          />
+        )}
         <div className="bg-white/5 rounded-lg border border-gray-800 shadow overflow-hidden">
             <ul className="divide-y divide-gray-800">
                 {employees?.map(e => (
@@ -104,7 +126,7 @@ export default async function EmployeesPage() {
                             </div>
                             <div className="flex items-center gap-4">
                                 <div className="text-right text-sm text-gray-400">
-                                    {e.role === 'specialist' && ['aurora_manager', 'hr', 'it'].includes(currentUserProfile.role ?? '') && specialistDealersMap.has(e.id) ? (
+                                    {e.role === 'specialist' && ['aurora_manager', 'hr'].includes(currentUserProfile.role ?? '') && specialistDealersMap.has(e.id) ? (
                                         <p className="text-[#C27E00]">
                                           {specialistDealersMap.get(e.id)?.map(d => d.name).join(', ') || 'No dealers assigned'}
                                         </p>
@@ -124,7 +146,9 @@ export default async function EmployeesPage() {
         </div>
       </div>
 
-      <CreateEmployeeForm dealers={dealers || []} currentUserRole={currentUserProfile.role} />
+      {['aurora_manager', 'hr', 'general_manager'].includes(currentUserProfile.role ?? '') && (
+        <CreateEmployeeForm dealers={dealers || []} currentUserRole={currentUserProfile.role} />
+      )}
     </div>
   )
 }

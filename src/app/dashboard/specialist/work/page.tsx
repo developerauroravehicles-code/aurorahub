@@ -17,6 +17,7 @@ type WorkDemandRow = {
   created_at: string
   address?: string | null
   assigned_specialist_id?: string | null
+  vin_last6?: string | null
   dealers?: { region_codes?: { timezones?: { name: string } } } | null
   profiles?: { full_name: string } | null
 }
@@ -125,7 +126,7 @@ export default async function SpecialistWorkPage() {
                                                 Customer: {demand.customer_phone}
                                             </p>
                                         </div>
-                                        <WorkActions demandId={demand.id} isAssigned={true} />
+                                        <WorkActions demandId={demand.id} isAssigned={true} vinLast6={demand.vin_last6} />
                                     </div>
                                 </li>
                             ))}

@@ -442,10 +442,10 @@ export async function getAvailableSlotsForEdit(
   let query = supabase
     .from('demands')
     .select('appointment_date')
-    .eq('dealer_id', dealerId)
     .gte('appointment_date', startOfDayISO)
     .lte('appointment_date', endOfDayISO)
     .neq('status', 'cancelled')
+    .or('is_external.is.null,is_external.eq.false')
   if (excludeDemandId) {
     query = query.neq('id', excludeDemandId)
   }

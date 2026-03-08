@@ -75,7 +75,7 @@ export async function assignWorkToMe(demandId: string) {
   return { success: true }
 }
 
-export async function completeDemand(demandId: string) {
+export async function completeDemand(demandId: string, vinLast6?: string) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   
@@ -84,11 +84,21 @@ export async function completeDemand(demandId: string) {
   // Check if demand is assigned to current user
   const { data: demand } = await supabase
     .from('demands')
-    .select('assigned_specialist_id, status')
+    .select('assigned_specialist_id, status, vin_last6')
     .eq('id', demandId)
     .single()
 
   if (!demand) return { error: 'Work not found' }
+
+  // VIN verification required for all demands
+  const expectedVin = (demand.vin_last6 || '').trim().toUpperCase()
+  if (!expectedVin) {
+    return { error: 'Cannot complete: VIN not on file. Contact administrator.' }
+  }
+  const normalized = (vinLast6 || '').trim().toUpperCase().slice(-6)
+  if (normalized !== expectedVin) {
+    return { error: 'VIN last 6 digits do not match. Please enter the correct VIN last 6 digits.' }
+  }
 
   // Only assigned specialists can complete
   if (demand.assigned_specialist_id && demand.assigned_specialist_id !== user.id) {

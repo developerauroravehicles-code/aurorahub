@@ -7,6 +7,8 @@ import { ArrowLeft } from 'lucide-react'
 import { DeleteDemandButton } from '../delete-demand-button'
 import { ChangeSpecialistForm } from '../change-specialist-form'
 import { ChangeFinanceForm } from '../change-finance-form'
+import { EditCustomerForm } from '../edit-customer-form'
+import { EditVinForm } from '../edit-vin-form'
 
 export default async function DemandDetailsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -131,22 +133,14 @@ export default async function DemandDetailsPage({ params }: { params: Promise<{ 
         {/* Customer Information */}
         <div className="bg-white/5 border border-gray-800 p-6 rounded-lg">
           <h2 className="text-lg font-semibold text-white mb-4">Customer Information</h2>
-          <div className="space-y-3">
-            <div>
-              <p className="text-sm text-gray-400">Name</p>
-              <p className="text-white font-medium">{demand.customer_firstname} {demand.customer_lastname}</p>
-            </div>
-            <div>
-              <p className="text-sm text-gray-400">Phone</p>
-              <p className="text-white">{demand.customer_phone}</p>
-            </div>
-            {demand.customer_address && (
-              <div>
-                <p className="text-sm text-gray-400">Address</p>
-                <p className="text-white">{demand.customer_address}</p>
-              </div>
-            )}
-          </div>
+          <EditCustomerForm
+            demandId={id}
+            firstName={demand.customer_firstname ?? ''}
+            lastName={demand.customer_lastname ?? ''}
+            phone={demand.customer_phone ?? ''}
+            address={demand.customer_address}
+            isAuroraManager={isAuroraManager}
+          />
         </div>
 
         {/* Vehicle Information */}
@@ -167,6 +161,14 @@ export default async function DemandDetailsPage({ params }: { params: Promise<{ 
                 <p className="text-white">{demand.stock_number}</p>
               </div>
             )}
+            <div>
+              <p className="text-sm text-gray-400 mb-1">VIN Last 6 Digits</p>
+              <EditVinForm
+                demandId={id}
+                vinLast6={demand.vin_last6}
+                isAuroraManager={isAuroraManager}
+              />
+            </div>
             <div>
               <p className="text-sm text-gray-400">Appointment Date</p>
               <p className="text-white font-semibold text-[#C27E00]">

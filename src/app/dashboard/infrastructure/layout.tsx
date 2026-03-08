@@ -20,7 +20,8 @@ export default async function InfrastructureLayout({
     .eq('id', user.id)
     .single()
 
-  if (!['aurora_manager', 'it'].includes(profile?.role ?? '')) {
+  // Only IT can access Infrastructure (IT-only section)
+  if (profile?.role !== 'it') {
     redirect('/dashboard')
   }
 

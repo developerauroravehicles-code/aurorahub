@@ -3,7 +3,7 @@ import { assignWorkToMe, completeDemand } from './actions'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 
-export function WorkActions({ demandId, isAssigned }: { demandId: string, isAssigned: boolean }) {
+export function WorkActions({ demandId, isAssigned, vinLast6 }: { demandId: string; isAssigned: boolean; vinLast6?: string | null }) {
     const [loading, setLoading] = useState(false)
     const router = useRouter()
 
@@ -19,9 +19,11 @@ export function WorkActions({ demandId, isAssigned }: { demandId: string, isAssi
     }
 
     const handleComplete = async () => {
-        if(!confirm('Mark this job as completed?')) return
+        const entered = prompt('Enter VIN last 6 digits to complete this demand:')
+        if (entered === null) return
+        const vinInput = entered
         setLoading(true)
-        const result = await completeDemand(demandId)
+        const result = await completeDemand(demandId, vinInput)
         if (result?.error) {
             alert(result.error)
         } else {
