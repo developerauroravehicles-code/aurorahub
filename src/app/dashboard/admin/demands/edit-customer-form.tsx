@@ -87,7 +87,8 @@ export function EditCustomerForm({
         <input
           type="text"
           value={firstNameVal}
-          onChange={(e) => setFirstNameVal(e.target.value)}
+          onChange={(e) => setFirstNameVal(e.target.value.toUpperCase())}
+          style={{ textTransform: 'uppercase' }}
           className={inputClass}
           placeholder="First name"
         />
@@ -97,7 +98,8 @@ export function EditCustomerForm({
         <input
           type="text"
           value={lastNameVal}
-          onChange={(e) => setLastNameVal(e.target.value)}
+          onChange={(e) => setLastNameVal(e.target.value.toUpperCase())}
+          style={{ textTransform: 'uppercase' }}
           className={inputClass}
           placeholder="Last name"
         />

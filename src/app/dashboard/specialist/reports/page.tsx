@@ -31,8 +31,8 @@ export default function SpecialistReportsPage() {
   const [previewModalOpen, setPreviewModalOpen] = useState(false)
   const [reportOptionsForEmail, setReportOptionsForEmail] = useState<ExportReportOptions | null>(null)
   const [reportOptionsForPreview, setReportOptionsForPreview] = useState<ExportReportOptions | null>(null)
-  const [startDate, setStartDate] = useState(format(startOfMonth(new Date()), 'yyyy-MM-dd'))
-  const [endDate, setEndDate] = useState(format(endOfMonth(new Date()), 'yyyy-MM-dd'))
+  const [startDate, setStartDate] = useState(formatInTimeZone(startOfMonth(new Date()), SYSTEM_DEFAULT_TIMEZONE, 'yyyy-MM-dd'))
+  const [endDate, setEndDate] = useState(formatInTimeZone(endOfMonth(new Date()), SYSTEM_DEFAULT_TIMEZONE, 'yyyy-MM-dd'))
   const supabase = createClient()
 
   useEffect(() => {
@@ -92,7 +92,7 @@ export default function SpecialistReportsPage() {
     const { data: profile } = user
       ? await supabase.from('profiles').select('full_name').eq('id', user.id).single()
       : { data: null }
-    const dateRangeStr = `${format(new Date(startDate), 'MMM d, yyyy')} - ${format(new Date(endDate), 'MMM d, yyyy')}`
+    const dateRangeStr = `${formatInTimeZone(new Date(startDate + 'T12:00:00Z'), SYSTEM_DEFAULT_TIMEZONE, 'MMM d, yyyy')} - ${formatInTimeZone(new Date(endDate + 'T12:00:00Z'), SYSTEM_DEFAULT_TIMEZONE, 'MMM d, yyyy')}`
     return {
       reportTitle: 'Technical Support Reports',
       dateRange: dateRangeStr,
@@ -136,8 +136,8 @@ export default function SpecialistReportsPage() {
   const setDateRange = (months: number) => {
     const end = new Date()
     const start = subMonths(end, months)
-    setStartDate(format(startOfMonth(start), 'yyyy-MM-dd'))
-    setEndDate(format(endOfMonth(end), 'yyyy-MM-dd'))
+    setStartDate(formatInTimeZone(startOfMonth(start), SYSTEM_DEFAULT_TIMEZONE, 'yyyy-MM-dd'))
+    setEndDate(formatInTimeZone(endOfMonth(end), SYSTEM_DEFAULT_TIMEZONE, 'yyyy-MM-dd'))
   }
 
   return (

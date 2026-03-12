@@ -1,10 +1,26 @@
 import { createClient } from '@/lib/supabase/server'
 import { formatInTimeZone } from 'date-fns-tz'
 import Link from 'next/link'
+import { FileText, Clock, CheckCircle, XCircle, AlertCircle, Calendar, Briefcase, ClipboardCheck, Users, DollarSign, Building2, BarChart3 } from 'lucide-react'
 import { AppointmentAlerts, type AppointmentAlert } from './specialist/appointment-alerts'
 import { getEffectiveTimezone, getTodayRangeInTimezone, SYSTEM_DEFAULT_TIMEZONE } from '@/lib/timezone-defaults'
+import { GMDashboardMonthSelector } from './gm-dashboard-month-selector'
+import { StatCard, WelcomeBanner, DataCard, QuickActions, CameraDistribution } from '@/components/dashboard'
 
-export default async function DashboardPage() {
+function getCameraDistribution(demands: { camera_model?: string | null }[]): { model: string; count: number }[] {
+  const map = new Map<string, number>()
+  for (const d of demands) {
+    const model = d.camera_model?.trim() || 'Unknown'
+    map.set(model, (map.get(model) ?? 0) + 1)
+  }
+  return Array.from(map.entries()).map(([model, count]) => ({ model, count }))
+}
+
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ month?: string }>
+}) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   
@@ -13,7 +29,7 @@ export default async function DashboardPage() {
   // Get user profile to determine role
   const { data: profile } = await supabase
     .from('profiles')
-    .select('role, dealer_id')
+    .select('role, dealer_id, full_name')
     .eq('id', user.id)
     .single()
 
@@ -46,71 +62,51 @@ export default async function DashboardPage() {
     const cancelled = demands?.filter(d => d.status === 'cancelled').length || 0
 
     return (
-      <div className="space-y-8">
-        <div>
-          <h1 className="text-2xl font-semibold text-white mb-2">Dashboard</h1>
-          <p className="text-gray-400">Welcome back! Here's an overview of your demands.</p>
+      <div className="space-y-10">
+        <WelcomeBanner
+          title="Sales Dashboard"
+          subtitle="Overview of your demands"
+          userName={(profile as { full_name?: string })?.full_name?.split(' ')[0]}
+          timezone={salesTimezoneName}
+        />
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+          <StatCard title="Total Demands" value={totalDemands} icon={FileText} accentColor="white" />
+          <StatCard title="Pending Finance" value={pendingFinance} icon={AlertCircle} accentColor="yellow" />
+          <StatCard title="Approved" value={approved} icon={Clock} accentColor="blue" />
+          <StatCard title="Completed" value={completed} icon={CheckCircle} accentColor="green" />
+          <StatCard title="Cancelled" value={cancelled} icon={XCircle} accentColor="red" />
         </div>
 
-        {/* Statistics Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-          <div className="bg-white/5 border border-gray-800 p-6 rounded-lg">
-            <h3 className="text-sm font-medium text-gray-400 mb-2">Total Demands</h3>
-            <p className="text-3xl font-bold text-white">{totalDemands}</p>
-          </div>
-          <div className="bg-white/5 border border-gray-800 p-6 rounded-lg">
-            <h3 className="text-sm font-medium text-gray-400 mb-2">Pending Finance</h3>
-            <p className="text-3xl font-bold text-yellow-500">{pendingFinance}</p>
-          </div>
-          <div className="bg-white/5 border border-gray-800 p-6 rounded-lg">
-            <h3 className="text-sm font-medium text-gray-400 mb-2">Approved</h3>
-            <p className="text-3xl font-bold text-blue-500">{approved}</p>
-          </div>
-          <div className="bg-white/5 border border-gray-800 p-6 rounded-lg">
-            <h3 className="text-sm font-medium text-gray-400 mb-2">Completed</h3>
-            <p className="text-3xl font-bold text-green-500">{completed}</p>
-          </div>
-          <div className="bg-white/5 border border-gray-800 p-6 rounded-lg">
-            <h3 className="text-sm font-medium text-gray-400 mb-2">Cancelled</h3>
-            <p className="text-3xl font-bold text-red-500">{cancelled}</p>
-          </div>
-        </div>
+        {(demands?.length ?? 0) > 0 && (
+          <CameraDistribution items={getCameraDistribution(demands ?? [])} />
+        )}
 
-        {/* Recent Demands */}
-        <div>
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-semibold text-white">Your Demands</h2>
-            <Link 
-              href="/dashboard/sales/demands" 
-              className="text-sm text-[#C27E00] hover:text-[#a06900] transition-colors"
-            >
-              View All →
-            </Link>
-          </div>
-          
-          <div className="bg-white/5 rounded-lg border border-gray-800 shadow overflow-hidden">
-            {(!demands || demands.length === 0) ? (
-              <div className="p-8 text-center">
-                <p className="text-gray-400 mb-4">You haven't created any demands yet.</p>
-                <Link 
-                  href="/dashboard/sales/demands/new" 
-                  className="inline-flex items-center bg-[#C27E00] text-white px-4 py-2 rounded-md hover:bg-[#a06900] transition-colors"
+        <DataCard
+          title="Your Demands"
+          action={{ label: 'View All', href: '/dashboard/sales/demands' }}
+        >
+          {(!demands || demands.length === 0) ? (
+              <div className="py-12 text-center">
+                <p className="text-gray-400 mb-5">You haven't created any demands yet.</p>
+                <Link
+                  href="/dashboard/sales/demands/new"
+                  className="inline-flex items-center gap-2 rounded-xl bg-[#C27E00] px-5 py-2.5 text-sm font-semibold text-white shadow-lg transition-all hover:bg-[#a06900] hover:shadow-[#C27E00]/25"
                 >
                   Create Your First Demand
                 </Link>
               </div>
             ) : (
-              <ul className="divide-y divide-gray-800">
+              <ul className="divide-y divide-gray-800/80">
                 {demands.slice(0, 10).map(demand => {
-                  const statusColors = {
+                  const statusColors: Record<string, string> = {
                     pending_finance: 'bg-yellow-900/50 text-yellow-300 border-yellow-800',
                     approved: 'bg-blue-900/50 text-blue-300 border-blue-800',
                     completed: 'bg-green-900/50 text-green-300 border-green-800',
                     cancelled: 'bg-red-900/50 text-red-300 border-red-800'
                   }
-                  
                   return (
-                    <li key={demand.id} className="p-4 hover:bg-white/5 transition-colors">
+                    <li key={demand.id} className="px-6 py-4 hover:bg-white/[0.03] transition-colors">
                       <div className="flex justify-between items-start">
                         <div className="flex-1">
                           <div className="flex items-center gap-3 mb-2">
@@ -142,8 +138,7 @@ export default async function DashboardPage() {
                 })}
               </ul>
             )}
-          </div>
-        </div>
+        </DataCard>
       </div>
     )
   }
@@ -151,6 +146,17 @@ export default async function DashboardPage() {
   // If finance user, fetch their statistics (only from their dealer)
   if (profile.role === 'finance') {
     const dealerId = profile.dealer_id
+
+    // Dealer timezone for WelcomeBanner (finance at dealer uses dealer TZ; otherwise PT)
+    let financeTimezoneName: string | null = null
+    if (dealerId) {
+      const { data: financeDealer } = await supabase
+        .from('dealers')
+        .select('region_codes(timezone_id, timezones(name))')
+        .eq('id', dealerId)
+        .single()
+      financeTimezoneName = (financeDealer?.region_codes as { timezones?: { name: string } } | null)?.timezones?.name ?? null
+    }
 
     // Get all demands from this dealer for statistics
     const allDemandsQuery = supabase
@@ -182,59 +188,34 @@ export default async function DashboardPage() {
     const myApproved = assignedDemands?.filter(d => d.status === 'approved').length || 0
 
     return (
-      <div className="space-y-8">
-        <div>
-          <h1 className="text-2xl font-semibold text-white mb-2">Finance Dashboard</h1>
-          <p className="text-gray-400">Welcome back! Here's an overview of demands.</p>
+      <div className="space-y-10">
+        <WelcomeBanner
+          title="Finance Dashboard"
+          subtitle="Overview of demands and assignments"
+          userName={(profile as { full_name?: string })?.full_name?.split(' ')[0]}
+          timezone={financeTimezoneName ?? SYSTEM_DEFAULT_TIMEZONE}
+        />
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <StatCard title="Total Pending" value={totalPending} subtitle="In demand pool" icon={AlertCircle} accentColor="yellow" />
+          <StatCard title="My Assigned" value={myAssigned} subtitle={`${myPending} pending, ${myApproved} approved`} icon={FileText} accentColor="blue" />
+          <StatCard title="Total Approved" value={totalApproved} icon={Clock} accentColor="green" />
+          <StatCard title="Total Completed" value={totalCompleted} icon={CheckCircle} accentColor="emerald" />
         </div>
 
-        {/* Statistics Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="bg-white/5 border border-gray-800 p-6 rounded-lg">
-            <h3 className="text-sm font-medium text-gray-400 mb-2">Total Pending</h3>
-            <p className="text-3xl font-bold text-yellow-500">{totalPending}</p>
-            <p className="text-xs text-gray-500 mt-1">In demand pool</p>
-          </div>
-          <div className="bg-white/5 border border-gray-800 p-6 rounded-lg">
-            <h3 className="text-sm font-medium text-gray-400 mb-2">My Assigned</h3>
-            <p className="text-3xl font-bold text-blue-500">{myAssigned}</p>
-            <p className="text-xs text-gray-500 mt-1">{myPending} pending, {myApproved} approved</p>
-          </div>
-          <div className="bg-white/5 border border-gray-800 p-6 rounded-lg">
-            <h3 className="text-sm font-medium text-gray-400 mb-2">Total Approved</h3>
-            <p className="text-3xl font-bold text-green-500">{totalApproved}</p>
-          </div>
-          <div className="bg-white/5 border border-gray-800 p-6 rounded-lg">
-            <h3 className="text-sm font-medium text-gray-400 mb-2">Total Completed</h3>
-            <p className="text-3xl font-bold text-emerald-500">{totalCompleted}</p>
-          </div>
-        </div>
-
-        {/* My Assigned Demands */}
-        <div>
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-semibold text-white">My Assigned Demands</h2>
-            <Link 
-              href="/dashboard/finance/demands" 
-              className="text-sm text-[#C27E00] hover:text-[#a06900] transition-colors"
-            >
-              View All →
-            </Link>
-          </div>
-          
-          <div className="bg-white/5 rounded-lg border border-gray-800 shadow overflow-hidden">
-            {(!assignedDemands || assignedDemands.length === 0) ? (
-              <div className="p-8 text-center">
-                <p className="text-gray-400 mb-4">You haven't assigned any demands yet.</p>
-                <Link 
-                  href="/dashboard/finance/demands" 
-                  className="inline-flex items-center bg-[#C27E00] text-white px-4 py-2 rounded-md hover:bg-[#a06900] transition-colors"
-                >
-                  View Demand Pool
-                </Link>
-              </div>
-            ) : (
-              <ul className="divide-y divide-gray-800">
+        <DataCard title="My Assigned Demands" action={{ label: 'View All', href: '/dashboard/finance/demands' }}>
+          {(!assignedDemands || assignedDemands.length === 0) ? (
+            <div className="py-12 text-center">
+              <p className="text-gray-400 mb-5">You haven't assigned any demands yet.</p>
+              <Link
+                href="/dashboard/finance/demands"
+                className="inline-flex items-center gap-2 rounded-xl bg-[#C27E00] px-5 py-2.5 text-sm font-semibold text-white shadow-lg transition-all hover:bg-[#a06900] hover:shadow-[#C27E00]/25"
+              >
+                View Demand Pool
+              </Link>
+            </div>
+          ) : (
+              <ul className="divide-y divide-gray-800/80">
                 {assignedDemands.slice(0, 10).map(demand => {
                   const statusColors = {
                     pending_finance: 'bg-yellow-900/50 text-yellow-300 border-yellow-800',
@@ -244,7 +225,7 @@ export default async function DashboardPage() {
                   }
                   
                   return (
-                    <li key={demand.id} className="p-4 hover:bg-white/5 transition-colors">
+                    <li key={demand.id} className="px-6 py-4 hover:bg-white/[0.03] transition-colors">
                       <div className="flex justify-between items-start">
                         <div className="flex-1">
                           <div className="flex items-center gap-3 mb-2">
@@ -279,9 +260,8 @@ export default async function DashboardPage() {
                   )
                 })}
               </ul>
-            )}
-          </div>
-        </div>
+          )}
+        </DataCard>
       </div>
     )
   }
@@ -291,11 +271,26 @@ export default async function DashboardPage() {
     // Specialist can see demands from dealers in specialist_dealers, or fallback to profile.dealer_id
     const { data: specialistDealers } = await supabase
       .from('specialist_dealers')
-      .select('dealer_id')
+      .select('dealer_id, dealers(name)')
       .eq('specialist_id', user.id)
     const dealerIds: string[] = (specialistDealers?.length ?? 0) > 0
       ? specialistDealers!.map((sd: { dealer_id: string }) => sd.dealer_id)
       : (profile.dealer_id ? [profile.dealer_id] : [])
+    let dealerNames: string[] = (specialistDealers ?? []).map((sd: { dealers?: { name: string } | { name: string }[] }) => {
+      const d = sd.dealers
+      return (Array.isArray(d) ? d[0]?.name : (d as { name?: string })?.name) ?? null
+    }).filter((n): n is string => Boolean(n))
+    if (dealerIds.length > 0 && dealerNames.length === 0) {
+      const { data: dealersData } = await supabase.from('dealers').select('name').in('id', dealerIds)
+      dealerNames = dealersData?.map(d => d.name) ?? []
+    }
+
+    // Get all demands from specialist's dealers (for status breakdown + camera distribution)
+    let allScopeDemands: { id: string; status: string; camera_model?: string | null }[] = []
+    if (dealerIds.length > 0) {
+      const { data } = await supabase.from('demands').select('id, status, camera_model').in('dealer_id', dealerIds)
+      allScopeDemands = data ?? []
+    }
 
     // Get all approved demands for this specialist's dealers (available work)
     let availableWork: { id: string; status: string; appointment_date: string; customer_firstname: string; customer_lastname: string; vehicle_make: string; vehicle_model: string; vehicle_year: number }[] = []
@@ -342,12 +337,17 @@ export default async function DashboardPage() {
       .eq('status', 'completed')
       .order('updated_at', { ascending: false })
 
-    // Get today's appointments (PST - system default timezone)
+    // Get today's appointments (PT - system default timezone)
     const { start: todayStart, end: todayEnd } = getTodayRangeInTimezone(SYSTEM_DEFAULT_TIMEZONE)
+    const now = new Date()
+    const weekEnd = new Date(now)
+    weekEnd.setDate(weekEnd.getDate() + 7)
+    const weekEndISO = weekEnd.toISOString()
 
     let todayAppointments: { id: string; status: string; appointment_date: string; customer_firstname: string; customer_lastname: string; vehicle_make: string; vehicle_model: string; vehicle_year: number; camera_model: string; customer_address: string | null; dealers: unknown }[] = []
+    let upcomingThisWeek: typeof todayAppointments = []
     if (dealerIds.length > 0) {
-      const { data } = await supabase
+      const { data: todayData } = await supabase
         .from('demands')
         .select('id, demand_number, status, appointment_date, customer_firstname, customer_lastname, vehicle_make, vehicle_model, vehicle_year, camera_model, customer_address, dealers(region_codes(timezone_id, timezones(name)))')
         .in('dealer_id', dealerIds)
@@ -355,7 +355,16 @@ export default async function DashboardPage() {
         .gte('appointment_date', todayStart)
         .lte('appointment_date', todayEnd)
         .order('appointment_date', { ascending: true })
-      todayAppointments = data ?? []
+      todayAppointments = todayData ?? []
+      const { data: weekData } = await supabase
+        .from('demands')
+        .select('id, demand_number, status, appointment_date, customer_firstname, customer_lastname, vehicle_make, vehicle_model, vehicle_year, camera_model, customer_address, dealers(region_codes(timezone_id, timezones(name)))')
+        .in('dealer_id', dealerIds)
+        .eq('status', 'approved')
+        .gt('appointment_date', todayEnd)
+        .lte('appointment_date', weekEndISO)
+        .order('appointment_date', { ascending: true })
+      upcomingThisWeek = weekData ?? []
     }
 
     // Calculate statistics
@@ -363,37 +372,70 @@ export default async function DashboardPage() {
     const myAssigned = assignedWork?.length || 0
     const myCompleted = completedWork?.length || 0
     const todayCount = todayAppointments?.length || 0
+    const upcomingCount = upcomingThisWeek?.length || 0
+    const totalScope = allScopeDemands?.length || 0
+    const pendingFinance = allScopeDemands?.filter(d => d.status === 'pending_finance').length || 0
+    const approvedScope = allScopeDemands?.filter(d => d.status === 'approved').length || 0
+    const completedScope = allScopeDemands?.filter(d => d.status === 'completed').length || 0
+    const cancelledScope = allScopeDemands?.filter(d => d.status === 'cancelled').length || 0
+    const completionRate = myAssigned + myCompleted > 0 ? Math.round((myCompleted / (myAssigned + myCompleted)) * 100) : 0
 
     return (
-      <div className="space-y-8">
-        <div>
-          <h1 className="text-2xl font-semibold text-white mb-2">Technical Support Dashboard</h1>
-          <p className="text-gray-400">Welcome back! Here's an overview of your work.</p>
+      <div className="space-y-10">
+        <WelcomeBanner
+          title="Technical Support Dashboard"
+          subtitle="Work assignments, job pool, appointments, and performance overview for your dealers"
+          userName={(profile as { full_name?: string })?.full_name?.split(' ')[0]}
+          timezone={SYSTEM_DEFAULT_TIMEZONE}
+        />
+
+        <QuickActions
+          actions={[
+            { label: 'Work List', href: '/dashboard/specialist/work', icon: FileText },
+            { label: 'Reports', href: '/dashboard/specialist/reports', icon: BarChart3 },
+          ]}
+        />
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+          <StatCard title="Dealers" value={dealerIds.length || 0} subtitle={dealerNames.slice(0, 2).join(', ') || (dealerIds.length ? 'Assigned dealers' : 'No dealers')} icon={Building2} accentColor="white" />
+          <StatCard title="Available Work" value={totalAvailable} subtitle="Approved jobs in pool" icon={Briefcase} accentColor="yellow" />
+          <StatCard title="My Assigned" value={myAssigned} subtitle="Jobs assigned to me" icon={ClipboardCheck} accentColor="blue" />
+          <StatCard title="Completed" value={myCompleted} subtitle={completionRate > 0 ? `${completionRate}% completion rate` : "Jobs I've completed"} icon={CheckCircle} accentColor="green" />
+          <StatCard title="Today's Appointments" value={todayCount} subtitle="Scheduled for today" icon={Calendar} accentColor="orange" />
+          <StatCard title="Upcoming This Week" value={upcomingCount} subtitle="Next 7 days" icon={Clock} accentColor="white" />
         </div>
 
-        {/* Statistics Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="bg-white/5 border border-gray-800 p-6 rounded-lg">
-            <h3 className="text-sm font-medium text-gray-400 mb-2">Available Work</h3>
-            <p className="text-3xl font-bold text-yellow-500">{totalAvailable}</p>
-            <p className="text-xs text-gray-500 mt-1">Approved jobs in pool</p>
+        {/* Status Breakdown - scope: demands from specialist's dealers */}
+        {totalScope > 0 && (
+          <div className="rounded-xl border border-gray-800/80 bg-gradient-to-b from-white/[0.04] to-transparent overflow-hidden p-6 shadow-lg">
+            <h2 className="text-lg font-semibold text-white mb-5">Demand Status (Your Dealers)</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="p-4 rounded-lg border bg-yellow-900/50 text-yellow-300 border-yellow-800">
+                <p className="text-sm font-medium mb-1">PENDING FINANCE</p>
+                <p className="text-2xl font-bold">{pendingFinance}</p>
+                <p className="text-xs mt-1 opacity-75">{totalScope > 0 ? Math.round((pendingFinance / totalScope) * 100) : 0}% of total</p>
+              </div>
+              <div className="p-4 rounded-lg border bg-blue-900/50 text-blue-300 border-blue-800">
+                <p className="text-sm font-medium mb-1">APPROVED</p>
+                <p className="text-2xl font-bold">{approvedScope}</p>
+                <p className="text-xs mt-1 opacity-75">{totalScope > 0 ? Math.round((approvedScope / totalScope) * 100) : 0}% of total</p>
+              </div>
+              <div className="p-4 rounded-lg border bg-green-900/50 text-green-300 border-green-800">
+                <p className="text-sm font-medium mb-1">COMPLETED</p>
+                <p className="text-2xl font-bold">{completedScope}</p>
+                <p className="text-xs mt-1 opacity-75">{totalScope > 0 ? Math.round((completedScope / totalScope) * 100) : 0}% of total</p>
+              </div>
+              <div className="p-4 rounded-lg border bg-red-900/50 text-red-300 border-red-800">
+                <p className="text-sm font-medium mb-1">CANCELLED</p>
+                <p className="text-2xl font-bold">{cancelledScope}</p>
+                <p className="text-xs mt-1 opacity-75">{totalScope > 0 ? Math.round((cancelledScope / totalScope) * 100) : 0}% of total</p>
+              </div>
+            </div>
           </div>
-          <div className="bg-white/5 border border-gray-800 p-6 rounded-lg">
-            <h3 className="text-sm font-medium text-gray-400 mb-2">My Assigned</h3>
-            <p className="text-3xl font-bold text-blue-500">{myAssigned}</p>
-            <p className="text-xs text-gray-500 mt-1">Jobs assigned to me</p>
-          </div>
-          <div className="bg-white/5 border border-gray-800 p-6 rounded-lg">
-            <h3 className="text-sm font-medium text-gray-400 mb-2">Completed</h3>
-            <p className="text-3xl font-bold text-green-500">{myCompleted}</p>
-            <p className="text-xs text-gray-500 mt-1">Jobs I've completed</p>
-          </div>
-          <div className="bg-white/5 border border-gray-800 p-6 rounded-lg">
-            <h3 className="text-sm font-medium text-gray-400 mb-2">Today's Appointments</h3>
-            <p className="text-3xl font-bold text-[#C27E00]">{todayCount}</p>
-            <p className="text-xs text-gray-500 mt-1">Scheduled for today</p>
-          </div>
-        </div>
+        )}
+
+        {/* Camera Distribution - scope: approved + completed from specialist's dealers */}
+        <CameraDistribution items={getCameraDistribution(allScopeDemands.filter(d => ['approved', 'completed'].includes(d.status)))} />
 
         {/* Appointment Alerts */}
         {assignedWork && assignedWork.length > 0 && (
@@ -402,21 +444,10 @@ export default async function DashboardPage() {
 
         {/* Today's Appointments */}
         {todayCount > 0 && (
-          <div>
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-semibold text-white">Today's Appointments</h2>
-              <Link 
-                href="/dashboard/specialist/work" 
-                className="text-sm text-[#C27E00] hover:text-[#a06900] transition-colors"
-              >
-                View All Work →
-              </Link>
-            </div>
-            
-            <div className="bg-white/5 rounded-lg border border-gray-800 shadow overflow-hidden">
-              <ul className="divide-y divide-gray-800">
+          <DataCard title="Today's Appointments" action={{ label: 'View All Work', href: '/dashboard/specialist/work' }}>
+              <ul className="divide-y divide-gray-800/80">
                 {todayAppointments?.slice(0, 5).map(demand => (
-                  <li key={demand.id} className="p-4 hover:bg-white/5 transition-colors">
+                  <li key={demand.id} className="px-6 py-4 hover:bg-white/[0.03] transition-colors">
                     <div className="flex justify-between items-start">
                       <div className="flex-1">
                         <div className="flex items-center gap-3 mb-2">
@@ -447,37 +478,24 @@ export default async function DashboardPage() {
                   </li>
                 ))}
               </ul>
-            </div>
-          </div>
+          </DataCard>
         )}
 
-        {/* My Assigned Work */}
-        <div>
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-semibold text-white">My Assigned Work</h2>
-            <Link 
-              href="/dashboard/specialist/work" 
-              className="text-sm text-[#C27E00] hover:text-[#a06900] transition-colors"
-            >
-              View All →
-            </Link>
-          </div>
-          
-          <div className="bg-white/5 rounded-lg border border-gray-800 shadow overflow-hidden">
+        <DataCard title="My Assigned Work" action={{ label: 'View All', href: '/dashboard/specialist/work' }}>
             {(!assignedWork || assignedWork.length === 0) ? (
-              <div className="p-8 text-center">
-                <p className="text-gray-400 mb-4">You don't have any assigned work yet.</p>
-                <Link 
-                  href="/dashboard/specialist/work" 
-                  className="inline-flex items-center bg-[#C27E00] text-white px-4 py-2 rounded-md hover:bg-[#a06900] transition-colors"
+              <div className="py-12 text-center">
+                <p className="text-gray-400 mb-5">You don't have any assigned work yet.</p>
+                <Link
+                  href="/dashboard/specialist/work"
+                  className="inline-flex items-center gap-2 rounded-xl bg-[#C27E00] px-5 py-2.5 text-sm font-semibold text-white shadow-lg transition-all hover:bg-[#a06900] hover:shadow-[#C27E00]/25"
                 >
                   View Available Work
                 </Link>
               </div>
             ) : (
-              <ul className="divide-y divide-gray-800">
+              <ul className="divide-y divide-gray-800/80">
                 {assignedWork.slice(0, 10).map(demand => (
-                  <li key={demand.id} className="p-4 hover:bg-white/5 transition-colors">
+                  <li key={demand.id} className="px-6 py-4 hover:bg-white/[0.03] transition-colors">
                     <div className="flex justify-between items-start">
                       <div className="flex-1">
                         <div className="flex items-center gap-3 mb-2">
@@ -516,30 +534,18 @@ export default async function DashboardPage() {
                 ))}
               </ul>
             )}
-          </div>
-        </div>
+        </DataCard>
 
         {/* Recent Completed Work */}
         {myCompleted > 0 && (
-          <div>
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-semibold text-white">Recent Completed Work</h2>
-              <Link 
-                href="/dashboard/specialist/reports" 
-                className="text-sm text-[#C27E00] hover:text-[#a06900] transition-colors"
-              >
-                View Reports →
-              </Link>
-            </div>
-            
-            <div className="bg-white/5 rounded-lg border border-gray-800 shadow overflow-hidden">
-              <ul className="divide-y divide-gray-800">
+          <DataCard title="Recent Completed Work" action={{ label: 'View Reports', href: '/dashboard/specialist/reports' }}>
+              <ul className="divide-y divide-gray-800/80">
                 {completedWork?.slice(0, 5).map(demand => {
                   const completedDealers = (demand as { dealers?: { region_codes?: { timezones?: { name: string } } } | null }).dealers
                   const completedTz = (Array.isArray(completedDealers) ? completedDealers[0] : completedDealers)?.region_codes?.timezones?.name ?? null
                   const fmt = (d: Date, fmtStr: string) => formatInTimeZone(d, getEffectiveTimezone(completedTz ?? null), fmtStr)
                   return (
-                  <li key={demand.id} className="p-4 hover:bg-white/5 transition-colors">
+                  <li key={demand.id} className="px-6 py-4 hover:bg-white/[0.03] transition-colors">
                     <div className="flex justify-between items-start">
                       <div className="flex-1">
                         <div className="flex items-center gap-3 mb-2">
@@ -573,8 +579,7 @@ export default async function DashboardPage() {
                   )
                 })}
               </ul>
-            </div>
-          </div>
+          </DataCard>
         )}
       </div>
     )
@@ -624,64 +629,31 @@ export default async function DashboardPage() {
       : 0
 
     return (
-      <div className="space-y-8">
-        <div>
-          <h1 className="text-2xl font-semibold text-white mb-2">HR Dashboard</h1>
-          <p className="text-gray-400">Employee management, leave, recruitment, and onboarding overview.</p>
-        </div>
+      <div className="space-y-10">
+        <WelcomeBanner
+          title="HR Dashboard"
+          subtitle="Employee management, leave, recruitment, and onboarding overview"
+          userName={(profile as { full_name?: string })?.full_name?.split(' ')[0]}
+          timezone={SYSTEM_DEFAULT_TIMEZONE}
+        />
 
-        <div className="flex flex-wrap gap-2">
-          <Link href="/dashboard/hr/personnel" className="px-4 py-2 rounded-lg bg-white/5 border border-gray-700 text-white hover:bg-white/10 transition-colors text-sm font-medium">
-            Personnel Registry
-          </Link>
-          <Link href="/dashboard/hr/installers" className="px-4 py-2 rounded-lg bg-white/5 border border-gray-700 text-white hover:bg-white/10 transition-colors text-sm font-medium">
-            Installer Network
-          </Link>
-          <Link href="/dashboard/hr/employees" className="px-4 py-2 rounded-lg bg-white/5 border border-gray-700 text-white hover:bg-white/10 transition-colors text-sm font-medium">
-            Employees
-          </Link>
-          <Link href="/dashboard/hr/leave" className="px-4 py-2 rounded-lg bg-white/5 border border-gray-700 text-white hover:bg-white/10 transition-colors text-sm font-medium">
-            Leave
-          </Link>
-          <Link href="/dashboard/hr/recruitment" className="px-4 py-2 rounded-lg bg-white/5 border border-gray-700 text-white hover:bg-white/10 transition-colors text-sm font-medium">
-            Recruitment
-          </Link>
-          <Link href="/dashboard/hr/onboarding" className="px-4 py-2 rounded-lg bg-white/5 border border-gray-700 text-white hover:bg-white/10 transition-colors text-sm font-medium">
-            Onboarding
-          </Link>
-          <Link href="/dashboard/hr/analytics" className="px-4 py-2 rounded-lg bg-white/5 border border-gray-700 text-white hover:bg-white/10 transition-colors text-sm font-medium">
-            Analytics
-          </Link>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="bg-white/5 border border-gray-800 p-6 rounded-lg">
-            <h3 className="text-sm font-medium text-gray-400 mb-2">Total Personnel</h3>
-            <p className="text-3xl font-bold text-white">{totalPersonnel ?? 0}</p>
-            <p className="text-xs text-gray-500 mt-1">All worker types</p>
-          </div>
-          <div className="bg-white/5 border border-gray-800 p-6 rounded-lg">
-            <h3 className="text-sm font-medium text-gray-400 mb-2">Platform Employees</h3>
-            <p className="text-3xl font-bold text-white">{totalEmployees}</p>
-            <p className="text-xs text-gray-500 mt-1">
-              {employeeCounts.specialist} Technical Support, {employeeCounts.aurora_manager} Aurora Manager, {employeeCounts.hr} HR, {employeeCounts.it} IT
-            </p>
-          </div>
-          <div className="bg-white/5 border border-gray-800 p-6 rounded-lg">
-            <h3 className="text-sm font-medium text-gray-400 mb-2">Pending Leave</h3>
-            <p className="text-3xl font-bold text-yellow-500">{pendingLeave ?? 0}</p>
-            <p className="text-xs text-gray-500 mt-1">Awaiting approval</p>
-          </div>
-          <div className="bg-white/5 border border-gray-800 p-6 rounded-lg">
-            <h3 className="text-sm font-medium text-gray-400 mb-2">Open Positions</h3>
-            <p className="text-3xl font-bold text-blue-500">{openPositions ?? 0}</p>
-            <p className="text-xs text-gray-500 mt-1">Active recruitment</p>
-          </div>
-          <div className="bg-white/5 border border-gray-800 p-6 rounded-lg">
-            <h3 className="text-sm font-medium text-gray-400 mb-2">Onboarding Tasks</h3>
-            <p className="text-3xl font-bold text-[#C27E00]">{onboardingInProgress ?? 0}</p>
-            <p className="text-xs text-gray-500 mt-1">In progress</p>
-          </div>
+        <QuickActions
+          actions={[
+            { label: 'Personnel Registry', href: '/dashboard/hr/personnel' },
+            { label: 'Installer Network', href: '/dashboard/hr/installers' },
+            { label: 'Employees', href: '/dashboard/hr/employees' },
+            { label: 'Leave', href: '/dashboard/hr/leave' },
+            { label: 'Recruitment', href: '/dashboard/hr/recruitment' },
+            { label: 'Onboarding', href: '/dashboard/hr/onboarding' },
+            { label: 'Analytics', href: '/dashboard/hr/analytics' },
+          ]}
+        />
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+          <StatCard title="Total Personnel" value={totalPersonnel ?? 0} subtitle="All worker types" accentColor="white" />
+          <StatCard title="Platform Employees" value={totalEmployees} subtitle={`${employeeCounts.specialist} Technical Support, ${employeeCounts.aurora_manager} Aurora Manager, ${employeeCounts.hr} HR, ${employeeCounts.it} IT`} accentColor="white" />
+          <StatCard title="Pending Leave" value={pendingLeave ?? 0} subtitle="Awaiting approval" accentColor="yellow" />
+          <StatCard title="Open Positions" value={openPositions ?? 0} subtitle="Active recruitment" accentColor="blue" />
+          <StatCard title="Onboarding Tasks" value={onboardingInProgress ?? 0} subtitle="In progress" accentColor="orange" />
         </div>
       </div>
     )
@@ -712,39 +684,26 @@ export default async function DashboardPage() {
     const recentAlerts = recentAlertsRes.data ?? []
 
     return (
-      <div className="space-y-8">
-        <div>
-          <h1 className="text-2xl font-semibold text-white mb-2">IT Dashboard</h1>
-          <p className="text-gray-400">Service desk, incidents, system health, and observability overview.</p>
-        </div>
+      <div className="space-y-10">
+        <WelcomeBanner
+          title="IT Dashboard"
+          subtitle="Service desk, incidents, system health, and observability overview"
+          userName={(profile as { full_name?: string })?.full_name?.split(' ')[0]}
+          timezone={SYSTEM_DEFAULT_TIMEZONE}
+        />
 
-        {/* Quick Navigation */}
-        <div className="flex flex-wrap gap-2">
-          <Link href="/dashboard/operations/service-desk" className="px-4 py-2 rounded-lg bg-white/5 border border-gray-700 text-white hover:bg-white/10 transition-colors text-sm font-medium">
-            Service Desk
-          </Link>
-          <Link href="/dashboard/observability/logs" className="px-4 py-2 rounded-lg bg-white/5 border border-gray-700 text-white hover:bg-white/10 transition-colors text-sm font-medium">
-            Logs
-          </Link>
-          <Link href="/dashboard/observability/monitoring" className="px-4 py-2 rounded-lg bg-white/5 border border-gray-700 text-white hover:bg-white/10 transition-colors text-sm font-medium">
-            Monitoring
-          </Link>
-          <Link href="/dashboard/observability/alerts" className="px-4 py-2 rounded-lg bg-white/5 border border-gray-700 text-white hover:bg-white/10 transition-colors text-sm font-medium">
-            Alerts
-          </Link>
-          <Link href="/dashboard/identity" className="px-4 py-2 rounded-lg bg-white/5 border border-gray-700 text-white hover:bg-white/10 transition-colors text-sm font-medium">
-            Identity
-          </Link>
-          <Link href="/dashboard/infrastructure/database" className="px-4 py-2 rounded-lg bg-white/5 border border-gray-700 text-white hover:bg-white/10 transition-colors text-sm font-medium">
-            Infrastructure
-          </Link>
-          <Link href="/dashboard/integrations/webhooks" className="px-4 py-2 rounded-lg bg-white/5 border border-gray-700 text-white hover:bg-white/10 transition-colors text-sm font-medium">
-            Integrations
-          </Link>
-          <Link href="/dashboard/configuration/settings" className="px-4 py-2 rounded-lg bg-white/5 border border-gray-700 text-white hover:bg-white/10 transition-colors text-sm font-medium">
-            Configuration
-          </Link>
-        </div>
+        <QuickActions
+          actions={[
+            { label: 'Service Desk', href: '/dashboard/operations/service-desk' },
+            { label: 'Logs', href: '/dashboard/observability/logs' },
+            { label: 'Monitoring', href: '/dashboard/observability/monitoring' },
+            { label: 'Alerts', href: '/dashboard/observability/alerts' },
+            { label: 'Identity', href: '/dashboard/identity' },
+            { label: 'Infrastructure', href: '/dashboard/infrastructure/database' },
+            { label: 'Integrations', href: '/dashboard/integrations/webhooks' },
+            { label: 'Configuration', href: '/dashboard/configuration/settings' },
+          ]}
+        />
 
         {/* IT Statistics */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
@@ -833,7 +792,7 @@ export default async function DashboardPage() {
                   <li key={a.id} className="py-3 flex justify-between items-start">
                     <div>
                       <p className="text-sm text-white truncate max-w-[200px]">{a.subject ?? a.alert_type}</p>
-                      <p className="text-xs text-gray-500">{new Date(a.created_at).toLocaleString()}</p>
+                      <p className="text-xs text-gray-500">{formatInTimeZone(new Date(a.created_at), SYSTEM_DEFAULT_TIMEZONE, 'MMM d, yyyy h:mm a')}</p>
                     </div>
                     <span className={`px-2 py-0.5 rounded text-xs ${a.success ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>{a.success ? 'Sent' : 'Failed'}</span>
                   </li>
@@ -888,60 +847,34 @@ export default async function DashboardPage() {
     const { ManagerNotesWidget } = await import('./admin/dashboard/manager-notes')
 
     return (
-      <div className="space-y-8">
-        <div>
-          <h1 className="text-2xl font-semibold text-white mb-2">Aurora Manager Dashboard</h1>
-          <p className="text-gray-400">System-wide overview of demand tracking, invoices, statements, employees, and dealer alerts.</p>
+      <div className="space-y-10">
+        <WelcomeBanner
+          title="Aurora Manager Dashboard"
+          subtitle="System-wide overview of demand tracking, invoices, statements, employees, and dealer alerts"
+          userName={(profile as { full_name?: string })?.full_name?.split(' ')[0]}
+          timezone={SYSTEM_DEFAULT_TIMEZONE}
+        />
+
+        <QuickActions
+          actions={[
+            { label: 'Demand Tracking', href: '/dashboard/admin/demands' },
+            { label: 'Invoice', href: '/dashboard/admin/invoices' },
+            { label: 'Finance', href: '#finance-overview' },
+            { label: 'Statement Tracking', href: '/dashboard/admin/statements' },
+            { label: 'Employee Tracking', href: '/dashboard/admin/employees' },
+            { label: 'Dealer Alerts', href: '#dealer-alerts' },
+            { label: 'Notes & Reminders', href: '#manager-notes' },
+          ]}
+        />
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <StatCard title="Total Dealers" value={totalDealers || 0} subtitle="Active dealers in system" icon={Users} accentColor="white" />
+          <StatCard title="Technical Support" value={totalSpecialists || 0} subtitle="Active specialists" icon={Briefcase} accentColor="orange" />
+          <StatCard title="Total Demands" value={totalDemands} subtitle="All time demands" icon={FileText} accentColor="blue" />
+          <StatCard title="Completed" value={completed} subtitle={totalDemands > 0 ? `${Math.round((completed / totalDemands) * 100)}% completion rate` : undefined} icon={CheckCircle} accentColor="green" />
         </div>
 
-        {/* Quick Navigation */}
-        <div className="flex flex-wrap gap-2">
-          <Link href="/dashboard/admin/demands" className="px-4 py-2 rounded-lg bg-white/5 border border-gray-700 text-white hover:bg-white/10 transition-colors text-sm font-medium">
-            Demand Tracking
-          </Link>
-          <Link href="/dashboard/admin/invoices" className="px-4 py-2 rounded-lg bg-white/5 border border-gray-700 text-white hover:bg-white/10 transition-colors text-sm font-medium">
-            Invoice
-          </Link>
-          <Link href="#finance-overview" className="px-4 py-2 rounded-lg bg-white/5 border border-gray-700 text-white hover:bg-white/10 transition-colors text-sm font-medium">
-            Finance
-          </Link>
-          <Link href="/dashboard/admin/statements" className="px-4 py-2 rounded-lg bg-white/5 border border-gray-700 text-white hover:bg-white/10 transition-colors text-sm font-medium">
-            Statement Tracking
-          </Link>
-          <Link href="/dashboard/admin/employees" className="px-4 py-2 rounded-lg bg-white/5 border border-gray-700 text-white hover:bg-white/10 transition-colors text-sm font-medium">
-            Employee Tracking
-          </Link>
-          <a href="#dealer-alerts" className="px-4 py-2 rounded-lg bg-white/5 border border-gray-700 text-white hover:bg-white/10 transition-colors text-sm font-medium">
-            Dealer Alerts
-          </a>
-          <a href="#manager-notes" className="px-4 py-2 rounded-lg bg-white/5 border border-gray-700 text-white hover:bg-white/10 transition-colors text-sm font-medium">
-            Notes & Reminders
-          </a>
-        </div>
-
-        {/* Main Statistics Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="bg-white/5 border border-gray-800 p-6 rounded-lg">
-            <h3 className="text-sm font-medium text-gray-400 mb-2">Total Dealers</h3>
-            <p className="text-3xl font-bold text-white">{totalDealers || 0}</p>
-            <p className="text-xs text-gray-500 mt-1">Active dealers in system</p>
-          </div>
-          <div className="bg-white/5 border border-gray-800 p-6 rounded-lg">
-            <h3 className="text-sm font-medium text-gray-400 mb-2">Total Technical Support</h3>
-            <p className="text-3xl font-bold text-[#C27E00]">{totalSpecialists || 0}</p>
-            <p className="text-xs text-gray-500 mt-1">Active specialists</p>
-          </div>
-          <div className="bg-white/5 border border-gray-800 p-6 rounded-lg">
-            <h3 className="text-sm font-medium text-gray-400 mb-2">Total Demands</h3>
-            <p className="text-3xl font-bold text-blue-500">{totalDemands}</p>
-            <p className="text-xs text-gray-500 mt-1">All time demands</p>
-          </div>
-          <div className="bg-white/5 border border-gray-800 p-6 rounded-lg">
-            <h3 className="text-sm font-medium text-gray-400 mb-2">Completed</h3>
-            <p className="text-3xl font-bold text-green-500">{completed}</p>
-            <p className="text-xs text-gray-500 mt-1">{totalDemands > 0 ? Math.round((completed / totalDemands) * 100) : 0}% completion rate</p>
-          </div>
-        </div>
+        <CameraDistribution items={getCameraDistribution(allDemands ?? [])} />
 
         {/* Demand Overview with Pie Chart */}
         <div id="demand-overview">
@@ -995,12 +928,35 @@ export default async function DashboardPage() {
       .single()
     const gmTimezoneName: string | null = (dealer?.region_codes as { timezones?: { name: string } } | null)?.timezones?.name ?? null
 
-    // Get all demands for this dealer
+    // Get all demands for this dealer (include invoice_total_amount for financial metrics)
     const { data: allDemands } = await supabase
       .from('demands')
-      .select('id, status, created_at, customer_firstname, customer_lastname, vehicle_make, vehicle_model, vehicle_year, camera_model, appointment_date')
+      .select('id, status, created_at, completed_at, invoice_total_amount, customer_firstname, customer_lastname, vehicle_make, vehicle_model, vehicle_year, camera_model, appointment_date')
       .eq('dealer_id', profile.dealer_id)
       .order('created_at', { ascending: false })
+
+    // Financial metrics: Total Amount (all completed) and Monthly Amount
+    const completedDemands = allDemands?.filter(d => d.status === 'completed') ?? []
+    const totalAmount = completedDemands.reduce((sum, d) => sum + (d.invoice_total_amount ?? 0), 0)
+    const params = await searchParams
+    const monthParam = params.month
+    const now = new Date()
+    const selectedYear = monthParam ? parseInt(monthParam.slice(0, 4), 10) : now.getFullYear()
+    const selectedMonth = monthParam ? parseInt(monthParam.slice(5, 7), 10) - 1 : now.getMonth()
+    const monthStart = new Date(selectedYear, selectedMonth, 1)
+    const monthEnd = new Date(selectedYear, selectedMonth + 1, 0, 23, 59, 59, 999)
+    const monthlyDemands = completedDemands.filter(d => {
+      const completedAt = d.completed_at ? new Date(d.completed_at) : null
+      return completedAt && completedAt >= monthStart && completedAt <= monthEnd
+    })
+    const monthlyAmount = monthlyDemands.reduce((sum, d) => sum + (d.invoice_total_amount ?? 0), 0)
+
+    // Monthly demands for camera distribution (by created_at)
+    const monthlyDemandsForCameras = (allDemands ?? []).filter(d => {
+      const createdAt = d.created_at ? new Date(d.created_at) : null
+      return createdAt && createdAt >= monthStart && createdAt <= monthEnd
+    })
+    const monthLabel = new Date(selectedYear, selectedMonth, 1).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
 
     // Get employees for this dealer
     const { data: employees } = await supabase
@@ -1038,46 +994,32 @@ export default async function DashboardPage() {
     const recentDemands = allDemands?.slice(0, 10) || []
 
     return (
-      <div className="space-y-8">
-        <div>
-          <h1 className="text-2xl font-semibold text-white mb-2">General Manager Dashboard</h1>
-          <p className="text-gray-400">
-            {dealer ? `Overview for ${dealer.name} (${dealer.code})` : 'Dealer overview'}
-          </p>
-        </div>
+      <div className="space-y-10">
+        <WelcomeBanner
+          title="General Manager Dashboard"
+          subtitle={dealer ? `Overview for ${dealer.name} (${dealer.code})` : 'Dealer overview'}
+          userName={(profile as { full_name?: string })?.full_name?.split(' ')[0]}
+          timezone={gmTimezoneName}
+        />
 
-        {/* Main Statistics Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="bg-white/5 border border-gray-800 p-6 rounded-lg">
-            <h3 className="text-sm font-medium text-gray-400 mb-2">Total Employees</h3>
-            <p className="text-3xl font-bold text-white">{totalEmployees}</p>
-            <p className="text-xs text-gray-500 mt-1">
-              {salesCount} Sales, {financeCount} Finance, {specialistCount} Technical Support
-            </p>
-          </div>
-          <div className="bg-white/5 border border-gray-800 p-6 rounded-lg">
-            <h3 className="text-sm font-medium text-gray-400 mb-2">Total Demands</h3>
-            <p className="text-3xl font-bold text-blue-500">{totalDemands}</p>
-            <p className="text-xs text-gray-500 mt-1">All time demands</p>
-          </div>
-          <div className="bg-white/5 border border-gray-800 p-6 rounded-lg">
-            <h3 className="text-sm font-medium text-gray-400 mb-2">Today's Appointments</h3>
-            <p className="text-3xl font-bold text-[#C27E00]">{todayCount}</p>
-            <p className="text-xs text-gray-500 mt-1">Scheduled for today</p>
-          </div>
-          <div className="bg-white/5 border border-gray-800 p-6 rounded-lg">
-            <h3 className="text-sm font-medium text-gray-400 mb-2">Completed</h3>
-            <p className="text-3xl font-bold text-green-500">{completed}</p>
-            <p className="text-xs text-gray-500 mt-1">
-              {totalDemands > 0 ? Math.round((completed / totalDemands) * 100) : 0}% completion rate
-            </p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+          <StatCard title="Total Employees" value={totalEmployees} subtitle={`${salesCount} Sales, ${financeCount} Finance, ${specialistCount} Technical Support`} icon={Users} accentColor="white" />
+          <StatCard title="Total Demands" value={totalDemands} subtitle="All time demands" icon={FileText} accentColor="blue" />
+          <StatCard title="Today's Appointments" value={todayCount} subtitle="Scheduled for today" icon={Calendar} accentColor="orange" />
+          <StatCard title="Completed" value={completed} subtitle={totalDemands > 0 ? `${Math.round((completed / totalDemands) * 100)}% completion rate` : undefined} icon={CheckCircle} accentColor="green" />
+          <StatCard title="Total Amount" value={`$${totalAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} subtitle="All completed invoices" icon={DollarSign} accentColor="white" />
+          <div className="rounded-xl border border-gray-800/80 bg-gradient-to-br from-white/[0.06] to-transparent p-6 shadow-lg backdrop-blur-sm transition-all duration-300 hover:border-gray-700/80">
+            <p className="text-xs font-medium uppercase tracking-wider text-gray-400/90">Monthly Amount</p>
+            <p className="mt-2 text-3xl font-bold tabular-nums tracking-tight text-[#C27E00]">${monthlyAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+            <div className="mt-1"><GMDashboardMonthSelector currentMonth={monthParam ?? `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`} /></div>
           </div>
         </div>
 
-        {/* Demand Status Breakdown */}
-        <div className="bg-white/5 border border-gray-800 p-6 rounded-lg">
-          <h2 className="text-lg font-semibold text-white mb-4">Demand Status Breakdown</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <CameraDistribution items={getCameraDistribution(monthlyDemandsForCameras)} monthLabel={monthLabel} />
+
+        <div className="rounded-xl border border-gray-800/80 bg-gradient-to-b from-white/[0.04] to-transparent overflow-hidden p-6 shadow-lg">
+          <h2 className="text-lg font-semibold text-white mb-5">Demand Status Breakdown</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="p-4 rounded-lg border bg-yellow-900/50 text-yellow-300 border-yellow-800">
               <p className="text-sm font-medium mb-1">PENDING FINANCE</p>
               <p className="text-2xl font-bold">{pendingFinance}</p>
@@ -1109,23 +1051,11 @@ export default async function DashboardPage() {
           </div>
         </div>
 
-        {/* Today's Appointments */}
         {todayCount > 0 && (
-          <div>
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-semibold text-white">Today's Appointments</h2>
-              <Link 
-                href="/dashboard/admin/demands" 
-                className="text-sm text-[#C27E00] hover:text-[#a06900] transition-colors"
-              >
-                View All Demands →
-              </Link>
-            </div>
-            
-            <div className="bg-white/5 rounded-lg border border-gray-800 shadow overflow-hidden">
-              <ul className="divide-y divide-gray-800">
+          <DataCard title="Today's Appointments" action={{ label: 'View All Demands', href: '/dashboard/admin/demands' }}>
+              <ul className="divide-y divide-gray-800/80">
                 {todayAppointments?.slice(0, 5).map(demand => (
-                  <li key={demand.id} className="p-4 hover:bg-white/5 transition-colors">
+                  <li key={demand.id} className="px-6 py-4 hover:bg-white/[0.03] transition-colors">
                     <div className="flex justify-between items-start">
                       <div className="flex-1">
                         <div className="flex items-center gap-3 mb-2">
@@ -1150,29 +1080,16 @@ export default async function DashboardPage() {
                   </li>
                 ))}
               </ul>
-            </div>
-          </div>
+          </DataCard>
         )}
 
-        {/* Recent Demands */}
-        <div>
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-semibold text-white">Recent Demands</h2>
-            <Link 
-              href="/dashboard/admin/demands" 
-              className="text-sm text-[#C27E00] hover:text-[#a06900] transition-colors"
-            >
-              View All →
-            </Link>
-          </div>
-          
-          <div className="bg-white/5 rounded-lg border border-gray-800 shadow overflow-hidden">
+        <DataCard title="Recent Demands" action={{ label: 'View All', href: '/dashboard/admin/demands' }}>
             {recentDemands.length === 0 ? (
-              <div className="p-8 text-center">
+              <div className="py-12 text-center">
                 <p className="text-gray-400">No demands found for your dealer.</p>
               </div>
             ) : (
-              <ul className="divide-y divide-gray-800">
+              <ul className="divide-y divide-gray-800/80">
                 {recentDemands.map(demand => {
                   const statusColors = {
                     pending_finance: 'bg-yellow-900/50 text-yellow-300 border-yellow-800',
@@ -1181,7 +1098,7 @@ export default async function DashboardPage() {
                     cancelled: 'bg-red-900/50 text-red-300 border-red-800'
                   }
                   return (
-                    <li key={demand.id} className="p-4 hover:bg-white/5 transition-colors">
+                    <li key={demand.id} className="px-6 py-4 hover:bg-white/[0.03] transition-colors">
                       <div className="flex justify-between items-start">
                         <div className="flex-1">
                           <div className="flex items-center gap-3 mb-2">
@@ -1216,17 +1133,15 @@ export default async function DashboardPage() {
                 })}
               </ul>
             )}
-          </div>
-        </div>
+        </DataCard>
       </div>
     )
   }
 
   // For other roles, show default dashboard
   return (
-    <div>
-      <h1 className="text-2xl font-semibold text-white">Dashboard</h1>
-      <p className="mt-4 text-gray-400">Welcome to AuroraHub. Select an option from the sidebar to get started.</p>
+    <div className="space-y-10">
+      <WelcomeBanner title="Dashboard" subtitle="Select an option from the sidebar to get started" timezone={SYSTEM_DEFAULT_TIMEZONE} />
     </div>
   )
 }

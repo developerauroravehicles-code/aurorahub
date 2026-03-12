@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { getAlertSettings, saveAlertSettings, getAlertLogs, type AlertRule } from './actions'
 import { Bell, Clock, CheckCircle, XCircle, Mail, Loader2 } from 'lucide-react'
+import { formatInPT } from '@/lib/timezone-defaults'
 
 const ALERT_TYPE_LABELS: Record<string, string> = {
   sla_breach_ticket: 'SLA Breach',
@@ -199,7 +200,7 @@ export function AlertsContent() {
                 {logs.map((log) => (
                   <tr key={log.id} className="border-b border-gray-800/50 hover:bg-white/5">
                     <td className="px-4 py-2 text-gray-300">
-                      {new Date(log.created_at).toLocaleString()}
+                      {formatInPT(log.created_at, 'MMM d, yyyy h:mm:ss a')}
                     </td>
                     <td className="px-4 py-2 text-gray-300">
                       {ALERT_TYPE_LABELS[log.alert_type] ?? log.alert_type}

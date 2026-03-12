@@ -1,8 +1,17 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { isStockNumberDuplicate } from '@/lib/demand-stock'
 import { revalidatePath } from 'next/cache'
 import { logDemandChange, type DemandStatus } from '@/lib/demand-logger'
+import { sendSMS } from '@/lib/twilio'
+import { logSmsSent } from '@/lib/sms-logger'
+import { getSmsSettings } from '@/lib/sms-resolver'
+import { resolveCancellationTemplate } from '@/lib/sms-resolver'
+import { validateAppointmentSlot } from '@/app/dashboard/system-management/calendar/actions'
+import { getTimezoneFromDealer } from '@/lib/dealer-timezone'
+import { fromZonedTime } from 'date-fns-tz'
+import { SYSTEM_DEFAULT_TIMEZONE } from '@/lib/timezone-defaults'
 
 export async function updateAssignedSpecialist(
   demandId: string,
@@ -112,8 +121,8 @@ export async function updateCustomerInfo(
     return { success: false, error: 'Only Aurora Manager can update customer info' }
   }
 
-  const firstName = (data.firstName || '').trim()
-  const lastName = (data.lastName || '').trim()
+  const firstName = (data.firstName || '').trim().toUpperCase()
+  const lastName = (data.lastName || '').trim().toUpperCase()
   const phone = (data.phone || '').trim()
   if (!firstName || !lastName || !phone) {
     return { success: false, error: 'First name, last name and phone are required' }
@@ -199,6 +208,219 @@ export async function updateVinLast6(
   revalidatePath('/dashboard/admin/demands')
   revalidatePath(`/dashboard/admin/demands/${demandId}`)
   return { success: true }
+}
+
+export async function updateStockNumber(
+  demandId: string,
+  stockNumber: string
+): Promise<{ success: boolean; error?: string }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { success: false, error: 'Unauthorized' }
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single()
+
+  if (!profile || profile.role !== 'aurora_manager') {
+    return { success: false, error: 'Only Aurora Manager can update stock number' }
+  }
+
+  const trimmed = (stockNumber || '').trim().toUpperCase()
+
+  if (trimmed) {
+    const { duplicate } = await isStockNumberDuplicate(trimmed, demandId)
+    if (duplicate) {
+      return { success: false, error: `A demand with stock number "${trimmed}" already exists. Please verify the stock number.` }
+    }
+  }
+
+  const { data: demand } = await supabase
+    .from('demands')
+    .select('status')
+    .eq('id', demandId)
+    .single()
+
+  const { error } = await supabase
+    .from('demands')
+    .update({ stock_number: trimmed || null })
+    .eq('id', demandId)
+
+  if (error) return { success: false, error: error.message }
+
+  const status: DemandStatus = (demand?.status ?? 'pending_finance') as DemandStatus
+  logDemandChange({
+    demandId,
+    actorId: user.id,
+    previousStatus: status,
+    newStatus: status,
+    notes: 'Stock number updated',
+  }).catch(() => {})
+
+  revalidatePath('/dashboard/admin/demands')
+  revalidatePath(`/dashboard/admin/demands/${demandId}`)
+  return { success: true }
+}
+
+export async function updateDemandByAuroraManager(
+  demandId: string,
+  formData: FormData,
+  options: { sendToCustomer?: boolean; sendToSpecialist?: boolean } = {}
+): Promise<{ error?: string }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Unauthorized' }
+
+  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+  if (!profile || profile.role !== 'aurora_manager') {
+    return { error: 'Only Aurora Managers can update demands' }
+  }
+
+  const { data: demand } = await supabase
+    .from('demands')
+    .select('dealer_id, status, appointment_date, customer_phone, customer_firstname, customer_lastname, assigned_specialist_id, is_external, dealers(region_codes(timezone_id, timezones(name)))')
+    .eq('id', demandId)
+    .single()
+
+  if (!demand) return { error: 'Demand not found' }
+  if (demand.status === 'cancelled') return { error: 'Cannot update a cancelled demand' }
+
+  const customerFirstname = ((formData.get('customer_firstname') as string) ?? '').trim().toUpperCase()
+  const customerLastname = ((formData.get('customer_lastname') as string) ?? '').trim().toUpperCase()
+  const customerPhone = (formData.get('customer_phone') as string)?.trim()
+  const customerAddress = (formData.get('customer_address') as string)?.trim() || null
+  const vehicleMake = (formData.get('vehicle_make') as string)?.trim()
+  const vehicleModel = (formData.get('vehicle_model') as string)?.trim()
+  const vehicleYear = parseInt(formData.get('vehicle_year') as string, 10)
+  const stockNumberRaw = (formData.get('stock_number') as string)?.trim() || null
+  const stockNumber = stockNumberRaw ? stockNumberRaw.toUpperCase() : null
+  const cameraModel = (formData.get('camera_model') as string)?.trim()
+  let appointmentDate = formData.get('appointment_date') as string
+
+  if (!customerFirstname || !customerLastname || !customerPhone || !vehicleMake || !vehicleModel || !cameraModel) {
+    return { error: 'All required fields must be filled' }
+  }
+  if (isNaN(vehicleYear) || vehicleYear < 1900) return { error: 'Invalid vehicle year' }
+
+  const isExternal = !!demand.is_external
+
+  if (isExternal && formData.get('appointment_date_date')) {
+    const dateStr = formData.get('appointment_date_date') as string
+    const [y, m, d] = dateStr.split('-').map(Number)
+    const timezoneName = getTimezoneFromDealer(demand.dealers as Parameters<typeof getTimezoneFromDealer>[0]) ?? SYSTEM_DEFAULT_TIMEZONE
+    appointmentDate = fromZonedTime(new Date(y, m - 1, d, 12, 0, 0), timezoneName).toISOString()
+  }
+
+  if (!appointmentDate) return { error: 'Appointment date is required' }
+
+  if (stockNumber) {
+    const { duplicate } = await isStockNumberDuplicate(stockNumber, demandId)
+    if (duplicate) {
+      return { error: `A demand with stock number "${stockNumber}" already exists. Please verify the stock number.` }
+    }
+  }
+
+  if (demand.dealer_id && !isExternal) {
+    const validation = await validateAppointmentSlot(demand.dealer_id, appointmentDate)
+    if (!validation.valid) {
+      return { error: validation.error ?? 'Selected appointment time is not available.' }
+    }
+  }
+
+  const oldAppointmentDate = demand.appointment_date ? new Date(demand.appointment_date) : null
+  const newAppointmentDate = new Date(appointmentDate)
+  const appointmentDateChanged = oldAppointmentDate && oldAppointmentDate.getTime() !== newAppointmentDate.getTime()
+
+  const { error: updateError } = await supabase
+    .from('demands')
+    .update({
+      customer_firstname: customerFirstname,
+      customer_lastname: customerLastname,
+      customer_phone: customerPhone,
+      customer_address: customerAddress,
+      vehicle_make: vehicleMake,
+      vehicle_model: vehicleModel,
+      vehicle_year: vehicleYear,
+      stock_number: stockNumber,
+      camera_model: cameraModel,
+      appointment_date: appointmentDate,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', demandId)
+
+  if (updateError) return { error: updateError.message }
+
+  const status: DemandStatus = (demand?.status ?? 'pending_finance') as DemandStatus
+  logDemandChange({
+    demandId,
+    actorId: user.id,
+    previousStatus: status,
+    newStatus: status,
+    notes: appointmentDateChanged ? 'Appointment rescheduled' : 'Demand updated',
+  }).catch(() => {})
+
+  if (appointmentDateChanged && (options.sendToCustomer || options.sendToSpecialist)) {
+    const smsSettings = await getSmsSettings()
+    const rn = smsSettings.rescheduling_notice
+    if (rn.enabled) {
+      const timezoneName = getTimezoneFromDealer(demand.dealers as Parameters<typeof getTimezoneFromDealer>[0]) ?? undefined
+      const message = resolveCancellationTemplate(rn.template, {
+        phone: smsSettings.contactPhone,
+        signature: smsSettings.signature,
+        appointmentDate: newAppointmentDate,
+        timezoneName,
+      })
+      if (options.sendToCustomer && rn.sendToCustomer && demand.customer_phone) {
+        try {
+          const result = await sendSMS(demand.customer_phone, message)
+          if (result.success) {
+            logSmsSent({
+              phoneNumber: demand.customer_phone,
+              recipientType: 'customer',
+              recipientName: `${demand.customer_firstname} ${demand.customer_lastname}`.trim(),
+              demandId,
+              messageType: 'rescheduling_notice',
+              triggeredBy: 'system',
+              messageContent: message,
+            }).catch(() => {})
+          }
+        } catch (e) {
+          console.error('Failed to send rescheduling SMS to customer:', e)
+        }
+      }
+      if (options.sendToSpecialist && rn.sendToSpecialist && demand.assigned_specialist_id) {
+        try {
+          const { data: specialist } = await supabase
+            .from('profiles')
+            .select('phone, full_name')
+            .eq('id', demand.assigned_specialist_id)
+            .single()
+          if (specialist?.phone) {
+            const result = await sendSMS(specialist.phone, message)
+            if (result.success) {
+              logSmsSent({
+                phoneNumber: specialist.phone,
+                recipientType: 'specialist',
+                recipientName: specialist.full_name ?? undefined,
+                demandId,
+                messageType: 'rescheduling_notice',
+                triggeredBy: 'system',
+                messageContent: message,
+              }).catch(() => {})
+            }
+          }
+        } catch (e) {
+          console.error('Failed to send rescheduling SMS to specialist:', e)
+        }
+      }
+    }
+  }
+
+  revalidatePath('/dashboard/admin/demands')
+  revalidatePath(`/dashboard/admin/demands/${demandId}`)
+  return {}
 }
 
 export async function deleteDemand(demandId: string): Promise<{ error?: string }> {

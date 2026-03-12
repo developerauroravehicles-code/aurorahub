@@ -1,0 +1,39 @@
+import { format } from 'date-fns'
+import { formatInTimeZone } from 'date-fns-tz'
+import { getEffectiveTimezone } from '@/lib/timezone-defaults'
+
+interface WelcomeBannerProps {
+  title: string
+  subtitle?: string
+  userName?: string
+  /** When set (e.g. dealer timezone for GM), date and greeting use this timezone */
+  timezone?: string | null
+}
+
+function getGreeting(hour: number): string {
+  if (hour < 12) return 'Good morning'
+  if (hour < 17) return 'Good afternoon'
+  return 'Good evening'
+}
+
+export function WelcomeBanner({ title, subtitle, userName, timezone }: WelcomeBannerProps) {
+  const tz = timezone ? getEffectiveTimezone(timezone) : null
+  const now = new Date()
+  const hour = tz ? parseInt(formatInTimeZone(now, tz, 'H'), 10) : now.getHours()
+  const today = tz ? formatInTimeZone(now, tz, 'EEEE, MMMM d, yyyy') : format(now, 'EEEE, MMMM d, yyyy')
+
+  const greeting = userName ? `${getGreeting(hour)}, ${userName}` : getGreeting(hour)
+
+  return (
+    <div className="relative overflow-hidden rounded-2xl border border-gray-800/80 bg-gradient-to-br from-[#C27E00]/15 via-white/[0.04] to-transparent px-8 py-6">
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(194,126,0,0.12),transparent)]" />
+      <div className="relative">
+        <p className="text-sm font-medium text-[#C27E00]/90">{greeting}</p>
+        <h1 className="mt-1 text-2xl font-bold tracking-tight text-white md:text-3xl">{title}</h1>
+        <p className="mt-2 text-sm text-gray-400">
+          {subtitle ? `${subtitle} · ${today}` : today}
+        </p>
+      </div>
+    </div>
+  )
+}

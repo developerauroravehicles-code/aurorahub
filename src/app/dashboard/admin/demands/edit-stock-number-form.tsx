@@ -2,42 +2,37 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { updateVinLast6 } from './actions'
+import { updateStockNumber } from './actions'
 
 const inputClass = 'w-full border border-gray-700 bg-white/5 p-2 rounded text-white text-sm focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]'
 
-interface EditVinFormProps {
+interface EditStockNumberFormProps {
   demandId: string
-  vinLast6: string | null
+  stockNumber: string | null
   isAuroraManager: boolean
 }
 
-export function EditVinForm({
+export function EditStockNumberForm({
   demandId,
-  vinLast6,
+  stockNumber,
   isAuroraManager,
-}: EditVinFormProps) {
+}: EditStockNumberFormProps) {
   const router = useRouter()
-  const [value, setValue] = useState(vinLast6 ?? '')
+  const [value, setValue] = useState(stockNumber ?? '')
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
 
-  const normalized = (value || '').trim().replace(/\s/g, '').slice(-6).toUpperCase()
-  const hasChange = normalized !== (vinLast6 ?? '').trim().toUpperCase()
-  const isValid = normalized.length >= 6
+  const trimmed = (value || '').trim()
+  const hasChange = trimmed !== (stockNumber ?? '').trim()
 
   const handleSave = async () => {
-    if (normalized.length < 6) {
-      setMessage({ type: 'error', text: 'VIN last 6 digits is required (exactly 6 characters)' })
-      return
-    }
     setSaving(true)
     setMessage(null)
-    const result = await updateVinLast6(demandId, value)
+    const result = await updateStockNumber(demandId, value)
     setSaving(false)
     if (result.success) {
-      setMessage({ type: 'success', text: 'VIN updated' })
-      setValue(normalized)
+      setMessage({ type: 'success', text: 'Stock number updated' })
+      setValue(trimmed)
       router.refresh()
     } else {
       setMessage({ type: 'error', text: result.error ?? 'Failed to update' })
@@ -46,7 +41,7 @@ export function EditVinForm({
 
   if (!isAuroraManager) {
     return (
-      <p className="text-white">{vinLast6 ? vinLast6.toUpperCase() : '—'}</p>
+      <p className="text-white">{stockNumber || '—'}</p>
     )
   }
 
@@ -57,20 +52,18 @@ export function EditVinForm({
         value={value}
         onChange={(e) => setValue(e.target.value.toUpperCase())}
         className={inputClass}
-        placeholder="Last 6 digits"
+        placeholder="Stock number"
         style={{ textTransform: 'uppercase' }}
-        maxLength={17}
       />
       <div className="flex items-center gap-2">
         <button
           type="button"
           onClick={handleSave}
-          disabled={saving || !hasChange || !isValid}
+          disabled={saving || !hasChange}
           className="px-4 py-2 bg-[#C27E00] hover:bg-[#a06900] disabled:bg-gray-600 disabled:cursor-not-allowed text-white text-sm font-medium rounded transition-colors"
         >
           {saving ? 'Saving...' : 'Save'}
         </button>
-        <span className="text-xs text-gray-500">Full VIN or last 6 digits</span>
       </div>
       {message && (
         <p

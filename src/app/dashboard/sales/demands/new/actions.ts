@@ -9,6 +9,7 @@ import { fromZonedTime, formatInTimeZone } from 'date-fns-tz'
 import { validateAppointmentSlot } from '@/app/dashboard/system-management/calendar/actions'
 import { getTimezoneFromDealer } from '@/lib/dealer-timezone'
 import { SYSTEM_DEFAULT_TIMEZONE } from '@/lib/timezone-defaults'
+import { isStockNumberDuplicate } from '@/lib/demand-stock'
 
 async function getDealerTimezone(dealerId: string | null): Promise<string | null> {
   if (!dealerId) return null
@@ -22,14 +23,14 @@ async function getDealerTimezone(dealerId: string | null): Promise<string | null
 }
 
 const schema = z.object({
-  firstName: z.string().min(1),
-  lastName: z.string().min(1),
+  firstName: z.string().min(1).transform(v => (v || '').trim().toUpperCase()),
+  lastName: z.string().min(1).transform(v => (v || '').trim().toUpperCase()),
   phone: z.string().min(1),
   address: z.string().optional(),
   vehicleMake: z.string().min(1),
   vehicleModel: z.string().min(1),
   vehicleYear: z.coerce.number().min(1900),
-  stockNumber: z.string().min(1, 'Stock number is required'),
+  stockNumber: z.string().min(1, 'Stock number is required').transform(v => (v || '').trim().toUpperCase()),
   vinLast6: z.string().min(1, 'VIN last 6 digits is required').refine(
     v => (v || '').trim().replace(/\s/g, '').length >= 6,
     'VIN last 6 digits is required (at least 6 characters)'
@@ -88,6 +89,11 @@ export async function createDemand(prevState: ActionState, formData: FormData) {
   const slotTaken = await isTimeSlotTaken(data.appointmentDate, profile.dealer_id, timezoneName)
   if (slotTaken) {
       return { error: 'This time slot is already booked. Please select another time.' }
+  }
+
+  const { duplicate: stockDuplicate } = await isStockNumberDuplicate(data.stockNumber)
+  if (stockDuplicate) {
+    return { error: `A demand with stock number "${data.stockNumber}" already exists. Please verify the stock number.` }
   }
 
   const insertData = {
@@ -173,7 +179,6 @@ export async function getTakenSlots(
     .gte('appointment_date', start)
     .lte('appointment_date', end)
     .neq('status', 'cancelled')
-    .or('is_external.is.null,is_external.eq.false')
 
   if (!data || data.length === 0) return []
   return data.map((r: { appointment_date: string }) => r.appointment_date)

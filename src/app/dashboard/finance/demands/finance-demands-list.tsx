@@ -47,9 +47,10 @@ interface FinanceDemandsListProps {
   unassignedDemands: Demand[]
   allAssignedDemands: Demand[]
   completedDemands?: Demand[]
+  duplicateStockNumbers?: string[]
 }
 
-export function FinanceDemandsList({ myAssignedDemands, unassignedDemands, allAssignedDemands, completedDemands = [] }: FinanceDemandsListProps) {
+export function FinanceDemandsList({ myAssignedDemands, unassignedDemands, allAssignedDemands, completedDemands = [], duplicateStockNumbers = [] }: FinanceDemandsListProps) {
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [dateFilter, setDateFilter] = useState<string>('all')
   const [searchType, setSearchType] = useState<'customer' | 'demand_id'>('customer')
@@ -234,6 +235,9 @@ export function FinanceDemandsList({ myAssignedDemands, unassignedDemands, allAs
                         {demand.demand_number != null && (
                           <span className="text-xs font-medium text-gray-500">#{demand.demand_number}</span>
                         )}
+                        {demand.stock_number && duplicateStockNumbers.includes((demand.stock_number || '').trim().toUpperCase()) && (
+                          <span className="text-xs text-amber-400">(Duplicate Stock No)</span>
+                        )}
                         <span className="px-2 py-1 rounded text-xs font-medium bg-blue-900/50 text-blue-300 border border-blue-800">
                           ASSIGNED TO ME
                         </span>
@@ -313,6 +317,9 @@ export function FinanceDemandsList({ myAssignedDemands, unassignedDemands, allAs
                         {demand.demand_number != null && (
                           <span className="text-xs font-medium text-gray-500">#{demand.demand_number}</span>
                         )}
+                        {demand.stock_number && duplicateStockNumbers.includes((demand.stock_number || '').trim().toUpperCase()) && (
+                          <span className="text-xs text-amber-400">(Duplicate Stock No)</span>
+                        )}
                         <span className="px-2 py-1 rounded text-xs font-medium bg-gray-900/50 text-gray-300 border border-gray-800">
                           UNASSIGNED
                         </span>
@@ -360,6 +367,9 @@ export function FinanceDemandsList({ myAssignedDemands, unassignedDemands, allAs
                         </p>
                         {demand.demand_number != null && (
                           <span className="text-xs font-medium text-gray-500">#{demand.demand_number}</span>
+                        )}
+                        {demand.stock_number && duplicateStockNumbers.includes((demand.stock_number || '').trim().toUpperCase()) && (
+                          <span className="text-xs text-amber-400">(Duplicate Stock No)</span>
                         )}
                         <span className="px-2 py-1 rounded text-xs font-medium bg-green-900/50 text-green-300 border border-green-800">
                           COMPLETED
@@ -409,6 +419,9 @@ export function FinanceDemandsList({ myAssignedDemands, unassignedDemands, allAs
                         </p>
                         {demand.demand_number != null && (
                           <span className="text-xs font-medium text-gray-500">#{demand.demand_number}</span>
+                        )}
+                        {demand.stock_number && duplicateStockNumbers.includes((demand.stock_number || '').trim().toUpperCase()) && (
+                          <span className="text-xs text-amber-400">(Duplicate Stock No)</span>
                         )}
                         <span className="px-2 py-1 rounded text-xs font-medium bg-purple-900/50 text-purple-300 border border-purple-800">
                           ASSIGNED TO: {(demand.profiles as any)?.full_name || 'Unknown'}

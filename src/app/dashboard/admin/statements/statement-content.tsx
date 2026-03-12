@@ -9,11 +9,14 @@ import {
   type DealerOption
 } from './actions'
 import { downloadStatementPdf, previewStatementPdf, type StatementPdfData } from '@/lib/generate-statement-pdf'
-import { format } from 'date-fns'
+import { formatInTimeZone } from 'date-fns-tz'
+import { SYSTEM_DEFAULT_TIMEZONE } from '@/lib/timezone-defaults'
 
 interface StatementContentProps {
   dealers: DealerOption[]
   logoDataUrl?: string | null
+  hideDealerFilter?: boolean
+  defaultDealerId?: string
 }
 
 function getDealerName(d: StatementDemandRow): string {
@@ -23,8 +26,8 @@ function getDealerName(d: StatementDemandRow): string {
   return (single as { name: string })?.name ?? 'Unknown Dealer'
 }
 
-export function StatementContent({ dealers, logoDataUrl }: StatementContentProps) {
-  const [dealerId, setDealerId] = useState<string>('')
+export function StatementContent({ dealers, logoDataUrl, hideDealerFilter, defaultDealerId }: StatementContentProps) {
+  const [dealerId, setDealerId] = useState<string>(defaultDealerId ?? '')
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
   const [rows, setRows] = useState<StatementDemandRow[]>([])
@@ -55,10 +58,10 @@ export function StatementContent({ dealers, logoDataUrl }: StatementContentProps
   // Period: use filter dates when set, otherwise derive from rows' completed_at
   const completedTimestamps = rows.filter((r) => r.completed_at).map((r) => new Date(r.completed_at!).getTime())
   const effectiveDateFrom = dateFrom || (completedTimestamps.length > 0
-    ? format(new Date(Math.min(...completedTimestamps)), 'yyyy-MM-dd')
+    ? formatInTimeZone(new Date(Math.min(...completedTimestamps)), SYSTEM_DEFAULT_TIMEZONE, 'yyyy-MM-dd')
     : '')
   const effectiveDateTo = dateTo || (completedTimestamps.length > 0
-    ? format(new Date(Math.max(...completedTimestamps)), 'yyyy-MM-dd')
+    ? formatInTimeZone(new Date(Math.max(...completedTimestamps)), SYSTEM_DEFAULT_TIMEZONE, 'yyyy-MM-dd')
     : '')
 
   const statementData: StatementPdfData = {
@@ -73,7 +76,7 @@ export function StatementContent({ dealers, logoDataUrl }: StatementContentProps
       const dateValue = d.completed_at ?? d.updated_at
       return {
         demand_number: d.demand_number,
-        date: format(new Date(dateValue), 'd MMMM yyyy'),
+        date: formatInTimeZone(new Date(dateValue), SYSTEM_DEFAULT_TIMEZONE, 'd MMMM yyyy'),
         vehicleModel,
         stockNumber: d.stock_number ?? '—',
         price,
@@ -126,22 +129,24 @@ export function StatementContent({ dealers, logoDataUrl }: StatementContentProps
       {/* Filters */}
       <div className="bg-black/30 rounded-lg border border-gray-800 p-4">
         <h3 className="text-md font-semibold text-white mb-4">Filters</h3>
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
-          <div>
-            <label className="block text-sm font-medium text-gray-400 mb-1">Dealer (Bayi)</label>
-            <select
-              value={dealerId}
-              onChange={(e) => setDealerId(e.target.value)}
-              className="w-full border border-gray-700 bg-black/50 text-white rounded px-3 py-2 text-sm focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]"
-            >
-              <option value="">All dealers</option>
-              {dealers.map((d) => (
-                <option key={d.id} value={d.id}>
-                  {d.name}
-                </option>
-              ))}
-            </select>
-          </div>
+        <div className={`grid grid-cols-1 gap-4 items-end ${hideDealerFilter ? 'md:grid-cols-3' : 'md:grid-cols-4'}`}>
+          {!hideDealerFilter && (
+            <div>
+              <label className="block text-sm font-medium text-gray-400 mb-1">Dealer (Bayi)</label>
+              <select
+                value={dealerId}
+                onChange={(e) => setDealerId(e.target.value)}
+                className="w-full border border-gray-700 bg-black/50 text-white rounded px-3 py-2 text-sm focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]"
+              >
+                <option value="">All dealers</option>
+                {dealers.map((d) => (
+                  <option key={d.id} value={d.id}>
+                    {d.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
           <div>
             <label className="block text-sm font-medium text-gray-400 mb-1">From date</label>
             <input
@@ -207,15 +212,17 @@ export function StatementContent({ dealers, logoDataUrl }: StatementContentProps
                 <Download className="w-4 h-4" />
                 Download PDF
               </button>
-              <button
-                type="button"
-                onClick={handleDrive}
-                disabled={driveUploading}
-                className="inline-flex items-center gap-2 bg-gray-600 hover:bg-gray-500 text-white px-4 py-2 rounded-md font-medium transition-colors disabled:opacity-50"
-              >
-                <HardDrive className="w-4 h-4" />
-                {driveUploading ? 'Uploading...' : 'Save to Drive'}
-              </button>
+              {!hideDealerFilter && (
+                <button
+                  type="button"
+                  onClick={handleDrive}
+                  disabled={driveUploading}
+                  className="inline-flex items-center gap-2 bg-gray-600 hover:bg-gray-500 text-white px-4 py-2 rounded-md font-medium transition-colors disabled:opacity-50"
+                >
+                  <HardDrive className="w-4 h-4" />
+                  {driveUploading ? 'Uploading...' : 'Save to Drive'}
+                </button>
+              )}
             </div>
           )}
         </div>
@@ -248,7 +255,7 @@ export function StatementContent({ dealers, logoDataUrl }: StatementContentProps
                         {row.demand_number ?? '—'}
                       </td>
                       <td className="px-3 py-2.5 text-sm text-gray-300 whitespace-nowrap">
-                        {format(new Date(row.completed_at ?? row.updated_at), 'd MMMM yyyy')}
+                        {formatInTimeZone(new Date(row.completed_at ?? row.updated_at), SYSTEM_DEFAULT_TIMEZONE, 'd MMMM yyyy')}
                       </td>
                       <td className="px-3 py-2.5 text-sm text-white">{vehicleModel || '—'}</td>
                       <td className="px-3 py-2.5 text-sm text-gray-300">{row.stock_number ?? '—'}</td>

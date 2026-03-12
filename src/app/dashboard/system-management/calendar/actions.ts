@@ -189,6 +189,31 @@ export async function getCalendarBlocksInRange(fromDate: string, toDate: string)
   return data || []
 }
 
+/**
+ * Get appointment times already taken on a date (all demands including external).
+ * Shared system - one slot taken = blocked for all. Uses Pacific Time (PT).
+ */
+export async function getTakenSlots(dateStr: string): Promise<string[]> {
+  const supabase = await createClient()
+  const match = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})/)
+  const y = match ? parseInt(match[1], 10) : 0
+  const m = match ? parseInt(match[2], 10) : 1
+  const d = match ? parseInt(match[3], 10) : 1
+  const startInPT = new Date(y, m - 1, d, 0, 0, 0)
+  const endInPT = new Date(y, m - 1, d, 23, 59, 59, 999)
+  const start = fromZonedTime(startInPT, SYSTEM_DEFAULT_TIMEZONE).toISOString()
+  const end = fromZonedTime(endInPT, SYSTEM_DEFAULT_TIMEZONE).toISOString()
+  const { data } = await supabase
+    .from('demands')
+    .select('appointment_date')
+    .gte('appointment_date', start)
+    .lte('appointment_date', end)
+    .neq('status', 'cancelled')
+    .or('is_external.is.null,is_external.eq.false')
+  if (!data || data.length === 0) return []
+  return data.map((r: { appointment_date: string }) => r.appointment_date)
+}
+
 /** Get blocks for a single date (for demand form slot filtering). */
 export async function getDealerBlocksForDate(dealerId: string, dateStr: string): Promise<{ start_minutes: number; end_minutes: number }[]> {
   if (!dealerId || !dateStr) return []
@@ -204,6 +229,31 @@ export async function getDealerBlocksForDate(dealerId: string, dateStr: string):
     start_minutes: r.start_minutes,
     end_minutes: r.end_minutes
   }))
+}
+
+export type CalendarSetting = {
+  day_type: string
+  start_hour: number
+  end_hour: number
+  slot_interval_minutes: number
+  appointment_duration_minutes: number
+}
+
+/** Get calendar settings for a dealer (for external demand form). Returns weekday/saturday/sunday. */
+export async function getCalendarSettingsForDealer(dealerId: string): Promise<{ weekday?: CalendarSetting; saturday?: CalendarSetting; sunday?: CalendarSetting }> {
+  if (!dealerId) return {}
+  const supabase = await createClient()
+  const { data } = await supabase
+    .from('dealer_calendar_settings')
+    .select('day_type, start_hour, end_hour, slot_interval_minutes, appointment_duration_minutes')
+    .eq('dealer_id', dealerId)
+  const out: { weekday?: CalendarSetting; saturday?: CalendarSetting; sunday?: CalendarSetting } = {}
+  ;(data || []).forEach((s: CalendarSetting) => {
+    if (s.day_type === 'weekday') out.weekday = s
+    else if (s.day_type === 'saturday') out.saturday = s
+    else if (s.day_type === 'sunday') out.sunday = s
+  })
+  return out
 }
 
 export async function createCalendarBlock(formData: FormData): Promise<{ success: boolean; error?: string }> {
@@ -293,7 +343,8 @@ export async function deleteCalendarBlock(blockId: string): Promise<{ success: b
  */
 export async function validateAppointmentSlot(
   dealerId: string,
-  appointmentDateISO: string
+  appointmentDateISO: string,
+  options?: { allowPast?: boolean }
 ): Promise<{ valid: boolean; error?: string }> {
   const supabase = await createClient()
   const slotTime = new Date(appointmentDateISO)
@@ -352,15 +403,18 @@ export async function validateAppointmentSlot(
     return { valid: false, error: 'Selected slot is closed for this dealer.' }
   }
 
-  // Reject past dates and past slots - system base = Pacific (PT)
-  const now = new Date()
-  const slotDateInPacific = formatInTimeZone(slotTime, SYSTEM_DEFAULT_TIMEZONE, 'yyyy-MM-dd')
-  const todayInPacific = formatInTimeZone(now, SYSTEM_DEFAULT_TIMEZONE, 'yyyy-MM-dd')
-  if (slotDateInPacific < todayInPacific) {
-    return { valid: false, error: 'Cannot create appointments for past dates. Please select today or a future date.' }
-  }
-  if (slotDateInPacific === todayInPacific && slotTime.getTime() <= now.getTime()) {
-    return { valid: false, error: 'This time slot has already passed. Please select a future time.' }
+  // Reject past dates and past slots - unless allowPast (e.g. external retroactive demands)
+  const allowPast = !!options?.allowPast
+  if (!allowPast) {
+    const now = new Date()
+    const slotDateInPacific = formatInTimeZone(slotTime, SYSTEM_DEFAULT_TIMEZONE, 'yyyy-MM-dd')
+    const todayInPacific = formatInTimeZone(now, SYSTEM_DEFAULT_TIMEZONE, 'yyyy-MM-dd')
+    if (slotDateInPacific < todayInPacific) {
+      return { valid: false, error: 'Cannot create appointments for past dates. Please select today or a future date.' }
+    }
+    if (slotDateInPacific === todayInPacific && slotTime.getTime() <= now.getTime()) {
+      return { valid: false, error: 'This time slot has already passed. Please select a future time.' }
+    }
   }
 
   return { valid: true }
@@ -445,7 +499,6 @@ export async function getAvailableSlotsForEdit(
     .gte('appointment_date', startOfDayISO)
     .lte('appointment_date', endOfDayISO)
     .neq('status', 'cancelled')
-    .or('is_external.is.null,is_external.eq.false')
   if (excludeDemandId) {
     query = query.neq('id', excludeDemandId)
   }

@@ -128,12 +128,12 @@ export function DemandForm({ cameraModels, defaultAddress = '', timezoneName: pr
         
         <div>
           <label className="block text-sm font-medium text-gray-300">First Name</label>
-          <input name="firstName" required className="mt-1 block w-full rounded-md border border-gray-700 bg-black/50 py-2 px-3 shadow-sm focus:border-[#C27E00] focus:outline-none focus:ring-[#C27E00] sm:text-sm text-white" />
+          <input name="firstName" required style={{ textTransform: 'uppercase' }} onInput={(e) => { (e.target as HTMLInputElement).value = (e.target as HTMLInputElement).value.toUpperCase() }} className="mt-1 block w-full rounded-md border border-gray-700 bg-black/50 py-2 px-3 shadow-sm focus:border-[#C27E00] focus:outline-none focus:ring-[#C27E00] sm:text-sm text-white" />
         </div>
 
         <div>
           <label className="block text-sm font-medium text-gray-300">Last Name</label>
-          <input name="lastName" required className="mt-1 block w-full rounded-md border border-gray-700 bg-black/50 py-2 px-3 shadow-sm focus:border-[#C27E00] focus:outline-none focus:ring-[#C27E00] sm:text-sm text-white" />
+          <input name="lastName" required style={{ textTransform: 'uppercase' }} onInput={(e) => { (e.target as HTMLInputElement).value = (e.target as HTMLInputElement).value.toUpperCase() }} className="mt-1 block w-full rounded-md border border-gray-700 bg-black/50 py-2 px-3 shadow-sm focus:border-[#C27E00] focus:outline-none focus:ring-[#C27E00] sm:text-sm text-white" />
         </div>
 
         <div>
@@ -260,7 +260,9 @@ export function DemandForm({ cameraModels, defaultAddress = '', timezoneName: pr
         <div>
           <label className="block text-sm font-medium text-gray-300">Stock Number</label>
           <input 
-            name="stockNumber" 
+            name="stockNumber"
+            style={{ textTransform: 'uppercase' }}
+            onInput={(e) => { (e.target as HTMLInputElement).value = (e.target as HTMLInputElement).value.toUpperCase() }} 
             required 
             className="mt-1 block w-full rounded-md border border-gray-700 bg-black/50 py-2 px-3 shadow-sm focus:border-[#C27E00] focus:outline-none focus:ring-[#C27E00] sm:text-sm text-white" 
             placeholder="Enter stock number"
@@ -270,7 +272,9 @@ export function DemandForm({ cameraModels, defaultAddress = '', timezoneName: pr
         <div>
           <label className="block text-sm font-medium text-gray-300">VIN Last 6 Digits <span className="text-red-400">*</span></label>
           <input 
-            name="vinLast6" 
+            name="vinLast6"
+            style={{ textTransform: 'uppercase' }}
+            onInput={(e) => { (e.target as HTMLInputElement).value = (e.target as HTMLInputElement).value.toUpperCase() }} 
             required
             minLength={6}
             className="mt-1 block w-full rounded-md border border-gray-700 bg-black/50 py-2 px-3 shadow-sm focus:border-[#C27E00] focus:outline-none focus:ring-[#C27E00] sm:text-sm text-white" 

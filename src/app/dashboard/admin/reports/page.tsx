@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { startOfMonth, endOfMonth, subMonths } from 'date-fns'
 import { formatInTimeZone, fromZonedTime } from 'date-fns-tz'
-import { getEffectiveTimezone, SYSTEM_DEFAULT_TIMEZONE } from '@/lib/timezone-defaults'
+import { SYSTEM_DEFAULT_TIMEZONE } from '@/lib/timezone-defaults'
 import { exportReportToPdf, type ExportReportOptions } from '@/lib/export-report-pdf'
 import { SendReportEmailModal } from '@/components/send-report-email-modal'
 import { ReportPreviewModal } from '@/components/report-preview-modal'
@@ -31,19 +31,6 @@ interface Demand {
   assigned_finance_id: string | null
   created_by: string | null
   dealers?: DealerRelation | DealerRelation[] | null
-}
-
-function getDealerTz(demand: Demand): string | null {
-  const d = demand.dealers
-  if (!d) return null
-  const dealer = Array.isArray(d) ? d[0] : d
-  const rc = dealer?.region_codes
-  if (!rc) return null
-  const region = Array.isArray(rc) ? rc[0] : rc
-  const tz = region?.timezones
-  if (!tz) return null
-  const t = Array.isArray(tz) ? tz[0] : tz
-  return (t as { name?: string })?.name ?? null
 }
 
 interface Dealer {
@@ -268,9 +255,9 @@ export default function AdminReportsPage() {
         customer: `${d.customer_firstname} ${d.customer_lastname}`,
         vehicle: `${d.vehicle_year} ${d.vehicle_make} ${d.vehicle_model}`,
         camera: d.camera_model,
-        appointment: formatInTimeZone(new Date(d.appointment_date), getEffectiveTimezone(getDealerTz(d) ?? null), 'MMM d, yyyy h:mm a'),
+        appointment: formatInTimeZone(new Date(d.appointment_date), SYSTEM_DEFAULT_TIMEZONE, 'MMM d, yyyy h:mm a'),
         status: d.status.replace('_', ' ').toUpperCase(),
-        created: formatInTimeZone(new Date(d.created_at), getEffectiveTimezone(getDealerTz(d) ?? null), 'MMM d, yyyy'),
+        created: formatInTimeZone(new Date(d.created_at), SYSTEM_DEFAULT_TIMEZONE, 'MMM d, yyyy'),
       })),
     }
   }
@@ -628,7 +615,7 @@ export default function AdminReportsPage() {
                             {demand.camera_model}
                           </td>
                           <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-300">
-                            {formatInTimeZone(new Date(demand.appointment_date), getEffectiveTimezone(getDealerTz(demand) ?? null), 'MMM d, yyyy h:mm a')}
+                            {formatInTimeZone(new Date(demand.appointment_date), SYSTEM_DEFAULT_TIMEZONE, 'MMM d, yyyy h:mm a')}
                           </td>
                           <td className="px-4 py-3 whitespace-nowrap">
                             <span className={`px-2 py-1 rounded text-xs font-medium border ${statusColors[demand.status as keyof typeof statusColors] || 'bg-gray-900/50 text-gray-300 border-gray-800'}`}>
@@ -636,7 +623,7 @@ export default function AdminReportsPage() {
                             </span>
                           </td>
                           <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-400">
-                            {formatInTimeZone(new Date(demand.created_at), getEffectiveTimezone(getDealerTz(demand) ?? null), 'MMM d, yyyy')}
+                            {formatInTimeZone(new Date(demand.created_at), SYSTEM_DEFAULT_TIMEZONE, 'MMM d, yyyy')}
                           </td>
                         </tr>
                       )

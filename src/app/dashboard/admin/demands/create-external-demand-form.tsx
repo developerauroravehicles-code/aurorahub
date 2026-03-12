@@ -40,6 +40,7 @@ export function CreateExternalDemandForm({ dealers, specialists, onSuccess, onCa
       setSelectedDealerId(dealers[0].id)
     }
   }, [dealers])
+
   const [cameraModels, setCameraModels] = useState<CameraModel[]>([])
   const [selectedMake, setSelectedMake] = useState('')
   const [selectedModel, setSelectedModel] = useState('')
@@ -48,6 +49,7 @@ export function CreateExternalDemandForm({ dealers, specialists, onSuccess, onCa
   const [selectedCamera, setSelectedCamera] = useState('')
   const [customCamera, setCustomCamera] = useState('')
   const [isFutureCustomer, setIsFutureCustomer] = useState(false)
+  const [completeOnCreate, setCompleteOnCreate] = useState(false)
 
   useEffect(() => {
     if (selectedDealerId) {
@@ -63,13 +65,11 @@ export function CreateExternalDemandForm({ dealers, specialists, onSuccess, onCa
     }
   }, [state?.success, onSuccess])
 
-  const today = new Date().toISOString().split('T')[0]
-
   return (
     <form action={formAction} className="space-y-6">
       <div>
         <h2 className="text-lg font-medium text-white border-b border-gray-800 pb-2">Create External Demand</h2>
-        <p className="text-sm text-gray-400 mt-1">External demands do not affect calendar time slots. No time selection required.</p>
+        <p className="text-sm text-gray-400 mt-1">Date only — no slot. External demands do not affect normal demand slots. Past dates allowed for retroactive entry.</p>
       </div>
 
       {state?.error && (
@@ -101,10 +101,9 @@ export function CreateExternalDemandForm({ dealers, specialists, onSuccess, onCa
             name="appointmentDate"
             type="date"
             required
-            min={today}
             className={inputClass}
           />
-          <p className="text-xs text-gray-500 mt-1">Date only - no time slot. Does not affect calendar.</p>
+          <p className="text-xs text-gray-500 mt-1">Past dates allowed for retroactive demands.</p>
         </div>
 
         {specialists.length > 0 && (
@@ -135,6 +134,20 @@ export function CreateExternalDemandForm({ dealers, specialists, onSuccess, onCa
           </label>
           <span className="text-xs text-gray-500">— When checked, customer info is set to &quot;Future&quot;</span>
         </div>
+        <div className="sm:col-span-2 flex items-center gap-2">
+          <input
+            type="checkbox"
+            id="completeOnCreate"
+            checked={completeOnCreate}
+            onChange={(e) => setCompleteOnCreate(e.target.checked)}
+            className="rounded border-gray-600 bg-black/50 text-[#C27E00] focus:ring-[#C27E00] focus:ring-offset-0"
+          />
+          <label htmlFor="completeOnCreate" className="text-sm font-medium text-gray-300 cursor-pointer">
+            Mark as completed on creation
+          </label>
+          <span className="text-xs text-gray-500">— When checked, demand is created directly as completed</span>
+        </div>
+        {completeOnCreate && <input type="hidden" name="completeOnCreate" value="true" />}
         <div>
           <label className="block text-sm font-medium text-gray-300">First Name *</label>
           <input
@@ -145,6 +158,8 @@ export function CreateExternalDemandForm({ dealers, specialists, onSuccess, onCa
             readOnly={isFutureCustomer}
             className={isFutureCustomer ? inputReadOnlyClass : inputClass}
             placeholder={isFutureCustomer ? '' : undefined}
+            style={!isFutureCustomer ? { textTransform: 'uppercase' } : undefined}
+            onInput={!isFutureCustomer ? (e) => { (e.target as HTMLInputElement).value = (e.target as HTMLInputElement).value.toUpperCase() } : undefined}
           />
         </div>
         <div>
@@ -157,6 +172,8 @@ export function CreateExternalDemandForm({ dealers, specialists, onSuccess, onCa
             readOnly={isFutureCustomer}
             className={isFutureCustomer ? inputReadOnlyClass : inputClass}
             placeholder={isFutureCustomer ? '' : undefined}
+            style={!isFutureCustomer ? { textTransform: 'uppercase' } : undefined}
+            onInput={!isFutureCustomer ? (e) => { (e.target as HTMLInputElement).value = (e.target as HTMLInputElement).value.toUpperCase() } : undefined}
           />
         </div>
         <div>
@@ -268,7 +285,7 @@ export function CreateExternalDemandForm({ dealers, specialists, onSuccess, onCa
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-300">Stock Number *</label>
-          <input name="stockNumber" required className={inputClass} placeholder="Stock number" />
+          <input name="stockNumber" required className={inputClass} placeholder="Stock number" style={{ textTransform: 'uppercase' }} onInput={(e) => { (e.target as HTMLInputElement).value = (e.target as HTMLInputElement).value.toUpperCase() }} />
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-300">VIN Last 6 Digits <span className="text-red-400">*</span></label>
@@ -278,6 +295,8 @@ export function CreateExternalDemandForm({ dealers, specialists, onSuccess, onCa
             minLength={6}
             className={inputClass}
             placeholder="Last 6 digits"
+            style={{ textTransform: 'uppercase' }}
+            onInput={(e) => { (e.target as HTMLInputElement).value = (e.target as HTMLInputElement).value.toUpperCase() }}
           />
         </div>
 

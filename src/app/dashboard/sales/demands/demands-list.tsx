@@ -16,6 +16,7 @@ interface Demand {
   vehicle_year: number
   vehicle_make: string
   vehicle_model: string
+  stock_number?: string | null
   appointment_date: string
   comment?: string | null
 }
@@ -23,9 +24,10 @@ interface Demand {
 interface DemandsListProps {
   demands: Demand[]
   timezoneName?: string | null
+  duplicateStockNumbers?: string[]
 }
 
-export function DemandsList({ demands, timezoneName = null }: DemandsListProps) {
+export function DemandsList({ demands, timezoneName = null, duplicateStockNumbers = [] }: DemandsListProps) {
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [dateFilter, setDateFilter] = useState<string>('all')
   const [searchType, setSearchType] = useState<'customer' | 'demand_id'>('customer')
@@ -228,6 +230,9 @@ export function DemandsList({ demands, timezoneName = null }: DemandsListProps) 
                         </p>
                         {demand.demand_number != null && (
                           <span className="text-xs text-gray-500">#{demand.demand_number}</span>
+                        )}
+                        {demand.stock_number && duplicateStockNumbers.includes((demand.stock_number as string).trim().toUpperCase()) && (
+                          <span className="text-xs text-amber-400">(Duplicate Stock No)</span>
                         )}
                       </div>
                       <div className="ml-2 flex-shrink-0 flex">

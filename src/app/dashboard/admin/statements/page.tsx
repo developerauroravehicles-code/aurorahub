@@ -8,16 +8,19 @@ export default async function StatementsPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+  const { data: profile } = await supabase.from('profiles').select('role, dealer_id').eq('id', user.id).single()
 
-  if (!profile || profile.role !== 'aurora_manager') {
+  const isGM = profile?.role === 'general_manager'
+  const isAuroraManager = profile?.role === 'aurora_manager'
+  if (!profile || (!isAuroraManager && !isGM)) {
     redirect('/dashboard')
   }
 
-  const { data: dealers } = await supabase
-    .from('dealers')
-    .select('id, name')
-    .order('name')
+  let dealersQuery = supabase.from('dealers').select('id, name').order('name')
+  if (isGM && profile.dealer_id) {
+    dealersQuery = dealersQuery.eq('id', profile.dealer_id)
+  }
+  const { data: dealers } = await dealersQuery
 
   const logoUrl = await getSystemLogo()
 
@@ -26,11 +29,15 @@ export default async function StatementsPage() {
       <div>
         <h1 className="text-2xl font-semibold text-white mb-2">Statement</h1>
         <p className="text-gray-400">
-          Filter by dealer and date range to generate statements. Download as PDF or save to Google Drive
-          (Statements / Dealer / Year folder).
+          {isGM ? 'Generate statement for your dealer. Filter by date range.' : 'Filter by dealer and date range to generate statements. Download as PDF or save to Google Drive (Statements / Dealer / Year folder).'}
         </p>
       </div>
-      <StatementContent dealers={dealers ?? []} logoDataUrl={logoUrl} />
+      <StatementContent
+        dealers={dealers ?? []}
+        logoDataUrl={logoUrl}
+        hideDealerFilter={isGM}
+        defaultDealerId={isGM && profile.dealer_id ? profile.dealer_id : undefined}
+      />
     </div>
   )
 }

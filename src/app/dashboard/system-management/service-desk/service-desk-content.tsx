@@ -30,6 +30,7 @@ import {
   BookOpen,
   Loader2,
 } from 'lucide-react'
+import { formatInPT } from '@/lib/timezone-defaults'
 
 const TICKET_CATEGORIES: Record<string, string> = {
   bug_report: 'Bug Report',
@@ -287,7 +288,7 @@ export function ServiceDeskContent({
                     <td className="px-4 py-2">{TICKET_STATUSES[t.status] ?? t.status}</td>
                     <td className="px-4 py-2 text-gray-400">{t.assigned?.full_name ?? '—'}</td>
                     <td className="px-4 py-2 text-gray-400">{t.requester?.full_name ?? '—'}</td>
-                    <td className="px-4 py-2 text-gray-400">{t.sla_due_at ? new Date(t.sla_due_at).toLocaleString() : '—'}</td>
+                    <td className="px-4 py-2 text-gray-400">{t.sla_due_at ? formatInPT(t.sla_due_at, 'MMM d, yyyy h:mm a') : '—'}</td>
                     <td className="px-4 py-2 text-right">
                       <button onClick={() => { setEditingTicketId(t.id); setShowTicketForm(true) }} className="p-1.5 text-gray-400 hover:text-[#C27E00] mr-1" title="Edit">
                         <Pencil className="w-4 h-4 inline" />
@@ -408,7 +409,7 @@ export function ServiceDeskContent({
                     <td className="px-4 py-2 text-gray-300">{CHANGE_TYPES[c.change_type] ?? c.change_type}</td>
                     <td className="px-4 py-2">{c.risk_level}</td>
                     <td className="px-4 py-2">{CHANGE_STATUSES[c.status] ?? c.status}</td>
-                    <td className="px-4 py-2 text-gray-400">{c.scheduled_at ? new Date(c.scheduled_at).toLocaleString() : '—'}</td>
+                    <td className="px-4 py-2 text-gray-400">{c.scheduled_at ? formatInPT(c.scheduled_at, 'MMM d, yyyy h:mm a') : '—'}</td>
                     <td className="px-4 py-2 text-right">
                       <button onClick={() => { setEditingChangeId(c.id); setShowChangeForm(true) }} className="p-1.5 text-gray-400 hover:text-[#C27E00] mr-1" title="Edit">
                         <Pencil className="w-4 h-4 inline" />
@@ -465,7 +466,7 @@ export function ServiceDeskContent({
                     <td className="px-4 py-2 text-gray-400">{r.build_number ?? '—'}</td>
                     <td className="px-4 py-2 text-gray-300">{RELEASE_ENVS[r.environment] ?? r.environment}</td>
                     <td className="px-4 py-2">{RELEASE_STATUSES[r.status] ?? r.status}</td>
-                    <td className="px-4 py-2 text-gray-400">{r.deployed_at ? new Date(r.deployed_at).toLocaleString() : '—'}</td>
+                    <td className="px-4 py-2 text-gray-400">{r.deployed_at ? formatInPT(r.deployed_at, 'MMM d, yyyy h:mm:ss a') : '—'}</td>
                     <td className="px-4 py-2 text-right">
                       <button onClick={() => { setEditingReleaseId(r.id); setShowReleaseForm(true) }} className="p-1.5 text-gray-400 hover:text-[#C27E00] mr-1" title="Edit">
                         <Pencil className="w-4 h-4 inline" />
@@ -550,15 +551,16 @@ function TicketForm({
     setLoading(true)
     setError('')
     const form = e.currentTarget
+    const get = (name: string) => form.elements.namedItem(name) as HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement | null
     const data = {
-      title: (form.elements.namedItem('title') as HTMLInputElement).value.trim(),
-      description: (form.elements.namedItem('description') as HTMLTextAreaElement).value.trim() || undefined,
-      category: (form.elements.namedItem('category') as HTMLSelectElement).value,
-      priority: (form.elements.namedItem('priority') as HTMLSelectElement).value || undefined,
-      status: (form.elements.namedItem('status') as HTMLSelectElement).value || undefined,
-      assigned_to: (form.elements.namedItem('assigned_to') as HTMLSelectElement).value || undefined,
-      sla_due_at: (form.elements.namedItem('sla_due_at') as HTMLInputElement).value || undefined,
-      resolution_notes: (form.elements.namedItem('resolution_notes') as HTMLTextAreaElement).value.trim() || undefined,
+      title: get('title')?.value.trim() ?? '',
+      description: get('description')?.value.trim() || undefined,
+      category: get('category')?.value ?? '',
+      priority: get('priority')?.value || undefined,
+      status: get('status')?.value || undefined,
+      assigned_to: get('assigned_to')?.value || undefined,
+      sla_due_at: get('sla_due_at')?.value || undefined,
+      resolution_notes: get('resolution_notes')?.value.trim() || undefined,
     }
     const result = ticket
       ? await updateTicket(ticket.id, data)
@@ -651,15 +653,16 @@ function IncidentForm({
     setLoading(true)
     setError('')
     const form = e.currentTarget
+    const get = (name: string) => form.elements.namedItem(name) as HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement | null
     const data = {
-      title: (form.elements.namedItem('title') as HTMLInputElement).value.trim(),
-      description: (form.elements.namedItem('description') as HTMLTextAreaElement).value.trim() || undefined,
-      severity: (form.elements.namedItem('severity') as HTMLSelectElement).value,
-      impact_scope: (form.elements.namedItem('impact_scope') as HTMLInputElement).value.trim() || undefined,
-      status: (form.elements.namedItem('status') as HTMLSelectElement).value || undefined,
-      root_cause: (form.elements.namedItem('root_cause') as HTMLTextAreaElement).value.trim() || undefined,
-      resolution_notes: (form.elements.namedItem('resolution_notes') as HTMLTextAreaElement).value.trim() || undefined,
-      post_mortem: (form.elements.namedItem('post_mortem') as HTMLTextAreaElement).value.trim() || undefined,
+      title: get('title')?.value.trim() ?? '',
+      description: get('description')?.value.trim() || undefined,
+      severity: get('severity')?.value ?? '',
+      impact_scope: get('impact_scope')?.value.trim() || undefined,
+      status: get('status')?.value || undefined,
+      root_cause: get('root_cause')?.value.trim() || undefined,
+      resolution_notes: get('resolution_notes')?.value.trim() || undefined,
+      post_mortem: get('post_mortem')?.value.trim() || undefined,
     }
     const result = incident
       ? await updateIncident(incident.id, data)
@@ -745,14 +748,15 @@ function ChangeForm({
     setLoading(true)
     setError('')
     const form = e.currentTarget
+    const get = (name: string) => form.elements.namedItem(name) as HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement | null
     const data = {
-      title: (form.elements.namedItem('title') as HTMLInputElement).value.trim(),
-      description: (form.elements.namedItem('description') as HTMLTextAreaElement).value.trim() || undefined,
-      change_type: (form.elements.namedItem('change_type') as HTMLSelectElement).value,
-      risk_level: (form.elements.namedItem('risk_level') as HTMLSelectElement).value || undefined,
-      status: (form.elements.namedItem('status') as HTMLSelectElement).value || undefined,
-      scheduled_at: (form.elements.namedItem('scheduled_at') as HTMLInputElement).value || undefined,
-      rollback_plan: (form.elements.namedItem('rollback_plan') as HTMLTextAreaElement).value.trim() || undefined,
+      title: get('title')?.value.trim() ?? '',
+      description: get('description')?.value.trim() || undefined,
+      change_type: get('change_type')?.value ?? '',
+      risk_level: get('risk_level')?.value || undefined,
+      status: get('status')?.value || undefined,
+      scheduled_at: get('scheduled_at')?.value || undefined,
+      rollback_plan: get('rollback_plan')?.value.trim() || undefined,
     }
     const result = change
       ? await updateChange(change.id, data)
@@ -834,12 +838,13 @@ function ReleaseForm({
     setLoading(true)
     setError('')
     const form = e.currentTarget
+    const get = (name: string) => form.elements.namedItem(name) as HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement | null
     const data = {
-      version: (form.elements.namedItem('version') as HTMLInputElement).value.trim(),
-      build_number: (form.elements.namedItem('build_number') as HTMLInputElement).value.trim() || undefined,
-      release_notes: (form.elements.namedItem('release_notes') as HTMLTextAreaElement).value.trim() || undefined,
-      environment: (form.elements.namedItem('environment') as HTMLSelectElement).value,
-      status: (form.elements.namedItem('status') as HTMLSelectElement).value || undefined,
+      version: get('version')?.value.trim() ?? '',
+      build_number: get('build_number')?.value.trim() || undefined,
+      release_notes: get('release_notes')?.value.trim() || undefined,
+      environment: get('environment')?.value ?? '',
+      status: get('status')?.value || undefined,
     }
     const result = release
       ? await updateRelease(release.id, data)
@@ -910,10 +915,11 @@ function KnowledgeForm({
     setLoading(true)
     setError('')
     const form = e.currentTarget
+    const get = (name: string) => form.elements.namedItem(name) as HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement | null
     const data = {
-      title: (form.elements.namedItem('title') as HTMLInputElement).value.trim(),
-      content: (form.elements.namedItem('content') as HTMLTextAreaElement).value.trim() || undefined,
-      category: (form.elements.namedItem('category') as HTMLSelectElement).value || undefined,
+      title: get('title')?.value.trim() ?? '',
+      content: get('content')?.value.trim() || undefined,
+      category: get('category')?.value || undefined,
     }
     const result = article
       ? await updateKnowledgeArticle(article.id, data)

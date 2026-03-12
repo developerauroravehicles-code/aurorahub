@@ -176,7 +176,8 @@ export function EditDemandModal({ demand, isOpen, onClose }: EditDemandModalProp
                 <input
                   type="text"
                   value={formData.customer_firstname}
-                  onChange={(e) => setFormData({ ...formData, customer_firstname: e.target.value })}
+                  onChange={(e) => setFormData({ ...formData, customer_firstname: e.target.value.toUpperCase() })}
+                  style={{ textTransform: 'uppercase' }}
                   required
                   className="w-full border border-gray-700 bg-black/50 py-2 px-3 rounded text-white focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]"
                 />
@@ -187,7 +188,8 @@ export function EditDemandModal({ demand, isOpen, onClose }: EditDemandModalProp
                 <input
                   type="text"
                   value={formData.customer_lastname}
-                  onChange={(e) => setFormData({ ...formData, customer_lastname: e.target.value })}
+                  onChange={(e) => setFormData({ ...formData, customer_lastname: e.target.value.toUpperCase() })}
+                  style={{ textTransform: 'uppercase' }}
                   required
                   className="w-full border border-gray-700 bg-black/50 py-2 px-3 rounded text-white focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]"
                 />
@@ -338,8 +340,9 @@ export function EditDemandModal({ demand, isOpen, onClose }: EditDemandModalProp
                 <input
                   type="text"
                   value={formData.stock_number}
-                  onChange={(e) => setFormData({ ...formData, stock_number: e.target.value })}
+                  onChange={(e) => setFormData({ ...formData, stock_number: e.target.value.toUpperCase() })}
                   className="w-full border border-gray-700 bg-black/50 py-2 px-3 rounded text-white focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]"
+                  style={{ textTransform: 'uppercase' }}
                 />
               </div>
 

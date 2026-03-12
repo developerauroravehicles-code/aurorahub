@@ -12,13 +12,16 @@ interface AppointmentCalendarProps {
   onDateSelect: (date: Date) => void
   selectedDate?: Date | null
   getTakenSlots: (dateStr: string) => Promise<string[]>
+  /** When true, past dates are selectable (e.g. external retroactive demands) */
+  allowPastDates?: boolean
 }
 
 export function AppointmentCalendar({ 
   timezoneName: propTimezone, 
   onDateSelect, 
   selectedDate,
-  getTakenSlots 
+  getTakenSlots,
+  allowPastDates = false
 }: AppointmentCalendarProps) {
   const now = useSystemTime()
   const contextTz = useTimezone()
@@ -91,7 +94,7 @@ export function AppointmentCalendar({
     const todayStr = getTodayInTz()
     const isPast = dateStr < todayStr
 
-    if (isSameMonth(date, currentMonth) && !isPast) {
+    if (isSameMonth(date, currentMonth) && (allowPastDates || !isPast)) {
       onDateSelect(date)
     }
   }
@@ -142,8 +145,8 @@ export function AppointmentCalendar({
         <button
           type="button"
           onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}
-          disabled={isPastMonth(subMonths(currentMonth, 1))}
-          className={`p-2 rounded transition-colors ${isPastMonth(subMonths(currentMonth, 1)) ? 'cursor-not-allowed opacity-40' : 'hover:bg-white/10'}`}
+          disabled={!allowPastDates && isPastMonth(subMonths(currentMonth, 1))}
+          className={`p-2 rounded transition-colors ${(!allowPastDates && isPastMonth(subMonths(currentMonth, 1))) ? 'cursor-not-allowed opacity-40' : 'hover:bg-white/10'}`}
         >
           <ChevronLeft className="w-5 h-5 text-white" />
         </button>
@@ -180,13 +183,15 @@ export function AppointmentCalendar({
               key={idx}
               type="button"
               onClick={() => handleDateClick(day)}
-              disabled={!isCurrentMonth || dayIsLoading || dayIsPast}
+              disabled={!isCurrentMonth || dayIsLoading || (!allowPastDates && dayIsPast)}
               className={`
                 aspect-square p-2 rounded text-sm font-medium transition-colors relative
                 ${!isCurrentMonth 
                   ? 'text-gray-600 cursor-not-allowed' 
-                  : dayIsPast
+                  : dayIsPast && !allowPastDates
                   ? 'text-gray-500 bg-gray-900/50 cursor-not-allowed opacity-60 border border-gray-800'
+                  : dayIsPast && allowPastDates
+                  ? 'text-gray-400 bg-gray-800/50 hover:bg-white/10 border border-gray-700'
                   : dayIsSelected
                   ? 'bg-[#C27E00] text-white'
                   : dayIsToday
@@ -198,15 +203,17 @@ export function AppointmentCalendar({
                 ${dayIsLoading ? 'opacity-50 cursor-wait' : ''}
               `}
               title={
-                dayIsPast 
+                dayIsPast && !allowPastDates
                   ? 'Closed - past date' 
+                  : dayIsPast && allowPastDates
+                  ? 'Select (retroactive)'
                   : dayIsTaken 
                   ? 'Has appointments' 
                   : getDateStrInPacific(day)
               }
             >
               {formatDateForDisplay(day)}
-              {dayIsPast && isCurrentMonth && (
+              {dayIsPast && isCurrentMonth && !allowPastDates && (
                 <Lock className="w-2.5 h-2.5 text-gray-500 absolute top-1 right-1" />
               )}
               {dayIsTaken && !dayIsPast && (

@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { formatInTimeZone } from 'date-fns-tz'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getMailSettingsWithPassword } from '@/lib/mail-settings'
 import { sendEmailViaSMTP } from '@/lib/mail-sender'
@@ -138,7 +139,7 @@ export async function GET(req: Request) {
             <h2 style="color: #C27E00;">SLA Breach Alert</h2>
             <p><strong>Ticket:</strong> ${t.ticket_number}</p>
             <p><strong>Title:</strong> ${t.title}</p>
-            <p><strong>SLA Due:</strong> ${new Date(t.sla_due_at).toLocaleString()}</p>
+            <p><strong>SLA Due:</strong> ${formatInTimeZone(new Date(t.sla_due_at), 'America/Vancouver', 'MMM d, yyyy h:mm a')}</p>
             <p><a href="${process.env.NEXT_PUBLIC_APP_URL || ''}/dashboard/operations/service-desk?tab=tickets">View in Service Desk</a></p>
             <p style="margin-top: 16px; color: #666;">— AuroraHub Alerts</p>
           </div>

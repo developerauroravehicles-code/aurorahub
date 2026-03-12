@@ -29,6 +29,11 @@ export default async function EmployeesPage({
     redirect('/dashboard/identity')
   }
 
+  // General Manager does not have access to Employees
+  if (currentUserProfile.role === 'general_manager') {
+    redirect('/dashboard')
+  }
+
   const params = await searchParams
   const dealerFilter = params.dealer && params.dealer !== 'platform' ? params.dealer : 'platform'
 
@@ -147,7 +152,11 @@ export default async function EmployeesPage({
       </div>
 
       {['aurora_manager', 'hr', 'general_manager'].includes(currentUserProfile.role ?? '') && (
-        <CreateEmployeeForm dealers={dealers || []} currentUserRole={currentUserProfile.role} />
+        <CreateEmployeeForm
+          dealers={dealers || []}
+          currentUserRole={currentUserProfile.role}
+          defaultDealerId={currentUserProfile.role === 'general_manager' ? currentUserProfile.dealer_id ?? undefined : undefined}
+        />
       )}
     </div>
   )

@@ -61,10 +61,14 @@ export async function getStatementDataAction(
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Unauthorized' }
 
-  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
-  if (!profile || profile.role !== 'aurora_manager') {
-    return { error: 'Only Aurora Managers can view statements' }
+  const { data: profile } = await supabase.from('profiles').select('role, dealer_id').eq('id', user.id).single()
+  const isGM = profile?.role === 'general_manager'
+  const isAuroraManager = profile?.role === 'aurora_manager'
+  if (!profile || (!isAuroraManager && !isGM)) {
+    return { error: 'Unauthorized' }
   }
+
+  const effectiveDealerId = isGM && profile.dealer_id ? profile.dealer_id : dealerId
 
   let query = supabase
     .from('demands')
@@ -84,8 +88,8 @@ export async function getStatementDataAction(
     .order('completed_at', { ascending: false })
     .order('updated_at', { ascending: false })
 
-  if (dealerId) {
-    query = query.eq('dealer_id', dealerId)
+  if (effectiveDealerId) {
+    query = query.eq('dealer_id', effectiveDealerId)
   }
   if (dateFrom && dateTo) {
     const from = `${dateFrom}T00:00:00.000Z`
@@ -115,7 +119,7 @@ export async function uploadStatementToDriveAction(
 
   const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
   if (!profile || profile.role !== 'aurora_manager') {
-    return { success: false, error: 'Only Aurora Managers can upload statements to Drive' }
+    return { success: false, error: 'Only Aurora Manager can upload statements to Drive' }
   }
 
   const { data: settingsRow } = await supabase

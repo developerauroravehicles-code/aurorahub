@@ -8,9 +8,10 @@ import { useEffect } from 'react'
 interface CreateEmployeeFormProps {
   dealers: Array<{ id: string; name: string }>
   currentUserRole?: string
+  defaultDealerId?: string
 }
 
-export function CreateEmployeeForm({ dealers, currentUserRole }: CreateEmployeeFormProps) {
+export function CreateEmployeeForm({ dealers, currentUserRole, defaultDealerId }: CreateEmployeeFormProps) {
   const [state, formAction, isPending] = useActionState(createEmployee, null)
   const router = useRouter()
 
@@ -70,13 +71,23 @@ export function CreateEmployeeForm({ dealers, currentUserRole }: CreateEmployeeF
         </div>
 
         <div className="col-span-2 sm:col-span-1">
-          <label className="block text-sm font-medium text-gray-300">Dealer</label>
-          <select name="dealerId" className="border border-gray-700 bg-white/5 p-2 w-full rounded text-white focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]">
-            <option value="" className="bg-black text-white">Platform (Aurora)</option>
-            {dealers?.map(d => (
-              <option key={d.id} value={d.id} className="bg-black text-white">{d.name}</option>
-            ))}
-          </select>
+          {currentUserRole === 'general_manager' && defaultDealerId ? (
+            <>
+              <label className="block text-sm font-medium text-gray-300">Dealer</label>
+              <p className="text-white py-2">{dealers?.find(d => d.id === defaultDealerId)?.name ?? 'Your dealer'}</p>
+              <input type="hidden" name="dealerId" value={defaultDealerId} />
+            </>
+          ) : (
+            <>
+              <label className="block text-sm font-medium text-gray-300">Dealer</label>
+              <select name="dealerId" className="border border-gray-700 bg-white/5 p-2 w-full rounded text-white focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]">
+                <option value="" className="bg-black text-white">Platform (Aurora)</option>
+                {dealers?.map(d => (
+                  <option key={d.id} value={d.id} className="bg-black text-white">{d.name}</option>
+                ))}
+              </select>
+            </>
+          )}
         </div>
 
         <div className="col-span-2">

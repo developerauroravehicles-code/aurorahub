@@ -1,3 +1,4 @@
+import { formatInTimeZone } from 'date-fns-tz'
 import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
 
@@ -212,7 +213,7 @@ function buildReportPdf(options: ExportReportOptions): jsPDF {
     doc.setFontSize(8)
     doc.setFont('helvetica', 'normal')
     doc.text(
-      `Page ${i} of ${pageCount} - AuroraHub Report - Generated ${new Date().toLocaleDateString()}`,
+      `Page ${i} of ${pageCount} - AuroraHub Report - Generated ${formatInTimeZone(new Date(), 'America/Vancouver', 'MMM d, yyyy')}`,
       pageWidth / 2,
       doc.internal.pageSize.getHeight() - 10,
       { align: 'center' }

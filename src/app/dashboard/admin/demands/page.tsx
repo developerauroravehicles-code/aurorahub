@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { getDuplicateStockNumbers } from '@/lib/demand-stock'
 import { DemandsList } from './demands-list'
 
 export default async function AdminDemandsPage({
@@ -9,12 +10,17 @@ export default async function AdminDemandsPage({
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   const { data: profile } = user
-    ? await supabase.from('profiles').select('role').eq('id', user.id).single()
+    ? await supabase.from('profiles').select('role, dealer_id').eq('id', user.id).single()
     : { data: null }
   const canCreateExternal = profile?.role === 'aurora_manager'
+  const isGM = profile?.role === 'general_manager'
 
   const params = await searchParams
-  const dealerId = params.dealer && params.dealer !== 'all' ? params.dealer : null
+  const dealerId = isGM && profile?.dealer_id
+    ? profile.dealer_id
+    : params.dealer && params.dealer !== 'all'
+      ? params.dealer
+      : null
 
   const { data: dealers } = await supabase
     .from('dealers')
@@ -37,6 +43,9 @@ export default async function AdminDemandsPage({
     ? await supabase.from('profiles').select('id, full_name').eq('role', 'specialist').order('full_name')
     : { data: [] }
 
+  const duplicateStockNumbersSet = await getDuplicateStockNumbers()
+  const duplicateStockNumbers = Array.from(duplicateStockNumbersSet)
+
   return (
     <div className="space-y-8">
       <div>
@@ -45,8 +54,10 @@ export default async function AdminDemandsPage({
           demands={demands || []}
           dealers={dealers || []}
           specialists={specialists || []}
-          selectedDealerId={params.dealer ?? 'all'}
+          selectedDealerId={isGM && profile?.dealer_id ? profile.dealer_id : (params.dealer ?? 'all')}
           canCreateExternal={canCreateExternal}
+          hideDealerFilter={isGM}
+          duplicateStockNumbers={duplicateStockNumbers}
         />
       </div>
     </div>

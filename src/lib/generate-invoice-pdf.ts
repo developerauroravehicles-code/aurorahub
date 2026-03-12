@@ -1,4 +1,5 @@
 import { parse } from 'date-fns'
+import { formatInTimeZone } from 'date-fns-tz'
 import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
 
@@ -318,7 +319,7 @@ export function buildInvoicePdf(data: InvoiceRowData): jsPDF {
   doc.setFont('helvetica', 'normal')
   doc.setTextColor(128, 128, 128)
   doc.text(
-    `AuroraHub Invoice - Generated ${new Date().toLocaleDateString()} - ${data.demand_number ?? 'Invoice'}`,
+    `AuroraHub Invoice - Generated ${formatInTimeZone(new Date(), 'America/Vancouver', 'MMM d, yyyy')} - ${data.demand_number ?? 'Invoice'}`,
     pageWidth / 2,
     pageHeight - 6,
     { align: 'center' }

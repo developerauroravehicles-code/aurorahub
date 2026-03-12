@@ -2,8 +2,9 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { format } from 'date-fns'
 import { addYears } from 'date-fns'
+import { formatInTimeZone } from 'date-fns-tz'
+import { SYSTEM_DEFAULT_TIMEZONE } from '@/lib/timezone-defaults'
 import { Download, Eye, X, Save, Plus, Trash2, HardDrive, ArrowUpDown, ChevronDown, ChevronsDown, ChevronsUp } from 'lucide-react'
 import { updateInvoiceFields, uploadInvoiceToDriveAction, recordInvoiceDownloadAction, updateInvoiceStatusAction } from './actions'
 import { downloadInvoicePdf, getInvoicePdfBlobUrl } from '@/lib/generate-invoice-pdf'
@@ -48,6 +49,7 @@ interface InvoiceRow {
 interface InvoiceTableProps {
   invoices: InvoiceRow[]
   logoDataUrl?: string | null
+  canEdit?: boolean
 }
 
 function getDealer(d: InvoiceRow): DealerRow {
@@ -55,7 +57,7 @@ function getDealer(d: InvoiceRow): DealerRow {
   return Array.isArray(d.dealers) ? d.dealers[0] : d.dealers
 }
 
-export function InvoiceTable({ invoices, logoDataUrl }: InvoiceTableProps) {
+export function InvoiceTable({ invoices, logoDataUrl, canEdit = true }: InvoiceTableProps) {
   const router = useRouter()
   const [editing, setEditing] = useState<{ id: string; field: 'amount' | 'comments' } | null>(null)
   const [values, setValues] = useState<Record<string, { amount: string; comments: string }>>({})
@@ -148,8 +150,8 @@ export function InvoiceTable({ invoices, logoDataUrl }: InvoiceTableProps) {
         customerAddress: dealer?.address ?? '—',
         vehicleInfo: `${row.vehicle_year} ${row.vehicle_make} ${row.vehicle_model} - Stock ${row.stock_number ?? '—'}`,
         productModel: row.camera_model,
-        completeDate: format(completionDate, 'd MMMM yyyy'),
-        warrantyEnd: format(warrantyEnd, 'd MMMM yyyy'),
+        completeDate: formatInTimeZone(completionDate, SYSTEM_DEFAULT_TIMEZONE, 'd MMMM yyyy'),
+        warrantyEnd: formatInTimeZone(warrantyEnd, SYSTEM_DEFAULT_TIMEZONE, 'd MMMM yyyy'),
         totalAmount: currentAmount ? `$${(parseFloat(currentAmount.replace(/[^0-9.-]/g, '')) || 0).toFixed(2)}` : '$0.00',
         comments: currentComments,
         logoDataUrl: logoDataUrl ?? null
@@ -188,8 +190,8 @@ export function InvoiceTable({ invoices, logoDataUrl }: InvoiceTableProps) {
       customerAddress: dealer?.address ?? '—',
       vehicleInfo: `${previewRow.vehicle_year} ${previewRow.vehicle_make} ${previewRow.vehicle_model} - Stock ${previewRow.stock_number ?? '—'}`,
       productModel: previewRow.camera_model,
-      completeDate: format(completionDate, 'd MMMM yyyy'),
-      warrantyEnd: format(warrantyEnd, 'd MMMM yyyy'),
+      completeDate: formatInTimeZone(completionDate, SYSTEM_DEFAULT_TIMEZONE, 'd MMMM yyyy'),
+      warrantyEnd: formatInTimeZone(warrantyEnd, SYSTEM_DEFAULT_TIMEZONE, 'd MMMM yyyy'),
       totalAmount,
       comments: previewComments ?? '—',
       logoDataUrl: logoDataUrl ?? null,
@@ -383,13 +385,13 @@ export function InvoiceTable({ invoices, logoDataUrl }: InvoiceTableProps) {
                   {row.camera_model}
                 </td>
                 <td className="px-3 py-2.5 text-sm text-gray-300 whitespace-nowrap">
-                  {format(completionDate, 'd MMMM yyyy')}
+                  {formatInTimeZone(completionDate, SYSTEM_DEFAULT_TIMEZONE, 'd MMMM yyyy')}
                 </td>
                 <td className="px-3 py-2.5 text-sm text-gray-300 whitespace-nowrap">
-                  {format(warrantyEnd, 'd MMMM yyyy')}
+                  {formatInTimeZone(warrantyEnd, SYSTEM_DEFAULT_TIMEZONE, 'd MMMM yyyy')}
                 </td>
                 <td className="px-3 py-2.5 text-sm">
-                  {isEditingAmount ? (
+                  {canEdit && isEditingAmount ? (
                     <div className="flex items-center gap-1">
                       <span className="text-gray-400">$</span>
                       <input
@@ -402,7 +404,7 @@ export function InvoiceTable({ invoices, logoDataUrl }: InvoiceTableProps) {
                         autoFocus
                       />
                     </div>
-                  ) : (
+                  ) : canEdit ? (
                     <button
                       type="button"
                       onClick={() => startEdit(row.id, 'amount', row)}
@@ -410,10 +412,14 @@ export function InvoiceTable({ invoices, logoDataUrl }: InvoiceTableProps) {
                     >
                       {row.invoice_total_amount != null ? `$${Number(row.invoice_total_amount).toFixed(2)}` : 'Add amount'}
                     </button>
+                  ) : (
+                    <span className={row.invoice_total_amount != null ? 'text-[#C27E00] font-medium' : 'text-gray-500'}>
+                      {row.invoice_total_amount != null ? `$${Number(row.invoice_total_amount).toFixed(2)}` : '—'}
+                    </span>
                   )}
                 </td>
                 <td className="px-3 py-2.5 text-sm max-w-[180px]">
-                  {isEditingComments ? (
+                  {canEdit && isEditingComments ? (
                     <input
                       type="text"
                       value={v.comments}
@@ -424,7 +430,7 @@ export function InvoiceTable({ invoices, logoDataUrl }: InvoiceTableProps) {
                       className="w-full border border-gray-600 bg-black/50 text-white rounded px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-[#C27E00]"
                       autoFocus
                     />
-                  ) : (
+                  ) : canEdit ? (
                     <button
                       type="button"
                       onClick={() => startEdit(row.id, 'comments', row)}
@@ -432,6 +438,8 @@ export function InvoiceTable({ invoices, logoDataUrl }: InvoiceTableProps) {
                     >
                       {row.invoice_comments || 'Add expenses / comments...'}
                     </button>
+                  ) : (
+                    <span className="text-gray-400 truncate block">{row.invoice_comments || '—'}</span>
                   )}
                 </td>
                 <td className="px-3 py-2.5 text-sm">
@@ -439,24 +447,27 @@ export function InvoiceTable({ invoices, logoDataUrl }: InvoiceTableProps) {
                     const edited = !!displayRow.invoice_saved_at
                     const downloaded = !!displayRow.invoice_downloaded_at
                     const drive = !!displayRow.invoice_drive_uploaded_at
-                    const count = [edited, downloaded, drive].filter(Boolean).length
                     const labels: string[] = []
                     labels.push(edited ? 'Edited' : 'Waiting')
                     if (downloaded) labels.push('Downloaded locally')
                     if (drive) labels.push('Saved to Drive')
                     const isOpen = statusMenuOpen === row.id
+                    if (canEdit) {
+                      return (
+                        <button
+                          type="button"
+                          onClick={() => setStatusMenuOpen(isOpen ? null : row.id)}
+                          className={`flex items-center gap-1.5 px-2 py-1 -mx-2 -my-1 rounded hover:bg-white/10 transition-colors text-left w-full ${[edited, downloaded, drive].filter(Boolean).length === 3 ? 'text-[#C27E00] font-medium' : 'text-gray-400'}`}
+                        >
+                          <span>{labels.join(' / ')}</span>
+                          <ChevronDown className={`w-4 h-4 shrink-0 transition-transform ${isOpen ? 'rotate-180' : ''}`} aria-hidden />
+                        </button>
+                      )
+                    }
                     return (
-                      <button
-                        type="button"
-                        onClick={() => setStatusMenuOpen(isOpen ? null : row.id)}
-                        className={`flex items-center gap-1.5 px-2 py-1 -mx-2 -my-1 rounded hover:bg-white/10 transition-colors text-left w-full ${count === 3 ? 'text-[#C27E00] font-medium' : 'text-gray-400'}`}
-                      >
-                        <span>
-                          {labels.join(' / ')}
-                          {count === 3 ? ` (${count})` : ''}
-                        </span>
-                        <ChevronDown className={`w-4 h-4 shrink-0 transition-transform ${isOpen ? 'rotate-180' : ''}`} aria-hidden />
-                      </button>
+                      <span className={`text-left ${[edited, downloaded, drive].filter(Boolean).length === 3 ? 'text-[#C27E00] font-medium' : 'text-gray-400'}`}>
+                        {labels.join(' / ')}
+                      </span>
                     )
                   })()}
                 </td>
@@ -613,6 +624,7 @@ export function InvoiceTable({ invoices, logoDataUrl }: InvoiceTableProps) {
           </div>
 
           <div className="flex-1 min-h-0 flex flex-col lg:flex-row overflow-hidden">
+          {canEdit && (
           <div className="lg:w-[clamp(200px,22vw,300px)] lg:min-w-[180px] lg:border-r lg:border-b-0 border-b border-gray-700 p-3 space-y-3 overflow-y-auto flex-shrink-0">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-3">
               <div>
@@ -765,6 +777,7 @@ export function InvoiceTable({ invoices, logoDataUrl }: InvoiceTableProps) {
               </div>
             </div>
           </div>
+          )}
 
           <div className="flex-1 min-h-0 p-2 sm:p-3 flex flex-col">
             {previewPdfUrl && (
@@ -787,15 +800,17 @@ export function InvoiceTable({ invoices, logoDataUrl }: InvoiceTableProps) {
             </div>
           )}
           <div className="flex flex-wrap items-center justify-end gap-2 p-2 sm:p-3 border-t border-gray-700 flex-shrink-0 bg-gray-900">
-            <button
-              type="button"
-              onClick={handlePreviewSave}
-              disabled={pending.has(previewRow.id)}
-              className="inline-flex items-center gap-1.5 bg-gray-600 hover:bg-gray-500 text-white px-3 py-1.5 rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
-            >
-              <Save className="w-4 h-4 shrink-0" />
-              Save
-            </button>
+            {canEdit && (
+              <button
+                type="button"
+                onClick={handlePreviewSave}
+                disabled={pending.has(previewRow.id)}
+                className="inline-flex items-center gap-1.5 bg-gray-600 hover:bg-gray-500 text-white px-3 py-1.5 rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
+              >
+                <Save className="w-4 h-4 shrink-0" />
+                Save
+              </button>
+            )}
             <button
               type="button"
               onClick={handlePreviewDownload}
@@ -805,15 +820,17 @@ export function InvoiceTable({ invoices, logoDataUrl }: InvoiceTableProps) {
               <span className="sm:hidden">PDF</span>
               <span className="hidden sm:inline">Download PDF</span>
             </button>
-            <button
-              type="button"
-              onClick={handlePreviewDrive}
-              disabled={driveUploading}
-              className="inline-flex items-center gap-1.5 bg-gray-600 hover:bg-gray-500 text-white px-3 py-1.5 rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
-            >
-              <HardDrive className="w-4 h-4 shrink-0" />
-              {driveUploading ? 'Uploading...' : 'Drive'}
-            </button>
+            {canEdit && (
+              <button
+                type="button"
+                onClick={handlePreviewDrive}
+                disabled={driveUploading}
+                className="inline-flex items-center gap-1.5 bg-gray-600 hover:bg-gray-500 text-white px-3 py-1.5 rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
+              >
+                <HardDrive className="w-4 h-4 shrink-0" />
+                {driveUploading ? 'Uploading...' : 'Drive'}
+              </button>
+            )}
           </div>
         </div>
       </div>

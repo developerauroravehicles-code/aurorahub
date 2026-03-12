@@ -1,6 +1,7 @@
 'use client'
 
 import { LogIn, LogOut, XCircle, Key, Shield } from 'lucide-react'
+import { formatInPT } from '@/lib/timezone-defaults'
 
 const EVENT_LABELS: Record<string, { label: string; icon: typeof LogIn; color: string }> = {
   login_success: { label: 'Login Success', icon: LogIn, color: 'text-green-400' },
@@ -11,10 +12,7 @@ const EVENT_LABELS: Record<string, { label: string; icon: typeof LogIn; color: s
 }
 
 function formatDate(d: string) {
-  return new Date(d).toLocaleString('en-GB', {
-    dateStyle: 'short',
-    timeStyle: 'medium',
-  })
+  return formatInPT(d, 'MMM d, yyyy h:mm:ss a')
 }
 
 export function SessionsContent({ logs }: { logs: Awaited<ReturnType<typeof import('./actions').getSessionLogs>> }) {

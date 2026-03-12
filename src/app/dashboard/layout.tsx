@@ -32,10 +32,24 @@ export default async function DashboardLayout({ children }: { children: React.Re
       )
   }
 
-  // System uses Pacific Time (PT) as base - sidebar clock and calendar use this
-  // Dealer timezone is for display of dealer-specific data only (appointment times in lists, etc.)
-  const systemTimezone = SYSTEM_DEFAULT_TIMEZONE
-  const systemTimezoneDisplayName = 'Pacific Time (PT)'
+  // Sidebar clock: dealer TZ for Sales/GM, PT for HQ
+  let displayTimezone = SYSTEM_DEFAULT_TIMEZONE
+  let displayTimezoneName = 'Pacific Time (PT)'
+  if ((profile.role === 'sales' || profile.role === 'finance' || profile.role === 'general_manager') && profile.dealer_id) {
+    const { data: dealer } = await supabase
+      .from('dealers')
+      .select('region_codes(timezone_id, timezones(name))')
+      .eq('id', profile.dealer_id)
+      .single()
+    const tzName = (dealer?.region_codes as { timezones?: { name: string } } | null)?.timezones?.name ?? null
+    if (tzName) {
+      displayTimezone = tzName
+      displayTimezoneName = tzName
+    }
+  }
+
+  const systemTimezone = displayTimezone
+  const systemTimezoneDisplayName = displayTimezoneName
 
   return (
     <SystemTimeProvider>

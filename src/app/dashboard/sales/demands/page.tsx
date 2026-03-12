@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { Plus } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
+import { getDuplicateStockNumbers } from '@/lib/demand-stock'
 import { DemandsList } from './demands-list'
 import { getTimezoneFromDealer } from '@/lib/dealer-timezone'
 
@@ -29,9 +30,11 @@ export default async function DemandsPage() {
   // Fetch demands for this dealer
   const { data: demands } = await supabase
     .from('demands')
-    .select('id, demand_number, status, created_at, customer_firstname, customer_lastname, vehicle_year, vehicle_make, vehicle_model, appointment_date, comment')
+    .select('id, demand_number, status, created_at, customer_firstname, customer_lastname, vehicle_year, vehicle_make, vehicle_model, stock_number, appointment_date, comment')
     .eq('dealer_id', profile.dealer_id)
     .order('created_at', { ascending: false })
+
+  const duplicateStockNumbers = Array.from(await getDuplicateStockNumbers())
 
   return (
     <div>
@@ -43,7 +46,7 @@ export default async function DemandsPage() {
         </Link>
       </div>
 
-      <DemandsList demands={demands || []} timezoneName={timezoneName} />
+      <DemandsList demands={demands || []} timezoneName={timezoneName} duplicateStockNumbers={duplicateStockNumbers} />
     </div>
   )
 }

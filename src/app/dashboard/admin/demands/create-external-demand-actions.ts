@@ -7,29 +7,17 @@ import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 import { fromZonedTime } from 'date-fns-tz'
 import { SYSTEM_DEFAULT_TIMEZONE } from '@/lib/timezone-defaults'
-import { getTimezoneFromDealer } from '@/lib/dealer-timezone'
-
-async function getDealerTimezone(dealerId: string | null): Promise<string | null> {
-  if (!dealerId) return null
-  const supabase = await createClient()
-  const { data } = await supabase
-    .from('dealers')
-    .select('region_codes(timezone_id, timezones(name))')
-    .eq('id', dealerId)
-    .single()
-  return getTimezoneFromDealer(data as Parameters<typeof getTimezoneFromDealer>[0]) ?? null
-}
 
 const schema = z.object({
   dealerId: z.string().min(1, 'Dealer is required'),
-  firstName: z.string().min(1),
-  lastName: z.string().min(1),
+  firstName: z.string().min(1).transform(v => (v || '').trim().toUpperCase()),
+  lastName: z.string().min(1).transform(v => (v || '').trim().toUpperCase()),
   phone: z.string().min(1),
   address: z.string().optional(),
   vehicleMake: z.string().min(1),
   vehicleModel: z.string().min(1),
   vehicleYear: z.coerce.number().min(1900),
-  stockNumber: z.string().min(1, 'Stock number is required'),
+  stockNumber: z.string().min(1, 'Stock number is required').transform(v => (v || '').trim().toUpperCase()),
   vinLast6: z.string().min(1, 'VIN last 6 digits is required').refine(
     v => (v || '').trim().replace(/\s/g, '').length >= 6,
     'VIN last 6 digits is required (at least 6 characters)'
@@ -77,9 +65,11 @@ export async function createExternalDemand(prevState: CreateExternalDemandState,
 
   const data = result.data
 
-  const timezoneName = await getDealerTimezone(data.dealerId) ?? SYSTEM_DEFAULT_TIMEZONE
+  // HQ uses PT — external demand date stored as PT noon (no slot, does not affect normal demands)
   const [y, m, d] = data.appointmentDate.split('-').map(Number)
-  const appointmentDateISO = fromZonedTime(new Date(y, m - 1, d, 12, 0, 0), timezoneName).toISOString()
+  const appointmentDateISO = fromZonedTime(new Date(y, m - 1, d, 12, 0, 0), SYSTEM_DEFAULT_TIMEZONE).toISOString()
+
+  const completeOnCreate = formData.get('completeOnCreate') === 'true'
 
   const insertData = {
     created_by: profile.id,
@@ -95,7 +85,8 @@ export async function createExternalDemand(prevState: CreateExternalDemandState,
     vin_last6: data.vinLast6,
     camera_model: data.cameraModel,
     appointment_date: appointmentDateISO,
-    status: 'pending_finance',
+    status: completeOnCreate ? 'completed' : 'pending_finance',
+    ...(completeOnCreate && { completed_at: new Date().toISOString() }),
     is_external: true,
     ...(data.comment?.trim() && { comment: data.comment.trim() }),
     ...(data.assignedSpecialistId && { assigned_specialist_id: data.assignedSpecialistId }),
@@ -112,8 +103,8 @@ export async function createExternalDemand(prevState: CreateExternalDemandState,
     demandId: demand.id,
     actorId: user.id,
     previousStatus: null,
-    newStatus: 'pending_finance',
-    notes: 'External demand created by Aurora Manager',
+    newStatus: demand.status,
+    notes: completeOnCreate ? 'External demand created and marked completed by Aurora Manager' : 'External demand created by Aurora Manager',
   }).catch(() => {})
 
   dispatchWebhooks(supabase, 'demand_created', {

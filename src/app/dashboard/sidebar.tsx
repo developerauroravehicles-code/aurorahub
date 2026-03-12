@@ -150,12 +150,14 @@ export function Sidebar({
   } else if (['aurora_manager', 'general_manager'].includes(role)) {
     links.push({ name: 'Demands', href: '/dashboard/admin/demands', icon: FileText })
     links.push({ name: 'Reports', href: '/dashboard/admin/reports', icon: FileText })
-    links.push({ name: 'Employees', href: '/dashboard/admin/employees', icon: Users })
+    if (role === 'aurora_manager') {
+      links.push({ name: 'Employees', href: '/dashboard/admin/employees', icon: Users })
+    }
+    links.push({ name: 'Invoice', href: '/dashboard/admin/invoices', icon: Receipt })
+    links.push({ name: 'Statement', href: '/dashboard/admin/statements', icon: FileText })
     if (role === 'aurora_manager') {
       links.push({ name: 'Service Desk', href: '/dashboard/operations/service-desk', icon: Ticket })
       links.push({ name: 'Leave', href: '/dashboard/hr/leave', icon: CalendarDays })
-      links.push({ name: 'Invoice', href: '/dashboard/admin/invoices', icon: Receipt })
-      links.push({ name: 'Statement', href: '/dashboard/admin/statements', icon: FileText })
     }
   }
 

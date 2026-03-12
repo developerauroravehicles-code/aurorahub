@@ -9,6 +9,8 @@ import { ChangeSpecialistForm } from '../change-specialist-form'
 import { ChangeFinanceForm } from '../change-finance-form'
 import { EditCustomerForm } from '../edit-customer-form'
 import { EditVinForm } from '../edit-vin-form'
+import { EditStockNumberForm } from '../edit-stock-number-form'
+import { RescheduleDemandButton } from '../reschedule-demand-button'
 
 export default async function DemandDetailsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -105,11 +107,14 @@ export default async function DemandDetailsPage({ params }: { params: Promise<{ 
           </div>
         </div>
         {isAuroraManager && (
-          <DeleteDemandButton
-            demandId={id}
-            customerName={customerName}
-            appointmentDate={formattedAppointment}
-          />
+          <div className="flex gap-2">
+            <RescheduleDemandButton demand={demand} />
+            <DeleteDemandButton
+              demandId={id}
+              customerName={customerName}
+              appointmentDate={formattedAppointment}
+            />
+          </div>
         )}
       </div>
 
@@ -155,12 +160,14 @@ export default async function DemandDetailsPage({ params }: { params: Promise<{ 
               <p className="text-sm text-gray-400">Camera Model</p>
               <p className="text-white">{demand.camera_model}</p>
             </div>
-            {demand.stock_number && (
-              <div>
-                <p className="text-sm text-gray-400">Stock Number</p>
-                <p className="text-white">{demand.stock_number}</p>
-              </div>
-            )}
+            <div>
+              <p className="text-sm text-gray-400 mb-1">Stock Number</p>
+              <EditStockNumberForm
+                demandId={id}
+                stockNumber={demand.stock_number}
+                isAuroraManager={isAuroraManager}
+              />
+            </div>
             <div>
               <p className="text-sm text-gray-400 mb-1">VIN Last 6 Digits</p>
               <EditVinForm

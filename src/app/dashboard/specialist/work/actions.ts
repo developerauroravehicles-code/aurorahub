@@ -75,7 +75,7 @@ export async function assignWorkToMe(demandId: string) {
   return { success: true }
 }
 
-export async function completeDemand(demandId: string, vinLast6?: string) {
+export async function completeDemand(demandId: string, vinLast6?: string, options?: { skipVinCheck?: boolean }) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   
@@ -90,14 +90,17 @@ export async function completeDemand(demandId: string, vinLast6?: string) {
 
   if (!demand) return { error: 'Work not found' }
 
-  // VIN verification required for all demands
   const expectedVin = (demand.vin_last6 || '').trim().toUpperCase()
-  if (!expectedVin) {
+  const skipVin = !!options?.skipVinCheck
+
+  if (expectedVin) {
+    // VIN on file: verify (or use when direct complete)
+    const normalized = (vinLast6 || '').trim().toUpperCase().slice(-6)
+    if (normalized !== expectedVin) {
+      return { error: 'VIN last 6 digits do not match. Please enter the correct VIN last 6 digits.' }
+    }
+  } else if (!skipVin) {
     return { error: 'Cannot complete: VIN not on file. Contact administrator.' }
-  }
-  const normalized = (vinLast6 || '').trim().toUpperCase().slice(-6)
-  if (normalized !== expectedVin) {
-    return { error: 'VIN last 6 digits do not match. Please enter the correct VIN last 6 digits.' }
   }
 
   // Only assigned specialists can complete

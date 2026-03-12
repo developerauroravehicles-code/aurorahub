@@ -431,14 +431,15 @@ export async function updateDemand(demandId: string, formData: FormData) {
   }
 
   // Get form data
-  const customerFirstname = formData.get('customer_firstname') as string
-  const customerLastname = formData.get('customer_lastname') as string
+  const customerFirstname = ((formData.get('customer_firstname') as string) ?? '').trim().toUpperCase()
+  const customerLastname = ((formData.get('customer_lastname') as string) ?? '').trim().toUpperCase()
   const customerPhone = formData.get('customer_phone') as string
   const customerAddress = formData.get('customer_address') as string | null
   const vehicleMake = formData.get('vehicle_make') as string
   const vehicleModel = formData.get('vehicle_model') as string
   const vehicleYear = parseInt(formData.get('vehicle_year') as string)
-  const stockNumber = formData.get('stock_number') as string | null
+  const stockNumberRaw = (formData.get('stock_number') as string)?.trim() || null
+  const stockNumber = stockNumberRaw ? stockNumberRaw.toUpperCase() : null
   const cameraModel = formData.get('camera_model') as string
   const appointmentDate = formData.get('appointment_date') as string
   

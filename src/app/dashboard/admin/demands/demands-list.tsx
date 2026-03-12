@@ -4,7 +4,7 @@ import { useState, useMemo } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { format } from 'date-fns'
 import { formatInTimeZone } from 'date-fns-tz'
-import { getEffectiveTimezone } from '@/lib/timezone-defaults'
+import { SYSTEM_DEFAULT_TIMEZONE, getPTDateRanges } from '@/lib/timezone-defaults'
 import { Filter, X, Plus } from 'lucide-react'
 import Link from 'next/link'
 import { CreateExternalDemandForm } from './create-external-demand-form'
@@ -32,14 +32,11 @@ interface Demand {
   appointment_date: string
   is_external?: boolean | null
   vin_last6?: string | null
+  stock_number?: string | null
   dealers?: { name: string; region_codes?: { timezones?: { name: string } } } | null
   profiles?: { full_name: string } | null
   assigned_specialist?: { full_name: string } | null
   assigned_finance?: { full_name: string } | null
-}
-
-function getDealerTz(dealers: Demand['dealers']): string | null {
-  return dealers?.region_codes?.timezones?.name ?? null
 }
 
 interface DemandsListProps {
@@ -48,9 +45,11 @@ interface DemandsListProps {
   specialists: Specialist[]
   selectedDealerId: string
   canCreateExternal?: boolean
+  hideDealerFilter?: boolean
+  duplicateStockNumbers?: string[]
 }
 
-export function DemandsList({ demands, dealers, specialists, selectedDealerId, canCreateExternal }: DemandsListProps) {
+export function DemandsList({ demands, dealers, specialists, selectedDealerId, canCreateExternal, hideDealerFilter, duplicateStockNumbers = [] }: DemandsListProps) {
   const [createModalOpen, setCreateModalOpen] = useState(false)
   const router = useRouter()
 
@@ -71,10 +70,10 @@ export function DemandsList({ demands, dealers, specialists, selectedDealerId, c
   }
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [dateFilter, setDateFilter] = useState<string>('all')
-  const [searchType, setSearchType] = useState<'customer' | 'demand_id'>('customer')
+  const [searchType, setSearchType] = useState<'customer' | 'demand_id' | 'vin' | 'stock_number'>('customer')
   const [searchValue, setSearchValue] = useState<string>('')
   const [showFilters, setShowFilters] = useState(false)
-  const dealerFilterActive = selectedDealerId !== 'all'
+  const dealerFilterActive = !hideDealerFilter && selectedDealerId !== 'all'
 
   const filteredDemands = useMemo(() => {
     let filtered = [...demands]
@@ -84,47 +83,45 @@ export function DemandsList({ demands, dealers, specialists, selectedDealerId, c
       filtered = filtered.filter(d => d.status === statusFilter)
     }
 
-    // Date filter
+    // Date filter (HQ uses PT)
     if (dateFilter !== 'all') {
-      const now = new Date()
-      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-      
+      const { today, week, month } = getPTDateRanges()
       if (dateFilter === 'today') {
-        const tomorrow = new Date(today)
-        tomorrow.setDate(tomorrow.getDate() + 1)
         filtered = filtered.filter(d => {
-          const appointmentDate = new Date(d.appointment_date)
-          return appointmentDate >= today && appointmentDate < tomorrow
+          const t = d.appointment_date
+          return t >= today.start && t <= today.end
         })
       } else if (dateFilter === 'this_week') {
-        const weekStart = new Date(today)
-        weekStart.setDate(today.getDate() - today.getDay())
-        const weekEnd = new Date(weekStart)
-        weekEnd.setDate(weekStart.getDate() + 7)
         filtered = filtered.filter(d => {
-          const appointmentDate = new Date(d.appointment_date)
-          return appointmentDate >= weekStart && appointmentDate < weekEnd
+          const t = d.appointment_date
+          return t >= week.start && t < week.end
         })
       } else if (dateFilter === 'this_month') {
-        const monthStart = new Date(today.getFullYear(), today.getMonth(), 1)
-        const monthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 1)
         filtered = filtered.filter(d => {
-          const appointmentDate = new Date(d.appointment_date)
-          return appointmentDate >= monthStart && appointmentDate < monthEnd
+          const t = d.appointment_date
+          return t >= month.start && t <= month.end
         })
       }
     }
 
     // Search filter (by selected criterion only)
     if (searchValue.trim()) {
-      const query = searchValue.toLowerCase().trim()
+      const query = searchValue.toLowerCase().trim().replace(/\s/g, '')
       if (searchType === 'customer') {
         filtered = filtered.filter(d =>
           `${d.customer_firstname} ${d.customer_lastname}`.toLowerCase().includes(query)
         )
-      } else {
+      } else if (searchType === 'demand_id') {
         filtered = filtered.filter(d =>
           d.demand_number != null && String(d.demand_number).toLowerCase().includes(query)
+        )
+      } else if (searchType === 'vin') {
+        filtered = filtered.filter(d =>
+          d.vin_last6 != null && d.vin_last6.replace(/\s/g, '').toLowerCase().includes(query)
+        )
+      } else if (searchType === 'stock_number') {
+        filtered = filtered.filter(d =>
+          d.stock_number != null && d.stock_number.toLowerCase().includes(query)
         )
       }
     }
@@ -146,17 +143,25 @@ export function DemandsList({ demands, dealers, specialists, selectedDealerId, c
       {/* Dealer filter and Create External button */}
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-4">
-          <label className="text-sm font-medium text-gray-400">Dealer:</label>
-        <select
-          value={selectedDealerId}
-          onChange={(e) => handleDealerChange(e.target.value)}
-          className="border border-gray-700 bg-white/5 px-3 py-2 rounded text-white text-sm focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00] min-w-[200px]"
-        >
-          <option value="all" className="bg-black">All Dealers</option>
-          {dealers.map((d) => (
-            <option key={d.id} value={d.id} className="bg-black">{d.name}</option>
-          ))}
-        </select>
+          {hideDealerFilter ? (
+            <span className="text-sm text-gray-400">
+              Dealer: {dealers.find(d => d.id === selectedDealerId)?.name ?? selectedDealerId}
+            </span>
+          ) : (
+            <>
+              <label className="text-sm font-medium text-gray-400">Dealer:</label>
+              <select
+                value={selectedDealerId}
+                onChange={(e) => handleDealerChange(e.target.value)}
+                className="border border-gray-700 bg-white/5 px-3 py-2 rounded text-white text-sm focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00] min-w-[200px]"
+              >
+                <option value="all" className="bg-black">All Dealers</option>
+                {dealers.map((d) => (
+                  <option key={d.id} value={d.id} className="bg-black">{d.name}</option>
+                ))}
+              </select>
+            </>
+          )}
         </div>
         {canCreateExternal && (
           <button
@@ -214,28 +219,35 @@ export function DemandsList({ demands, dealers, specialists, selectedDealerId, c
 
         {showFilters && (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {/* Search - by customer name or demand ID */}
+            {/* Search - by customer, demand ID, VIN, or stock number */}
             <div className="md:col-span-2 flex gap-2">
               <div className="flex-1 min-w-0">
                 <label className="block text-xs font-medium text-gray-400 mb-1">Search by</label>
                 <select
                   value={searchType}
-                  onChange={(e) => setSearchType(e.target.value as 'customer' | 'demand_id')}
+                  onChange={(e) => setSearchType(e.target.value as 'customer' | 'demand_id' | 'vin' | 'stock_number')}
                   className="w-full border border-gray-700 bg-white/5 p-2 rounded text-white text-sm focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]"
                 >
                   <option value="customer" className="bg-black">Customer name</option>
                   <option value="demand_id" className="bg-black">Demand ID</option>
+                  <option value="vin" className="bg-black">VIN No</option>
+                  <option value="stock_number" className="bg-black">Stock Number</option>
                 </select>
               </div>
               <div className="flex-1 min-w-0">
                 <label className="block text-xs font-medium text-gray-400 mb-1">
-                  {searchType === 'customer' ? 'Name' : 'Demand ID'}
+                  {searchType === 'customer' ? 'Name' : searchType === 'demand_id' ? 'Demand ID' : searchType === 'vin' ? 'VIN No' : 'Stock Number'}
                 </label>
                 <input
                   type="text"
                   value={searchValue}
                   onChange={(e) => setSearchValue(e.target.value)}
-                  placeholder={searchType === 'customer' ? 'Customer first or last name...' : 'ARR20260000001'}
+                  placeholder={
+                    searchType === 'customer' ? 'Customer first or last name...' :
+                    searchType === 'demand_id' ? 'ARR20260000001' :
+                    searchType === 'vin' ? 'Last 6 digits or full VIN' :
+                    'Stock number'
+                  }
                   className="w-full border border-gray-700 bg-white/5 p-2 rounded text-white text-sm focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]"
                 />
               </div>
@@ -308,14 +320,17 @@ export function DemandsList({ demands, dealers, specialists, selectedDealerId, c
                           {demand.demand_number != null && (
                             <span className="text-xs font-medium text-gray-500">#{demand.demand_number}</span>
                           )}
+                          {demand.stock_number && duplicateStockNumbers.includes((demand.stock_number as string).trim().toUpperCase()) && (
+                            <span className="text-xs text-amber-400">(Duplicate Stock No)</span>
+                          )}
                         </div>
                         <p className="text-sm text-gray-400">
                           {demand.vehicle_year} {demand.vehicle_make} {demand.vehicle_model}
                         </p>
                         <p className="text-sm text-gray-500">
                           Appointment: {demand.is_external
-                            ? formatInTimeZone(new Date(demand.appointment_date), getEffectiveTimezone(getDealerTz(demand.dealers) ?? null), 'PPP') + ' (External)'
-                            : formatInTimeZone(new Date(demand.appointment_date), getEffectiveTimezone(getDealerTz(demand.dealers) ?? null), 'PPP h:mm a')}
+                            ? formatInTimeZone(new Date(demand.appointment_date), SYSTEM_DEFAULT_TIMEZONE, 'PPP') + ' (External)'
+                            : formatInTimeZone(new Date(demand.appointment_date), SYSTEM_DEFAULT_TIMEZONE, 'PPP h:mm a')}
                         </p>
                         <p className="text-xs text-gray-600 mt-1">
                           Dealer: {(demand.dealers as any)?.name || 'Unknown'} | Created by: {(demand.profiles as any)?.full_name || 'Unknown'}

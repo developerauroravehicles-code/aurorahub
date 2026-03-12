@@ -1,3 +1,4 @@
+import { formatInTimeZone } from 'date-fns-tz'
 import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
 
@@ -163,7 +164,7 @@ export function buildStatementPdf(data: StatementPdfData): jsPDF {
   doc.setFont('helvetica', 'normal')
   doc.setTextColor(128, 128, 128)
   doc.text(
-    `AuroraHub Statement - Generated ${new Date().toLocaleDateString()} - ${data.dealerName}`,
+    `AuroraHub Statement - Generated ${formatInTimeZone(new Date(), 'America/Vancouver', 'MMM d, yyyy')} - ${data.dealerName}`,
     pageWidth / 2,
     doc.internal.pageSize.getHeight() - 10,
     { align: 'center' }

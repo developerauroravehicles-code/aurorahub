@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { Plus } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
+import { getDuplicateStockNumbers } from '@/lib/demand-stock'
 import { FinanceDemandsList } from './finance-demands-list'
 
 export default async function FinanceDemandsPage() {
@@ -81,6 +82,7 @@ export default async function FinanceDemandsPage() {
   const myAssignedDemands = myAssignedDemandsRaw?.map(transformDemand) || []
   const allAssignedDemands = allAssignedDemandsRaw?.map(transformDemand) || []
   const completedDemands = completedDemandsRaw?.map(transformDemand) || []
+  const duplicateStockNumbers = Array.from(await getDuplicateStockNumbers())
 
   return (
     <div className="space-y-8">
@@ -103,6 +105,7 @@ export default async function FinanceDemandsPage() {
         unassignedDemands={unassignedDemands || []}
         allAssignedDemands={allAssignedDemands || []}
         completedDemands={completedDemands || []}
+        duplicateStockNumbers={duplicateStockNumbers}
       />
     </div>
   )

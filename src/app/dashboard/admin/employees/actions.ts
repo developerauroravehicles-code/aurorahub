@@ -20,20 +20,22 @@ export async function createEmployee(prevState: ActionState, formData: FormData)
 
     const { data: currentProfile } = await supabase
       .from('profiles')
-      .select('role')
+      .select('role, dealer_id')
       .eq('id', currentUser.id)
       .single()
 
     if (!currentProfile) {
       return { error: 'User profile not found' }
     }
-    
+
     const email = formData.get('email') as string
     const password = formData.get('password') as string
     const role = formData.get('role') as string
     const fullName = formData.get('fullName') as string
-    const dealerId = formData.get('dealerId') as string
     const phone = formData.get('phone') as string
+    const dealerId = currentProfile.role === 'general_manager' && currentProfile.dealer_id
+      ? currentProfile.dealer_id
+      : (formData.get('dealerId') as string)
 
     if (!email || !password || !role) {
       return { error: 'Missing required fields' }

@@ -94,7 +94,7 @@ export async function recordInvoiceDownloadAction(demandId: string): Promise<{ e
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('role')
+    .select('role, dealer_id')
     .eq('id', user.id)
     .single()
 

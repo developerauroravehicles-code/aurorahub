@@ -21,6 +21,11 @@ export function getEffectiveTimezone(dealerTz: string | null | undefined): strin
   return dealerTz && dealerTz.trim() ? dealerTz : SYSTEM_DEFAULT_TIMEZONE
 }
 
+/** Format a date in HQ timezone (PT) for display in platform-level features (Service Desk, Reports, Invoice, Statement, etc.) */
+export function formatInPT(date: Date | string, formatStr: string): string {
+  return formatInTimeZone(typeof date === 'string' ? new Date(date) : date, SYSTEM_DEFAULT_TIMEZONE, formatStr)
+}
+
 /**
  * Get today's date range (start and end) in the given timezone as ISO strings for DB queries.
  */
@@ -31,4 +36,26 @@ export function getTodayRangeInTimezone(tz: string): { start: string; end: strin
   const start = fromZonedTime(new Date(y, mo - 1, d, 0, 0, 0), tz).toISOString()
   const end = fromZonedTime(new Date(y, mo - 1, d, 23, 59, 59, 999), tz).toISOString()
   return { start, end }
+}
+
+/** Get week (Sun–Sat) and month ranges in PT for HQ date filters */
+export function getPTDateRanges(): { today: { start: string; end: string }; week: { start: string; end: string }; month: { start: string; end: string } } {
+  const tz = SYSTEM_DEFAULT_TIMEZONE
+  const now = new Date()
+  const dateStr = formatInTimeZone(now, tz, 'yyyy-MM-dd')
+  const [y, mo, d] = dateStr.split('-').map(Number)
+  const dayOfWeek = new Date(Date.UTC(y, mo - 1, d)).getUTCDay()
+
+  const todayStart = fromZonedTime(new Date(y, mo - 1, d, 0, 0, 0), tz).toISOString()
+  const todayEnd = fromZonedTime(new Date(y, mo - 1, d, 23, 59, 59, 999), tz).toISOString()
+
+  const weekStartY = new Date(Date.UTC(y, mo - 1, d - dayOfWeek))
+  const weekEndY = new Date(Date.UTC(y, mo - 1, d - dayOfWeek + 7))
+  const weekStart = fromZonedTime(new Date(weekStartY.getUTCFullYear(), weekStartY.getUTCMonth(), weekStartY.getUTCDate(), 0, 0, 0), tz).toISOString()
+  const weekEnd = fromZonedTime(new Date(weekEndY.getUTCFullYear(), weekEndY.getUTCMonth(), weekEndY.getUTCDate(), 0, 0, 0), tz).toISOString()
+
+  const monthStart = fromZonedTime(new Date(y, mo - 1, 1, 0, 0, 0), tz).toISOString()
+  const monthEnd = fromZonedTime(new Date(y, mo, 0, 23, 59, 59, 999), tz).toISOString()
+
+  return { today: { start: todayStart, end: todayEnd }, week: { start: weekStart, end: weekEnd }, month: { start: monthStart, end: monthEnd } }
 }
