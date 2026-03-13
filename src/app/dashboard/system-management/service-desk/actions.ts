@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { revalidatePath } from 'next/cache'
 import { sendNewCriticalTicketAlertIfEnabled, sendCriticalIncidentAlertIfEnabled } from '@/lib/alert-dispatch'
 
@@ -12,7 +13,9 @@ async function ensureAuth() {
   if (!['aurora_manager', 'it'].includes(profile?.role ?? '')) {
     return { error: 'Unauthorized', supabase: null }
   }
-  return { supabase, userId: user.id }
+  // Use admin client for IT and aurora_manager to bypass RLS - ensures they can view content and change ticket status
+  const db = createAdminClient()
+  return { supabase: db, userId: user.id }
 }
 
 // Tickets

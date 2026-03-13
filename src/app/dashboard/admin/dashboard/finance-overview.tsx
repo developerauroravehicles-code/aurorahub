@@ -3,11 +3,12 @@
 import Link from 'next/link'
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, Legend, CartesianGrid } from 'recharts'
 import { DollarSign, TrendingUp } from 'lucide-react'
+import { FinanceOverviewMonthSelector } from './finance-overview-month-selector'
 import type { FinanceSummary } from './actions'
 
 const fmt = (n: number) => `$${n.toLocaleString('en-CA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 
-export function FinanceOverview({ summary }: { summary: FinanceSummary }) {
+export function FinanceOverview({ summary, selectedMonth = '' }: { summary: FinanceSummary; selectedMonth?: string }) {
   const { totalInvoiced, totalTax, totalSubtotal, invoiceCount, byDealer } = summary
 
   const chartData = byDealer.slice(0, 8).map(d => ({
@@ -20,14 +21,17 @@ export function FinanceOverview({ summary }: { summary: FinanceSummary }) {
 
   return (
     <div className="bg-white/5 border border-gray-800 rounded-lg p-6">
-      <div className="flex justify-between items-center mb-4">
+      <div className="flex flex-wrap justify-between items-center gap-3 mb-4">
         <h2 className="text-lg font-semibold text-white flex items-center gap-2">
           <DollarSign className="w-5 h-5 text-green-500" />
           Finance Overview
         </h2>
-        <Link href="/dashboard/admin/invoices" className="text-sm text-[#C27E00] hover:text-[#a06900] transition-colors">
-          View Invoices →
-        </Link>
+        <div className="flex items-center gap-3">
+          <FinanceOverviewMonthSelector selectedMonth={selectedMonth} />
+          <Link href="/dashboard/admin/invoices" className="text-sm text-[#C27E00] hover:text-[#a06900] transition-colors">
+            View Invoices →
+          </Link>
+        </div>
       </div>
 
       {invoiceCount === 0 ? (

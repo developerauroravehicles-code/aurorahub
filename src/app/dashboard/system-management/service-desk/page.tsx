@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import { ServiceDeskContent } from './service-desk-content'
 
@@ -16,28 +17,31 @@ export default async function ServiceDeskPage({ searchParams }: { searchParams: 
   const canAccess = ['aurora_manager', 'it'].includes(profile?.role ?? '')
   if (!canAccess) redirect('/dashboard')
 
+  // Use admin client for IT and aurora_manager to bypass any RLS edge cases - ensures full ticket visibility and management
+  const db = createAdminClient()
+
   const [ticketsRes, incidentsRes, changesRes, releasesRes, knowledgeRes, assigneesRes] = await Promise.all([
-    supabase
+    db
       .from('it_tickets')
       .select('id, ticket_number, title, description, category, priority, status, sla_due_at, resolved_at, resolution_notes, created_at, assigned_to, requested_by')
       .order('created_at', { ascending: false }),
-    supabase
+    db
       .from('it_incidents')
       .select('id, incident_number, title, description, severity, impact_scope, status, root_cause, resolution_notes, post_mortem, resolved_at, created_at')
       .order('created_at', { ascending: false }),
-    supabase
+    db
       .from('it_changes')
       .select('id, change_number, title, description, change_type, risk_level, status, scheduled_at, deployed_at, rollback_plan, created_at')
       .order('created_at', { ascending: false }),
-    supabase
+    db
       .from('it_releases')
       .select('id, version, build_number, release_notes, environment, status, deployed_at, created_at')
       .order('created_at', { ascending: false }),
-    supabase
+    db
       .from('it_knowledge_base')
       .select('id, title, content, category, tags, created_at')
       .order('updated_at', { ascending: false }),
-    supabase
+    db
       .from('profiles')
       .select('id, full_name')
       .in('role', ['it', 'aurora_manager', 'specialist'])
@@ -52,7 +56,7 @@ export default async function ServiceDeskPage({ searchParams }: { searchParams: 
   const assignees = assigneesRes.data ?? []
   const ticketProfileIds = [...new Set(tickets.flatMap((t) => [t.assigned_to, t.requested_by].filter(Boolean) as string[]))]
   const { data: profileRows } = ticketProfileIds.length > 0
-    ? await supabase.from('profiles').select('id, full_name').in('id', ticketProfileIds)
+    ? await db.from('profiles').select('id, full_name').in('id', ticketProfileIds)
     : { data: [] as Array<{ id: string; full_name: string | null }> }
   const profileMap = Object.fromEntries((profileRows ?? []).map((p) => [p.id, p.full_name ?? '—']))
   const ticketsWithNames = tickets.map((t) => ({

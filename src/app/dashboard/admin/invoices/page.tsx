@@ -6,11 +6,12 @@ import { getSystemLogo } from '@/app/dashboard/system-management/logo/actions'
 import { InvoiceTable } from './invoice-table'
 import { InvoiceDealerFilter } from './invoice-dealer-filter'
 import { InvoiceDateFilter } from './invoice-date-filter'
+import { InvoiceSearchFilter } from './invoice-search-filter'
 
 export default async function InvoicesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ dealer?: string; month?: string; startDate?: string; endDate?: string }>
+  searchParams: Promise<{ dealer?: string; month?: string; startDate?: string; endDate?: string; search?: string; searchBy?: string }>
 }) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -47,6 +48,7 @@ export default async function InvoicesPage({
       demand_number,
       dealer_id,
       stock_number,
+      vin_last6,
       customer_phone,
       customer_firstname,
       customer_lastname,
@@ -85,6 +87,18 @@ export default async function InvoicesPage({
     query = query.gte('completed_at', `${startDateParam}T00:00:00.000Z`).lte('completed_at', `${endDateParam}T23:59:59.999Z`)
   }
 
+  const searchParam = params.search?.trim()
+  const searchBy = (params.searchBy === 'vin_last6' || params.searchBy === 'stock_number' || params.searchBy === 'demand_number')
+    ? params.searchBy
+    : 'demand_number'
+  if (searchParam && searchParam.length > 0) {
+    const sanitized = searchParam.replace(/["\\]/g, '').replace(/\s+/g, ' ').trim()
+    if (sanitized) {
+      const pattern = `%${sanitized}%`
+      query = query.ilike(searchBy, pattern)
+    }
+  }
+
   const { data: demands } = await query
   const logoUrl = await getSystemLogo()
 
@@ -111,6 +125,7 @@ export default async function InvoicesPage({
           startDate={params.startDate ?? ''}
           endDate={params.endDate ?? ''}
         />
+        <InvoiceSearchFilter searchValue={params.search ?? ''} searchBy={(params.searchBy as 'demand_number' | 'stock_number' | 'vin_last6') || 'demand_number'} />
       </div>
       <div className="flex items-center gap-4 text-sm text-gray-300">
         <span>Total: <strong className="text-[#C27E00]">${totalAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong></span>

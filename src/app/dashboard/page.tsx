@@ -19,7 +19,7 @@ function getCameraDistribution(demands: { camera_model?: string | null }[]): { m
 export default async function DashboardPage({
   searchParams,
 }: {
-  searchParams: Promise<{ month?: string }>
+  searchParams: Promise<{ month?: string; financeMonth?: string }>
 }) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -834,8 +834,9 @@ export default async function DashboardPage({
     const recentDemands = allDemands?.slice(0, 10) || []
 
     // Dashboard overview data for widgets
+    const params = await searchParams
     const { getDashboardOverviewData } = await import('./admin/dashboard/actions')
-    const overviewData = await getDashboardOverviewData()
+    const overviewData = await getDashboardOverviewData(params.financeMonth ?? null)
 
     const { DemandOverview } = await import('./admin/dashboard/demand-overview')
     const { DemandTrends } = await import('./admin/dashboard/demand-trends')
@@ -902,7 +903,7 @@ export default async function DashboardPage({
 
         {/* Finance Overview */}
         <div id="finance-overview">
-          <FinanceOverview summary={overviewData.financeSummary} />
+          <FinanceOverview summary={overviewData.financeSummary} selectedMonth={params.financeMonth ?? ''} />
         </div>
 
         {/* Dealer Alerts & Notes */}

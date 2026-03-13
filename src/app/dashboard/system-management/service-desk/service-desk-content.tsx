@@ -29,6 +29,8 @@ import {
   Package,
   BookOpen,
   Loader2,
+  Eye,
+  X,
 } from 'lucide-react'
 import { formatInPT } from '@/lib/timezone-defaults'
 
@@ -200,6 +202,7 @@ export function ServiceDeskContent({
   }, [initialTab])
   const [showTicketForm, setShowTicketForm] = useState(false)
   const [editingTicketId, setEditingTicketId] = useState<string | null>(null)
+  const [viewingTicketId, setViewingTicketId] = useState<string | null>(null)
   const [showIncidentForm, setShowIncidentForm] = useState(false)
   const [editingIncidentId, setEditingIncidentId] = useState<string | null>(null)
   const [showChangeForm, setShowChangeForm] = useState(false)
@@ -290,6 +293,9 @@ export function ServiceDeskContent({
                     <td className="px-4 py-2 text-gray-400">{t.requester?.full_name ?? '—'}</td>
                     <td className="px-4 py-2 text-gray-400">{t.sla_due_at ? formatInPT(t.sla_due_at, 'MMM d, yyyy h:mm a') : '—'}</td>
                     <td className="px-4 py-2 text-right">
+                      <button onClick={() => setViewingTicketId(t.id)} className="p-1.5 text-gray-400 hover:text-blue-400 mr-1" title="View details">
+                        <Eye className="w-4 h-4 inline" />
+                      </button>
                       <button onClick={() => { setEditingTicketId(t.id); setShowTicketForm(true) }} className="p-1.5 text-gray-400 hover:text-[#C27E00] mr-1" title="Edit">
                         <Pencil className="w-4 h-4 inline" />
                       </button>
@@ -301,6 +307,45 @@ export function ServiceDeskContent({
                 ))}
               </tbody>
             </table>
+            {viewingTicketId && (() => {
+              const t = tickets.find((x) => x.id === viewingTicketId)
+              if (!t) return null
+              return (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70" onClick={() => setViewingTicketId(null)}>
+                  <div className="bg-gray-900 border border-gray-800 rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto p-6" onClick={(e) => e.stopPropagation()}>
+                    <div className="flex justify-between items-start mb-4">
+                      <h3 className="text-lg font-semibold text-white">{t.ticket_number ?? 'Ticket'}: {t.title}</h3>
+                      <button onClick={() => setViewingTicketId(null)} className="p-1 text-gray-400 hover:text-white"><X className="w-5 h-5" /></button>
+                    </div>
+                    <div className="space-y-3 text-sm">
+                      <div>
+                        <span className="text-gray-500">Description:</span>
+                        <p className="text-gray-300 mt-1 whitespace-pre-wrap">{t.description || '—'}</p>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2 text-gray-400">
+                        <span>Category: {TICKET_CATEGORIES[t.category] ?? t.category}</span>
+                        <span>Priority: {PRIORITIES[t.priority] ?? t.priority}</span>
+                        <span>Status: {TICKET_STATUSES[t.status] ?? t.status}</span>
+                        <span>SLA: {t.sla_due_at ? formatInPT(t.sla_due_at, 'MMM d, yyyy h:mm a') : '—'}</span>
+                        <span>Assigned: {t.assigned?.full_name ?? '—'}</span>
+                        <span>Requested by: {t.requester?.full_name ?? '—'}</span>
+                      </div>
+                      {t.resolution_notes && (
+                        <div>
+                          <span className="text-gray-500">Resolution Notes:</span>
+                          <p className="text-gray-300 mt-1 whitespace-pre-wrap">{t.resolution_notes}</p>
+                        </div>
+                      )}
+                    </div>
+                    <div className="mt-4 flex justify-end">
+                      <button onClick={() => { setViewingTicketId(null); setEditingTicketId(t.id); setShowTicketForm(true) }} className="px-3 py-1.5 rounded bg-[#C27E00] text-white text-sm hover:bg-[#a06900]">
+                        Edit
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )
+            })()}
             {tickets.length === 0 && !showTicketForm && (
               <p className="text-gray-500 py-6 text-center">No tickets yet.</p>
             )}

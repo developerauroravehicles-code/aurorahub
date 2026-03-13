@@ -5,6 +5,7 @@ import { createExternalDemand } from './create-external-demand-actions'
 import { getCameraModelsForDealer } from './get-cameras-for-dealer'
 import { VEHICLE_MAKES_CA } from '@/lib/vehicle-makes'
 import { getModelsForMake, getTrimsForModel } from '@/lib/vehicle-models'
+import { CanadianPhoneInput } from '@/components/canadian-phone-input'
 
 interface Dealer {
   id: string
@@ -178,16 +179,25 @@ export function CreateExternalDemandForm({ dealers, specialists, onSuccess, onCa
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-300">Phone *</label>
-          <input
-            key={isFutureCustomer ? 'ph-future' : 'ph-normal'}
-            name="phone"
-            type="tel"
-            required
-            value={isFutureCustomer ? '000-000-0000' : undefined}
-            readOnly={isFutureCustomer}
-            placeholder={!isFutureCustomer ? '(604) 833-5801' : undefined}
-            className={isFutureCustomer ? inputReadOnlyClass : inputClass}
-          />
+          {isFutureCustomer ? (
+            <input
+              key="ph-future"
+              name="phone"
+              type="tel"
+              required
+              value="000 - 000 - 0000"
+              readOnly
+              className={inputReadOnlyClass}
+            />
+          ) : (
+            <CanadianPhoneInput
+              key="ph-normal"
+              name="phone"
+              required
+              placeholder="416 - 123 - 4567"
+              className={inputClass}
+            />
+          )}
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-300">Address</label>

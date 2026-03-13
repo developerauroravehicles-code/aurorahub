@@ -27,6 +27,28 @@ export function formatInPT(date: Date | string, formatStr: string): string {
 }
 
 /**
+ * Convert yyyy-MM (e.g. "2026-03") to month range in the given timezone as ISO strings for DB queries.
+ */
+export function getMonthRangeInTimezone(monthStr: string, tz: string): { start: string; end: string } {
+  const [y, m] = monthStr.split('-').map(Number)
+  const start = fromZonedTime(new Date(y, m - 1, 1, 0, 0, 0), tz).toISOString()
+  const end = fromZonedTime(new Date(y, m, 0, 23, 59, 59, 999), tz).toISOString()
+  return { start, end }
+}
+
+/**
+ * Convert yyyy-MM-dd date range to ISO strings in the given timezone for DB queries.
+ * Ensures date filtering matches the timezone used for display (e.g. Pacific for invoices/statements).
+ */
+export function getDateRangeInTimezone(dateFrom: string, dateTo: string, tz: string): { start: string; end: string } {
+  const [y1, m1, d1] = dateFrom.split('-').map(Number)
+  const [y2, m2, d2] = dateTo.split('-').map(Number)
+  const start = fromZonedTime(new Date(y1, m1 - 1, d1, 0, 0, 0), tz).toISOString()
+  const end = fromZonedTime(new Date(y2, m2 - 1, d2, 23, 59, 59, 999), tz).toISOString()
+  return { start, end }
+}
+
+/**
  * Get today's date range (start and end) in the given timezone as ISO strings for DB queries.
  */
 export function getTodayRangeInTimezone(tz: string): { start: string; end: string } {

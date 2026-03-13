@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { updateCustomerInfo } from './actions'
+import { CanadianPhoneInput, formatCanadianPhone } from '@/components/canadian-phone-input'
 
 const inputClass = 'w-full border border-gray-700 bg-white/5 p-2 rounded text-white text-sm focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]'
 
@@ -26,15 +27,16 @@ export function EditCustomerForm({
   const router = useRouter()
   const [firstNameVal, setFirstNameVal] = useState(firstName ?? '')
   const [lastNameVal, setLastNameVal] = useState(lastName ?? '')
-  const [phoneVal, setPhoneVal] = useState(phone ?? '')
+  const [phoneVal, setPhoneVal] = useState(phone ? formatCanadianPhone(phone) : '')
   const [addressVal, setAddressVal] = useState(address ?? '')
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
 
+  const phoneFormatted = phone ? formatCanadianPhone(phone) : ''
   const hasChange =
     firstNameVal.trim() !== (firstName ?? '').trim() ||
     lastNameVal.trim() !== (lastName ?? '').trim() ||
-    phoneVal.trim() !== (phone ?? '').trim() ||
+    phoneVal.trim() !== phoneFormatted.trim() ||
     addressVal.trim() !== (address ?? '').trim()
 
   const handleSave = async () => {
@@ -106,12 +108,11 @@ export function EditCustomerForm({
       </div>
       <div>
         <label className="block text-xs font-medium text-gray-400 mb-1">Phone</label>
-        <input
-          type="tel"
+        <CanadianPhoneInput
           value={phoneVal}
-          onChange={(e) => setPhoneVal(e.target.value)}
+          onChange={setPhoneVal}
           className={inputClass}
-          placeholder="(604) 833-5801"
+          placeholder="416 - 123 - 4567"
         />
       </div>
       <div>

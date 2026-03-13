@@ -11,6 +11,7 @@ import { useSystemTime } from '@/contexts/system-time-context'
 import { AppointmentCalendar } from '@/components/appointment-calendar'
 import { VEHICLE_MAKES_CA } from '@/lib/vehicle-makes'
 import { getModelsForMake, getTrimsForModel } from '@/lib/vehicle-models'
+import { CanadianPhoneInput } from '@/components/canadian-phone-input'
 
 interface CameraModel {
   id: string
@@ -138,14 +139,13 @@ export function DemandForm({ cameraModels, defaultAddress = '', timezoneName: pr
 
         <div>
           <label className="block text-sm font-medium text-gray-300">
-            Phone Number <span className="text-xs text-gray-500">(e.g., (604) 833-5801 or +1 604 833 5801)</span>
+            Phone Number <span className="text-xs text-gray-500">(416 - 123 - 4567)</span>
           </label>
-          <input 
-            name="phone" 
-            type="tel" 
-            required 
-            placeholder="(604) 833-5801"
-            className="mt-1 block w-full rounded-md border border-gray-700 bg-black/50 py-2 px-3 shadow-sm focus:border-[#C27E00] focus:outline-none focus:ring-[#C27E00] sm:text-sm text-white" 
+          <CanadianPhoneInput
+            name="phone"
+            required
+            placeholder="416 - 123 - 4567"
+            className="mt-1 block w-full rounded-md border border-gray-700 bg-black/50 py-2 px-3 shadow-sm focus:border-[#C27E00] focus:outline-none focus:ring-[#C27E00] sm:text-sm text-white"
           />
         </div>
 

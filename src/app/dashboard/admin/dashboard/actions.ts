@@ -2,7 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
-import { getTodayRangeInTimezone, getEffectiveTimezone } from '@/lib/timezone-defaults'
+import { getTodayRangeInTimezone, getEffectiveTimezone, getMonthRangeInTimezone, SYSTEM_DEFAULT_TIMEZONE } from '@/lib/timezone-defaults'
 
 export type ManagerNote = {
   id: string
@@ -260,7 +260,7 @@ export type FinanceSummary = {
   byDealer: { dealerName: string; total: number; tax: number; count: number }[]
 }
 
-export async function getDashboardOverviewData(): Promise<{
+export async function getDashboardOverviewData(financeMonth?: string | null): Promise<{
   demandCounts: DemandCounts
   invoiceSummary: InvoiceSummary
   statementSummary: StatementSummary
@@ -397,13 +397,22 @@ export async function getDashboardOverviewData(): Promise<{
     .sort((a, b) => b.total - a.total)
     .slice(0, 8)
 
-  // Finance summary: completed demands with invoice amounts
+  // Finance summary: completed demands with invoice amounts (optionally filtered by month)
+  let financeDemands = completedDemands
+  if (financeMonth && /^\d{4}-\d{2}$/.test(financeMonth)) {
+    const { start, end } = getMonthRangeInTimezone(financeMonth, SYSTEM_DEFAULT_TIMEZONE)
+    financeDemands = completedDemands.filter(d => {
+      const completedAt = (d as { completed_at?: string }).completed_at ?? (d as { updated_at?: string }).updated_at
+      return completedAt && completedAt >= start && completedAt <= end
+    })
+  }
+
   const defaultFs = { gstEnabled: true, gstPercent: 5, pstEnabled: false, pstPercent: 7, salesTaxEnabled: false, salesTaxPercent: 0, otherEnabled: false, otherAmount: 0 }
   let totalInvoiced = 0
   let totalTax = 0
   let totalSubtotal = 0
   const dealerFinanceMap = new Map<string, { total: number; tax: number; count: number }>()
-  for (const d of completedDemands) {
+  for (const d of financeDemands) {
     const amount = d.invoice_total_amount ?? 0
     if (amount <= 0) continue
 
@@ -442,7 +451,7 @@ export async function getDashboardOverviewData(): Promise<{
     totalInvoiced,
     totalTax,
     totalSubtotal,
-    invoiceCount: completedDemands.filter(d => (d.invoice_total_amount ?? 0) > 0).length,
+    invoiceCount: financeDemands.filter(d => (d.invoice_total_amount ?? 0) > 0).length,
     byDealer: Array.from(dealerFinanceMap.entries())
       .map(([dealerName, v]) => ({ dealerName, total: v.total, tax: v.tax, count: v.count }))
       .sort((a, b) => b.total - a.total)

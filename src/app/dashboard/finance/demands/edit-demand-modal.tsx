@@ -8,6 +8,7 @@ import { formatInTimeZone } from 'date-fns-tz'
 import { SYSTEM_DEFAULT_TIMEZONE } from '@/lib/timezone-defaults'
 import { VEHICLE_MAKES_CA } from '@/lib/vehicle-makes'
 import { getModelsForMake, getTrimsForModel } from '@/lib/vehicle-models'
+import { CanadianPhoneInput, formatCanadianPhone } from '@/components/canadian-phone-input'
 
 function parseModelAndTrim(val: string): { model: string; trim: string } {
   const m = val?.match(/^(.+?)\s*\(([^)]+)\)$/)
@@ -44,7 +45,7 @@ export function EditDemandModal({ demand, isOpen, onClose }: EditDemandModalProp
   const [formData, setFormData] = useState({
     customer_firstname: demand.customer_firstname,
     customer_lastname: demand.customer_lastname,
-    customer_phone: demand.customer_phone,
+    customer_phone: formatCanadianPhone(demand.customer_phone ?? ''),
     customer_address: demand.customer_address || '',
     vehicle_make: demand.vehicle_make,
     vehicle_model: demand.vehicle_model,
@@ -64,7 +65,7 @@ export function EditDemandModal({ demand, isOpen, onClose }: EditDemandModalProp
       setFormData({
         customer_firstname: demand.customer_firstname,
         customer_lastname: demand.customer_lastname,
-        customer_phone: demand.customer_phone,
+        customer_phone: formatCanadianPhone(demand.customer_phone ?? ''),
         customer_address: demand.customer_address || '',
         vehicle_make: demand.vehicle_make,
         vehicle_model: demand.vehicle_model,
@@ -197,11 +198,11 @@ export function EditDemandModal({ demand, isOpen, onClose }: EditDemandModalProp
 
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-1">Phone *</label>
-                <input
-                  type="tel"
+                <CanadianPhoneInput
                   value={formData.customer_phone}
-                  onChange={(e) => setFormData({ ...formData, customer_phone: e.target.value })}
+                  onChange={(v) => setFormData({ ...formData, customer_phone: v })}
                   required
+                  placeholder="416 - 123 - 4567"
                   className="w-full border border-gray-700 bg-black/50 py-2 px-3 rounded text-white focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]"
                 />
               </div>

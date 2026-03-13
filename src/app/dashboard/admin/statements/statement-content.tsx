@@ -64,13 +64,16 @@ export function StatementContent({ dealers, logoDataUrl, hideDealerFilter, defau
     ? formatInTimeZone(new Date(Math.max(...completedTimestamps)), SYSTEM_DEFAULT_TIMEZONE, 'yyyy-MM-dd')
     : '')
 
+  // invoice_total_amount is the grand total (subtotal + tax). Split into price (subtotal) and tax to avoid double-counting.
+  const TAX_RATE = 0.05 // 5% GST
   const statementData: StatementPdfData = {
     dealerName,
     dateFrom: effectiveDateFrom,
     dateTo: effectiveDateTo,
     rows: rows.map((d) => {
-      const price = d.invoice_total_amount ?? 0
-      const tax = price * 0.05
+      const total = d.invoice_total_amount ?? 0
+      const price = total / (1 + TAX_RATE) // subtotal before tax
+      const tax = total - price
       const vehicleModel = `${d.vehicle_year} ${d.vehicle_make} ${d.vehicle_model}`.trim() || '—'
       // Talebin gerçek tamamlanma tarihi (completed_at); yoksa updated_at fallback (eski veriler için)
       const dateValue = d.completed_at ?? d.updated_at
@@ -120,9 +123,11 @@ export function StatementContent({ dealers, logoDataUrl, hideDealerFilter, defau
     }
   }
 
-  const totalPrice = rows.reduce((sum, r) => sum + (r.invoice_total_amount ?? 0), 0)
-  const totalTax = totalPrice * 0.05
-  const grandTotal = totalPrice + totalTax
+  // invoice_total_amount is total (subtotal + tax). Extract subtotal and tax to avoid double-counting.
+  const totalAmount = rows.reduce((sum, r) => sum + (r.invoice_total_amount ?? 0), 0)
+  const totalPrice = totalAmount / (1 + TAX_RATE)
+  const totalTax = totalAmount - totalPrice
+  const grandTotal = totalAmount
 
   return (
     <div className="space-y-6">
@@ -246,8 +251,9 @@ export function StatementContent({ dealers, logoDataUrl, hideDealerFilter, defau
               </thead>
               <tbody className="divide-y divide-gray-800">
                 {rows.map((row) => {
-                  const price = row.invoice_total_amount ?? 0
-                  const tax = price * 0.05
+                  const total = row.invoice_total_amount ?? 0
+                  const price = total / (1 + TAX_RATE)
+                  const tax = total - price
                   const vehicleModel = `${row.vehicle_year} ${row.vehicle_make} ${row.vehicle_model}`.trim()
                   return (
                     <tr key={row.id} className="hover:bg-white/5 transition-colors">

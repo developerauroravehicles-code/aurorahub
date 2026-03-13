@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { getDateRangeInTimezone, SYSTEM_DEFAULT_TIMEZONE } from '@/lib/timezone-defaults'
 import { buildStatementPdf } from '@/lib/generate-statement-pdf'
 import { uploadStatementToDrive, type GoogleDriveSettings } from '@/lib/google-drive'
 import type { StatementPdfData } from '@/lib/generate-statement-pdf'
@@ -92,16 +93,15 @@ export async function getStatementDataAction(
     query = query.eq('dealer_id', effectiveDealerId)
   }
   if (dateFrom && dateTo) {
-    const from = `${dateFrom}T00:00:00.000Z`
-    const to = `${dateTo}T23:59:59.999Z`
+    const { start: from, end: to } = getDateRangeInTimezone(dateFrom, dateTo, SYSTEM_DEFAULT_TIMEZONE)
     query = query.or(
       `and(completed_at.gte.${from},completed_at.lte.${to}),and(completed_at.is.null,updated_at.gte.${from},updated_at.lte.${to})`
     )
   } else if (dateFrom) {
-    const from = `${dateFrom}T00:00:00.000Z`
+    const { start: from } = getDateRangeInTimezone(dateFrom, dateFrom, SYSTEM_DEFAULT_TIMEZONE)
     query = query.or(`completed_at.gte.${from},and(completed_at.is.null,updated_at.gte.${from})`)
   } else if (dateTo) {
-    const to = `${dateTo}T23:59:59.999Z`
+    const { end: to } = getDateRangeInTimezone(dateTo, dateTo, SYSTEM_DEFAULT_TIMEZONE)
     query = query.or(`completed_at.lte.${to},and(completed_at.is.null,updated_at.lte.${to})`)
   }
 
