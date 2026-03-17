@@ -44,7 +44,7 @@ export default async function ServiceDeskPage({ searchParams }: { searchParams: 
     db
       .from('profiles')
       .select('id, full_name')
-      .in('role', ['it', 'aurora_manager', 'specialist'])
+      .eq('role', 'it')
       .order('full_name'),
   ])
 

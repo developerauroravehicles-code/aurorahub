@@ -3,7 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { revalidatePath } from 'next/cache'
-import { sendNewCriticalTicketAlertIfEnabled, sendCriticalIncidentAlertIfEnabled } from '@/lib/alert-dispatch'
+import { sendNewCriticalTicketAlertIfEnabled, sendCriticalIncidentAlertIfEnabled, sendTicketStatusChangeEmail, sendNewTicketEmailToIT } from '@/lib/alert-dispatch'
 
 async function ensureAuth() {
   const supabase = await createClient()
@@ -29,6 +29,18 @@ export async function createTicket(formData: {
   const { supabase, userId } = await ensureAuth()
   if (!supabase) return { error: 'Not authenticated' }
   const priority = formData.priority || 'medium'
+
+  let assignedTo = formData.assigned_to || null
+  if (!assignedTo) {
+    const { data: itUsers } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('role', 'it')
+    if (itUsers?.length === 1) {
+      assignedTo = itUsers[0].id
+    }
+  }
+
   const { data: ticket, error } = await supabase
     .from('it_tickets')
     .insert({
@@ -36,15 +48,18 @@ export async function createTicket(formData: {
       description: formData.description?.trim() || null,
       category: formData.category,
       priority,
-      assigned_to: formData.assigned_to || null,
+      assigned_to: assignedTo,
       requested_by: userId,
     })
-    .select('id, ticket_number, title')
+    .select('id, ticket_number, title, description, category, priority')
     .single()
   if (error) return { error: error.message }
   revalidatePath('/dashboard/operations/service-desk')
-  if (priority === 'critical' && ticket) {
-    sendNewCriticalTicketAlertIfEnabled(ticket).catch(console.error)
+  if (ticket) {
+    sendNewTicketEmailToIT(ticket).catch(console.error)
+    if (priority === 'critical') {
+      sendNewCriticalTicketAlertIfEnabled(ticket).catch(console.error)
+    }
   }
   return { success: true }
 }
@@ -61,6 +76,17 @@ export async function updateTicket(id: string, formData: {
 }) {
   const { supabase } = await ensureAuth()
   if (!supabase) return { error: 'Not authenticated' }
+
+  let previousStatus: string | undefined
+  if (formData.status != null) {
+    const { data: existing } = await supabase
+      .from('it_tickets')
+      .select('status, ticket_number, title')
+      .eq('id', id)
+      .single()
+    previousStatus = existing?.status
+  }
+
   const update: Record<string, unknown> = {}
   if (formData.title != null) update.title = formData.title.trim()
   if (formData.description != null) update.description = formData.description?.trim() || null
@@ -74,8 +100,31 @@ export async function updateTicket(id: string, formData: {
   if (formData.sla_due_at != null) update.sla_due_at = formData.sla_due_at || null
   if (formData.resolution_notes != null) update.resolution_notes = formData.resolution_notes?.trim() || null
   update.updated_at = new Date().toISOString()
-  const { error } = await supabase.from('it_tickets').update(update).eq('id', id)
+
+  const { data: updated, error } = await supabase
+    .from('it_tickets')
+    .update(update)
+    .eq('id', id)
+    .select('ticket_number, title, status')
+    .single()
+
   if (error) return { error: error.message }
+
+  if (
+    formData.status != null &&
+    previousStatus != null &&
+    previousStatus !== formData.status &&
+    updated
+  ) {
+    sendTicketStatusChangeEmail({
+      ticketId: id,
+      ticketNumber: updated.ticket_number ?? null,
+      title: updated.title ?? '',
+      previousStatus,
+      newStatus: formData.status,
+    }).catch(console.error)
+  }
+
   revalidatePath('/dashboard/operations/service-desk')
   return { success: true }
 }

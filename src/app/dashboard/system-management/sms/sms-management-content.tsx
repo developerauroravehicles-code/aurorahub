@@ -18,6 +18,7 @@ const TRIGGER_LABELS: Record<SMSTriggerType, string> = {
   cancellation_notice: 'Cancellation Notice',
   rescheduling_notice: 'Rescheduling Notice',
   four_hour_reminder: '4-Hour Reminder',
+  twenty_four_hour_reminder: '24-Hour Reminder',
 }
 
 export function SMSManagementContent() {
@@ -143,7 +144,7 @@ export function SMSManagementContent() {
   }
 
   const selectedDemand = demands.find((d) => d.id === manualDemandId)
-  const canSendToSpecialist = selectedDemand?.assigned_specialist_id && (manualMessageType === 'appointment_created' || manualMessageType === 'four_hour_reminder' || manualMessageType === 'cancellation_notice' || manualMessageType === 'rescheduling_notice')
+  const canSendToSpecialist = selectedDemand?.assigned_specialist_id && (manualMessageType === 'appointment_created' || manualMessageType === 'four_hour_reminder' || manualMessageType === 'twenty_four_hour_reminder' || manualMessageType === 'cancellation_notice' || manualMessageType === 'rescheduling_notice')
 
   const loadSmsLogs = async () => {
     setLogsLoading(true)
@@ -338,7 +339,7 @@ export function SMSManagementContent() {
           const previewText = previewSmsTemplate(trigger, s.template, {
             signature: settings.signature,
             contactPhone: settings.contactPhone,
-            hoursBefore: (s as { hoursBefore?: number }).hoursBefore ?? 4,
+            hoursBefore: trigger === 'twenty_four_hour_reminder' ? 24 : ((s as { hoursBefore?: number }).hoursBefore ?? 4),
           })
           const segmentInfo = getSmsSegmentCount(previewText)
           return (

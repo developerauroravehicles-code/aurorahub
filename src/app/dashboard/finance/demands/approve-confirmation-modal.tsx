@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { approveDemand } from './actions'
 import { useRouter } from 'next/navigation'
 
@@ -20,18 +20,22 @@ export function ApproveConfirmationModal({ demandId, isOpen, onClose, hasAssigne
   // Auto-check specialist SMS since demand will be auto-assigned to dealer's specialist when approved
   const [sendSMSToSpecialist, setSendSMSToSpecialist] = useState(true)
   const [sendSMSToAuroraManager, setSendSMSToAuroraManager] = useState(true)
+  const submittingRef = useRef(false)
 
   const handleApprove = async () => {
     if (!confirmApprove) {
       setError('Please confirm that you want to approve this demand')
       return
     }
+    if (submittingRef.current) return
+    submittingRef.current = true
 
     setLoading(true)
     setError(null)
 
     const result = await approveDemand(demandId, sendSMSToCustomer, sendSMSToSpecialist, sendSMSToAuroraManager)
     
+    submittingRef.current = false
     if (result?.error) {
       setError(result.error)
       setLoading(false)

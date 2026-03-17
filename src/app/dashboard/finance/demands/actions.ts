@@ -134,12 +134,16 @@ export async function approveDemand(demandId: string, sendSMSToCustomer: boolean
     updateData.assigned_specialist_id = assignedSpecialistId
   }
 
-  const { error: updateError } = await supabase
+  const { data: updated, error: updateError } = await supabase
     .from('demands')
     .update(updateData)
     .eq('id', demandId)
+    .eq('status', 'pending_finance')
+    .select('id')
+    .single()
 
   if (updateError) return { error: updateError.message }
+  if (!updated) return { error: 'Demand was already approved or no longer pending' }
 
   logDemandChange({
     demandId,

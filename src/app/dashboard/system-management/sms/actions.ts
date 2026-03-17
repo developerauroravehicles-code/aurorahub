@@ -189,7 +189,7 @@ export async function sendManualSms(
       .single()
     phone = specialist?.phone ?? null
     if (!phone) return { success: false, error: 'Specialist has no phone number' }
-    const specialistAllowed = ['appointment_created', 'four_hour_reminder', 'cancellation_notice', 'rescheduling_notice']
+    const specialistAllowed = ['appointment_created', 'four_hour_reminder', 'twenty_four_hour_reminder', 'cancellation_notice', 'rescheduling_notice']
     if (!specialistAllowed.includes(messageType)) {
       return { success: false, error: 'This message type cannot be sent to specialist' }
     }
@@ -234,6 +234,13 @@ export async function sendManualSms(
     case 'four_hour_reminder':
       message = resolveReminderTemplate(trigger.template, {
         hoursText,
+        address,
+        signature: smsSettings.signature,
+      })
+      break
+    case 'twenty_four_hour_reminder':
+      message = resolveReminderTemplate(trigger.template, {
+        hoursText: '24 hours',
         address,
         signature: smsSettings.signature,
       })

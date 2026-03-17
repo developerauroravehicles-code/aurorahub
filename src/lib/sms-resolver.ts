@@ -22,6 +22,7 @@ export async function getSmsSettings(supabaseClient?: SupabaseClient): Promise<S
       cancellation_notice: { ...DEFAULT_SMS_SETTINGS.cancellation_notice, ...parsed.cancellation_notice },
       rescheduling_notice: { ...DEFAULT_SMS_SETTINGS.rescheduling_notice, ...parsed.rescheduling_notice },
       four_hour_reminder: { ...DEFAULT_SMS_SETTINGS.four_hour_reminder, ...parsed.four_hour_reminder },
+      twenty_four_hour_reminder: { ...DEFAULT_SMS_SETTINGS.twenty_four_hour_reminder, ...parsed.twenty_four_hour_reminder },
     }
   } catch {
     return DEFAULT_SMS_SETTINGS

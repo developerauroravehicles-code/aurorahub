@@ -27,6 +27,20 @@ export function formatInPT(date: Date | string, formatStr: string): string {
 }
 
 /**
+ * Convert datetime-local value (YYYY-MM-DDTHH:mm) to ISO string, interpreting the value as Pacific Time.
+ * Use when the user enters SLA Due etc. in the Service Desk (all platform times are PT).
+ */
+export function ptDatetimeLocalToISO(localStr: string): string {
+  if (!localStr || !localStr.includes('T')) return localStr
+  const [datePart, timePart] = localStr.split('T')
+  const [y, mo, day] = datePart.split('-').map(Number)
+  const [hour, min] = timePart.split(':').map(Number)
+  const d = new Date(y, mo - 1, day, hour, min, 0)
+  const utcDate = fromZonedTime(d, SYSTEM_DEFAULT_TIMEZONE)
+  return utcDate.toISOString()
+}
+
+/**
  * Convert yyyy-MM (e.g. "2026-03") to month range in the given timezone as ISO strings for DB queries.
  */
 export function getMonthRangeInTimezone(monthStr: string, tz: string): { start: string; end: string } {

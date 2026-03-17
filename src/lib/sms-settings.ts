@@ -3,7 +3,7 @@
  * Used by Aurora Manager to control when, to whom, and what SMS are sent.
  */
 
-export type SMSTriggerType = 'appointment_created' | 'cancellation_notice' | 'rescheduling_notice' | 'four_hour_reminder'
+export type SMSTriggerType = 'appointment_created' | 'cancellation_notice' | 'rescheduling_notice' | 'four_hour_reminder' | 'twenty_four_hour_reminder'
 
 export interface SMSTriggerSetting {
   enabled: boolean
@@ -22,6 +22,7 @@ export interface SMSSettings {
   cancellation_notice: SMSTriggerSetting
   rescheduling_notice: SMSTriggerSetting
   four_hour_reminder: SMSTriggerSetting
+  twenty_four_hour_reminder: SMSTriggerSetting
   /** Contact phone shown in cancellation/rescheduling notice */
   contactPhone: string
   /** Signature/branding at end of messages */
@@ -74,6 +75,17 @@ This is a reminder that your dashcam installation appointment is scheduled to ta
 
 {{signature}}`,
     description: 'Sent before appointment (automated cron). Configure hours (2, 4, or 6) and recipients below.',
+  },
+  twenty_four_hour_reminder: {
+    enabled: true,
+    sendToCustomer: true,
+    sendToSpecialist: true,
+    template: `24-Hour Appointment Reminder
+
+This is a reminder that your dashcam installation appointment is scheduled to take place in {{hours}} at {{address}}.
+
+{{signature}}`,
+    description: 'Sent 24 hours before appointment (automated cron). Recipients: Customer, Assigned Specialist.',
   },
   contactPhone: '(604) 833-5801',
   signature: 'Aurora Vehicles.',

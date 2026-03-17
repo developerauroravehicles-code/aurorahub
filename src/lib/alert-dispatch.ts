@@ -26,6 +26,42 @@ export async function getAlertRecipientEmails(): Promise<string[]> {
   return [...new Set(emails)]
 }
 
+/** Get email addresses for IT role only */
+export async function getITEmails(): Promise<string[]> {
+  const supabase = createAdminClient()
+  const { data: profiles } = await supabase
+    .from('profiles')
+    .select('id')
+    .eq('role', 'it')
+
+  if (!profiles?.length) return []
+
+  const emails: string[] = []
+  for (const p of profiles) {
+    const { data } = await supabase.auth.admin.getUserById(p.id)
+    if (data?.user?.email) emails.push(data.user.email)
+  }
+  return [...new Set(emails)]
+}
+
+/** Get email addresses for Aurora Manager role only */
+export async function getAuroraManagerEmails(): Promise<string[]> {
+  const supabase = createAdminClient()
+  const { data: profiles } = await supabase
+    .from('profiles')
+    .select('id')
+    .eq('role', 'aurora_manager')
+
+  if (!profiles?.length) return []
+
+  const emails: string[] = []
+  for (const p of profiles) {
+    const { data } = await supabase.auth.admin.getUserById(p.id)
+    if (data?.user?.email) emails.push(data.user.email)
+  }
+  return [...new Set(emails)]
+}
+
 /** Send alert email to IT and Aurora Manager users */
 export async function sendAlertEmail(params: {
   subject: string
@@ -77,6 +113,79 @@ export async function sendAlertEmail(params: {
     success: result.success ?? false,
     recipientCount: emails.length,
     error: result.error,
+  }
+}
+
+/** Send new ticket details to IT users via email */
+export async function sendNewTicketEmailToIT(ticket: {
+  id: string
+  ticket_number: string | null
+  title: string
+  description?: string | null
+  category: string
+  priority: string
+}): Promise<void> {
+  try {
+    const emails = await getITEmails()
+    if (emails.length === 0) return
+
+    const mailSettings = await getMailSettingsWithPassword()
+    if (!mailSettings && !process.env.RESEND_API_KEY) return
+
+    const ticketNum = ticket.ticket_number ?? ticket.id.slice(0, 8)
+    const categoryLabels: Record<string, string> = {
+      bug_report: 'Bug Report',
+      feature_request: 'Feature Request',
+      system_issue: 'System Issue',
+      access_request: 'Access Request',
+      integration_request: 'Integration Request',
+      security_incident: 'Security Incident',
+      other: 'Other',
+    }
+    const priorityLabels: Record<string, string> = {
+      low: 'Low',
+      medium: 'Medium',
+      high: 'High',
+      critical: 'Critical',
+    }
+    const subject = `AuroraHub: New Ticket - ${ticketNum}`
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || ''
+    const html = `
+      <div style="font-family: Arial, sans-serif;">
+        <h2 style="color: #C27E00;">New Ticket Created</h2>
+        <p><strong>Ticket:</strong> ${ticketNum}</p>
+        <p><strong>Title:</strong> ${ticket.title}</p>
+        <p><strong>Category:</strong> ${categoryLabels[ticket.category] ?? ticket.category}</p>
+        <p><strong>Priority:</strong> ${priorityLabels[ticket.priority] ?? ticket.priority}</p>
+        ${ticket.description ? `<p><strong>Description:</strong></p><p style="white-space: pre-wrap; background: #f5f5f5; padding: 8px; border-radius: 4px;">${String(ticket.description).replace(/</g, '&lt;').replace(/>/g, '&gt;')}</p>` : ''}
+        <p><a href="${appUrl}/dashboard/operations/service-desk?tab=tickets">View in Service Desk</a></p>
+        <p style="margin-top: 16px; color: #666;">— AuroraHub</p>
+      </div>
+    `
+
+    let result: { success: boolean; error?: string }
+    if (mailSettings) {
+      result = await sendEmailViaSMTP(mailSettings, { to: emails, subject, html })
+    } else {
+      const { error } = await resend.emails.send({
+        from: FROM_EMAIL,
+        to: emails,
+        subject,
+        html,
+      })
+      result = error ? { success: false, error: error.message } : { success: true }
+    }
+
+    logMailSent({
+      recipientEmails: emails,
+      subject,
+      mailType: 'alert',
+      reportTitle: 'new_ticket',
+      success: result.success ?? false,
+      errorMessage: result.error,
+    })
+  } catch (err) {
+    console.error('sendNewTicketEmailToIT failed:', err)
   }
 }
 
@@ -144,6 +253,62 @@ export async function sendNewCriticalTicketAlertIfEnabled(ticket: {
     })
   } catch (err) {
     console.error('sendNewCriticalTicketAlertIfEnabled failed:', err)
+  }
+}
+
+/** Called when a ticket status is changed - sends email to Aurora Manager */
+export async function sendTicketStatusChangeEmail(params: {
+  ticketId: string
+  ticketNumber: string | null
+  title: string
+  previousStatus: string
+  newStatus: string
+}): Promise<void> {
+  try {
+    const emails = await getAuroraManagerEmails()
+    if (emails.length === 0) return
+
+    const mailSettings = await getMailSettingsWithPassword()
+    if (!mailSettings && !process.env.RESEND_API_KEY) return
+
+    const ticketNum = params.ticketNumber ?? params.ticketId.slice(0, 8)
+    const subject = `AuroraHub: Ticket Status Changed - ${ticketNum}`
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || ''
+    const html = `
+      <div style="font-family: Arial, sans-serif;">
+        <h2 style="color: #C27E00;">Ticket Status Updated</h2>
+        <p><strong>Ticket:</strong> ${ticketNum}</p>
+        <p><strong>Title:</strong> ${params.title}</p>
+        <p><strong>Previous Status:</strong> ${params.previousStatus}</p>
+        <p><strong>New Status:</strong> ${params.newStatus}</p>
+        <p><a href="${appUrl}/dashboard/operations/service-desk?tab=tickets">View in Service Desk</a></p>
+        <p style="margin-top: 16px; color: #666;">— AuroraHub</p>
+      </div>
+    `
+
+    let result: { success: boolean; error?: string }
+    if (mailSettings) {
+      result = await sendEmailViaSMTP(mailSettings, { to: emails, subject, html })
+    } else {
+      const { error } = await resend.emails.send({
+        from: FROM_EMAIL,
+        to: emails,
+        subject,
+        html,
+      })
+      result = error ? { success: false, error: error.message } : { success: true }
+    }
+
+    logMailSent({
+      recipientEmails: emails,
+      subject,
+      mailType: 'alert',
+      reportTitle: 'ticket_status_change',
+      success: result.success ?? false,
+      errorMessage: result.error,
+    })
+  } catch (err) {
+    console.error('sendTicketStatusChangeEmail failed:', err)
   }
 }
 

@@ -32,7 +32,27 @@ import {
   Eye,
   X,
 } from 'lucide-react'
-import { formatInPT } from '@/lib/timezone-defaults'
+import { formatInPT, ptDatetimeLocalToISO } from '@/lib/timezone-defaults'
+
+/** Format duration in ms to "X Hour Y Minute" */
+function formatDuration(ms: number): string {
+  if (ms < 0 || !Number.isFinite(ms)) return '—'
+  const totalMinutes = Math.floor(ms / (1000 * 60))
+  const hours = Math.floor(totalMinutes / 60)
+  const minutes = totalMinutes % 60
+  const parts: string[] = []
+  if (hours > 0) parts.push(`${hours} Hour${hours !== 1 ? 's' : ''}`)
+  parts.push(`${minutes} Minute${minutes !== 1 ? 's' : ''}`)
+  return parts.join(' ')
+}
+
+/** Closing duration: created_at to resolved_at for closed tickets */
+function getClosingDuration(createdAt: string, resolvedAt: string | null): number | null {
+  if (!resolvedAt) return null
+  const start = new Date(createdAt).getTime()
+  const end = new Date(resolvedAt).getTime()
+  return end - start
+}
 
 const TICKET_CATEGORIES: Record<string, string> = {
   bug_report: 'Bug Report',
@@ -272,6 +292,7 @@ export function ServiceDeskContent({
                   <th className="px-4 py-2 text-left text-gray-400">Assigned</th>
                   <th className="px-4 py-2 text-left text-gray-400">Requested By</th>
                   <th className="px-4 py-2 text-left text-gray-400">SLA</th>
+                  <th className="px-4 py-2 text-left text-gray-400">Duration</th>
                   <th className="px-4 py-2 text-right text-gray-400">Actions</th>
                 </tr>
               </thead>
@@ -291,7 +312,8 @@ export function ServiceDeskContent({
                     <td className="px-4 py-2">{TICKET_STATUSES[t.status] ?? t.status}</td>
                     <td className="px-4 py-2 text-gray-400">{t.assigned?.full_name ?? '—'}</td>
                     <td className="px-4 py-2 text-gray-400">{t.requester?.full_name ?? '—'}</td>
-                    <td className="px-4 py-2 text-gray-400">{t.sla_due_at ? formatInPT(t.sla_due_at, 'MMM d, yyyy h:mm a') : '—'}</td>
+                    <td className="px-4 py-2 text-gray-400 whitespace-nowrap">{t.sla_due_at ? formatInPT(t.sla_due_at, 'MMM d, yyyy h:mm a') : '—'}</td>
+                    <td className="px-4 py-2 text-gray-400">{t.resolved_at ? formatDuration(getClosingDuration(t.created_at, t.resolved_at) ?? 0) : '—'}</td>
                     <td className="px-4 py-2 text-right">
                       <button onClick={() => setViewingTicketId(t.id)} className="p-1.5 text-gray-400 hover:text-blue-400 mr-1" title="View details">
                         <Eye className="w-4 h-4 inline" />
@@ -327,6 +349,7 @@ export function ServiceDeskContent({
                         <span>Priority: {PRIORITIES[t.priority] ?? t.priority}</span>
                         <span>Status: {TICKET_STATUSES[t.status] ?? t.status}</span>
                         <span>SLA: {t.sla_due_at ? formatInPT(t.sla_due_at, 'MMM d, yyyy h:mm a') : '—'}</span>
+                        <span>Duration: {t.resolved_at ? formatDuration(getClosingDuration(t.created_at, t.resolved_at) ?? 0) : '—'}</span>
                         <span>Assigned: {t.assigned?.full_name ?? '—'}</span>
                         <span>Requested by: {t.requester?.full_name ?? '—'}</span>
                       </div>
@@ -597,6 +620,7 @@ function TicketForm({
     setError('')
     const form = e.currentTarget
     const get = (name: string) => form.elements.namedItem(name) as HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement | null
+    const slaRaw = get('sla_due_at')?.value
     const data = {
       title: get('title')?.value.trim() ?? '',
       description: get('description')?.value.trim() || undefined,
@@ -604,7 +628,7 @@ function TicketForm({
       priority: get('priority')?.value || undefined,
       status: get('status')?.value || undefined,
       assigned_to: get('assigned_to')?.value || undefined,
-      sla_due_at: get('sla_due_at')?.value || undefined,
+      sla_due_at: slaRaw ? ptDatetimeLocalToISO(slaRaw) : undefined,
       resolution_notes: get('resolution_notes')?.value.trim() || undefined,
     }
     const result = ticket
@@ -659,8 +683,8 @@ function TicketForm({
               </select>
             </div>
             <div>
-              <label className="block text-xs text-gray-400 mb-1">SLA Due</label>
-              <input name="sla_due_at" type="datetime-local" defaultValue={ticket?.sla_due_at ? new Date(ticket.sla_due_at).toISOString().slice(0, 16) : ''} className="w-full rounded bg-gray-900 border border-gray-700 px-3 py-2 text-white text-sm" />
+              <label className="block text-xs text-gray-400 mb-1">SLA Due (Pacific Time)</label>
+              <input name="sla_due_at" type="datetime-local" defaultValue={ticket?.sla_due_at ? formatInPT(ticket.sla_due_at, "yyyy-MM-dd'T'HH:mm") : ''} className="w-full rounded bg-gray-900 border border-gray-700 px-3 py-2 text-white text-sm" />
             </div>
           </div>
           <div>

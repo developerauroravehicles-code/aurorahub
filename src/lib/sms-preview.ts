@@ -3,13 +3,13 @@
  * For actual sending, sms-resolver is used server-side.
  */
 export function previewSmsTemplate(
-  trigger: 'appointment_created' | 'cancellation_notice' | 'rescheduling_notice' | 'four_hour_reminder',
+  trigger: 'appointment_created' | 'cancellation_notice' | 'rescheduling_notice' | 'four_hour_reminder' | 'twenty_four_hour_reminder',
   template: string,
   opts: { signature: string; contactPhone: string; hoursBefore?: number }
 ): string {
   const sampleDate = 'February 15, 2026 at 2:30 PM'
   const sampleAddress = '123 Main St, Vancouver'
-  const sampleHours = opts.hoursBefore === 2 ? '2 hours' : opts.hoursBefore === 6 ? '6 hours' : '4 hours'
+  const sampleHours = opts.hoursBefore === 24 ? '24 hours' : opts.hoursBefore === 2 ? '2 hours' : opts.hoursBefore === 6 ? '6 hours' : '4 hours'
 
   let result = template
     .replace(/\{\{date\}\}/g, sampleDate)
