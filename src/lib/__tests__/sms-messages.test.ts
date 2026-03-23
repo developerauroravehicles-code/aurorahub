@@ -103,5 +103,15 @@ describe('SMS timing utilities', () => {
       const in4_6Hours = new Date(Date.now() + 4.6 * 60 * 60 * 1000)
       expect(isWithinHoursBeforeWindow(in4_6Hours, 4)).toBe(false)
     })
+
+    it('returns true when ~23.75h away with hoursBefore=24 (24h reminder cron window)', () => {
+      const appt = new Date(Date.now() + 23.75 * 60 * 60 * 1000)
+      expect(isWithinHoursBeforeWindow(appt, 24)).toBe(true)
+    })
+
+    it('returns false when 22h away with hoursBefore=24 (old buggy DB lower bound missed 23.5–24h)', () => {
+      const appt = new Date(Date.now() + 22 * 60 * 60 * 1000)
+      expect(isWithinHoursBeforeWindow(appt, 24)).toBe(false)
+    })
   })
 })

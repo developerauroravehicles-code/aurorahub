@@ -1,8 +1,7 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { format } from 'date-fns'
 import { formatInTimeZone } from 'date-fns-tz'
 import { SYSTEM_DEFAULT_TIMEZONE, getPTDateRanges } from '@/lib/timezone-defaults'
 import { Filter, X, Plus } from 'lucide-react'
@@ -49,6 +48,32 @@ interface DemandsListProps {
   duplicateStockNumbers?: string[]
 }
 
+const ADMIN_DEMANDS_FILTERS_KEY = 'aurora_admin_demands_filters_v1'
+
+function buildPersistQS(
+  dateFilter: string,
+  statusFilter: string,
+  selectedDealerId: string,
+  hideDealerFilter: boolean
+): string {
+  const p = new URLSearchParams()
+  if (dateFilter !== 'all') p.set('date', dateFilter)
+  if (statusFilter !== 'all') p.set('status', statusFilter)
+  if (!hideDealerFilter && selectedDealerId !== 'all') p.set('dealer', selectedDealerId)
+  return p.toString()
+}
+
+/** True when both query strings encode the same key/value pairs. */
+function paramsEqual(a: string, b: string): boolean {
+  const pa = new URLSearchParams(a)
+  const pb = new URLSearchParams(b)
+  const keys = new Set([...pa.keys(), ...pb.keys()])
+  for (const k of keys) {
+    if (pa.get(k) !== pb.get(k)) return false
+  }
+  return true
+}
+
 export function DemandsList({ demands, dealers, specialists, selectedDealerId, canCreateExternal, hideDealerFilter, duplicateStockNumbers = [] }: DemandsListProps) {
   const [createModalOpen, setCreateModalOpen] = useState(false)
   const router = useRouter()
@@ -60,16 +85,80 @@ export function DemandsList({ demands, dealers, specialists, selectedDealerId, c
   const searchParams = useSearchParams()
 
   const handleDealerChange = (dealerId: string) => {
-    const params = new URLSearchParams(searchParams.toString())
-    if (dealerId === 'all') {
-      params.delete('dealer')
-    } else {
-      params.set('dealer', dealerId)
-    }
-    router.push(`/dashboard/admin/demands?${params.toString()}`)
+    const qs = buildPersistQS(dateFilter, statusFilter, dealerId, !!hideDealerFilter)
+    router.push(qs ? `/dashboard/admin/demands?${qs}` : '/dashboard/admin/demands')
   }
-  const [statusFilter, setStatusFilter] = useState<string>('all')
-  const [dateFilter, setDateFilter] = useState<string>('all')
+
+  const [statusFilter, setStatusFilter] = useState<string>(() => searchParams.get('status') ?? 'all')
+  const [dateFilter, setDateFilter] = useState<string>(() => searchParams.get('date') ?? 'all')
+
+  const filtersBootstrapped = useRef(false)
+  const prevListSearchRef = useRef<string | undefined>(undefined)
+
+  /**
+   * - Restore from session once if URL has no filters.
+   * - When the URL changes (Back/Forward), merge date/status from the URL without clobbering
+   *   in-progress dropdown changes (same URL, state-only update).
+   * - Persist filters to sessionStorage and sync the address bar from effective filters.
+   */
+  useEffect(() => {
+    const cur = searchParams.toString()
+    const urlChanged = prevListSearchRef.current !== undefined && cur !== prevListSearchRef.current
+
+    if (!filtersBootstrapped.current) {
+      filtersBootstrapped.current = true
+      const hasUrl =
+        searchParams.has('date') ||
+        searchParams.has('status') ||
+        (!hideDealerFilter && searchParams.has('dealer'))
+      if (!hasUrl) {
+        try {
+          const raw = sessionStorage.getItem(ADMIN_DEMANDS_FILTERS_KEY)
+          if (raw) {
+            const sp = new URLSearchParams(raw)
+            setDateFilter(sp.get('date') ?? 'all')
+            setStatusFilter(sp.get('status') ?? 'all')
+            router.replace(`/dashboard/admin/demands?${raw}`, { scroll: false })
+            prevListSearchRef.current = cur
+            return
+          }
+        } catch {
+          /* ignore */
+        }
+      }
+    }
+
+    const p = new URLSearchParams(cur)
+    let effectiveDate = dateFilter
+    let effectiveStatus = statusFilter
+    if (urlChanged) {
+      if (p.has('date')) {
+        effectiveDate = p.get('date') ?? 'all'
+        if (effectiveDate !== dateFilter) setDateFilter(effectiveDate)
+      }
+      if (p.has('status')) {
+        effectiveStatus = p.get('status') ?? 'all'
+        if (effectiveStatus !== statusFilter) setStatusFilter(effectiveStatus)
+      }
+    }
+
+    const qs = buildPersistQS(effectiveDate, effectiveStatus, selectedDealerId, !!hideDealerFilter)
+    try {
+      if (qs) sessionStorage.setItem(ADMIN_DEMANDS_FILTERS_KEY, qs)
+      else sessionStorage.removeItem(ADMIN_DEMANDS_FILTERS_KEY)
+    } catch {
+      /* ignore */
+    }
+    if (!paramsEqual(qs, cur)) {
+      router.replace(qs ? `/dashboard/admin/demands?${qs}` : '/dashboard/admin/demands', { scroll: false })
+    }
+    prevListSearchRef.current = cur
+  }, [dateFilter, statusFilter, selectedDealerId, hideDealerFilter, searchParams, router])
+
+  const persistQueryString = useMemo(
+    () => buildPersistQS(dateFilter, statusFilter, selectedDealerId, !!hideDealerFilter),
+    [dateFilter, statusFilter, selectedDealerId, hideDealerFilter]
+  )
   const [searchType, setSearchType] = useState<'customer' | 'demand_id' | 'vin' | 'stock_number'>('customer')
   const [searchValue, setSearchValue] = useState<string>('')
   const [showFilters, setShowFilters] = useState(false)
@@ -135,7 +224,19 @@ export function DemandsList({ demands, dealers, specialists, selectedDealerId, c
     setStatusFilter('all')
     setDateFilter('all')
     setSearchValue('')
-    if (dealerFilterActive) handleDealerChange('all')
+    try {
+      sessionStorage.removeItem(ADMIN_DEMANDS_FILTERS_KEY)
+    } catch {
+      /* ignore */
+    }
+    const p = new URLSearchParams(searchParams.toString())
+    p.delete('date')
+    p.delete('status')
+    if (dealerFilterActive) {
+      p.delete('dealer')
+    }
+    const qs = p.toString()
+    router.replace(qs ? `/dashboard/admin/demands?${qs}` : '/dashboard/admin/demands', { scroll: false })
   }
 
   return (
@@ -307,10 +408,14 @@ export function DemandsList({ demands, dealers, specialists, selectedDealerId, c
                 completed: 'bg-green-500/20 text-green-400',
                 cancelled: 'bg-red-500/20 text-red-400'
               }
+              const detailHref =
+                persistQueryString !== ''
+                  ? `/dashboard/admin/demands/${demand.id}?${persistQueryString}`
+                  : `/dashboard/admin/demands/${demand.id}`
 
               return (
                 <li key={demand.id} className="p-4 hover:bg-white/5 transition-colors">
-                  <Link href={`/dashboard/admin/demands/${demand.id}`} className="block">
+                  <Link href={detailHref} className="block">
                     <div className="flex justify-between items-start">
                       <div className="flex-1">
                         <div className="flex items-center gap-2">

@@ -12,8 +12,29 @@ import { EditVinForm } from '../edit-vin-form'
 import { EditStockNumberForm } from '../edit-stock-number-form'
 import { RescheduleDemandButton } from '../reschedule-demand-button'
 
-export default async function DemandDetailsPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params
+/** List filters (date, status, dealer) are passed on the detail URL so "Back" can restore them. */
+function demandsListHrefFromDetailSearch(
+  sp: Record<string, string | string[] | undefined>
+): string {
+  const p = new URLSearchParams()
+  for (const key of ['date', 'status', 'dealer'] as const) {
+    const raw = sp[key]
+    const v = Array.isArray(raw) ? raw[0] : raw
+    if (typeof v === 'string' && v.length > 0) p.set(key, v)
+  }
+  const qs = p.toString()
+  return qs ? `/dashboard/admin/demands?${qs}` : '/dashboard/admin/demands'
+}
+
+export default async function DemandDetailsPage({
+  params,
+  searchParams: searchParamsPromise,
+}: {
+  params: Promise<{ id: string }>
+  searchParams: Promise<Record<string, string | string[] | undefined>>
+}) {
+  const [{ id }, searchParams] = await Promise.all([params, searchParamsPromise])
+  const backToDemandsHref = demandsListHrefFromDetailSearch(searchParams)
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   
@@ -34,7 +55,7 @@ export default async function DemandDetailsPage({ params }: { params: Promise<{ 
     return (
       <div className="space-y-8">
         <div className="text-white">Demand not found</div>
-        <Link href="/dashboard/admin/demands" className="text-[#C27E00] hover:text-[#a06900]">
+        <Link href={backToDemandsHref} className="text-[#C27E00] hover:text-[#a06900]">
           ← Back to Demands
         </Link>
       </div>
@@ -96,7 +117,7 @@ export default async function DemandDetailsPage({ params }: { params: Promise<{ 
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-4">
           <Link 
-            href="/dashboard/admin/demands"
+            href={backToDemandsHref}
             className="text-gray-400 hover:text-white transition-colors"
           >
             <ArrowLeft className="w-5 h-5" />

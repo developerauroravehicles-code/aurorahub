@@ -51,18 +51,20 @@ export async function GET(request: Request) {
     let errorCount = 0
 
     // --- 24-hour reminder pass ---
+    // Window filter is isWithinHoursBeforeWindow(..., 24) → real time until appointment ∈ (23.5h, 24.5h].
+    // DB prefilter must INCLUDE that interval: appointments roughly 22h–26h out (same idea as 4h pass using now..now+7h).
+    // BUGFIX: Previously used [now+24h, now+31h], which EXCLUDED 23.5h–24h — those never matched and 24h SMS was skipped.
     if (reminder24hConfig.enabled && (reminder24hConfig.sendToCustomer || reminder24hConfig.sendToSpecialist)) {
-      const twentyFourHoursFromNow = new Date(now.getTime() + 24 * 60 * 60 * 1000)
-      const thirtyOneHoursFromNow = new Date(now.getTime() + 31 * 60 * 60 * 1000)
+      const lower24 = new Date(now.getTime() + 22 * 60 * 60 * 1000)
+      const upper24 = new Date(now.getTime() + 26 * 60 * 60 * 1000)
 
       const { data: demands24h, error: err24h } = await supabase
         .from('demands')
         .select(DEMAND_SELECT)
         .eq('status', 'approved')
-        .gte('appointment_date', twentyFourHoursFromNow.toISOString())
-        .lte('appointment_date', thirtyOneHoursFromNow.toISOString())
+        .gte('appointment_date', lower24.toISOString())
+        .lte('appointment_date', upper24.toISOString())
         .is('reminder_24h_sent_at', null)
-        .not('customer_phone', 'is', null)
 
       if (!err24h && demands24h?.length) {
         const smsSettings = await getSmsSettings(supabase)
@@ -72,6 +74,23 @@ export async function GET(request: Request) {
         for (const demand of demands24h) {
           const appointmentDate = new Date(demand.appointment_date)
           if (!isWithinHoursBeforeWindow(appointmentDate, 24)) continue
+
+          const canCustomer =
+            reminder24hConfig.sendToCustomer && !!(demand as { customer_phone?: string | null }).customer_phone
+          let specialistForSend: { phone: string; full_name: string | null } | null = null
+          if (reminder24hConfig.sendToSpecialist && (demand as { assigned_specialist_id?: string }).assigned_specialist_id) {
+            try {
+              const { data: specialist } = await supabase
+                .from('profiles')
+                .select('phone, full_name')
+                .eq('id', (demand as { assigned_specialist_id?: string }).assigned_specialist_id!)
+                .single()
+              if (specialist?.phone) specialistForSend = { phone: specialist.phone, full_name: specialist.full_name }
+            } catch {
+              /* ignore */
+            }
+          }
+          if (!canCustomer && !specialistForSend) continue
 
           // Atomic claim: only one cron instance can claim this demand
           const { data: claimed24h } = await supabase
@@ -89,51 +108,50 @@ export async function GET(request: Request) {
             signature: smsSettings.signature,
           })
 
-          let sentForThisDemand = false
-
-          if (reminder24hConfig.sendToCustomer && demand.customer_phone) {
+          if (canCustomer) {
             try {
-              const result = await sendSMS(demand.customer_phone, message)
+              const result = await sendSMS((demand as { customer_phone: string }).customer_phone, message)
               if (result.success) {
                 sentCount++
-                sentForThisDemand = true
-                logSmsSent({
-                  phoneNumber: demand.customer_phone,
-                  recipientType: 'customer',
-                  recipientName: `${(demand as { customer_firstname?: string }).customer_firstname} ${(demand as { customer_lastname?: string }).customer_lastname}`.trim(),
-                  demandId: demand.id,
-                  messageType: 'twenty_four_hour_reminder',
-                  triggeredBy: 'system',
-                  messageContent: message,
-                }, supabase).catch(() => {})
-              } else errorCount++
-            } catch { errorCount++ }
-          }
-
-          if (reminder24hConfig.sendToSpecialist && (demand as { assigned_specialist_id?: string }).assigned_specialist_id) {
-            try {
-              const { data: specialist } = await supabase
-                .from('profiles')
-                .select('phone, full_name')
-                .eq('id', (demand as { assigned_specialist_id?: string }).assigned_specialist_id)
-                .single()
-              if (specialist?.phone) {
-                const result = await sendSMS(specialist.phone, message)
-                if (result.success) {
-                  sentCount++
-                  sentForThisDemand = true
-                  logSmsSent({
-                    phoneNumber: specialist.phone,
-                    recipientType: 'specialist',
-                    recipientName: specialist.full_name ?? undefined,
+                logSmsSent(
+                  {
+                    phoneNumber: demand.customer_phone,
+                    recipientType: 'customer',
+                    recipientName: `${(demand as { customer_firstname?: string }).customer_firstname} ${(demand as { customer_lastname?: string }).customer_lastname}`.trim(),
                     demandId: demand.id,
                     messageType: 'twenty_four_hour_reminder',
                     triggeredBy: 'system',
                     messageContent: message,
-                  }, supabase).catch(() => {})
-                } else errorCount++
-              }
-            } catch { errorCount++ }
+                  },
+                  supabase
+                ).catch(() => {})
+              } else errorCount++
+            } catch {
+              errorCount++
+            }
+          }
+
+          if (specialistForSend) {
+            try {
+              const result = await sendSMS(specialistForSend.phone, message)
+              if (result.success) {
+                sentCount++
+                logSmsSent(
+                  {
+                    phoneNumber: specialistForSend.phone,
+                    recipientType: 'specialist',
+                    recipientName: specialistForSend.full_name ?? undefined,
+                    demandId: demand.id,
+                    messageType: 'twenty_four_hour_reminder',
+                    triggeredBy: 'system',
+                    messageContent: message,
+                  },
+                  supabase
+                ).catch(() => {})
+              } else errorCount++
+            } catch {
+              errorCount++
+            }
           }
 
           // reminder_24h_sent_at already set by atomic claim above

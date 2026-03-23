@@ -58,7 +58,7 @@ export async function getSmsLogsForLogsPage(filters?: {
     .from('sms_logs')
     .select('id, sent_at, phone_number, recipient_type, recipient_name, demand_id, message_type, triggered_by, message_content')
     .order('sent_at', { ascending: false })
-    .limit(200)
+    .limit(500)
 
   if (filters?.dateFrom) {
     query = query.gte('sent_at', `${filters.dateFrom}T00:00:00.000Z`)

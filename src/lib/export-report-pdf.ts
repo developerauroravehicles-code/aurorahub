@@ -178,6 +178,7 @@ function buildReportPdf(options: ExportReportOptions): jsPDF {
     yPos += 6
 
     const demandRows = demands.map((d) => [
+      d.demandId ?? '—',
       d.customer,
       d.vehicle,
       d.camera,
@@ -188,19 +189,19 @@ function buildReportPdf(options: ExportReportOptions): jsPDF {
 
     autoTable(doc, {
       startY: yPos,
-      head: [['Customer', 'Vehicle', 'Camera', 'Appointment', 'Status', 'Created']],
+      head: [['Demand ID', 'Customer', 'Vehicle', 'Camera', 'Appointment', 'Status', 'Created']],
       body: demandRows,
       theme: 'grid',
       headStyles: { fillColor: [194, 126, 0], fontSize: 8 },
       bodyStyles: { fontSize: 7 },
       columnStyles: {
-        0: { cellWidth: 22 },
-        1: { cellWidth: 33 },
-        2: { cellWidth: 32 },
-        3: { cellWidth: 22 },
-        4: { cellWidth: 32 },
-        5: { cellWidth: 25 },
-        6: { cellWidth: 22 },
+        0: { cellWidth: 18 },
+        1: { cellWidth: 26 },
+        2: { cellWidth: 30 },
+        3: { cellWidth: 28 },
+        4: { cellWidth: 22 },
+        5: { cellWidth: 22 },
+        6: { cellWidth: 20 },
       },
       margin: { left: 14 },
     })

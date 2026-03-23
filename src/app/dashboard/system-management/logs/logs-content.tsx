@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { formatInTimeZone } from 'date-fns-tz'
 import { SYSTEM_DEFAULT_TIMEZONE } from '@/lib/timezone-defaults'
 import {
@@ -14,6 +14,25 @@ import {
 
 type LogType = 'sms' | 'mail' | 'demands'
 
+const STORAGE_SMS = 'aurora_logs_filters_sms'
+const STORAGE_MAIL = 'aurora_logs_filters_mail'
+const STORAGE_DEMANDS = 'aurora_logs_filters_demands'
+
+const defaultSmsFilters = { dateFrom: '', dateTo: '', customerName: '' }
+const defaultMailFilters = { dateFrom: '', dateTo: '', mailType: '', recipientEmail: '' }
+const defaultDemandFilters = { dateFrom: '', dateTo: '', demandId: '', actorId: '' }
+
+function readStored<T>(key: string, fallback: T): T {
+  if (typeof window === 'undefined') return fallback
+  try {
+    const raw = sessionStorage.getItem(key)
+    if (!raw) return fallback
+    return { ...fallback, ...JSON.parse(raw) }
+  } catch {
+    return fallback
+  }
+}
+
 export function LogsContent({ initialType }: { initialType: LogType }) {
   const logType = initialType
   const [smsLogs, setSmsLogs] = useState<SmsLogEntry[]>([])
@@ -23,55 +42,104 @@ export function LogsContent({ initialType }: { initialType: LogType }) {
   const [error, setError] = useState<string | null>(null)
   const [viewingSmsLog, setViewingSmsLog] = useState<SmsLogEntry | null>(null)
 
-  const [smsFilters, setSmsFilters] = useState({ dateFrom: '', dateTo: '', customerName: '' })
-  const [mailFilters, setMailFilters] = useState({ dateFrom: '', dateTo: '', mailType: '', recipientEmail: '' })
-  const [demandFilters, setDemandFilters] = useState({ dateFrom: '', dateTo: '', demandId: '', actorId: '' })
+  const [smsFilters, setSmsFilters] = useState(defaultSmsFilters)
+  const [mailFilters, setMailFilters] = useState(defaultMailFilters)
+  const [demandFilters, setDemandFilters] = useState(defaultDemandFilters)
 
-  const loadSmsLogs = async () => {
+  const loadSmsLogs = useCallback(async (filters: typeof defaultSmsFilters) => {
     setLoading(true)
     setError(null)
     const res = await getSmsLogsForLogsPage({
-      dateFrom: smsFilters.dateFrom || undefined,
-      dateTo: smsFilters.dateTo || undefined,
-      customerName: smsFilters.customerName || undefined,
+      dateFrom: filters.dateFrom || undefined,
+      dateTo: filters.dateTo || undefined,
+      customerName: filters.customerName || undefined,
     })
     setLoading(false)
     if (res.error) setError(res.error)
     else setSmsLogs(res.logs ?? [])
-  }
+  }, [])
 
-  const loadMailLogs = async () => {
+  const loadMailLogs = useCallback(async (filters: typeof defaultMailFilters) => {
     setLoading(true)
     setError(null)
     const res = await getMailLogsForLogsPage({
-      dateFrom: mailFilters.dateFrom || undefined,
-      dateTo: mailFilters.dateTo || undefined,
-      mailType: mailFilters.mailType || undefined,
-      recipientEmail: mailFilters.recipientEmail || undefined,
+      dateFrom: filters.dateFrom || undefined,
+      dateTo: filters.dateTo || undefined,
+      mailType: filters.mailType || undefined,
+      recipientEmail: filters.recipientEmail || undefined,
     })
     setLoading(false)
     if (res.error) setError(res.error)
     else setMailLogs(res.logs ?? [])
-  }
+  }, [])
 
-  const loadDemandLogs = async () => {
+  const loadDemandLogs = useCallback(async (filters: typeof defaultDemandFilters) => {
     setLoading(true)
     setError(null)
     const res = await getDemandLogsForLogsPage({
-      dateFrom: demandFilters.dateFrom || undefined,
-      dateTo: demandFilters.dateTo || undefined,
-      demandId: demandFilters.demandId || undefined,
-      actorId: demandFilters.actorId || undefined,
+      dateFrom: filters.dateFrom || undefined,
+      dateTo: filters.dateTo || undefined,
+      demandId: filters.demandId || undefined,
+      actorId: filters.actorId || undefined,
     })
     setLoading(false)
     if (res.error) setError(res.error)
     else setDemandLogs(res.logs ?? [])
-  }
+  }, [])
 
   useEffect(() => {
-    if (logType === 'sms') loadSmsLogs()
-    else if (logType === 'mail') loadMailLogs()
-    else loadDemandLogs()
+    let cancelled = false
+    const run = async () => {
+      if (logType === 'sms') {
+        const f = readStored(STORAGE_SMS, defaultSmsFilters)
+        setSmsFilters(f)
+        setLoading(true)
+        setError(null)
+        const res = await getSmsLogsForLogsPage({
+          dateFrom: f.dateFrom || undefined,
+          dateTo: f.dateTo || undefined,
+          customerName: f.customerName || undefined,
+        })
+        if (cancelled) return
+        setLoading(false)
+        if (res.error) setError(res.error)
+        else setSmsLogs(res.logs ?? [])
+      } else if (logType === 'mail') {
+        const f = readStored(STORAGE_MAIL, defaultMailFilters)
+        setMailFilters(f)
+        setLoading(true)
+        setError(null)
+        const res = await getMailLogsForLogsPage({
+          dateFrom: f.dateFrom || undefined,
+          dateTo: f.dateTo || undefined,
+          mailType: f.mailType || undefined,
+          recipientEmail: f.recipientEmail || undefined,
+        })
+        if (cancelled) return
+        setLoading(false)
+        if (res.error) setError(res.error)
+        else setMailLogs(res.logs ?? [])
+      } else {
+        const f = readStored(STORAGE_DEMANDS, defaultDemandFilters)
+        setDemandFilters(f)
+        setLoading(true)
+        setError(null)
+        const res = await getDemandLogsForLogsPage({
+          dateFrom: f.dateFrom || undefined,
+          dateTo: f.dateTo || undefined,
+          demandId: f.demandId || undefined,
+          actorId: f.actorId || undefined,
+        })
+        if (cancelled) return
+        setLoading(false)
+        if (res.error) setError(res.error)
+        else setDemandLogs(res.logs ?? [])
+      }
+    }
+    run()
+    return () => {
+      cancelled = true
+    }
   }, [logType])
 
   return (
@@ -122,11 +190,29 @@ export function LogsContent({ initialType }: { initialType: LogType }) {
             </div>
             <button
               type="button"
-              onClick={loadSmsLogs}
+              onClick={() => {
+                if (typeof window !== 'undefined') {
+                  sessionStorage.setItem(STORAGE_SMS, JSON.stringify(smsFilters))
+                }
+                loadSmsLogs(smsFilters)
+              }}
               disabled={loading}
               className="bg-[#C27E00] hover:bg-[#a06900] text-white px-4 py-2 rounded text-sm font-medium disabled:opacity-50"
             >
               {loading ? 'Loading...' : 'Apply filters'}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                if (typeof window !== 'undefined')                 sessionStorage.removeItem(STORAGE_SMS)
+                const cleared = { ...defaultSmsFilters }
+                setSmsFilters(cleared)
+                loadSmsLogs(cleared)
+              }}
+              disabled={loading}
+              className="border border-gray-600 text-gray-300 hover:bg-white/10 px-4 py-2 rounded text-sm font-medium disabled:opacity-50"
+            >
+              Clear filters
             </button>
           </div>
           <div className="overflow-x-auto border border-gray-800 rounded-lg">
@@ -262,11 +348,29 @@ export function LogsContent({ initialType }: { initialType: LogType }) {
             </div>
             <button
               type="button"
-              onClick={loadMailLogs}
+              onClick={() => {
+                if (typeof window !== 'undefined') {
+                  sessionStorage.setItem(STORAGE_MAIL, JSON.stringify(mailFilters))
+                }
+                loadMailLogs(mailFilters)
+              }}
               disabled={loading}
               className="bg-[#C27E00] hover:bg-[#a06900] text-white px-4 py-2 rounded text-sm font-medium disabled:opacity-50"
             >
               {loading ? 'Loading...' : 'Apply filters'}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                if (typeof window !== 'undefined')                 sessionStorage.removeItem(STORAGE_MAIL)
+                const cleared = { ...defaultMailFilters }
+                setMailFilters(cleared)
+                loadMailLogs(cleared)
+              }}
+              disabled={loading}
+              className="border border-gray-600 text-gray-300 hover:bg-white/10 px-4 py-2 rounded text-sm font-medium disabled:opacity-50"
+            >
+              Clear filters
             </button>
           </div>
           <div className="overflow-x-auto border border-gray-800 rounded-lg">
@@ -360,11 +464,29 @@ export function LogsContent({ initialType }: { initialType: LogType }) {
             </div>
             <button
               type="button"
-              onClick={loadDemandLogs}
+              onClick={() => {
+                if (typeof window !== 'undefined') {
+                  sessionStorage.setItem(STORAGE_DEMANDS, JSON.stringify(demandFilters))
+                }
+                loadDemandLogs(demandFilters)
+              }}
               disabled={loading}
               className="bg-[#C27E00] hover:bg-[#a06900] text-white px-4 py-2 rounded text-sm font-medium disabled:opacity-50"
             >
               {loading ? 'Loading...' : 'Apply filters'}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                if (typeof window !== 'undefined')                 sessionStorage.removeItem(STORAGE_DEMANDS)
+                const cleared = { ...defaultDemandFilters }
+                setDemandFilters(cleared)
+                loadDemandLogs(cleared)
+              }}
+              disabled={loading}
+              className="border border-gray-600 text-gray-300 hover:bg-white/10 px-4 py-2 rounded text-sm font-medium disabled:opacity-50"
+            >
+              Clear filters
             </button>
           </div>
           <div className="overflow-x-auto border border-gray-800 rounded-lg">
