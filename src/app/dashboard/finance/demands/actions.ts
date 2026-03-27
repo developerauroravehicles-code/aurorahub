@@ -9,6 +9,7 @@ import { getSmsSettings } from '@/lib/sms-resolver'
 import { resolveAppointmentCreatedTemplate, resolveCancellationTemplate, resolveReminderTemplate } from '@/lib/sms-resolver'
 import { validateAppointmentSlot } from '@/app/dashboard/system-management/calendar/actions'
 import { getTimezoneFromDealer } from '@/lib/dealer-timezone'
+import { lookupCameraModelId } from '@/lib/camera-model-resolve'
 
 export async function assignDemandToMe(demandId: string) {
   const supabase = await createClient()
@@ -468,6 +469,8 @@ export async function updateDemand(demandId: string, formData: FormData) {
     }
   }
 
+  const cameraModelId = await lookupCameraModelId(supabase, cameraModel)
+
   // Update demand
   const { error: updateError } = await supabase
     .from('demands')
@@ -481,6 +484,7 @@ export async function updateDemand(demandId: string, formData: FormData) {
       vehicle_year: vehicleYear,
       stock_number: stockNumber,
       camera_model: cameraModel,
+      camera_model_id: cameraModelId,
       appointment_date: appointmentDate,
       updated_at: new Date().toISOString()
     })

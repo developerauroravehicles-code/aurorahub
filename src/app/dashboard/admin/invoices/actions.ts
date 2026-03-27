@@ -17,9 +17,40 @@ function parseCompleteDateToYYYYMMDD(s: string): string | null {
   return null
 }
 import { revalidatePath } from 'next/cache'
-import { buildInvoicePdf } from '@/lib/generate-invoice-pdf'
+import { buildInvoicePdf, getInvoicePdfBase64 } from '@/lib/generate-invoice-pdf'
 import { uploadInvoiceToDrive } from '@/lib/google-drive'
+import { sendDocumentPdfEmail, sendBulkInvoicesPdfEmail, buildBulkInvoicesSummaryHtml, parseEmailRecipients } from '@/lib/email'
 import type { InvoiceRowData } from '@/lib/generate-invoice-pdf'
+import { demandRecordToInvoiceRowData } from '@/lib/invoice-row-pdf-data'
+import { getSystemLogo } from '@/app/dashboard/system-management/logo/actions'
+
+const BULK_INVOICE_EMAIL_MAX = 25
+
+const INVOICES_LIST_SELECT = `
+  id,
+  demand_number,
+  dealer_id,
+  stock_number,
+  vin_last6,
+  customer_phone,
+  customer_firstname,
+  customer_lastname,
+  customer_address,
+  vehicle_year,
+  vehicle_make,
+  vehicle_model,
+  camera_model,
+  updated_at,
+  completed_at,
+  invoice_total_amount,
+  invoice_comments,
+  invoice_extra_rows,
+  invoice_financial_summary,
+  invoice_saved_at,
+  invoice_downloaded_at,
+  invoice_drive_uploaded_at,
+  dealers(name, address, phone)
+` as const
 
 const DEFAULT_FINANCIAL_SUMMARY = {
   gstEnabled: true,
@@ -232,4 +263,123 @@ export async function uploadInvoiceToDriveAction(
   }
 
   return result
+}
+
+export async function sendInvoicePdfEmailAction(
+  recipientsRaw: string,
+  invoiceData: InvoiceRowData
+): Promise<{ success?: boolean; error?: string }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Unauthorized' }
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single()
+
+  if (!profile || profile.role !== 'aurora_manager') {
+    return { error: 'Only Aurora Manager can email invoices' }
+  }
+
+  const to = parseEmailRecipients(recipientsRaw)
+  if (to.length === 0) return { error: 'Enter at least one valid email address' }
+
+  const { base64, fileName } = getInvoicePdfBase64(invoiceData)
+  const invLabel = invoiceData.demand_number ? `#${invoiceData.demand_number}` : 'Invoice'
+  const subject = `Invoice ${invLabel} — Aurora Vehicles`
+  const documentTitle = `Invoice ${invLabel}`
+  const bodyIntro = `Please find attached the invoice for ${invoiceData.customerName} (${invLabel}).`
+
+  const result = await sendDocumentPdfEmail({
+    to,
+    subject,
+    documentTitle,
+    bodyIntro,
+    pdfBase64: base64,
+    fileName,
+    senderId: user.id,
+    mailType: 'invoice',
+  })
+
+  if (!result.success) return { error: result.error ?? 'Failed to send email' }
+  return { success: true }
+}
+
+export async function sendBulkInvoicePdfEmailAction(
+  recipientsRaw: string,
+  demandIds: string[]
+): Promise<{ success?: boolean; error?: string }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Unauthorized' }
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single()
+
+  if (!profile || profile.role !== 'aurora_manager') {
+    return { error: 'Only Aurora Manager can email invoices' }
+  }
+
+  const uniqueIds = [...new Set(demandIds.map((id) => id.trim()).filter(Boolean))]
+  if (uniqueIds.length === 0) return { error: 'No invoices selected' }
+  if (uniqueIds.length > BULK_INVOICE_EMAIL_MAX) {
+    return { error: `Select at most ${BULK_INVOICE_EMAIL_MAX} invoices per email` }
+  }
+
+  const to = parseEmailRecipients(recipientsRaw)
+  if (to.length === 0) return { error: 'Enter at least one valid email address' }
+
+  const { data: rows, error } = await supabase
+    .from('demands')
+    .select(INVOICES_LIST_SELECT)
+    .in('id', uniqueIds)
+    .eq('status', 'completed')
+
+  if (error) return { error: error.message }
+  if (!rows || rows.length !== uniqueIds.length) {
+    return { error: 'One or more invoices are missing or not completed' }
+  }
+
+  const rowById = new Map(rows.map((r) => [r.id as string, r]))
+  const ordered = uniqueIds.map((id) => rowById.get(id)!)
+
+  const logoDataUrl = await getSystemLogo()
+  const summaryItems: InvoiceRowData[] = []
+  const attachments: { filename: string; content: Buffer }[] = []
+
+  for (const row of ordered) {
+    const invoiceData = demandRecordToInvoiceRowData(row, logoDataUrl)
+    summaryItems.push(invoiceData)
+    const { base64, fileName } = getInvoicePdfBase64(invoiceData)
+    attachments.push({ filename: fileName, content: Buffer.from(base64, 'base64') })
+  }
+
+  const n = summaryItems.length
+  const subject =
+    n === 1 && summaryItems[0]?.demand_number
+      ? `Invoice #${summaryItems[0].demand_number} — Aurora Vehicles`
+      : `${n} invoices — Aurora Vehicles`
+  const documentTitle = n === 1 ? `Invoice ${summaryItems[0]?.demand_number ? `#${summaryItems[0].demand_number}` : ''}`.trim() : `Bulk invoices (${n})`
+  const bodyIntro =
+    n === 1
+      ? `Please find attached the invoice for ${summaryItems[0].customerName}.`
+      : 'Please find attached the invoice PDFs for the selected completed demands.'
+
+  const result = await sendBulkInvoicesPdfEmail({
+    to,
+    subject,
+    documentTitle,
+    bodyIntro,
+    bodyHtmlExtra: buildBulkInvoicesSummaryHtml(summaryItems),
+    attachments,
+    senderId: user.id,
+  })
+
+  if (!result.success) return { error: result.error ?? 'Failed to send email' }
+  return { success: true }
 }

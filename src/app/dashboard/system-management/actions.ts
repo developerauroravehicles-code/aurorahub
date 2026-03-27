@@ -510,6 +510,7 @@ export async function createCameraModel(prevState: ActionState, formData: FormDa
   if (error) return { error: error.message }
   
   revalidatePath('/dashboard/configuration/cameras')
+  revalidatePath('/dashboard/admin/inventory')
   return { success: 'Camera model created successfully!' }
 }
 
@@ -538,6 +539,7 @@ export async function updateCameraModel(prevState: ActionState, formData: FormDa
   if (error) return { error: error.message }
   
   revalidatePath('/dashboard/configuration/cameras')
+  revalidatePath('/dashboard/admin/inventory')
   return { success: 'Camera model updated successfully!' }
 }
 
@@ -555,6 +557,7 @@ export async function updateCameraStock(cameraId: string, stockQuantity: number)
   }
   
   revalidatePath('/dashboard/configuration/cameras')
+  revalidatePath('/dashboard/admin/inventory')
   return { success: 'Stock updated successfully!' }
 }
 
@@ -616,6 +619,7 @@ export async function deleteCameraModel(id: string) {
   }
   
   revalidatePath('/dashboard/configuration/cameras')
+  revalidatePath('/dashboard/admin/inventory')
   return { success: 'Camera model deleted successfully!' }
 }
 
@@ -633,6 +637,7 @@ export async function toggleCameraModelStatus(id: string, isActive: boolean) {
   }
   
   revalidatePath('/dashboard/configuration/cameras')
+  revalidatePath('/dashboard/admin/inventory')
   return { success: `Camera model ${isActive ? 'activated' : 'deactivated'} successfully!` }
 }
 

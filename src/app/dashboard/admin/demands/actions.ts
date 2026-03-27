@@ -12,6 +12,7 @@ import { validateAppointmentSlot } from '@/app/dashboard/system-management/calen
 import { getTimezoneFromDealer } from '@/lib/dealer-timezone'
 import { fromZonedTime } from 'date-fns-tz'
 import { SYSTEM_DEFAULT_TIMEZONE } from '@/lib/timezone-defaults'
+import { lookupCameraModelId } from '@/lib/camera-model-resolve'
 
 export async function updateAssignedSpecialist(
   demandId: string,
@@ -333,6 +334,8 @@ export async function updateDemandByAuroraManager(
   const newAppointmentDate = new Date(appointmentDate)
   const appointmentDateChanged = oldAppointmentDate && oldAppointmentDate.getTime() !== newAppointmentDate.getTime()
 
+  const cameraModelId = await lookupCameraModelId(supabase, cameraModel)
+
   const { error: updateError } = await supabase
     .from('demands')
     .update({
@@ -345,6 +348,7 @@ export async function updateDemandByAuroraManager(
       vehicle_year: vehicleYear,
       stock_number: stockNumber,
       camera_model: cameraModel,
+      camera_model_id: cameraModelId,
       appointment_date: appointmentDate,
       updated_at: new Date().toISOString(),
     })

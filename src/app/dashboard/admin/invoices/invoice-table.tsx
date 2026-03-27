@@ -1,12 +1,12 @@
 'use client'
 
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { addYears } from 'date-fns'
 import { formatInTimeZone } from 'date-fns-tz'
 import { SYSTEM_DEFAULT_TIMEZONE } from '@/lib/timezone-defaults'
-import { Download, Eye, X, Save, Plus, Trash2, HardDrive, ArrowUpDown, ChevronDown, ChevronsDown, ChevronsUp } from 'lucide-react'
-import { updateInvoiceFields, uploadInvoiceToDriveAction, recordInvoiceDownloadAction, updateInvoiceStatusAction } from './actions'
+import { Download, Eye, X, Save, Plus, Trash2, HardDrive, ArrowUpDown, ChevronDown, ChevronsDown, ChevronsUp, Mail } from 'lucide-react'
+import { updateInvoiceFields, uploadInvoiceToDriveAction, recordInvoiceDownloadAction, updateInvoiceStatusAction, sendInvoicePdfEmailAction, sendBulkInvoicePdfEmailAction } from './actions'
 import { downloadInvoicePdf, getInvoicePdfBlobUrl } from '@/lib/generate-invoice-pdf'
 import type { InvoiceRowData } from '@/lib/generate-invoice-pdf'
 
@@ -78,11 +78,20 @@ export function InvoiceTable({ invoices, logoDataUrl, canEdit = true }: InvoiceT
   const [previewPdfUrl, setPreviewPdfUrl] = useState<string | null>(null)
   const [driveUploading, setDriveUploading] = useState(false)
   const [driveMessage, setDriveMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+  const [previewEmailTo, setPreviewEmailTo] = useState('')
+  const [previewEmailSending, setPreviewEmailSending] = useState(false)
   const [sortBy, setSortBy] = useState<'id' | 'completeDate'>('completeDate')
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
   const [statusMenuOpen, setStatusMenuOpen] = useState<string | null>(null)
   const [tableExpanded, setTableExpanded] = useState(false)
   const [optimisticStatus, setOptimisticStatus] = useState<Record<string, { invoice_saved_at?: string | null; invoice_downloaded_at?: string | null; invoice_drive_uploaded_at?: string | null }>>({})
+  const [selectedInvoiceIds, setSelectedInvoiceIds] = useState<Set<string>>(() => new Set())
+  const [bulkEmailTo, setBulkEmailTo] = useState('')
+  const [bulkEmailSending, setBulkEmailSending] = useState(false)
+  const [bulkEmailMessage, setBulkEmailMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+  const selectAllCheckboxRef = useRef<HTMLInputElement>(null)
+
+  const BULK_EMAIL_MAX = 25
 
   const sortedInvoices = useMemo(() => {
     const arr = [...invoices]
@@ -99,6 +108,14 @@ export function InvoiceTable({ invoices, logoDataUrl, canEdit = true }: InvoiceT
     })
     return arr
   }, [invoices, sortBy, sortDir])
+
+  useEffect(() => {
+    const el = selectAllCheckboxRef.current
+    if (!el || !canEdit) return
+    const n = sortedInvoices.length
+    const selectedOnList = sortedInvoices.filter((r) => selectedInvoiceIds.has(r.id)).length
+    el.indeterminate = selectedOnList > 0 && selectedOnList < n
+  }, [canEdit, sortedInvoices, selectedInvoiceIds])
 
   const getRowWithOptimisticStatus = useCallback((row: InvoiceRow) => {
     const opt = optimisticStatus[row.id]
@@ -244,6 +261,8 @@ export function InvoiceTable({ invoices, logoDataUrl, canEdit = true }: InvoiceT
     setPreviewFinancialSummary({ gstEnabled: true, gstPercent: 5, pstEnabled: false, pstPercent: 7, salesTaxEnabled: false, salesTaxPercent: 0, otherEnabled: false, otherAmount: 0 })
     setPreviewPdfUrl(null)
     setDriveMessage(null)
+    setPreviewEmailTo('')
+    setPreviewEmailSending(false)
   }
 
   const handlePreviewSave = async () => {
@@ -282,6 +301,61 @@ export function InvoiceTable({ invoices, logoDataUrl, canEdit = true }: InvoiceT
       if (result.webViewLink) window.open(result.webViewLink, '_blank')
     } else {
       setDriveMessage({ type: 'error', text: result.error })
+    }
+  }
+
+  const handlePreviewEmail = async () => {
+    const data = buildPreviewData()
+    if (!data) return
+    setPreviewEmailSending(true)
+    setDriveMessage(null)
+    const res = await sendInvoicePdfEmailAction(previewEmailTo, data)
+    setPreviewEmailSending(false)
+    if (res.error) setDriveMessage({ type: 'error', text: res.error })
+    else setDriveMessage({ type: 'success', text: 'Email sent successfully.' })
+  }
+
+  const toggleInvoiceSelected = (id: string) => {
+    setSelectedInvoiceIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+    setBulkEmailMessage(null)
+  }
+
+  const toggleSelectAllInvoices = () => {
+    const allSelected =
+      sortedInvoices.length > 0 && sortedInvoices.every((r) => selectedInvoiceIds.has(r.id))
+    setSelectedInvoiceIds((prev) => {
+      const next = new Set(prev)
+      if (allSelected) {
+        sortedInvoices.forEach((r) => next.delete(r.id))
+      } else {
+        sortedInvoices.forEach((r) => next.add(r.id))
+      }
+      return next
+    })
+    setBulkEmailMessage(null)
+  }
+
+  const handleBulkInvoiceEmail = async () => {
+    const ids = Array.from(selectedInvoiceIds)
+    if (ids.length === 0) return
+    if (ids.length > BULK_EMAIL_MAX) {
+      setBulkEmailMessage({ type: 'error', text: `Select at most ${BULK_EMAIL_MAX} invoices per send.` })
+      return
+    }
+    setBulkEmailSending(true)
+    setBulkEmailMessage(null)
+    const res = await sendBulkInvoicePdfEmailAction(bulkEmailTo, ids)
+    setBulkEmailSending(false)
+    if (res.error) {
+      setBulkEmailMessage({ type: 'error', text: res.error })
+    } else {
+      setBulkEmailMessage({ type: 'success', text: `Sent ${ids.length} invoice PDFs in one email.` })
+      setSelectedInvoiceIds(new Set())
     }
   }
 
@@ -332,10 +406,81 @@ export function InvoiceTable({ invoices, logoDataUrl, canEdit = true }: InvoiceT
         <option value="completeDate-asc" className="bg-gray-900">Complete Date (Old→New)</option>
       </select>
     </div>
+    {canEdit && selectedInvoiceIds.size > 0 && (
+      <div className="mx-4 mb-2 flex flex-col gap-2 rounded-lg border border-[#C27E00]/35 bg-[#C27E00]/10 px-3 py-3 sm:flex-row sm:flex-wrap sm:items-end">
+        <div className="text-sm text-gray-200 sm:self-center">
+          <span className="font-medium text-white">{selectedInvoiceIds.size}</span>
+          {' '}
+          selected
+          <span className="text-gray-400"> · max {BULK_EMAIL_MAX} per email</span>
+        </div>
+        <div className="flex flex-1 flex-col gap-1 min-w-[200px] max-w-md">
+          <label htmlFor="invoice-bulk-email" className="text-xs font-medium text-gray-400">
+            One email — all selected PDFs attached
+          </label>
+          <input
+            id="invoice-bulk-email"
+            type="text"
+            value={bulkEmailTo}
+            onChange={(e) => setBulkEmailTo(e.target.value)}
+            placeholder="recipient@example.com (comma-separated)"
+            autoComplete="email"
+            className="w-full border border-gray-600 bg-black/50 text-white rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-[#C27E00]"
+          />
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={handleBulkInvoiceEmail}
+            disabled={bulkEmailSending || !bulkEmailTo.trim() || selectedInvoiceIds.size > BULK_EMAIL_MAX}
+            className="inline-flex items-center gap-1.5 bg-[#C27E00] hover:bg-[#a06900] text-white px-3 py-1.5 rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
+          >
+            <Mail className="w-4 h-4 shrink-0" />
+            {bulkEmailSending ? 'Sending…' : 'Send bulk email'}
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setSelectedInvoiceIds(new Set())
+              setBulkEmailMessage(null)
+            }}
+            className="text-sm text-gray-400 hover:text-white px-2 py-1.5"
+          >
+            Clear selection
+          </button>
+        </div>
+        {bulkEmailMessage && (
+          <p
+            className={`w-full text-sm sm:col-span-full ${
+              bulkEmailMessage.type === 'success' ? 'text-green-300' : 'text-red-300'
+            }`}
+          >
+            {bulkEmailMessage.text}
+          </p>
+        )}
+      </div>
+    )}
     <div className="flex-1 min-h-0 overflow-x-auto">
       <table className="min-w-full divide-y divide-gray-800">
         <thead className="bg-white/5">
           <tr>
+            {canEdit && (
+              <th className="w-10 px-2 py-2.5 text-left align-middle" scope="col">
+                <span className="sr-only">Select row</span>
+                <input
+                  ref={selectAllCheckboxRef}
+                  type="checkbox"
+                  checked={
+                    sortedInvoices.length > 0 &&
+                    sortedInvoices.every((r) => selectedInvoiceIds.has(r.id))
+                  }
+                  onChange={toggleSelectAllInvoices}
+                  className="rounded border-gray-500 bg-black/50 text-[#C27E00] focus:ring-[#C27E00] w-4 h-4"
+                  title="Select all invoices in list"
+                  aria-label="Select all invoices in list"
+                />
+              </th>
+            )}
             <th className="px-3 py-2.5 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Demand ID</th>
             <th className="px-3 py-2.5 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Customer Name</th>
             <th className="px-3 py-2.5 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Phone</th>
@@ -363,6 +508,17 @@ export function InvoiceTable({ invoices, logoDataUrl, canEdit = true }: InvoiceT
 
             return (
               <tr key={row.id} className="hover:bg-white/5 transition-colors">
+                {canEdit && (
+                  <td className="w-10 px-2 py-2.5 align-middle">
+                    <input
+                      type="checkbox"
+                      checked={selectedInvoiceIds.has(row.id)}
+                      onChange={() => toggleInvoiceSelected(row.id)}
+                      className="rounded border-gray-500 bg-black/50 text-[#C27E00] focus:ring-[#C27E00] w-4 h-4"
+                      aria-label={row.demand_number ? `Select invoice ${row.demand_number}` : 'Select invoice'}
+                    />
+                  </td>
+                )}
                 <td className="px-3 py-2.5 text-sm text-gray-300 whitespace-nowrap">
                   {row.demand_number ? `#${row.demand_number}` : '-'}
                 </td>
@@ -799,38 +955,65 @@ export function InvoiceTable({ invoices, logoDataUrl, canEdit = true }: InvoiceT
               {driveMessage.text}
             </div>
           )}
-          <div className="flex flex-wrap items-center justify-end gap-2 p-2 sm:p-3 border-t border-gray-700 flex-shrink-0 bg-gray-900">
-            {canEdit && (
+          <div className="flex flex-col gap-2 p-2 sm:p-3 border-t border-gray-700 flex-shrink-0 bg-gray-900">
+            <div className="flex flex-wrap items-end gap-2">
+              <div className="flex-1 min-w-[200px] max-w-md">
+                <label htmlFor="invoice-preview-email" className="block text-xs font-medium text-gray-400 mb-1">
+                  Send PDF by email
+                </label>
+                <input
+                  id="invoice-preview-email"
+                  type="text"
+                  value={previewEmailTo}
+                  onChange={e => setPreviewEmailTo(e.target.value)}
+                  placeholder="recipient@example.com (comma-separated)"
+                  autoComplete="email"
+                  className="w-full border border-gray-600 bg-black/50 text-white rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-[#C27E00]"
+                />
+              </div>
               <button
                 type="button"
-                onClick={handlePreviewSave}
-                disabled={pending.has(previewRow.id)}
-                className="inline-flex items-center gap-1.5 bg-gray-600 hover:bg-gray-500 text-white px-3 py-1.5 rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
+                onClick={handlePreviewEmail}
+                disabled={previewEmailSending || !previewEmailTo.trim()}
+                className="inline-flex items-center gap-1.5 bg-gray-600 hover:bg-gray-500 text-white px-3 py-1.5 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 h-[34px] self-end"
               >
-                <Save className="w-4 h-4 shrink-0" />
-                Save
+                <Mail className="w-4 h-4 shrink-0" />
+                {previewEmailSending ? 'Sending…' : 'Send email'}
               </button>
-            )}
-            <button
-              type="button"
-              onClick={handlePreviewDownload}
-              className="inline-flex items-center gap-1.5 bg-[#C27E00] hover:bg-[#a06900] text-white px-3 py-1.5 rounded-lg text-sm font-medium transition-colors"
-            >
-              <Download className="w-4 h-4 shrink-0" />
-              <span className="sm:hidden">PDF</span>
-              <span className="hidden sm:inline">Download PDF</span>
-            </button>
-            {canEdit && (
+            </div>
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              {canEdit && (
+                <button
+                  type="button"
+                  onClick={handlePreviewSave}
+                  disabled={pending.has(previewRow.id)}
+                  className="inline-flex items-center gap-1.5 bg-gray-600 hover:bg-gray-500 text-white px-3 py-1.5 rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
+                >
+                  <Save className="w-4 h-4 shrink-0" />
+                  Save
+                </button>
+              )}
               <button
                 type="button"
-                onClick={handlePreviewDrive}
-                disabled={driveUploading}
-                className="inline-flex items-center gap-1.5 bg-gray-600 hover:bg-gray-500 text-white px-3 py-1.5 rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
+                onClick={handlePreviewDownload}
+                className="inline-flex items-center gap-1.5 bg-[#C27E00] hover:bg-[#a06900] text-white px-3 py-1.5 rounded-lg text-sm font-medium transition-colors"
               >
-                <HardDrive className="w-4 h-4 shrink-0" />
-                {driveUploading ? 'Uploading...' : 'Drive'}
+                <Download className="w-4 h-4 shrink-0" />
+                <span className="sm:hidden">PDF</span>
+                <span className="hidden sm:inline">Download PDF</span>
               </button>
-            )}
+              {canEdit && (
+                <button
+                  type="button"
+                  onClick={handlePreviewDrive}
+                  disabled={driveUploading}
+                  className="inline-flex items-center gap-1.5 bg-gray-600 hover:bg-gray-500 text-white px-3 py-1.5 rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
+                >
+                  <HardDrive className="w-4 h-4 shrink-0" />
+                  {driveUploading ? 'Uploading...' : 'Drive'}
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </div>

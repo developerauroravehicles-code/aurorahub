@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { fromZonedTime } from 'date-fns-tz'
-import { SYSTEM_DEFAULT_TIMEZONE } from '@/lib/timezone-defaults'
+import { getDateRangeInTimezone, SYSTEM_DEFAULT_TIMEZONE } from '@/lib/timezone-defaults'
 import { redirect } from 'next/navigation'
 import { getSystemLogo } from '@/app/dashboard/system-management/logo/actions'
 import { InvoiceTable } from './invoice-table'
@@ -83,8 +83,14 @@ export default async function InvoicesPage({
     const monthStart = fromZonedTime(new Date(y, m - 1, 1, 0, 0, 0), SYSTEM_DEFAULT_TIMEZONE).toISOString()
     const monthEnd = fromZonedTime(new Date(y, m, 0, 23, 59, 59, 999), SYSTEM_DEFAULT_TIMEZONE).toISOString()
     query = query.gte('completed_at', monthStart).lte('completed_at', monthEnd)
-  } else if (startDateParam && endDateParam) {
-    query = query.gte('completed_at', `${startDateParam}T00:00:00.000Z`).lte('completed_at', `${endDateParam}T23:59:59.999Z`)
+  } else if (
+    startDateParam &&
+    endDateParam &&
+    /^\d{4}-\d{2}-\d{2}$/.test(startDateParam) &&
+    /^\d{4}-\d{2}-\d{2}$/.test(endDateParam)
+  ) {
+    const { start, end } = getDateRangeInTimezone(startDateParam, endDateParam, SYSTEM_DEFAULT_TIMEZONE)
+    query = query.gte('completed_at', start).lte('completed_at', end)
   }
 
   const searchParam = params.search?.trim()

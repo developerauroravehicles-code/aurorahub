@@ -342,6 +342,16 @@ export function getInvoicePdfBlobUrl(data: InvoiceRowData): string {
   return URL.createObjectURL(blob)
 }
 
+/** Server-friendly: base64 payload and filename for email attachments. */
+export function getInvoicePdfBase64(data: InvoiceRowData): { base64: string; fileName: string } {
+  const doc = buildInvoicePdf(data)
+  const dataUri = doc.output('datauristring')
+  const base64 = dataUri.split(',')[1] ?? ''
+  const dateStr = getCompleteDateStr(data)
+  const fileName = `Invoice_${data.demand_number ?? 'invoice'}_${dateStr}.pdf`
+  return { base64, fileName }
+}
+
 /** Opens PDF in new tab for preview. User can then download from browser's PDF viewer. */
 export function previewInvoicePdf(data: InvoiceRowData): void {
   const url = getInvoicePdfBlobUrl(data)

@@ -186,6 +186,16 @@ export function getStatementPdfBlobUrl(data: StatementPdfData): string {
   return URL.createObjectURL(blob)
 }
 
+/** Server-friendly: base64 payload and filename for email attachments. */
+export function getStatementPdfBase64(data: StatementPdfData): { base64: string; fileName: string } {
+  const doc = buildStatementPdf(data)
+  const dataUri = doc.output('datauristring')
+  const base64 = dataUri.split(',')[1] ?? ''
+  const sanitizedDealer = data.dealerName.replace(/[<>:"/\\|?*]/g, '_').trim() || 'Statement'
+  const fileName = `Statement_${sanitizedDealer}_${data.dateFrom}_${data.dateTo}.pdf`
+  return { base64, fileName }
+}
+
 /** Opens PDF in new tab for preview. User can then download from browser's PDF viewer. */
 export function previewStatementPdf(data: StatementPdfData): void {
   const url = getStatementPdfBlobUrl(data)

@@ -7,6 +7,7 @@ import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 import { fromZonedTime } from 'date-fns-tz'
 import { SYSTEM_DEFAULT_TIMEZONE } from '@/lib/timezone-defaults'
+import { lookupCameraModelId } from '@/lib/camera-model-resolve'
 
 const schema = z.object({
   dealerId: z.string().min(1, 'Dealer is required'),
@@ -71,6 +72,8 @@ export async function createExternalDemand(prevState: CreateExternalDemandState,
 
   const completeOnCreate = formData.get('completeOnCreate') === 'true'
 
+  const cameraModelId = await lookupCameraModelId(supabase, data.cameraModel)
+
   const insertData = {
     created_by: profile.id,
     dealer_id: data.dealerId,
@@ -84,6 +87,7 @@ export async function createExternalDemand(prevState: CreateExternalDemandState,
     stock_number: data.stockNumber,
     vin_last6: data.vinLast6,
     camera_model: data.cameraModel,
+    ...(cameraModelId && { camera_model_id: cameraModelId }),
     appointment_date: appointmentDateISO,
     status: completeOnCreate ? 'completed' : 'pending_finance',
     ...(completeOnCreate && { completed_at: new Date().toISOString() }),

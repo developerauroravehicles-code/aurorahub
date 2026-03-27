@@ -1,0 +1,93 @@
+'use server'
+
+import { createClient } from '@/lib/supabase/server'
+import { revalidatePath } from 'next/cache'
+
+export async function addManualInventoryMovement(formData: FormData): Promise<{ error?: string; success?: boolean }> {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { error: 'Unauthorized' }
+
+  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+  if (!profile || profile.role !== 'aurora_manager') {
+    return { error: 'Only Aurora Manager can manage inventory' }
+  }
+
+  const dealerId = (formData.get('dealer_id') as string)?.trim()
+  const cameraModelId = (formData.get('camera_model_id') as string)?.trim()
+  const movementType = (formData.get('movement_type') as string)?.trim() as
+    | 'receipt'
+    | 'adjustment'
+    | 'return_to_hq'
+  const note = ((formData.get('note') as string) ?? '').trim() || null
+
+  const quantityRaw = String(formData.get('quantity') ?? '').trim()
+  const q = parseInt(quantityRaw, 10)
+
+  if (!dealerId || !cameraModelId) return { error: 'Dealer and camera model are required' }
+  if (!['receipt', 'adjustment', 'return_to_hq'].includes(movementType)) {
+    return { error: 'Invalid movement type' }
+  }
+  if (!Number.isFinite(q)) return { error: 'Quantity must be an integer' }
+
+  let quantityDelta: number
+  if (movementType === 'receipt') {
+    if (q < 1) return { error: 'Receipt quantity must be at least 1' }
+    quantityDelta = q
+  } else if (movementType === 'return_to_hq') {
+    if (q < 1) return { error: 'Quantity must be at least 1' }
+    quantityDelta = -q
+  } else {
+    if (q === 0) return { error: 'Adjustment cannot be zero' }
+    quantityDelta = q
+  }
+
+  const { error: insertError } = await supabase.from('inventory_movements').insert({
+    dealer_id: dealerId,
+    camera_model_id: cameraModelId,
+    quantity_delta: quantityDelta,
+    movement_type: movementType,
+    note,
+    created_by: user.id,
+  })
+
+  if (insertError) return { error: insertError.message }
+  revalidatePath('/dashboard/admin/inventory')
+  return { success: true }
+}
+
+export async function upsertInventoryThreshold(formData: FormData): Promise<{ error?: string; success?: boolean }> {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { error: 'Unauthorized' }
+
+  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+  if (!profile || profile.role !== 'aurora_manager') {
+    return { error: 'Only Aurora Manager can manage inventory' }
+  }
+
+  const dealerId = (formData.get('dealer_id') as string)?.trim()
+  const cameraModelId = (formData.get('camera_model_id') as string)?.trim()
+  const minQty = parseInt(String(formData.get('min_qty') ?? '0'), 10)
+
+  if (!dealerId || !cameraModelId) return { error: 'Dealer and camera model are required' }
+  if (!Number.isFinite(minQty) || minQty < 0) return { error: 'Minimum quantity must be 0 or greater' }
+
+  const { error: upError } = await supabase.from('dealer_inventory_thresholds').upsert(
+    {
+      dealer_id: dealerId,
+      camera_model_id: cameraModelId,
+      min_qty: minQty,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: 'dealer_id,camera_model_id' }
+  )
+
+  if (upError) return { error: upError.message }
+  revalidatePath('/dashboard/admin/inventory')
+  return { success: true }
+}

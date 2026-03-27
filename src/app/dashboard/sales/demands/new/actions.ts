@@ -10,6 +10,7 @@ import { validateAppointmentSlot } from '@/app/dashboard/system-management/calen
 import { getTimezoneFromDealer } from '@/lib/dealer-timezone'
 import { SYSTEM_DEFAULT_TIMEZONE } from '@/lib/timezone-defaults'
 import { isStockNumberDuplicate } from '@/lib/demand-stock'
+import { lookupCameraModelId } from '@/lib/camera-model-resolve'
 
 async function getDealerTimezone(dealerId: string | null): Promise<string | null> {
   if (!dealerId) return null
@@ -96,6 +97,8 @@ export async function createDemand(prevState: ActionState, formData: FormData) {
     return { error: `A demand with stock number "${data.stockNumber}" already exists. Please verify the stock number.` }
   }
 
+  const cameraModelId = await lookupCameraModelId(supabase, data.cameraModel)
+
   const insertData = {
     created_by: profile.id,
     dealer_id: profile.dealer_id,
@@ -109,6 +112,7 @@ export async function createDemand(prevState: ActionState, formData: FormData) {
     stock_number: data.stockNumber,
     vin_last6: data.vinLast6,
     camera_model: data.cameraModel,
+    ...(cameraModelId && { camera_model_id: cameraModelId }),
     appointment_date: data.appointmentDate,
     status: 'pending_finance' as const,
     ...(profile.role === 'finance' && { assigned_finance_id: profile.id }),

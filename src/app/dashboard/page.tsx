@@ -5,7 +5,14 @@ import { FileText, Clock, CheckCircle, XCircle, AlertCircle, Calendar, Briefcase
 import { AppointmentAlerts, type AppointmentAlert } from './specialist/appointment-alerts'
 import { getEffectiveTimezone, getTodayRangeInTimezone, SYSTEM_DEFAULT_TIMEZONE } from '@/lib/timezone-defaults'
 import { GMDashboardMonthSelector } from './gm-dashboard-month-selector'
-import { StatCard, WelcomeBanner, DataCard, QuickActions, CameraDistribution } from '@/components/dashboard'
+import {
+  StatCard,
+  WelcomeBanner,
+  DataCard,
+  QuickActions,
+  CameraDistribution,
+  InventoryStockAlertsWidget,
+} from '@/components/dashboard'
 
 function getCameraDistribution(demands: { camera_model?: string | null }[]): { model: string; count: number }[] {
   const map = new Map<string, number>()
@@ -836,7 +843,11 @@ export default async function DashboardPage({
     // Dashboard overview data for widgets
     const params = await searchParams
     const { getDashboardOverviewData } = await import('./admin/dashboard/actions')
-    const overviewData = await getDashboardOverviewData(params.financeMonth ?? null)
+    const { fetchInventoryStockAlerts } = await import('@/lib/inventory-stock-alerts')
+    const [overviewData, inventoryStock] = await Promise.all([
+      getDashboardOverviewData(params.financeMonth ?? null),
+      fetchInventoryStockAlerts(supabase),
+    ])
 
     const { DemandOverview } = await import('./admin/dashboard/demand-overview')
     const { DemandTrends } = await import('./admin/dashboard/demand-trends')
@@ -851,7 +862,7 @@ export default async function DashboardPage({
       <div className="space-y-10">
         <WelcomeBanner
           title="Aurora Manager Dashboard"
-          subtitle="System-wide overview of demand tracking, invoices, statements, employees, and dealer alerts"
+          subtitle="Demands, finance, employees, dealer alerts, and inventory stock alerts"
           userName={(profile as { full_name?: string })?.full_name?.split(' ')[0]}
           timezone={SYSTEM_DEFAULT_TIMEZONE}
         />
@@ -863,6 +874,8 @@ export default async function DashboardPage({
             { label: 'Finance', href: '#finance-overview' },
             { label: 'Statement Tracking', href: '/dashboard/admin/statements' },
             { label: 'Employee Tracking', href: '/dashboard/admin/employees' },
+            { label: 'Inventory', href: '/dashboard/admin/inventory' },
+            { label: 'Stock alerts', href: '#inventory-stock-alerts' },
             { label: 'Dealer Alerts', href: '#dealer-alerts' },
             { label: 'Notes & Reminders', href: '#manager-notes' },
           ]}
@@ -874,6 +887,8 @@ export default async function DashboardPage({
           <StatCard title="Total Demands" value={totalDemands} subtitle="All time demands" icon={FileText} accentColor="blue" />
           <StatCard title="Completed" value={completed} subtitle={totalDemands > 0 ? `${Math.round((completed / totalDemands) * 100)}% completion rate` : undefined} icon={CheckCircle} accentColor="green" />
         </div>
+
+        <InventoryStockAlertsWidget alerts={inventoryStock.alerts} summary={inventoryStock.summary} />
 
         <CameraDistribution items={getCameraDistribution(allDemands ?? [])} />
 

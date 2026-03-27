@@ -103,7 +103,8 @@ function buildReportPdf(options: ExportReportOptions): jsPDF {
       body: cameraData,
       theme: 'grid',
       headStyles: { fillColor: [194, 126, 0] },
-      margin: { left: 14 },
+      margin: { left: 14, right: 14, bottom: 16 },
+      rowPageBreak: 'avoid',
     })
     yPos = (doc as JsPDFWithAutoTable).lastAutoTable!.finalY + 12
   }
@@ -131,7 +132,8 @@ function buildReportPdf(options: ExportReportOptions): jsPDF {
       body: statusData,
       theme: 'grid',
       headStyles: { fillColor: [194, 126, 0] },
-      margin: { left: 14 },
+      margin: { left: 14, right: 14, bottom: 16 },
+      rowPageBreak: 'avoid',
     })
     yPos = (doc as JsPDFWithAutoTable).lastAutoTable!.finalY + 12
   }
@@ -161,7 +163,8 @@ function buildReportPdf(options: ExportReportOptions): jsPDF {
       body: vehicleData,
       theme: 'grid',
       headStyles: { fillColor: [194, 126, 0] },
-      margin: { left: 14 },
+      margin: { left: 14, right: 14, bottom: 16 },
+      rowPageBreak: 'avoid',
     })
     yPos = (doc as JsPDFWithAutoTable).lastAutoTable!.finalY + 12
   }
@@ -203,7 +206,9 @@ function buildReportPdf(options: ExportReportOptions): jsPDF {
         5: { cellWidth: 22 },
         6: { cellWidth: 20 },
       },
-      margin: { left: 14 },
+      margin: { left: 14, right: 14, bottom: 16 },
+      rowPageBreak: 'avoid',
+      showHead: 'everyPage',
     })
   }
 

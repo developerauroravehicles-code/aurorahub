@@ -1,10 +1,11 @@
 'use client'
 
 import { useState } from 'react'
-import { Download, HardDrive, Eye } from 'lucide-react'
+import { Download, HardDrive, Eye, Mail } from 'lucide-react'
 import {
   getStatementDataAction,
   uploadStatementToDriveAction,
+  sendStatementPdfEmailAction,
   type StatementDemandRow,
   type DealerOption
 } from './actions'
@@ -33,6 +34,8 @@ export function StatementContent({ dealers, logoDataUrl, hideDealerFilter, defau
   const [rows, setRows] = useState<StatementDemandRow[]>([])
   const [loading, setLoading] = useState(false)
   const [driveUploading, setDriveUploading] = useState(false)
+  const [emailTo, setEmailTo] = useState('')
+  const [emailSending, setEmailSending] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
 
   const handleApply = async () => {
@@ -123,6 +126,19 @@ export function StatementContent({ dealers, logoDataUrl, hideDealerFilter, defau
     }
   }
 
+  const handleSendEmail = async () => {
+    if (rows.length === 0) {
+      setMessage({ type: 'error', text: 'No data to send. Apply filters first.' })
+      return
+    }
+    setEmailSending(true)
+    setMessage(null)
+    const result = await sendStatementPdfEmailAction(emailTo, statementData)
+    setEmailSending(false)
+    if (result.error) setMessage({ type: 'error', text: result.error })
+    else setMessage({ type: 'success', text: 'Statement email sent successfully.' })
+  }
+
   // invoice_total_amount is total (subtotal + tax). Extract subtotal and tax to avoid double-counting.
   const totalAmount = rows.reduce((sum, r) => sum + (r.invoice_total_amount ?? 0), 0)
   const totalPrice = totalAmount / (1 + TAX_RATE)
@@ -200,34 +216,59 @@ export function StatementContent({ dealers, logoDataUrl, hideDealerFilter, defau
         <div className="flex items-center justify-between p-4 border-b border-gray-800">
           <h3 className="text-md font-semibold text-white">Statement Preview</h3>
           {rows.length > 0 && (
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={handlePreview}
-                className="inline-flex items-center gap-2 bg-gray-600 hover:bg-gray-500 text-white px-4 py-2 rounded-md font-medium transition-colors"
-              >
-                <Eye className="w-4 h-4" />
-                Preview
-              </button>
-              <button
-                type="button"
-                onClick={handleDownload}
-                className="inline-flex items-center gap-2 bg-[#C27E00] hover:bg-[#a06900] text-white px-4 py-2 rounded-md font-medium transition-colors"
-              >
-                <Download className="w-4 h-4" />
-                Download PDF
-              </button>
-              {!hideDealerFilter && (
+            <div className="flex flex-col items-end gap-2 w-full max-w-xl sm:max-w-none sm:flex-row sm:items-end sm:flex-wrap sm:justify-end">
+              <div className="w-full sm:w-auto sm:min-w-[220px] sm:flex-1 sm:max-w-md">
+                <label htmlFor="statement-email-to" className="block text-xs font-medium text-gray-400 mb-1">
+                  Email PDF to
+                </label>
+                <input
+                  id="statement-email-to"
+                  type="text"
+                  value={emailTo}
+                  onChange={(e) => setEmailTo(e.target.value)}
+                  placeholder="finance@dealer.com (comma-separated)"
+                  autoComplete="email"
+                  className="w-full border border-gray-700 bg-black/50 text-white rounded px-3 py-2 text-sm focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]"
+                />
+              </div>
+              <div className="flex flex-wrap gap-2 justify-end">
                 <button
                   type="button"
-                  onClick={handleDrive}
-                  disabled={driveUploading}
+                  onClick={handleSendEmail}
+                  disabled={emailSending || !emailTo.trim()}
                   className="inline-flex items-center gap-2 bg-gray-600 hover:bg-gray-500 text-white px-4 py-2 rounded-md font-medium transition-colors disabled:opacity-50"
                 >
-                  <HardDrive className="w-4 h-4" />
-                  {driveUploading ? 'Uploading...' : 'Save to Drive'}
+                  <Mail className="w-4 h-4" />
+                  {emailSending ? 'Sending…' : 'Send email'}
                 </button>
-              )}
+                <button
+                  type="button"
+                  onClick={handlePreview}
+                  className="inline-flex items-center gap-2 bg-gray-600 hover:bg-gray-500 text-white px-4 py-2 rounded-md font-medium transition-colors"
+                >
+                  <Eye className="w-4 h-4" />
+                  Preview
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDownload}
+                  className="inline-flex items-center gap-2 bg-[#C27E00] hover:bg-[#a06900] text-white px-4 py-2 rounded-md font-medium transition-colors"
+                >
+                  <Download className="w-4 h-4" />
+                  Download PDF
+                </button>
+                {!hideDealerFilter && (
+                  <button
+                    type="button"
+                    onClick={handleDrive}
+                    disabled={driveUploading}
+                    className="inline-flex items-center gap-2 bg-gray-600 hover:bg-gray-500 text-white px-4 py-2 rounded-md font-medium transition-colors disabled:opacity-50"
+                  >
+                    <HardDrive className="w-4 h-4" />
+                    {driveUploading ? 'Uploading...' : 'Save to Drive'}
+                  </button>
+                )}
+              </div>
             </div>
           )}
         </div>
