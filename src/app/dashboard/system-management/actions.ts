@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@supabase/supabase-js'
 import type { SystemData, Profile } from '@/types/system-management'
+import { normalizeEmail } from '@/lib/email-normalize'
 
 // Helper to get a fresh admin client every time with explicit schema
 function getAdminClient() {
@@ -186,7 +187,7 @@ export async function createUser(prevState: ActionState, formData: FormData) {
 
   if (!formData) return { error: 'Invalid form data received.' }
 
-  const email = formData.get('email') as string
+  const email = normalizeEmail(formData.get('email') as string)
   const password = formData.get('password') as string
   const fullName = formData.get('fullName') as string
   const role = formData.get('role') as string
@@ -283,7 +284,8 @@ export async function createLoginForPersonnel(personnelId: string, email: string
   await verifyAuroraManager()
   const supabaseAdmin = getAdminClient()
 
-  if (!email?.trim() || !password || password.length < 6) {
+  const normalizedEmail = normalizeEmail(email)
+  if (!normalizedEmail || !password || password.length < 6) {
     return { error: 'Email and password (min 6 characters) are required.' }
   }
 
@@ -299,7 +301,7 @@ export async function createLoginForPersonnel(personnelId: string, email: string
   }
 
   const { data: userData, error: authError } = await supabaseAdmin.auth.admin.createUser({
-    email: email.trim(),
+    email: normalizedEmail,
     password,
     email_confirm: true,
     user_metadata: { full_name: personnel.full_name }
@@ -334,7 +336,7 @@ export async function createLoginForPersonnel(personnelId: string, email: string
 
   const { error: updateError } = await supabaseAdmin
     .from('personnel')
-    .update({ profile_id: userData.user.id, email: email.trim(), updated_at: new Date().toISOString() })
+    .update({ profile_id: userData.user.id, email: normalizedEmail, updated_at: new Date().toISOString() })
     .eq('id', personnelId)
 
   if (updateError) {
@@ -382,7 +384,7 @@ export async function updateUser(prevState: ActionState, formData: FormData) {
   const userId = formData.get('userId') as string
   const fullName = formData.get('fullName') as string
   const phone = formData.get('phone') as string
-  const email = formData.get('email') as string
+  const emailRaw = formData.get('email') as string
   const role = formData.get('role') as string
   const dealerCode = formData.get('dealerCode') as string
 
@@ -402,13 +404,13 @@ export async function updateUser(prevState: ActionState, formData: FormData) {
     else return { error: 'Dealer code not found.' }
   }
 
-  if (email?.trim()) {
+  const email = normalizeEmail(emailRaw)
+  if (email) {
     const { data: existingUser } = await supabaseAdmin.auth.admin.getUserById(userId)
     const currentEmail = existingUser?.user?.email?.toLowerCase()
-    const newEmail = email.trim().toLowerCase()
-    if (currentEmail !== newEmail) {
+    if (currentEmail !== email) {
       const { error: authError } = await supabaseAdmin.auth.admin.updateUserById(userId, {
-        email: email.trim()
+        email,
       })
       if (authError) return { error: 'Failed to update email: ' + authError.message }
     }

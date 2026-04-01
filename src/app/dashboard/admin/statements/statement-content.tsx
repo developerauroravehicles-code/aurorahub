@@ -148,16 +148,16 @@ export function StatementContent({ dealers, logoDataUrl, hideDealerFilter, defau
   return (
     <div className="space-y-6">
       {/* Filters */}
-      <div className="bg-black/30 rounded-lg border border-gray-800 p-4">
-        <h3 className="text-md font-semibold text-white mb-4">Filters</h3>
+      <div className="bg-zinc-100/90 dark:bg-black/30 rounded-lg border border-zinc-200 dark:border-gray-800 p-4">
+        <h3 className="text-md font-semibold text-zinc-900 dark:text-white mb-4">Filters</h3>
         <div className={`grid grid-cols-1 gap-4 items-end ${hideDealerFilter ? 'md:grid-cols-3' : 'md:grid-cols-4'}`}>
           {!hideDealerFilter && (
             <div>
-              <label className="block text-sm font-medium text-gray-400 mb-1">Dealer (Bayi)</label>
+              <label className="block text-sm font-medium text-zinc-500 dark:text-gray-400 mb-1">Dealer (Bayi)</label>
               <select
                 value={dealerId}
                 onChange={(e) => setDealerId(e.target.value)}
-                className="w-full border border-gray-700 bg-black/50 text-white rounded px-3 py-2 text-sm focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]"
+                className="w-full border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 text-zinc-900 dark:text-white rounded px-3 py-2 text-sm focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]"
               >
                 <option value="">All dealers</option>
                 {dealers.map((d) => (
@@ -169,21 +169,21 @@ export function StatementContent({ dealers, logoDataUrl, hideDealerFilter, defau
             </div>
           )}
           <div>
-            <label className="block text-sm font-medium text-gray-400 mb-1">From date</label>
+            <label className="block text-sm font-medium text-zinc-500 dark:text-gray-400 mb-1">From date</label>
             <input
               type="date"
               value={dateFrom}
               onChange={(e) => setDateFrom(e.target.value)}
-              className="w-full border border-gray-700 bg-black/50 text-white rounded px-3 py-2 text-sm focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]"
+              className="w-full border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 text-zinc-900 dark:text-white rounded px-3 py-2 text-sm focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-400 mb-1">To date</label>
+            <label className="block text-sm font-medium text-zinc-500 dark:text-gray-400 mb-1">To date</label>
             <input
               type="date"
               value={dateTo}
               onChange={(e) => setDateTo(e.target.value)}
-              className="w-full border border-gray-700 bg-black/50 text-white rounded px-3 py-2 text-sm focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]"
+              className="w-full border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 text-zinc-900 dark:text-white rounded px-3 py-2 text-sm focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]"
             />
           </div>
           <div>
@@ -212,23 +212,23 @@ export function StatementContent({ dealers, logoDataUrl, hideDealerFilter, defau
       )}
 
       {/* Table preview */}
-      <div className="bg-black/30 rounded-lg border border-gray-800 overflow-hidden">
-        <div className="flex items-center justify-between p-4 border-b border-gray-800">
-          <h3 className="text-md font-semibold text-white">Statement Preview</h3>
+      <div className="bg-zinc-100/90 dark:bg-black/30 rounded-lg border border-zinc-200 dark:border-gray-800 overflow-hidden">
+        <div className="flex items-center justify-between p-4 border-b border-zinc-200 dark:border-gray-800">
+          <h3 className="text-md font-semibold text-zinc-900 dark:text-white">Statement Preview</h3>
           {rows.length > 0 && (
             <div className="flex flex-col items-end gap-2 w-full max-w-xl sm:max-w-none sm:flex-row sm:items-end sm:flex-wrap sm:justify-end">
               <div className="w-full sm:w-auto sm:min-w-[220px] sm:flex-1 sm:max-w-md">
-                <label htmlFor="statement-email-to" className="block text-xs font-medium text-gray-400 mb-1">
+                <label htmlFor="statement-email-to" className="block text-xs font-medium text-zinc-500 dark:text-gray-400 mb-1">
                   Email PDF to
                 </label>
                 <input
                   id="statement-email-to"
                   type="text"
                   value={emailTo}
-                  onChange={(e) => setEmailTo(e.target.value)}
+                  onChange={(e) => setEmailTo(e.target.value.toLowerCase())}
                   placeholder="finance@dealer.com (comma-separated)"
                   autoComplete="email"
-                  className="w-full border border-gray-700 bg-black/50 text-white rounded px-3 py-2 text-sm focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]"
+                  className="w-full border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 text-zinc-900 dark:text-white rounded px-3 py-2 text-sm focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]"
                 />
               </div>
               <div className="flex flex-wrap gap-2 justify-end">
@@ -275,48 +275,48 @@ export function StatementContent({ dealers, logoDataUrl, hideDealerFilter, defau
 
         <div className="overflow-x-auto">
           {rows.length === 0 ? (
-            <div className="p-8 text-center text-gray-400">
+            <div className="p-8 text-center text-zinc-500 dark:text-gray-400">
               Select dealer and date range, then click Apply to load statement data.
             </div>
           ) : (
-            <table className="min-w-full divide-y divide-gray-800">
-              <thead className="bg-white/5">
+            <table className="min-w-full divide-y divide-zinc-200 dark:divide-gray-800">
+              <thead className="bg-zinc-200/50 dark:bg-white/5">
                 <tr>
-                  <th className="px-3 py-2.5 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Invoice No</th>
-                  <th className="px-3 py-2.5 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Complete Date</th>
-                  <th className="px-3 py-2.5 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Vehicle Model</th>
-                  <th className="px-3 py-2.5 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Stock No</th>
-                  <th className="px-3 py-2.5 text-right text-xs font-medium text-gray-400 uppercase tracking-wider">Price</th>
-                  <th className="px-3 py-2.5 text-right text-xs font-medium text-gray-400 uppercase tracking-wider">Tax</th>
+                  <th className="px-3 py-2.5 text-left text-xs font-medium text-zinc-500 dark:text-gray-400 uppercase tracking-wider">Invoice No</th>
+                  <th className="px-3 py-2.5 text-left text-xs font-medium text-zinc-500 dark:text-gray-400 uppercase tracking-wider">Complete Date</th>
+                  <th className="px-3 py-2.5 text-left text-xs font-medium text-zinc-500 dark:text-gray-400 uppercase tracking-wider">Vehicle Model</th>
+                  <th className="px-3 py-2.5 text-left text-xs font-medium text-zinc-500 dark:text-gray-400 uppercase tracking-wider">Stock No</th>
+                  <th className="px-3 py-2.5 text-right text-xs font-medium text-zinc-500 dark:text-gray-400 uppercase tracking-wider">Price</th>
+                  <th className="px-3 py-2.5 text-right text-xs font-medium text-zinc-500 dark:text-gray-400 uppercase tracking-wider">Tax</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-800">
+              <tbody className="divide-y divide-zinc-200 dark:divide-gray-800">
                 {rows.map((row) => {
                   const total = row.invoice_total_amount ?? 0
                   const price = total / (1 + TAX_RATE)
                   const tax = total - price
                   const vehicleModel = `${row.vehicle_year} ${row.vehicle_make} ${row.vehicle_model}`.trim()
                   return (
-                    <tr key={row.id} className="hover:bg-white/5 transition-colors">
-                      <td className="px-3 py-2.5 text-sm text-gray-300">
+                    <tr key={row.id} className="hover:bg-zinc-200/50 dark:bg-white/5 transition-colors">
+                      <td className="px-3 py-2.5 text-sm text-zinc-600 dark:text-gray-300">
                         {row.demand_number ?? '—'}
                       </td>
-                      <td className="px-3 py-2.5 text-sm text-gray-300 whitespace-nowrap">
+                      <td className="px-3 py-2.5 text-sm text-zinc-600 dark:text-gray-300 whitespace-nowrap">
                         {formatInTimeZone(new Date(row.completed_at ?? row.updated_at), SYSTEM_DEFAULT_TIMEZONE, 'd MMMM yyyy')}
                       </td>
-                      <td className="px-3 py-2.5 text-sm text-white">{vehicleModel || '—'}</td>
-                      <td className="px-3 py-2.5 text-sm text-gray-300">{row.stock_number ?? '—'}</td>
-                      <td className="px-3 py-2.5 text-sm text-gray-300 text-right">
+                      <td className="px-3 py-2.5 text-sm text-zinc-900 dark:text-white">{vehicleModel || '—'}</td>
+                      <td className="px-3 py-2.5 text-sm text-zinc-600 dark:text-gray-300">{row.stock_number ?? '—'}</td>
+                      <td className="px-3 py-2.5 text-sm text-zinc-600 dark:text-gray-300 text-right">
                         $ {(price).toFixed(2)}
                       </td>
-                      <td className="px-3 py-2.5 text-sm text-gray-300 text-right">
+                      <td className="px-3 py-2.5 text-sm text-zinc-600 dark:text-gray-300 text-right">
                         $ {(tax).toFixed(2)}
                       </td>
                     </tr>
                   )
                 })}
-                <tr className="bg-white/5 font-semibold">
-                  <td colSpan={4} className="px-3 py-2.5 text-sm text-white">
+                <tr className="bg-zinc-200/50 dark:bg-white/5 font-semibold">
+                  <td colSpan={4} className="px-3 py-2.5 text-sm text-zinc-900 dark:text-white">
                     Total
                   </td>
                   <td colSpan={2} className="px-3 py-2.5 text-sm text-[#C27E00] text-right">

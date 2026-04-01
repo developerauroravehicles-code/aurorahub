@@ -24,7 +24,7 @@ export function PitchDeckDownload({ logoDataUrl }: { logoDataUrl?: string | null
         </div>
         <div className="flex-1">
           <h2 className="font-medium text-gray-900">AuroraHub Pitch Deck</h2>
-          <p className="mt-1 text-sm text-gray-500">
+          <p className="mt-1 text-sm text-zinc-500 dark:text-gray-500">
             Executive overview: problem, solution, how it works, features, tech stack, and contact information.
           </p>
           <button

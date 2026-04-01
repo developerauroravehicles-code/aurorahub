@@ -25,8 +25,8 @@ export default async function RolesPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h2 className="text-lg font-semibold text-white mt-4">Roles</h2>
-        <p className="text-gray-400 text-sm">
+        <h2 className="text-lg font-semibold text-zinc-900 dark:text-white mt-4">Roles</h2>
+        <p className="text-zinc-500 dark:text-gray-400 text-sm">
           View platform roles, user counts and permission distribution.
         </p>
         <Link

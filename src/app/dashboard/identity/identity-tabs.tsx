@@ -18,7 +18,7 @@ export function IdentityTabs() {
   const pathname = usePathname()
 
   return (
-    <div className="flex flex-wrap gap-2 border-b border-gray-800 pb-4 mb-4">
+    <div className="flex flex-wrap gap-2 border-b border-zinc-200 dark:border-gray-800 pb-4 mb-4">
       {TABS.map((tab) => {
         const Icon = tab.icon
         const isActive =
@@ -31,10 +31,10 @@ export function IdentityTabs() {
             href={tab.href}
             className={clsx(
               'inline-flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors',
-              isActive ? 'bg-[#C27E00] text-white' : 'text-gray-500 hover:text-gray-300 hover:bg-white/5'
+              isActive ? 'bg-[#C27E00] text-white' : 'text-zinc-500 dark:text-gray-500 hover:text-zinc-600 dark:text-gray-300 hover:bg-zinc-200/50 dark:bg-white/5'
             )}
           >
-            <Icon className={clsx('h-4 w-4', isActive ? 'text-white' : 'text-gray-500')} />
+            <Icon className={clsx('h-4 w-4', isActive ? 'text-zinc-900 dark:text-white' : 'text-zinc-500 dark:text-gray-500')} />
             {tab.name}
           </Link>
         )

@@ -160,18 +160,18 @@ export function SMSManagementContent() {
 
   if (loading) {
     return (
-      <div className="text-gray-400 py-8 text-center">Loading SMS settings...</div>
+      <div className="text-zinc-500 dark:text-gray-400 py-8 text-center">Loading SMS settings...</div>
     )
   }
 
   return (
     <div className="space-y-8 pb-20">
       <div>
-        <h3 className="text-lg font-semibold text-white mb-2">SMS Management</h3>
-        <p className="text-sm text-gray-400 mb-4">
+        <h3 className="text-lg font-semibold text-zinc-900 dark:text-white mb-2">SMS Management</h3>
+        <p className="text-sm text-zinc-500 dark:text-gray-400 mb-4">
           Control when SMS are sent, who receives them, and customize message content. Use placeholders like
           {' '}
-          <code className="text-[#C27E00] bg-black/30 px-1 rounded">{'{{date}}'}</code>
+          <code className="text-[#C27E00] bg-zinc-100/90 dark:bg-black/30 px-1 rounded">{'{{date}}'}</code>
           {' '}
           in templates.
         </p>
@@ -196,28 +196,28 @@ export function SMSManagementContent() {
           onClick={() => (showManualSend ? setShowManualSend(false) : handleOpenManualSend())}
           className="w-full flex items-center justify-between p-4 text-left hover:bg-[#C27E00]/20 transition-colors"
         >
-          <span className="font-semibold text-white flex items-center gap-2">
+          <span className="font-semibold text-zinc-900 dark:text-white flex items-center gap-2">
             <Send className="w-5 h-5 text-[#C27E00]" />
             Send SMS Manually
           </span>
-          <span className="text-gray-500 text-sm">{showManualSend ? '▼' : '▶'}</span>
+          <span className="text-zinc-500 dark:text-gray-500 text-sm">{showManualSend ? '▼' : '▶'}</span>
         </button>
         {showManualSend && (
           <div className="px-4 pb-4 pt-0 border-t border-[#C27E00]/30 space-y-4">
-            <p className="text-sm text-gray-400 pt-3">
+            <p className="text-sm text-zinc-500 dark:text-gray-400 pt-3">
               Select an appointment (approved/pending/completed from last 90 days), choose the message type, and send to customer or specialist.
             </p>
             {demands.length === 0 ? (
-              <p className="text-sm text-gray-500">No appointments with phone numbers found. Create and approve demands first.</p>
+              <p className="text-sm text-zinc-500 dark:text-gray-500">No appointments with phone numbers found. Create and approve demands first.</p>
             ) : (
               <>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-1">Appointment</label>
+                    <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300 mb-1">Appointment</label>
                     <select
                       value={manualDemandId}
                       onChange={(e) => setManualDemandId(e.target.value)}
-                      className="w-full border border-gray-700 bg-black/50 text-white rounded px-3 py-2 text-sm focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]"
+                      className="w-full border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 text-zinc-900 dark:text-white rounded px-3 py-2 text-sm focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]"
                     >
                       <option value="">-- Select appointment --</option>
                       {demands.map((d) => (
@@ -226,14 +226,14 @@ export function SMSManagementContent() {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-1">Message type</label>
+                    <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300 mb-1">Message type</label>
                     <select
                       value={manualMessageType}
                       onChange={(e) => {
                         const t = e.target.value as SMSTriggerType
                         setManualMessageType(t)
                       }}
-                      className="w-full border border-gray-700 bg-black/50 text-white rounded px-3 py-2 text-sm focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]"
+                      className="w-full border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 text-zinc-900 dark:text-white rounded px-3 py-2 text-sm focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]"
                     >
                       {(Object.keys(TRIGGER_LABELS) as SMSTriggerType[]).map((t) => (
                         <option key={t} value={t}>{TRIGGER_LABELS[t]}</option>
@@ -241,11 +241,11 @@ export function SMSManagementContent() {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-1">Send to</label>
+                    <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300 mb-1">Send to</label>
                     <select
                       value={manualRecipient}
                       onChange={(e) => setManualRecipient(e.target.value as 'customer' | 'specialist')}
-                      className="w-full border border-gray-700 bg-black/50 text-white rounded px-3 py-2 text-sm focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]"
+                      className="w-full border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 text-zinc-900 dark:text-white rounded px-3 py-2 text-sm focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]"
                     >
                       <option value="customer">Customer</option>
                       {canSendToSpecialist && <option value="specialist">Assigned Specialist</option>}
@@ -268,26 +268,26 @@ export function SMSManagementContent() {
       </div>
 
       {/* Global settings */}
-      <div className="bg-black/30 rounded-lg p-4 space-y-4">
-        <h4 className="text-md font-semibold text-white">Global Settings</h4>
+      <div className="bg-zinc-100/90 dark:bg-black/30 rounded-lg p-4 space-y-4">
+        <h4 className="text-md font-semibold text-zinc-900 dark:text-white">Global Settings</h4>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">Contact Phone (for cancellation/rescheduling)</label>
+            <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300 mb-1">Contact Phone (for cancellation/rescheduling)</label>
             <input
               type="text"
               value={settings.contactPhone}
               onChange={(e) => setSettings((s) => ({ ...s, contactPhone: e.target.value }))}
-              className="w-full border border-gray-700 bg-black/50 text-white rounded px-3 py-2 text-sm focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]"
+              className="w-full border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 text-zinc-900 dark:text-white rounded px-3 py-2 text-sm focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]"
               placeholder="(604) 833-5801"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">Signature (appended to messages)</label>
+            <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300 mb-1">Signature (appended to messages)</label>
             <input
               type="text"
               value={settings.signature}
               onChange={(e) => setSettings((s) => ({ ...s, signature: e.target.value }))}
-              className="w-full border border-gray-700 bg-black/50 text-white rounded px-3 py-2 text-sm focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]"
+              className="w-full border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 text-zinc-900 dark:text-white rounded px-3 py-2 text-sm focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]"
               placeholder="Aurora Vehicles."
             />
           </div>
@@ -296,15 +296,15 @@ export function SMSManagementContent() {
 
       {/* Placeholder help */}
       <div className="bg-[#C27E00]/10 border border-[#C27E00]/30 rounded-lg p-4">
-        <h4 className="text-sm font-semibold text-white mb-2 flex items-center gap-2">
+        <h4 className="text-sm font-semibold text-zinc-900 dark:text-white mb-2 flex items-center gap-2">
           <Info className="w-4 h-4 text-[#C27E00]" />
           Available placeholders
         </h4>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-gray-300">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-zinc-600 dark:text-gray-300">
           {Object.entries(SMS_PLACEHOLDERS).map(([ph, desc]) => (
             <div key={ph} className="flex gap-2">
               <code className="text-[#C27E00] shrink-0">{ph}</code>
-              <span className="text-gray-400">{desc}</span>
+              <span className="text-zinc-500 dark:text-gray-400">{desc}</span>
             </div>
           ))}
         </div>
@@ -313,12 +313,12 @@ export function SMSManagementContent() {
       {/* Per-trigger settings */}
       <div className="space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h4 className="text-md font-semibold text-white">SMS Triggers & Templates</h4>
+          <h4 className="text-md font-semibold text-zinc-900 dark:text-white">SMS Triggers & Templates</h4>
           <div className="flex gap-2">
             <button
               type="button"
               onClick={expandAll}
-              className="text-xs text-gray-400 hover:text-white px-2 py-1 rounded border border-gray-600 hover:border-gray-500 flex items-center gap-1"
+              className="text-xs text-zinc-500 dark:text-gray-400 hover:text-zinc-900 dark:text-white px-2 py-1 rounded border border-zinc-300 dark:border-gray-600 hover:border-gray-500 flex items-center gap-1"
             >
               <ChevronDown className="w-3 h-3" />
               Expand all
@@ -326,7 +326,7 @@ export function SMSManagementContent() {
             <button
               type="button"
               onClick={collapseAll}
-              className="text-xs text-gray-400 hover:text-white px-2 py-1 rounded border border-gray-600 hover:border-gray-500 flex items-center gap-1"
+              className="text-xs text-zinc-500 dark:text-gray-400 hover:text-zinc-900 dark:text-white px-2 py-1 rounded border border-zinc-300 dark:border-gray-600 hover:border-gray-500 flex items-center gap-1"
             >
               <ChevronUp className="w-3 h-3" />
               Collapse all
@@ -343,24 +343,24 @@ export function SMSManagementContent() {
           })
           const segmentInfo = getSmsSegmentCount(previewText)
           return (
-            <div key={trigger} className="bg-black/30 rounded-lg border border-gray-800 overflow-hidden">
+            <div key={trigger} className="bg-zinc-100/90 dark:bg-black/30 rounded-lg border border-zinc-200 dark:border-gray-800 overflow-hidden">
               <button
                 type="button"
                 onClick={() => toggleTrigger(trigger)}
-                className="w-full flex items-center justify-between p-4 text-left hover:bg-white/5 transition-colors"
+                className="w-full flex items-center justify-between p-4 text-left hover:bg-zinc-200/50 dark:bg-white/5 transition-colors"
               >
                 <div className="flex items-center gap-3">
-                  <span className="font-medium text-white">{TRIGGER_LABELS[trigger]}</span>
-                  <span className={`text-xs px-2 py-0.5 rounded ${s.enabled ? 'bg-green-900/50 text-green-300' : 'bg-gray-700 text-gray-400'}`}>
+                  <span className="font-medium text-zinc-900 dark:text-white">{TRIGGER_LABELS[trigger]}</span>
+                  <span className={`text-xs px-2 py-0.5 rounded ${s.enabled ? 'bg-green-900/50 text-green-300' : 'bg-gray-700 text-zinc-500 dark:text-gray-400'}`}>
                     {s.enabled ? 'Enabled' : 'Disabled'}
                   </span>
                 </div>
-                <span className="text-gray-500 text-sm">{isExpanded ? '▼' : '▶'}</span>
+                <span className="text-zinc-500 dark:text-gray-500 text-sm">{isExpanded ? '▼' : '▶'}</span>
               </button>
               {isExpanded && (
-                <div className="px-4 pb-4 pt-0 space-y-4 border-t border-gray-800">
+                <div className="px-4 pb-4 pt-0 space-y-4 border-t border-zinc-200 dark:border-gray-800">
                   {s.description && (
-                    <p className="text-sm text-gray-400 pt-3">{s.description}</p>
+                    <p className="text-sm text-zinc-500 dark:text-gray-400 pt-3">{s.description}</p>
                   )}
                   <div className="space-y-3">
                     <label className="flex items-center gap-2 cursor-pointer">
@@ -368,30 +368,30 @@ export function SMSManagementContent() {
                         type="checkbox"
                         checked={s.enabled}
                         onChange={(e) => updateTrigger(trigger, { enabled: e.target.checked })}
-                        className="rounded border-gray-600 bg-black/50 text-[#C27E00] focus:ring-[#C27E00]"
+                        className="rounded border-zinc-300 dark:border-gray-600 bg-white dark:bg-black/50 text-[#C27E00] focus:ring-[#C27E00]"
                       />
-                      <span className="text-sm text-gray-300">Enable this SMS</span>
+                      <span className="text-sm text-zinc-600 dark:text-gray-300">Enable this SMS</span>
                     </label>
                     <div>
-                      <p className="text-xs font-medium text-gray-400 mb-2">Recipients</p>
+                      <p className="text-xs font-medium text-zinc-500 dark:text-gray-400 mb-2">Recipients</p>
                       <div className="flex flex-wrap gap-6">
                         <label className="flex items-center gap-2 cursor-pointer">
                           <input
                             type="checkbox"
                             checked={s.sendToCustomer}
                             onChange={(e) => updateTrigger(trigger, { sendToCustomer: e.target.checked })}
-                            className="rounded border-gray-600 bg-black/50 text-[#C27E00] focus:ring-[#C27E00]"
+                            className="rounded border-zinc-300 dark:border-gray-600 bg-white dark:bg-black/50 text-[#C27E00] focus:ring-[#C27E00]"
                           />
-                          <span className="text-sm text-gray-300">Customer</span>
+                          <span className="text-sm text-zinc-600 dark:text-gray-300">Customer</span>
                         </label>
                         <label className="flex items-center gap-2 cursor-pointer">
                           <input
                             type="checkbox"
                             checked={s.sendToSpecialist ?? false}
                             onChange={(e) => updateTrigger(trigger, { sendToSpecialist: e.target.checked })}
-                            className="rounded border-gray-600 bg-black/50 text-[#C27E00] focus:ring-[#C27E00]"
+                            className="rounded border-zinc-300 dark:border-gray-600 bg-white dark:bg-black/50 text-[#C27E00] focus:ring-[#C27E00]"
                           />
-                          <span className="text-sm text-gray-300">Assigned Specialist</span>
+                          <span className="text-sm text-zinc-600 dark:text-gray-300">Assigned Specialist</span>
                         </label>
                         {trigger === 'appointment_created' && (
                           <label className="flex items-center gap-2 cursor-pointer">
@@ -399,20 +399,20 @@ export function SMSManagementContent() {
                               type="checkbox"
                               checked={s.sendToAuroraManager ?? false}
                               onChange={(e) => updateTrigger(trigger, { sendToAuroraManager: e.target.checked })}
-                              className="rounded border-gray-600 bg-black/50 text-[#C27E00] focus:ring-[#C27E00]"
+                              className="rounded border-zinc-300 dark:border-gray-600 bg-white dark:bg-black/50 text-[#C27E00] focus:ring-[#C27E00]"
                             />
-                            <span className="text-sm text-gray-300">Aurora Manager(s)</span>
+                            <span className="text-sm text-zinc-600 dark:text-gray-300">Aurora Manager(s)</span>
                           </label>
                         )}
                       </div>
                     </div>
                     {trigger === 'four_hour_reminder' && (
                       <div>
-                        <label className="block text-sm font-medium text-gray-300 mb-1">Hours before appointment</label>
+                        <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300 mb-1">Hours before appointment</label>
                         <select
                           value={String((s as { hoursBefore?: number }).hoursBefore ?? 4)}
                           onChange={(e) => updateTrigger(trigger, { hoursBefore: Number(e.target.value) })}
-                          className="w-full max-w-xs border border-gray-700 bg-black/50 text-white rounded px-3 py-2 text-sm"
+                          className="w-full max-w-xs border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 text-zinc-900 dark:text-white rounded px-3 py-2 text-sm"
                         >
                           <option value={2}>2 hours before</option>
                           <option value={4}>4 hours before</option>
@@ -423,11 +423,11 @@ export function SMSManagementContent() {
                   </div>
                   <div className="space-y-2">
                     <div className="flex items-center justify-between gap-2">
-                      <label className="block text-sm font-medium text-gray-300">Message template</label>
+                      <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300">Message template</label>
                       <button
                         type="button"
                         onClick={() => resetTriggerToDefault(trigger)}
-                        className="text-xs text-gray-400 hover:text-[#C27E00] flex items-center gap-1"
+                        className="text-xs text-zinc-500 dark:text-gray-400 hover:text-[#C27E00] flex items-center gap-1"
                       >
                         <RotateCcw className="w-3 h-3" />
                         Reset to default
@@ -437,10 +437,10 @@ export function SMSManagementContent() {
                       value={s.template}
                       onChange={(e) => updateTrigger(trigger, { template: e.target.value })}
                       rows={8}
-                      className="w-full border border-gray-700 bg-black/50 text-white rounded px-3 py-2 text-sm font-mono focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]"
+                      className="w-full border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 text-zinc-900 dark:text-white rounded px-3 py-2 text-sm font-mono focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]"
                       placeholder="Enter message template..."
                     />
-                    <div className="flex flex-wrap items-center gap-4 text-xs text-gray-400">
+                    <div className="flex flex-wrap items-center gap-4 text-xs text-zinc-500 dark:text-gray-400">
                       <span title="Character and segment count for preview">
                         {previewText.length} chars · {segmentInfo} segment{segmentInfo !== 1 ? 's' : ''}
                       </span>
@@ -449,7 +449,7 @@ export function SMSManagementContent() {
                           <Eye className="w-3 h-3" />
                           Preview
                         </summary>
-                        <pre className="mt-2 p-3 bg-black/50 rounded text-gray-300 text-xs whitespace-pre-wrap break-words font-sans border border-gray-700">
+                        <pre className="mt-2 p-3 bg-white dark:bg-black/50 rounded text-zinc-600 dark:text-gray-300 text-xs whitespace-pre-wrap break-words font-sans border border-zinc-300 dark:border-gray-700">
                           {previewText || '(Empty)'}
                         </pre>
                       </details>
@@ -463,9 +463,9 @@ export function SMSManagementContent() {
       </div>
 
       {/* SMS Tracking */}
-      <div className="bg-black/30 rounded-lg border border-gray-800 p-6 space-y-4">
+      <div className="bg-zinc-100/90 dark:bg-black/30 rounded-lg border border-zinc-200 dark:border-gray-800 p-6 space-y-4">
         <div className="flex items-center justify-between">
-          <h4 className="text-md font-semibold text-white flex items-center gap-2">
+          <h4 className="text-md font-semibold text-zinc-900 dark:text-white flex items-center gap-2">
             <History className="w-5 h-5 text-[#C27E00]" />
             SMS Log / Tracking
           </h4>
@@ -476,36 +476,36 @@ export function SMSManagementContent() {
             View all logs on Logs page →
           </a>
         </div>
-        <p className="text-sm text-gray-400">
+        <p className="text-sm text-zinc-500 dark:text-gray-400">
           View sent SMS history. Filter by date range or customer name.
         </p>
         <div className="flex flex-wrap gap-4 items-end">
           <div>
-            <label className="block text-xs text-gray-400 mb-1">From date</label>
+            <label className="block text-xs text-zinc-500 dark:text-gray-400 mb-1">From date</label>
             <input
               type="date"
               value={logFilters.dateFrom}
               onChange={(e) => setLogFilters((f) => ({ ...f, dateFrom: e.target.value }))}
-              className="border border-gray-700 bg-black/50 text-white rounded px-3 py-2 text-sm"
+              className="border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 text-zinc-900 dark:text-white rounded px-3 py-2 text-sm"
             />
           </div>
           <div>
-            <label className="block text-xs text-gray-400 mb-1">To date</label>
+            <label className="block text-xs text-zinc-500 dark:text-gray-400 mb-1">To date</label>
             <input
               type="date"
               value={logFilters.dateTo}
               onChange={(e) => setLogFilters((f) => ({ ...f, dateTo: e.target.value }))}
-              className="border border-gray-700 bg-black/50 text-white rounded px-3 py-2 text-sm"
+              className="border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 text-zinc-900 dark:text-white rounded px-3 py-2 text-sm"
             />
           </div>
           <div>
-            <label className="block text-xs text-gray-400 mb-1">Customer name</label>
+            <label className="block text-xs text-zinc-500 dark:text-gray-400 mb-1">Customer name</label>
             <input
               type="text"
               value={logFilters.customerName}
               onChange={(e) => setLogFilters((f) => ({ ...f, customerName: e.target.value }))}
               placeholder="Search recipient..."
-              className="border border-gray-700 bg-black/50 text-white rounded px-3 py-2 text-sm w-48"
+              className="border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 text-zinc-900 dark:text-white rounded px-3 py-2 text-sm w-48"
             />
           </div>
           <button
@@ -517,35 +517,35 @@ export function SMSManagementContent() {
             {logsLoading ? 'Loading...' : 'Apply filters'}
           </button>
         </div>
-        <div className="overflow-x-auto border border-gray-800 rounded-lg">
+        <div className="overflow-x-auto border border-zinc-200 dark:border-gray-800 rounded-lg">
           <table className="w-full text-sm">
             <thead>
-              <tr className="bg-black/50 text-left">
-                <th className="px-4 py-3 text-gray-400 font-medium">Time</th>
-                <th className="px-4 py-3 text-gray-400 font-medium">Recipient</th>
-                <th className="px-4 py-3 text-gray-400 font-medium">Phone</th>
-                <th className="px-4 py-3 text-gray-400 font-medium">Message type</th>
-                <th className="px-4 py-3 text-gray-400 font-medium">Trigger</th>
-                <th className="px-4 py-3 text-gray-400 font-medium w-24">Message</th>
+              <tr className="bg-white dark:bg-black/50 text-left">
+                <th className="px-4 py-3 text-zinc-500 dark:text-gray-400 font-medium">Time</th>
+                <th className="px-4 py-3 text-zinc-500 dark:text-gray-400 font-medium">Recipient</th>
+                <th className="px-4 py-3 text-zinc-500 dark:text-gray-400 font-medium">Phone</th>
+                <th className="px-4 py-3 text-zinc-500 dark:text-gray-400 font-medium">Message type</th>
+                <th className="px-4 py-3 text-zinc-500 dark:text-gray-400 font-medium">Trigger</th>
+                <th className="px-4 py-3 text-zinc-500 dark:text-gray-400 font-medium w-24">Message</th>
               </tr>
             </thead>
             <tbody>
               {smsLogs.length === 0 && !logsLoading ? (
-                <tr><td colSpan={6} className="px-4 py-6 text-center text-gray-500">No logs yet. Send an SMS or click &quot;Apply filters&quot; to load.</td></tr>
+                <tr><td colSpan={6} className="px-4 py-6 text-center text-zinc-500 dark:text-gray-500">No logs yet. Send an SMS or click &quot;Apply filters&quot; to load.</td></tr>
               ) : (
                 smsLogs.map((log) => (
-                  <tr key={log.id} className="border-t border-gray-800 hover:bg-white/5">
-                    <td className="px-4 py-2 text-gray-300">
+                  <tr key={log.id} className="border-t border-zinc-200 dark:border-gray-800 hover:bg-zinc-200/50 dark:bg-white/5">
+                    <td className="px-4 py-2 text-zinc-600 dark:text-gray-300">
                       {formatInTimeZone(new Date(log.sent_at), SYSTEM_DEFAULT_TIMEZONE, 'yyyy-MM-dd, h:mm a')}
                     </td>
                     <td className="px-4 py-2">
-                      <span className="text-white">{log.recipient_name || '—'}</span>
-                      <span className="text-gray-500 ml-1">({log.recipient_type})</span>
+                      <span className="text-zinc-900 dark:text-white">{log.recipient_name || '—'}</span>
+                      <span className="text-zinc-500 dark:text-gray-500 ml-1">({log.recipient_type})</span>
                     </td>
-                    <td className="px-4 py-2 text-gray-400 font-mono text-xs">{log.phone_number}</td>
-                    <td className="px-4 py-2 text-gray-300">{log.message_type.replace(/_/g, ' ')}</td>
+                    <td className="px-4 py-2 text-zinc-500 dark:text-gray-400 font-mono text-xs">{log.phone_number}</td>
+                    <td className="px-4 py-2 text-zinc-600 dark:text-gray-300">{log.message_type.replace(/_/g, ' ')}</td>
                     <td className="px-4 py-2">
-                      <span className={`text-xs px-2 py-0.5 rounded ${log.triggered_by === 'manual' ? 'bg-[#C27E00]/30 text-[#C27E00]' : 'bg-gray-700 text-gray-400'}`}>
+                      <span className={`text-xs px-2 py-0.5 rounded ${log.triggered_by === 'manual' ? 'bg-[#C27E00]/30 text-[#C27E00]' : 'bg-gray-700 text-zinc-500 dark:text-gray-400'}`}>
                         {log.triggered_by}
                       </span>
                     </td>
@@ -568,27 +568,27 @@ export function SMSManagementContent() {
         {/* Message content modal */}
         {viewingLog && (
           <div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-50 dark:bg-black/60 p-4"
             onClick={() => setViewingLog(null)}
           >
             <div
-              className="bg-gray-900 border border-gray-700 rounded-lg max-w-lg w-full max-h-[80vh] overflow-hidden flex flex-col shadow-xl"
+              className="bg-zinc-200 dark:bg-gray-900 border border-zinc-300 dark:border-gray-700 rounded-lg max-w-lg w-full max-h-[80vh] overflow-hidden flex flex-col shadow-xl"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="px-4 py-3 border-b border-gray-700 flex justify-between items-center">
-                <h5 className="font-semibold text-white">
+              <div className="px-4 py-3 border-b border-zinc-300 dark:border-gray-700 flex justify-between items-center">
+                <h5 className="font-semibold text-zinc-900 dark:text-white">
                   Message — {viewingLog.recipient_name || '—'} ({viewingLog.message_type.replace(/_/g, ' ')})
                 </h5>
                 <button
                   type="button"
                   onClick={() => setViewingLog(null)}
-                  className="text-gray-400 hover:text-white text-2xl leading-none"
+                  className="text-zinc-500 dark:text-gray-400 hover:text-zinc-900 dark:text-white text-2xl leading-none"
                 >
                   ×
                 </button>
               </div>
               <div className="p-4 overflow-y-auto flex-1">
-                <pre className="text-sm text-gray-300 whitespace-pre-wrap break-words font-sans">
+                <pre className="text-sm text-zinc-600 dark:text-gray-300 whitespace-pre-wrap break-words font-sans">
                   {viewingLog.message_content ?? 'Message content was not recorded for this log entry.'}
                 </pre>
               </div>
@@ -621,7 +621,7 @@ export function SMSManagementContent() {
 
       {/* Sticky save bar when unsaved */}
       {hasUnsavedChanges && (
-        <div className="fixed bottom-0 left-0 right-0 z-40 bg-gray-900/95 border-t border-gray-700 py-3 px-4 shadow-lg">
+        <div className="fixed bottom-0 left-0 right-0 z-40 bg-zinc-200 dark:bg-gray-900/95 border-t border-zinc-300 dark:border-gray-700 py-3 px-4 shadow-lg">
           <div className="max-w-4xl mx-auto flex items-center justify-between">
             <span className="text-sm text-amber-400">You have unsaved changes</span>
             <div className="flex gap-2">
@@ -631,7 +631,7 @@ export function SMSManagementContent() {
                   if (initialSettings) setSettings(initialSettings)
                   setMessage({ type: 'success', text: 'Changes discarded' })
                 }}
-                className="text-sm text-gray-400 hover:text-white px-4 py-2 rounded border border-gray-600 hover:border-gray-500"
+                className="text-sm text-zinc-500 dark:text-gray-400 hover:text-zinc-900 dark:text-white px-4 py-2 rounded border border-zinc-300 dark:border-gray-600 hover:border-gray-500"
               >
                 Discard
               </button>

@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import type { MailSettings } from './mail-sender'
+import { normalizeEmail } from '@/lib/email-normalize'
 
 const MAIL_SETTINGS_KEY = 'mail_settings'
 
@@ -95,6 +96,7 @@ export async function saveMailSettings(settings: Partial<MailSettings>): Promise
     ...settings,
     password: keepPassword ? currentPassword : newPassword,
   }
+  if (merged.fromEmail) merged.fromEmail = normalizeEmail(merged.fromEmail)
 
   const { error } = await supabase
     .from('system_settings')

@@ -6,10 +6,11 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { logIdentityEvent } from '@/lib/identity-audit'
 import { z } from 'zod'
+import { normalizeEmail } from '@/lib/email-normalize'
 
 const loginSchema = z.object({
   dealerCode: z.string().min(1, 'Dealer code is required'),
-  email: z.string().email(),
+  email: z.preprocess((v) => normalizeEmail(String(v ?? '')), z.string().email()),
   password: z.string().min(1, 'Password is required'),
 })
 

@@ -68,8 +68,8 @@ export default async function SelfPortalPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-semibold text-white mb-2">Self Portal</h1>
-        <p className="text-gray-400">Your profile, leave, pay, IT support, documents, and more.</p>
+        <h1 className="text-2xl font-semibold text-zinc-900 dark:text-white mb-2">Self Portal</h1>
+        <p className="text-zinc-500 dark:text-gray-400">Your profile, leave, pay, IT support, documents, and more.</p>
       </div>
       <SelfPortalContent
         profile={profile}

@@ -29,10 +29,10 @@ export function BackgroundLogo() {
           <img
             src={logoUrl}
             alt="Aurora Vehicles"
-            className="max-w-[200px] max-h-[200px] object-contain brightness-0 invert mb-4"
-            style={{ filter: 'drop-shadow(0 4px 12px rgba(0, 0, 0, 0.8))' }}
+            className="max-w-[200px] max-h-[200px] object-contain mb-4 opacity-40 dark:opacity-30 dark:brightness-0 dark:invert"
+            style={{ filter: 'drop-shadow(0 4px 12px rgba(0, 0, 0, 0.25))' }}
           />
-          <p className="text-xl font-semibold text-white tracking-wider" style={{ 
+          <p className="text-xl font-semibold text-zinc-900 dark:text-white tracking-wider" style={{ 
             textShadow: '0 2px 8px rgba(0, 0, 0, 0.8)',
             opacity: 0.3
           }}>AURORA VEHICLES</p>
@@ -40,7 +40,7 @@ export function BackgroundLogo() {
       ) : (
         <div className="flex flex-col items-center justify-center" style={{ opacity: 0.3 }}>
           <div 
-            className="text-9xl font-bold tracking-wider text-white mb-6" 
+            className="text-9xl font-bold tracking-wider text-zinc-900 dark:text-white mb-6" 
             style={{
               fontFamily: 'system-ui, -apple-system, sans-serif',
               fontWeight: 700,
@@ -51,7 +51,7 @@ export function BackgroundLogo() {
             A
           </div>
           <p 
-            className="text-2xl font-semibold text-white tracking-wider uppercase"
+            className="text-2xl font-semibold text-zinc-900 dark:text-white tracking-wider uppercase"
             style={{
               textShadow: '0 2px 8px rgba(0, 0, 0, 0.8)'
             }}

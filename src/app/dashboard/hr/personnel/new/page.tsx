@@ -32,8 +32,8 @@ export default async function NewPersonnelPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-semibold text-white mb-2">Add Personnel</h1>
-        <p className="text-gray-400">Create a new personnel record. All worker types: Employee, Contractor, Installer, Dealer Staff, etc.</p>
+        <h1 className="text-2xl font-semibold text-zinc-900 dark:text-white mb-2">Add Personnel</h1>
+        <p className="text-zinc-500 dark:text-gray-400">Create a new personnel record. All worker types: Employee, Contractor, Installer, Dealer Staff, etc.</p>
       </div>
       <PersonnelForm
         regions={regions || []}

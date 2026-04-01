@@ -17,8 +17,8 @@ export default async function SettingsPage() {
     <div className="space-y-8">
       <div>
         <SystemManagementTitle />
-        <h2 className="text-lg font-semibold text-white mt-4">Platform Settings</h2>
-        <p className="text-gray-400 text-sm">Sistem genelindeki ayarları görüntüleyin. Hassas değerler (API keys vb.) maske gösterilir.</p>
+        <h2 className="text-lg font-semibold text-zinc-900 dark:text-white mt-4">Platform Settings</h2>
+        <p className="text-zinc-500 dark:text-gray-400 text-sm">Sistem genelindeki ayarları görüntüleyin. Hassas değerler (API keys vb.) maske gösterilir.</p>
       </div>
       <SettingsContent keys={keys} />
     </div>

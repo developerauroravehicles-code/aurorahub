@@ -129,11 +129,11 @@ export function FinanceDemandsList({ myAssignedDemands, unassignedDemands, allAs
   return (
     <div className="space-y-8">
       {/* Filters */}
-      <div className="bg-white/5 rounded-lg border border-gray-800 p-4">
+      <div className="bg-zinc-200/50 dark:bg-white/5 rounded-lg border border-zinc-200 dark:border-gray-800 p-4">
         <div className="flex items-center justify-between mb-4">
           <button
             onClick={() => setShowFilters(!showFilters)}
-            className="flex items-center gap-2 text-sm text-gray-300 hover:text-white transition-colors"
+            className="flex items-center gap-2 text-sm text-zinc-600 dark:text-gray-300 hover:text-zinc-900 dark:text-white transition-colors"
           >
             <Filter className="w-4 h-4" />
             Filters
@@ -146,7 +146,7 @@ export function FinanceDemandsList({ myAssignedDemands, unassignedDemands, allAs
           {hasActiveFilters && (
             <button
               onClick={clearFilters}
-              className="flex items-center gap-1 text-xs text-gray-400 hover:text-white transition-colors"
+              className="flex items-center gap-1 text-xs text-zinc-500 dark:text-gray-400 hover:text-zinc-900 dark:text-white transition-colors"
             >
               <X className="w-3 h-3" />
               Clear
@@ -159,18 +159,18 @@ export function FinanceDemandsList({ myAssignedDemands, unassignedDemands, allAs
             {/* Search - by customer name or demand ID */}
             <div className="md:col-span-2 flex gap-2">
               <div className="flex-1 min-w-0">
-                <label className="block text-xs font-medium text-gray-400 mb-1">Search by</label>
+                <label className="block text-xs font-medium text-zinc-500 dark:text-gray-400 mb-1">Search by</label>
                 <select
                   value={searchType}
                   onChange={(e) => setSearchType(e.target.value as 'customer' | 'demand_id')}
-                  className="w-full border border-gray-700 bg-white/5 p-2 rounded text-white text-sm focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]"
+                  className="w-full border border-zinc-300 dark:border-gray-700 bg-zinc-200/50 dark:bg-white/5 p-2 rounded text-zinc-900 dark:text-white text-sm focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]"
                 >
-                  <option value="customer" className="bg-black">Customer name</option>
-                  <option value="demand_id" className="bg-black">Demand ID</option>
+                  <option value="customer" className="bg-zinc-50 dark:bg-black">Customer name</option>
+                  <option value="demand_id" className="bg-zinc-50 dark:bg-black">Demand ID</option>
                 </select>
               </div>
               <div className="flex-1 min-w-0">
-                <label className="block text-xs font-medium text-gray-400 mb-1">
+                <label className="block text-xs font-medium text-zinc-500 dark:text-gray-400 mb-1">
                   {searchType === 'customer' ? 'Name' : 'Demand ID'}
                 </label>
                 <input
@@ -178,38 +178,38 @@ export function FinanceDemandsList({ myAssignedDemands, unassignedDemands, allAs
                   value={searchValue}
                   onChange={(e) => setSearchValue(e.target.value)}
                   placeholder={searchType === 'customer' ? 'Customer first or last name...' : 'ARR20260000001'}
-                  className="w-full border border-gray-700 bg-white/5 p-2 rounded text-white text-sm focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]"
+                  className="w-full border border-zinc-300 dark:border-gray-700 bg-zinc-200/50 dark:bg-white/5 p-2 rounded text-zinc-900 dark:text-white text-sm focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]"
                 />
               </div>
             </div>
 
             {/* Status Filter */}
             <div>
-              <label className="block text-xs font-medium text-gray-400 mb-1">Status</label>
+              <label className="block text-xs font-medium text-zinc-500 dark:text-gray-400 mb-1">Status</label>
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="w-full border border-gray-700 bg-white/5 p-2 rounded text-white text-sm focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]"
+                className="w-full border border-zinc-300 dark:border-gray-700 bg-zinc-200/50 dark:bg-white/5 p-2 rounded text-zinc-900 dark:text-white text-sm focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]"
               >
-                <option value="all" className="bg-black">All Status</option>
-                <option value="pending_finance" className="bg-black">Pending Finance</option>
-                <option value="approved" className="bg-black">Approved</option>
-                <option value="completed" className="bg-black">Completed</option>
+                <option value="all" className="bg-zinc-50 dark:bg-black">All Status</option>
+                <option value="pending_finance" className="bg-zinc-50 dark:bg-black">Pending Finance</option>
+                <option value="approved" className="bg-zinc-50 dark:bg-black">Approved</option>
+                <option value="completed" className="bg-zinc-50 dark:bg-black">Completed</option>
               </select>
             </div>
 
             {/* Date Filter */}
             <div>
-              <label className="block text-xs font-medium text-gray-400 mb-1">Date Range</label>
+              <label className="block text-xs font-medium text-zinc-500 dark:text-gray-400 mb-1">Date Range</label>
               <select
                 value={dateFilter}
                 onChange={(e) => setDateFilter(e.target.value)}
-                className="w-full border border-gray-700 bg-white/5 p-2 rounded text-white text-sm focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]"
+                className="w-full border border-zinc-300 dark:border-gray-700 bg-zinc-200/50 dark:bg-white/5 p-2 rounded text-zinc-900 dark:text-white text-sm focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]"
               >
-                <option value="all" className="bg-black">All Time</option>
-                <option value="today" className="bg-black">Today</option>
-                <option value="this_week" className="bg-black">This Week</option>
-                <option value="this_month" className="bg-black">This Month</option>
+                <option value="all" className="bg-zinc-50 dark:bg-black">All Time</option>
+                <option value="today" className="bg-zinc-50 dark:bg-black">Today</option>
+                <option value="this_week" className="bg-zinc-50 dark:bg-black">This Week</option>
+                <option value="this_month" className="bg-zinc-50 dark:bg-black">This Month</option>
               </select>
             </div>
           </div>
@@ -219,13 +219,13 @@ export function FinanceDemandsList({ myAssignedDemands, unassignedDemands, allAs
       {/* My Assigned Demands */}
       {filteredMyAssigned.length > 0 && (
         <div>
-          <h2 className="text-xl font-semibold text-white mb-4">
+          <h2 className="text-xl font-semibold text-zinc-900 dark:text-white mb-4">
             My Assigned Demands ({filteredMyAssigned.length})
           </h2>
-          <div className="bg-white/5 rounded-lg border border-gray-800 shadow overflow-hidden">
-            <ul className="divide-y divide-gray-800">
+          <div className="bg-zinc-200/50 dark:bg-white/5 rounded-lg border border-zinc-200 dark:border-gray-800 shadow overflow-hidden">
+            <ul className="divide-y divide-zinc-200 dark:divide-gray-800">
               {filteredMyAssigned.map(demand => (
-                <li key={demand.id} className="p-4 sm:px-6 hover:bg-white/5 transition-colors">
+                <li key={demand.id} className="p-4 sm:px-6 hover:bg-zinc-200/50 dark:bg-white/5 transition-colors">
                   <div className="flex items-center justify-between">
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-2">
@@ -233,7 +233,7 @@ export function FinanceDemandsList({ myAssignedDemands, unassignedDemands, allAs
                           {demand.customer_firstname} {demand.customer_lastname}
                         </p>
                         {demand.demand_number != null && (
-                          <span className="text-xs font-medium text-gray-500">#{demand.demand_number}</span>
+                          <span className="text-xs font-medium text-zinc-500 dark:text-gray-500">#{demand.demand_number}</span>
                         )}
                         {demand.stock_number && duplicateStockNumbers.includes((demand.stock_number || '').trim().toUpperCase()) && (
                           <span className="text-xs text-amber-400">(Duplicate Stock No)</span>
@@ -252,17 +252,17 @@ export function FinanceDemandsList({ myAssignedDemands, unassignedDemands, allAs
                           </span>
                         )}
                       </div>
-                      <p className="text-sm text-gray-400">
+                      <p className="text-sm text-zinc-500 dark:text-gray-400">
                         {demand.vehicle_year} {demand.vehicle_make} {demand.vehicle_model}
                       </p>
-                      <p className="text-sm text-gray-400">
-                        Appointment: <span className="font-semibold text-white">{formatAppointment(demand.appointment_date, demand.dealers)}</span>
+                      <p className="text-sm text-zinc-500 dark:text-gray-400">
+                        Appointment: <span className="font-semibold text-zinc-900 dark:text-white">{formatAppointment(demand.appointment_date, demand.dealers)}</span>
                       </p>
-                      <p className="text-sm text-gray-500 mt-1">
+                      <p className="text-sm text-zinc-500 dark:text-gray-500 mt-1">
                         Dealer: {(Array.isArray(demand.dealers) ? demand.dealers[0] : demand.dealers)?.name}
                       </p>
                       {demand.comment && (
-                        <p className="text-sm text-gray-400 mt-1 italic">Comment: {demand.comment}</p>
+                        <p className="text-sm text-zinc-500 dark:text-gray-400 mt-1 italic">Comment: {demand.comment}</p>
                       )}
                     </div>
                     <DemandActions 
@@ -296,47 +296,47 @@ export function FinanceDemandsList({ myAssignedDemands, unassignedDemands, allAs
 
       {/* Demand Pool - Unassigned Demands */}
       <div>
-        <h2 className="text-xl font-semibold text-white mb-4">
+        <h2 className="text-xl font-semibold text-zinc-900 dark:text-white mb-4">
           Demand Pool - Unassigned ({filteredUnassigned.length})
         </h2>
-        <div className="bg-white/5 rounded-lg border border-gray-800 shadow overflow-hidden">
+        <div className="bg-zinc-200/50 dark:bg-white/5 rounded-lg border border-zinc-200 dark:border-gray-800 shadow overflow-hidden">
           {filteredUnassigned.length === 0 ? (
-            <p className="p-4 text-gray-400 text-center">
+            <p className="p-4 text-zinc-500 dark:text-gray-400 text-center">
               {hasActiveFilters ? 'No unassigned demands match your filters.' : 'No unassigned demands in the pool.'}
             </p>
           ) : (
-            <ul className="divide-y divide-gray-800">
+            <ul className="divide-y divide-zinc-200 dark:divide-gray-800">
               {filteredUnassigned.map(demand => (
-                <li key={demand.id} className="p-4 sm:px-6 hover:bg-white/5 transition-colors">
+                <li key={demand.id} className="p-4 sm:px-6 hover:bg-zinc-200/50 dark:bg-white/5 transition-colors">
                   <div className="flex items-center justify-between">
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-2">
-                        <p className="text-lg font-medium text-white">
+                        <p className="text-lg font-medium text-zinc-900 dark:text-white">
                           {demand.customer_firstname} {demand.customer_lastname}
                         </p>
                         {demand.demand_number != null && (
-                          <span className="text-xs font-medium text-gray-500">#{demand.demand_number}</span>
+                          <span className="text-xs font-medium text-zinc-500 dark:text-gray-500">#{demand.demand_number}</span>
                         )}
                         {demand.stock_number && duplicateStockNumbers.includes((demand.stock_number || '').trim().toUpperCase()) && (
                           <span className="text-xs text-amber-400">(Duplicate Stock No)</span>
                         )}
-                        <span className="px-2 py-1 rounded text-xs font-medium bg-gray-900/50 text-gray-300 border border-gray-800">
+                        <span className="px-2 py-1 rounded text-xs font-medium bg-zinc-200/80 dark:bg-gray-900/50 text-zinc-600 dark:text-gray-300 border border-zinc-200 dark:border-gray-800">
                           UNASSIGNED
                         </span>
                       </div>
-                      <p className="text-sm text-gray-400">
+                      <p className="text-sm text-zinc-500 dark:text-gray-400">
                         {demand.vehicle_year} {demand.vehicle_make} {demand.vehicle_model}
                       </p>
-                      <p className="text-sm text-gray-400">
-                        Appointment: <span className="font-semibold text-white">{formatAppointment(demand.appointment_date, demand.dealers)}</span>
+                      <p className="text-sm text-zinc-500 dark:text-gray-400">
+                        Appointment: <span className="font-semibold text-zinc-900 dark:text-white">{formatAppointment(demand.appointment_date, demand.dealers)}</span>
                       </p>
-                      <p className="text-sm text-gray-500 mt-1">
+                      <p className="text-sm text-zinc-500 dark:text-gray-500 mt-1">
                         Dealer: {(Array.isArray(demand.dealers) ? demand.dealers[0] : demand.dealers)?.name}
                       </p>
                       {demand.comment && (
-                        <p className="text-sm text-gray-400 mt-1 italic">Comment: {demand.comment}</p>
+                        <p className="text-sm text-zinc-500 dark:text-gray-400 mt-1 italic">Comment: {demand.comment}</p>
                       )}
-                      <p className="text-xs text-gray-600 mt-1">
+                      <p className="text-xs text-zinc-600 dark:text-gray-600 mt-1">
                         Created: {formatInTimeZone(new Date(demand.created_at), getEffectiveTimezone(getDealerTimezone(demand.dealers) ?? null), 'PPP h:mm a')}
                       </p>
                     </div>
@@ -352,21 +352,21 @@ export function FinanceDemandsList({ myAssignedDemands, unassignedDemands, allAs
       {/* Completed Demands */}
       {filteredCompleted.length > 0 && (
         <div>
-          <h2 className="text-xl font-semibold text-white mb-4">
+          <h2 className="text-xl font-semibold text-zinc-900 dark:text-white mb-4">
             Completed ({filteredCompleted.length})
           </h2>
-          <div className="bg-white/5 rounded-lg border border-gray-800 shadow overflow-hidden">
-            <ul className="divide-y divide-gray-800">
+          <div className="bg-zinc-200/50 dark:bg-white/5 rounded-lg border border-zinc-200 dark:border-gray-800 shadow overflow-hidden">
+            <ul className="divide-y divide-zinc-200 dark:divide-gray-800">
               {filteredCompleted.map(demand => (
-                <li key={demand.id} className="p-4 sm:px-6 hover:bg-white/5 transition-colors">
+                <li key={demand.id} className="p-4 sm:px-6 hover:bg-zinc-200/50 dark:bg-white/5 transition-colors">
                   <div className="flex items-center justify-between">
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-2">
-                        <p className="text-lg font-medium text-gray-400">
+                        <p className="text-lg font-medium text-zinc-500 dark:text-gray-400">
                           {demand.customer_firstname} {demand.customer_lastname}
                         </p>
                         {demand.demand_number != null && (
-                          <span className="text-xs font-medium text-gray-500">#{demand.demand_number}</span>
+                          <span className="text-xs font-medium text-zinc-500 dark:text-gray-500">#{demand.demand_number}</span>
                         )}
                         {demand.stock_number && duplicateStockNumbers.includes((demand.stock_number || '').trim().toUpperCase()) && (
                           <span className="text-xs text-amber-400">(Duplicate Stock No)</span>
@@ -375,22 +375,22 @@ export function FinanceDemandsList({ myAssignedDemands, unassignedDemands, allAs
                           COMPLETED
                         </span>
                         {demand.profiles && (
-                          <span className="text-xs text-gray-500">
+                          <span className="text-xs text-zinc-500 dark:text-gray-500">
                             Finance: {(demand.profiles as any)?.full_name || '—'}
                           </span>
                         )}
                       </div>
-                      <p className="text-sm text-gray-500">
+                      <p className="text-sm text-zinc-500 dark:text-gray-500">
                         {demand.vehicle_year} {demand.vehicle_make} {demand.vehicle_model}
                       </p>
-                      <p className="text-sm text-gray-500">
+                      <p className="text-sm text-zinc-500 dark:text-gray-500">
                         Appointment: {formatAppointment(demand.appointment_date, demand.dealers)}
                       </p>
-                      <p className="text-sm text-gray-600 mt-1">
+                      <p className="text-sm text-zinc-600 dark:text-gray-600 mt-1">
                         Dealer: {(Array.isArray(demand.dealers) ? demand.dealers[0] : demand.dealers)?.name}
                       </p>
                       {demand.comment && (
-                        <p className="text-sm text-gray-400 mt-1 italic">Comment: {demand.comment}</p>
+                        <p className="text-sm text-zinc-500 dark:text-gray-400 mt-1 italic">Comment: {demand.comment}</p>
                       )}
                     </div>
                   </div>
@@ -404,21 +404,21 @@ export function FinanceDemandsList({ myAssignedDemands, unassignedDemands, allAs
       {/* Other Assigned Demands (for reference) */}
       {filteredAllAssigned.length > 0 && (
         <div>
-          <h2 className="text-xl font-semibold text-white mb-4">
+          <h2 className="text-xl font-semibold text-zinc-900 dark:text-white mb-4">
             Assigned to Others ({filteredAllAssigned.length})
           </h2>
-          <div className="bg-white/5 rounded-lg border border-gray-800 shadow overflow-hidden">
-            <ul className="divide-y divide-gray-800">
+          <div className="bg-zinc-200/50 dark:bg-white/5 rounded-lg border border-zinc-200 dark:border-gray-800 shadow overflow-hidden">
+            <ul className="divide-y divide-zinc-200 dark:divide-gray-800">
               {filteredAllAssigned.map(demand => (
-                <li key={demand.id} className="p-4 sm:px-6 hover:bg-white/5 transition-colors">
+                <li key={demand.id} className="p-4 sm:px-6 hover:bg-zinc-200/50 dark:bg-white/5 transition-colors">
                   <div className="flex items-center justify-between">
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-2">
-                        <p className="text-lg font-medium text-gray-500">
+                        <p className="text-lg font-medium text-zinc-500 dark:text-gray-500">
                           {demand.customer_firstname} {demand.customer_lastname}
                         </p>
                         {demand.demand_number != null && (
-                          <span className="text-xs font-medium text-gray-500">#{demand.demand_number}</span>
+                          <span className="text-xs font-medium text-zinc-500 dark:text-gray-500">#{demand.demand_number}</span>
                         )}
                         {demand.stock_number && duplicateStockNumbers.includes((demand.stock_number || '').trim().toUpperCase()) && (
                           <span className="text-xs text-amber-400">(Duplicate Stock No)</span>
@@ -427,17 +427,17 @@ export function FinanceDemandsList({ myAssignedDemands, unassignedDemands, allAs
                           ASSIGNED TO: {(demand.profiles as any)?.full_name || 'Unknown'}
                         </span>
                       </div>
-                      <p className="text-sm text-gray-500">
+                      <p className="text-sm text-zinc-500 dark:text-gray-500">
                         {demand.vehicle_year} {demand.vehicle_make} {demand.vehicle_model}
                       </p>
-                      <p className="text-sm text-gray-500">
+                      <p className="text-sm text-zinc-500 dark:text-gray-500">
                         Appointment: {formatAppointment(demand.appointment_date, demand.dealers)}
                       </p>
-                      <p className="text-sm text-gray-600 mt-1">
+                      <p className="text-sm text-zinc-600 dark:text-gray-600 mt-1">
                         Dealer: {(Array.isArray(demand.dealers) ? demand.dealers[0] : demand.dealers)?.name}
                       </p>
                       {demand.comment && (
-                        <p className="text-sm text-gray-400 mt-1 italic">Comment: {demand.comment}</p>
+                        <p className="text-sm text-zinc-500 dark:text-gray-400 mt-1 italic">Comment: {demand.comment}</p>
                       )}
                     </div>
                   </div>

@@ -35,7 +35,7 @@ export default async function CalendarManagementPage() {
         <SystemManagementTabs activeTab="calendar" />
 
         {/* Tab Content */}
-        <div className="bg-white/5 rounded-lg border border-gray-800 p-6">
+        <div className="bg-zinc-200/50 dark:bg-white/5 rounded-lg border border-zinc-200 dark:border-gray-800 p-6">
           <CalendarManagementContent 
             settings={settings || []}
             dealers={dealers || []}

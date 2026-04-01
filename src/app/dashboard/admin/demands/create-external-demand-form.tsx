@@ -29,7 +29,7 @@ interface CreateExternalDemandFormProps {
   onCancel?: () => void
 }
 
-const inputClass = 'mt-1 block w-full rounded-md border border-gray-700 bg-black/50 py-2 px-3 shadow-sm focus:border-[#C27E00] focus:outline-none focus:ring-[#C27E00] sm:text-sm text-white'
+const inputClass = 'mt-1 block w-full rounded-md border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 py-2 px-3 shadow-sm focus:border-[#C27E00] focus:outline-none focus:ring-[#C27E00] sm:text-sm text-white'
 const inputReadOnlyClass = inputClass + ' opacity-75 cursor-not-allowed'
 
 export function CreateExternalDemandForm({ dealers, specialists, onSuccess, onCancel }: CreateExternalDemandFormProps) {
@@ -69,8 +69,8 @@ export function CreateExternalDemandForm({ dealers, specialists, onSuccess, onCa
   return (
     <form action={formAction} className="space-y-6">
       <div>
-        <h2 className="text-lg font-medium text-white border-b border-gray-800 pb-2">Create External Demand</h2>
-        <p className="text-sm text-gray-400 mt-1">Date only — no slot. External demands do not affect normal demand slots. Past dates allowed for retroactive entry.</p>
+        <h2 className="text-lg font-medium text-zinc-900 dark:text-white border-b border-zinc-200 dark:border-gray-800 pb-2">Create External Demand</h2>
+        <p className="text-sm text-zinc-500 dark:text-gray-400 mt-1">Date only — no slot. External demands do not affect normal demand slots. Past dates allowed for retroactive entry.</p>
       </div>
 
       {state?.error && (
@@ -81,7 +81,7 @@ export function CreateExternalDemandForm({ dealers, specialists, onSuccess, onCa
 
       <div className="grid grid-cols-1 gap-y-4 sm:grid-cols-2 sm:gap-x-4">
         <div className="sm:col-span-2">
-          <label className="block text-sm font-medium text-gray-300">Dealer *</label>
+          <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300">Dealer *</label>
           <select
             name="dealerId"
             value={selectedDealerId}
@@ -91,29 +91,31 @@ export function CreateExternalDemandForm({ dealers, specialists, onSuccess, onCa
           >
             <option value="">-- Select dealer --</option>
             {dealers.map((d) => (
-              <option key={d.id} value={d.id} className="bg-black">{d.name}</option>
+              <option key={d.id} value={d.id} className="bg-zinc-50 dark:bg-black">{d.name}</option>
             ))}
           </select>
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-300">Date *</label>
+          <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300">Date *</label>
           <input
             name="appointmentDate"
             type="date"
             required
             className={inputClass}
           />
-          <p className="text-xs text-gray-500 mt-1">Past dates allowed for retroactive demands.</p>
+          <p className="text-xs text-zinc-500 dark:text-gray-500 mt-1">
+            Past dates allowed. The date is saved as noon in the dealer&apos;s region timezone (falls back to Pacific if none).
+          </p>
         </div>
 
         {specialists.length > 0 && (
           <div className="sm:col-span-2">
-            <label className="block text-sm font-medium text-gray-300">Specialist</label>
+            <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300">Specialist</label>
             <select name="assignedSpecialistId" className={inputClass}>
-              <option value="" className="bg-black">-- No specialist assigned --</option>
+              <option value="" className="bg-zinc-50 dark:bg-black">-- No specialist assigned --</option>
               {specialists.map((s) => (
-                <option key={s.id} value={s.id} className="bg-black">
+                <option key={s.id} value={s.id} className="bg-zinc-50 dark:bg-black">
                   {s.full_name || 'Unknown'}
                 </option>
               ))}
@@ -121,19 +123,19 @@ export function CreateExternalDemandForm({ dealers, specialists, onSuccess, onCa
           </div>
         )}
 
-        <h3 className="col-span-full text-sm font-medium text-white border-t border-gray-800 pt-4 mt-4">Customer</h3>
+        <h3 className="col-span-full text-sm font-medium text-zinc-900 dark:text-white border-t border-zinc-200 dark:border-gray-800 pt-4 mt-4">Customer</h3>
         <div className="sm:col-span-2 flex items-center gap-2">
           <input
             type="checkbox"
             id="futureCustomer"
             checked={isFutureCustomer}
             onChange={(e) => setIsFutureCustomer(e.target.checked)}
-            className="rounded border-gray-600 bg-black/50 text-[#C27E00] focus:ring-[#C27E00] focus:ring-offset-0"
+            className="rounded border-zinc-300 dark:border-gray-600 bg-white dark:bg-black/50 text-[#C27E00] focus:ring-[#C27E00] focus:ring-offset-0"
           />
-          <label htmlFor="futureCustomer" className="text-sm font-medium text-gray-300 cursor-pointer">
+          <label htmlFor="futureCustomer" className="text-sm font-medium text-zinc-600 dark:text-gray-300 cursor-pointer">
             Future Customer
           </label>
-          <span className="text-xs text-gray-500">— When checked, customer info is set to &quot;Future&quot;</span>
+          <span className="text-xs text-zinc-500 dark:text-gray-500">— When checked, customer info is set to &quot;Future&quot;</span>
         </div>
         <div className="sm:col-span-2 flex items-center gap-2">
           <input
@@ -141,16 +143,16 @@ export function CreateExternalDemandForm({ dealers, specialists, onSuccess, onCa
             id="completeOnCreate"
             checked={completeOnCreate}
             onChange={(e) => setCompleteOnCreate(e.target.checked)}
-            className="rounded border-gray-600 bg-black/50 text-[#C27E00] focus:ring-[#C27E00] focus:ring-offset-0"
+            className="rounded border-zinc-300 dark:border-gray-600 bg-white dark:bg-black/50 text-[#C27E00] focus:ring-[#C27E00] focus:ring-offset-0"
           />
-          <label htmlFor="completeOnCreate" className="text-sm font-medium text-gray-300 cursor-pointer">
+          <label htmlFor="completeOnCreate" className="text-sm font-medium text-zinc-600 dark:text-gray-300 cursor-pointer">
             Mark as completed on creation
           </label>
-          <span className="text-xs text-gray-500">— When checked, demand is created directly as completed</span>
+          <span className="text-xs text-zinc-500 dark:text-gray-500">— When checked, demand is created directly as completed</span>
         </div>
         {completeOnCreate && <input type="hidden" name="completeOnCreate" value="true" />}
         <div>
-          <label className="block text-sm font-medium text-gray-300">First Name *</label>
+          <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300">First Name *</label>
           <input
             key={isFutureCustomer ? 'fn-future' : 'fn-normal'}
             name="firstName"
@@ -164,7 +166,7 @@ export function CreateExternalDemandForm({ dealers, specialists, onSuccess, onCa
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-300">Last Name *</label>
+          <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300">Last Name *</label>
           <input
             key={isFutureCustomer ? 'ln-future' : 'ln-normal'}
             name="lastName"
@@ -178,7 +180,7 @@ export function CreateExternalDemandForm({ dealers, specialists, onSuccess, onCa
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-300">Phone *</label>
+          <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300">Phone *</label>
           {isFutureCustomer ? (
             <input
               key="ph-future"
@@ -200,7 +202,7 @@ export function CreateExternalDemandForm({ dealers, specialists, onSuccess, onCa
           )}
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-300">Address</label>
+          <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300">Address</label>
           <input
             key={isFutureCustomer ? 'addr-future' : 'addr-normal'}
             name="address"
@@ -211,9 +213,9 @@ export function CreateExternalDemandForm({ dealers, specialists, onSuccess, onCa
           />
         </div>
 
-        <h3 className="col-span-full text-sm font-medium text-white border-t border-gray-800 pt-4 mt-4">Vehicle</h3>
+        <h3 className="col-span-full text-sm font-medium text-zinc-900 dark:text-white border-t border-zinc-200 dark:border-gray-800 pt-4 mt-4">Vehicle</h3>
         <div>
-          <label className="block text-sm font-medium text-gray-300">Make *</label>
+          <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300">Make *</label>
           <select
             name="vehicleMake"
             value={selectedMake}
@@ -228,12 +230,12 @@ export function CreateExternalDemandForm({ dealers, specialists, onSuccess, onCa
           >
             <option value="">-- Select --</option>
             {VEHICLE_MAKES_CA.map((m) => (
-              <option key={m} value={m} className="bg-black">{m}</option>
+              <option key={m} value={m} className="bg-zinc-50 dark:bg-black">{m}</option>
             ))}
           </select>
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-300">Model *</label>
+          <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300">Model *</label>
           {selectedMake ? (
             <div className="space-y-1">
               <select
@@ -248,9 +250,9 @@ export function CreateExternalDemandForm({ dealers, specialists, onSuccess, onCa
               >
                 <option value="">-- Select --</option>
                 {getModelsForMake(selectedMake).map((m) => (
-                  <option key={m} value={m} className="bg-black">{m}</option>
+                  <option key={m} value={m} className="bg-zinc-50 dark:bg-black">{m}</option>
                 ))}
-                <option value="__custom__" className="bg-black">Other</option>
+                <option value="__custom__" className="bg-zinc-50 dark:bg-black">Other</option>
               </select>
               {selectedModel === '__custom__' && (
                 <input
@@ -273,7 +275,7 @@ export function CreateExternalDemandForm({ dealers, specialists, onSuccess, onCa
                     >
                       <option value="">-- Trim (optional) --</option>
                       {getTrimsForModel(selectedMake, selectedModel).map((t) => (
-                        <option key={t} value={t} className="bg-black">{t}</option>
+                        <option key={t} value={t} className="bg-zinc-50 dark:bg-black">{t}</option>
                       ))}
                     </select>
                   ) : null}
@@ -290,15 +292,15 @@ export function CreateExternalDemandForm({ dealers, specialists, onSuccess, onCa
           )}
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-300">Year *</label>
+          <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300">Year *</label>
           <input name="vehicleYear" type="number" min={1900} max={2100} required className={inputClass} />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-300">Stock Number *</label>
+          <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300">Stock Number *</label>
           <input name="stockNumber" required className={inputClass} placeholder="Stock number" style={{ textTransform: 'uppercase' }} onInput={(e) => { (e.target as HTMLInputElement).value = (e.target as HTMLInputElement).value.toUpperCase() }} />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-300">VIN Last 6 Digits <span className="text-red-400">*</span></label>
+          <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300">VIN Last 6 Digits <span className="text-red-400">*</span></label>
           <input
             name="vinLast6"
             required
@@ -310,9 +312,9 @@ export function CreateExternalDemandForm({ dealers, specialists, onSuccess, onCa
           />
         </div>
 
-        <h3 className="col-span-full text-sm font-medium text-white border-t border-gray-800 pt-4 mt-4">Camera</h3>
+        <h3 className="col-span-full text-sm font-medium text-zinc-900 dark:text-white border-t border-zinc-200 dark:border-gray-800 pt-4 mt-4">Camera</h3>
         <div>
-          <label className="block text-sm font-medium text-gray-300">Camera Model *</label>
+          <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300">Camera Model *</label>
           {cameraModels.length > 0 ? (
             <div className="space-y-1">
               <select
@@ -326,9 +328,9 @@ export function CreateExternalDemandForm({ dealers, specialists, onSuccess, onCa
               >
                 <option value="">-- Select --</option>
                 {cameraModels.map((c) => (
-                  <option key={c.id} value={c.name} className="bg-black">{c.name}</option>
+                  <option key={c.id} value={c.name} className="bg-zinc-50 dark:bg-black">{c.name}</option>
                 ))}
-                <option value="__custom__" className="bg-black">Other</option>
+                <option value="__custom__" className="bg-zinc-50 dark:bg-black">Other</option>
               </select>
               {selectedCamera === '__custom__' && (
                 <input
@@ -351,17 +353,17 @@ export function CreateExternalDemandForm({ dealers, specialists, onSuccess, onCa
         </div>
 
         <div className="sm:col-span-2">
-          <label className="block text-sm font-medium text-gray-300">Comment</label>
+          <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300">Comment</label>
           <textarea name="comment" rows={2} className={inputClass} placeholder="Optional" />
         </div>
       </div>
 
-      <div className="flex justify-end gap-3 pt-4 border-t border-gray-800">
+      <div className="flex justify-end gap-3 pt-4 border-t border-zinc-200 dark:border-gray-800">
         {onCancel && (
           <button
             type="button"
             onClick={onCancel}
-            className="px-4 py-2 text-sm font-medium text-gray-300 hover:text-white border border-gray-700 rounded-md"
+            className="px-4 py-2 text-sm font-medium text-zinc-600 dark:text-gray-300 hover:text-zinc-900 dark:text-white border border-zinc-300 dark:border-gray-700 rounded-md"
           >
             Cancel
           </button>

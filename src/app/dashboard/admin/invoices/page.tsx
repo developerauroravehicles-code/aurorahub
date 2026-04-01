@@ -114,8 +114,8 @@ export default async function InvoicesPage({
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-semibold text-white mb-2">Invoice</h1>
-        <p className="text-gray-400">
+        <h1 className="text-2xl font-semibold text-zinc-900 dark:text-white mb-2">Invoice</h1>
+        <p className="text-zinc-500 dark:text-gray-400">
           {isGM ? 'View completed demands as invoices. Read-only.' : 'Completed demands as invoices. Total amount and comments are editable.'}
         </p>
       </div>
@@ -133,12 +133,12 @@ export default async function InvoicesPage({
         />
         <InvoiceSearchFilter searchValue={params.search ?? ''} searchBy={(params.searchBy as 'demand_number' | 'stock_number' | 'vin_last6') || 'demand_number'} />
       </div>
-      <div className="flex items-center gap-4 text-sm text-gray-300">
+      <div className="flex items-center gap-4 text-sm text-zinc-600 dark:text-gray-300">
         <span>Total: <strong className="text-[#C27E00]">${totalAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong></span>
         <span>|</span>
         <span>{invoiceCount} invoice{invoiceCount !== 1 ? 's' : ''}</span>
       </div>
-      <div className="bg-white/5 rounded-lg border border-gray-800 shadow flex flex-col min-h-[calc(100vh-14rem)]">
+      <div className="bg-zinc-200/50 dark:bg-white/5 rounded-lg border border-zinc-200 dark:border-gray-800 shadow flex flex-col min-h-[calc(100vh-14rem)]">
         <InvoiceTable invoices={(demands ?? []) as Parameters<typeof InvoiceTable>[0]['invoices']} logoDataUrl={logoUrl} canEdit={isAuroraManager} />
       </div>
     </div>

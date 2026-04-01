@@ -27,8 +27,8 @@ export default async function StatementsPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-semibold text-white mb-2">Statement</h1>
-        <p className="text-gray-400">
+        <h1 className="text-2xl font-semibold text-zinc-900 dark:text-white mb-2">Statement</h1>
+        <p className="text-zinc-500 dark:text-gray-400">
           {isGM ? 'Generate statement for your dealer. Filter by date range.' : 'Filter by dealer and date range to generate statements. Download as PDF or save to Google Drive (Statements / Dealer / Year folder).'}
         </p>
       </div>

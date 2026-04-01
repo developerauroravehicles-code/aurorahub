@@ -49,15 +49,15 @@ export function LeaveRequestForm({
   }
 
   return (
-    <div className="bg-white/5 rounded-lg border border-gray-800 p-6">
-      <h2 className="text-lg font-semibold text-white mb-4">Create Leave Request</h2>
+    <div className="bg-zinc-200/50 dark:bg-white/5 rounded-lg border border-zinc-200 dark:border-gray-800 p-6">
+      <h2 className="text-lg font-semibold text-zinc-900 dark:text-white mb-4">Create Leave Request</h2>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label className="block text-sm text-gray-400 mb-1">Employee</label>
+          <label className="block text-sm text-zinc-500 dark:text-gray-400 mb-1">Employee</label>
           <select
             name="profile_id"
             required
-            className="w-full rounded-md bg-gray-900 border border-gray-700 text-white px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#C27E00] [&>option]:bg-gray-900 [&>option]:text-white"
+            className="w-full rounded-md bg-zinc-200 dark:bg-gray-900 border border-zinc-300 dark:border-gray-700 text-white px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#C27E00] [&>option]:bg-zinc-200 dark:bg-gray-900 [&>option]:text-white"
             style={{ colorScheme: 'light' }}
           >
             <option value="">Select employee</option>
@@ -70,11 +70,11 @@ export function LeaveRequestForm({
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm text-gray-400 mb-1">Leave Type</label>
+            <label className="block text-sm text-zinc-500 dark:text-gray-400 mb-1">Leave Type</label>
             <select
               name="leave_type"
               required
-              className="w-full rounded-md bg-gray-900 border border-gray-700 text-white px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#C27E00] [&>option]:bg-gray-900 [&>option]:text-white"
+              className="w-full rounded-md bg-zinc-200 dark:bg-gray-900 border border-zinc-300 dark:border-gray-700 text-white px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#C27E00] [&>option]:bg-zinc-200 dark:bg-gray-900 [&>option]:text-white"
               style={{ colorScheme: 'light' }}
             >
               {LEAVE_TYPES.map((t) => (
@@ -87,30 +87,30 @@ export function LeaveRequestForm({
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm text-gray-400 mb-1">Start Date</label>
+            <label className="block text-sm text-zinc-500 dark:text-gray-400 mb-1">Start Date</label>
             <input
               type="date"
               name="start_date"
               required
-              className="w-full rounded-md bg-white/5 border border-gray-700 text-white px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#C27E00]"
+              className="w-full rounded-md bg-zinc-200/50 dark:bg-white/5 border border-zinc-300 dark:border-gray-700 text-white px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#C27E00]"
             />
           </div>
           <div>
-            <label className="block text-sm text-gray-400 mb-1">End Date</label>
+            <label className="block text-sm text-zinc-500 dark:text-gray-400 mb-1">End Date</label>
             <input
               type="date"
               name="end_date"
               required
-              className="w-full rounded-md bg-white/5 border border-gray-700 text-white px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#C27E00]"
+              className="w-full rounded-md bg-zinc-200/50 dark:bg-white/5 border border-zinc-300 dark:border-gray-700 text-white px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#C27E00]"
             />
           </div>
         </div>
         <div>
-          <label className="block text-sm text-gray-400 mb-1">Notes (optional)</label>
+          <label className="block text-sm text-zinc-500 dark:text-gray-400 mb-1">Notes (optional)</label>
           <textarea
             name="notes"
             rows={2}
-            className="w-full rounded-md bg-white/5 border border-gray-700 text-white px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#C27E00]"
+            className="w-full rounded-md bg-zinc-200/50 dark:bg-white/5 border border-zinc-300 dark:border-gray-700 text-white px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#C27E00]"
           />
         </div>
         {error && <p className="text-sm text-red-400">{error}</p>}

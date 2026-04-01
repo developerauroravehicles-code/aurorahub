@@ -36,10 +36,10 @@ export function GMDashboardMonthSelector({ currentMonth }: { currentMonth: strin
     <select
       value={currentMonth}
       onChange={handleChange}
-      className="bg-transparent text-gray-400 border-0 p-0 text-xs cursor-pointer hover:text-gray-300 focus:outline-none focus:ring-0"
+      className="bg-transparent text-zinc-500 dark:text-gray-400 border-0 p-0 text-xs cursor-pointer hover:text-zinc-600 dark:text-gray-300 focus:outline-none focus:ring-0"
     >
       {options.map(o => (
-        <option key={o.value} value={o.value} className="bg-black text-white">
+        <option key={o.value} value={o.value} className="bg-zinc-50 dark:bg-black text-zinc-900 dark:text-white">
           {o.label}
         </option>
       ))}

@@ -1,6 +1,19 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* No-class / initial paint = dark (matches defaultTheme). .light overrides for light mode. */
 :root {
+  --background: #0a0a0a;
+  --foreground: #ededed;
+}
+
+.light {
+  --background: #f4f4f5;
+  --foreground: #18181b;
+}
+
+.dark {
   --background: #0a0a0a;
   --foreground: #ededed;
 }

@@ -28,11 +28,11 @@ export function EmployeesFilters({
   return (
     <div className="flex flex-wrap gap-4 items-center">
       <div className="flex items-center gap-2">
-        <label className="text-sm text-gray-400">Role</label>
+        <label className="text-sm text-zinc-500 dark:text-gray-400">Role</label>
         <select
           value={currentRole ?? ''}
           onChange={(e) => handleFilterChange(e.target.value)}
-          className="rounded-md bg-gray-900 border border-gray-700 text-white px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#C27E00] [&>option]:bg-gray-900 [&>option]:text-white"
+          className="rounded-md bg-zinc-200 dark:bg-gray-900 border border-zinc-300 dark:border-gray-700 text-white px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#C27E00] [&>option]:bg-zinc-200 dark:bg-gray-900 [&>option]:text-white"
           style={{ colorScheme: 'light' }}
         >
           {ROLES.map((r) => (

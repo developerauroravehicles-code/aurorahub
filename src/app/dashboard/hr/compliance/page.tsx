@@ -15,8 +15,8 @@ export default async function CompliancePage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-semibold text-white mb-2">Compliance & Legal (Canada)</h1>
-        <p className="text-gray-400">Employment compliance, provincial rules, insurance, safety, work permits, SIN, driver licenses.</p>
+        <h1 className="text-2xl font-semibold text-zinc-900 dark:text-white mb-2">Compliance & Legal (Canada)</h1>
+        <p className="text-zinc-500 dark:text-gray-400">Employment compliance, provincial rules, insurance, safety, work permits, SIN, driver licenses.</p>
       </div>
       <ComplianceContent documents={documents} checklists={checklists} personnel={personnel} />
     </div>

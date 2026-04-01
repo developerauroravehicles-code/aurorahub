@@ -64,22 +64,22 @@ export const DealerManagementContent = memo(function DealerManagementContent({
     <div className="space-y-8">
       {/* Dealers List */}
       <div>
-        <h1 className="text-2xl font-semibold mb-4 text-white">Dealers ({dealers.length})</h1>
-        <div className="bg-white/5 rounded-lg border border-gray-800 shadow overflow-hidden">
+        <h1 className="text-2xl font-semibold mb-4 text-zinc-900 dark:text-white">Dealers ({dealers.length})</h1>
+        <div className="bg-zinc-200/50 dark:bg-white/5 rounded-lg border border-zinc-200 dark:border-gray-800 shadow overflow-hidden">
           {/* Table View */}
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-800">
-              <thead className="bg-white/5">
+            <table className="min-w-full divide-y divide-zinc-200 dark:divide-gray-800">
+              <thead className="bg-zinc-200/50 dark:bg-white/5">
                 <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Name</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Code</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Region</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Phone</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Address</th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-400 uppercase tracking-wider">Actions</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500 dark:text-gray-400 uppercase tracking-wider">Name</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500 dark:text-gray-400 uppercase tracking-wider">Code</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500 dark:text-gray-400 uppercase tracking-wider">Region</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500 dark:text-gray-400 uppercase tracking-wider">Phone</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500 dark:text-gray-400 uppercase tracking-wider">Address</th>
+                  <th className="px-4 py-3 text-right text-xs font-medium text-zinc-500 dark:text-gray-400 uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-800">
+              <tbody className="divide-y divide-zinc-200 dark:divide-gray-800">
             {dealers.map(d => {
               // Find region code - check both merged region_codes and region_code_id
               let regionCode = d.region_codes || null
@@ -91,57 +91,57 @@ export const DealerManagementContent = memo(function DealerManagementContent({
               
               if (isEditing) {
                 return (
-                  <tr key={d.id} className="bg-white/5">
+                  <tr key={d.id} className="bg-zinc-200/50 dark:bg-white/5">
                     <td colSpan={6} className="px-4 py-4">
                       <form onSubmit={handleUpdateDealer} className="space-y-4">
                         <input type="hidden" name="dealerId" value={d.id} />
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div>
-                            <label className="block text-sm font-medium text-gray-300 mb-1">Dealer Name</label>
+                            <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300 mb-1">Dealer Name</label>
                             <input 
                               name="name" 
                               defaultValue={d.name}
                               required 
-                              className="border border-gray-700 bg-white/5 p-2 w-full rounded text-white focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00] text-sm"
+                              className="border border-zinc-300 dark:border-gray-700 bg-zinc-200/50 dark:bg-white/5 p-2 w-full rounded text-zinc-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00] text-sm"
                             />
                           </div>
                           <div>
-                            <label className="block text-sm font-medium text-gray-300 mb-1">Dealer Code</label>
+                            <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300 mb-1">Dealer Code</label>
                             <input 
                               name="code" 
                               defaultValue={d.code}
                               required 
-                              className="border border-gray-700 bg-white/5 p-2 w-full rounded text-white focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00] text-sm"
+                              className="border border-zinc-300 dark:border-gray-700 bg-zinc-200/50 dark:bg-white/5 p-2 w-full rounded text-zinc-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00] text-sm"
                             />
                           </div>
                           <div>
-                            <label className="block text-sm font-medium text-gray-300 mb-1">Phone</label>
+                            <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300 mb-1">Phone</label>
                             <input 
                               name="phone" 
                               type="tel"
                               defaultValue={d.phone || ''}
                               placeholder="e.g. 604-555-1234"
-                              className="border border-gray-700 bg-white/5 p-2 w-full rounded text-white focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00] text-sm"
+                              className="border border-zinc-300 dark:border-gray-700 bg-zinc-200/50 dark:bg-white/5 p-2 w-full rounded text-zinc-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00] text-sm"
                             />
                           </div>
                           <div>
-                            <label className="block text-sm font-medium text-gray-300 mb-1">Address</label>
+                            <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300 mb-1">Address</label>
                             <input 
                               name="address" 
                               defaultValue={d.address || ''}
-                              className="border border-gray-700 bg-white/5 p-2 w-full rounded text-white focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00] text-sm"
+                              className="border border-zinc-300 dark:border-gray-700 bg-zinc-200/50 dark:bg-white/5 p-2 w-full rounded text-zinc-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00] text-sm"
                             />
                           </div>
                           <div>
-                            <label className="block text-sm font-medium text-gray-300 mb-1">Region Code</label>
+                            <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300 mb-1">Region Code</label>
                             <select 
                               name="region_code_id" 
                               defaultValue={regionCode?.id || 'none'}
-                              className="border border-gray-700 bg-white/5 p-2 w-full rounded text-white focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00] text-sm"
+                              className="border border-zinc-300 dark:border-gray-700 bg-zinc-200/50 dark:bg-white/5 p-2 w-full rounded text-zinc-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00] text-sm"
                             >
-                              <option value="none" className="bg-black text-white">No Region Code</option>
+                              <option value="none" className="bg-zinc-50 dark:bg-black text-zinc-900 dark:text-white">No Region Code</option>
                               {regionCodes.map(rc => (
-                                <option key={rc.id} value={rc.id} className="bg-black text-white">
+                                <option key={rc.id} value={rc.id} className="bg-zinc-50 dark:bg-black text-zinc-900 dark:text-white">
                                   {rc.code} - {rc.name}
                                 </option>
                               ))}
@@ -170,9 +170,9 @@ export const DealerManagementContent = memo(function DealerManagementContent({
               }
               
               return (
-                <tr key={d.id} className="hover:bg-white/5 transition-colors">
+                <tr key={d.id} className="hover:bg-zinc-200/50 dark:bg-white/5 transition-colors">
                   <td className="px-4 py-3 whitespace-nowrap">
-                    <div className="text-sm font-medium text-white">{d.name}</div>
+                    <div className="text-sm font-medium text-zinc-900 dark:text-white">{d.name}</div>
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap">
                     <div className="text-sm text-[#C27E00]">{d.code}</div>
@@ -184,23 +184,23 @@ export const DealerManagementContent = memo(function DealerManagementContent({
                         {regionCode.code} - {regionCode.name}
                       </span>
                     ) : (
-                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-gray-800/50 text-gray-400 rounded border border-gray-700 text-xs font-medium">
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-gray-800/50 text-zinc-500 dark:text-gray-400 rounded border border-zinc-300 dark:border-gray-700 text-xs font-medium">
                         <MapPin className="w-3.5 h-3.5" />
                         No Region
                       </span>
                     )}
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap">
-                    <div className="text-sm text-gray-400">{d.phone || '-'}</div>
+                    <div className="text-sm text-zinc-500 dark:text-gray-400">{d.phone || '-'}</div>
                   </td>
                   <td className="px-4 py-3">
-                    <div className="text-sm text-gray-400">{d.address || '-'}</div>
+                    <div className="text-sm text-zinc-500 dark:text-gray-400">{d.address || '-'}</div>
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap text-right text-sm font-medium">
                     <div className="flex items-center justify-end gap-2">
                       <button
                         onClick={() => setEditingDealerId(d.id)}
-                        className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded text-sm transition-colors flex items-center gap-1.5"
+                        className="bg-blue-600 hover:bg-blue-700 text-zinc-900 dark:text-white px-3 py-1.5 rounded text-sm transition-colors flex items-center gap-1.5"
                       >
                         <Edit2 className="w-4 h-4" />
                         Edit
@@ -243,8 +243,8 @@ export const DealerManagementContent = memo(function DealerManagementContent({
       </div>
 
       {/* Add New Dealer */}
-      <div className="bg-white/5 p-6 rounded-lg border border-gray-800 shadow max-w-lg">
-        <h2 className="text-lg font-medium mb-4 text-white">Add New Dealer</h2>
+      <div className="bg-zinc-200/50 dark:bg-white/5 p-6 rounded-lg border border-zinc-200 dark:border-gray-800 shadow max-w-lg">
+        <h2 className="text-lg font-medium mb-4 text-zinc-900 dark:text-white">Add New Dealer</h2>
         <form onSubmit={async (e) => {
           e.preventDefault()
           try {
@@ -258,27 +258,27 @@ export const DealerManagementContent = memo(function DealerManagementContent({
           }
         }} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-300">Dealer Name</label>
-            <input name="name" required className="border border-gray-700 bg-white/5 p-2 w-full rounded text-white focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]" />
+            <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300">Dealer Name</label>
+            <input name="name" required className="border border-zinc-300 dark:border-gray-700 bg-zinc-200/50 dark:bg-white/5 p-2 w-full rounded text-zinc-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]" />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-300">Dealer Code</label>
-            <input name="code" required className="border border-gray-700 bg-white/5 p-2 w-full rounded text-white focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00] placeholder-gray-500" placeholder="e.g. KIASURREY" />
+            <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300">Dealer Code</label>
+            <input name="code" required className="border border-zinc-300 dark:border-gray-700 bg-zinc-200/50 dark:bg-white/5 p-2 w-full rounded text-zinc-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00] placeholder-gray-500" placeholder="e.g. KIASURREY" />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-300">Phone</label>
-            <input name="phone" type="tel" className="border border-gray-700 bg-white/5 p-2 w-full rounded text-white focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00] placeholder-gray-500" placeholder="e.g. 604-555-1234" />
+            <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300">Phone</label>
+            <input name="phone" type="tel" className="border border-zinc-300 dark:border-gray-700 bg-zinc-200/50 dark:bg-white/5 p-2 w-full rounded text-zinc-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00] placeholder-gray-500" placeholder="e.g. 604-555-1234" />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-300">Address</label>
-            <input name="address" className="border border-gray-700 bg-white/5 p-2 w-full rounded text-white focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]" />
+            <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300">Address</label>
+            <input name="address" className="border border-zinc-300 dark:border-gray-700 bg-zinc-200/50 dark:bg-white/5 p-2 w-full rounded text-zinc-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]" />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-300">Region Code</label>
-            <select name="region_code_id" className="border border-gray-700 bg-white/5 p-2 w-full rounded text-white focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]">
-              <option value="none" className="bg-black text-white">No Region Code</option>
+            <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300">Region Code</label>
+            <select name="region_code_id" className="border border-zinc-300 dark:border-gray-700 bg-zinc-200/50 dark:bg-white/5 p-2 w-full rounded text-zinc-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]">
+              <option value="none" className="bg-zinc-50 dark:bg-black text-zinc-900 dark:text-white">No Region Code</option>
               {regionCodes.map(rc => (
-                <option key={rc.id} value={rc.id} className="bg-black text-white">
+                <option key={rc.id} value={rc.id} className="bg-zinc-50 dark:bg-black text-zinc-900 dark:text-white">
                   {rc.code} - {rc.name}
                 </option>
               ))}

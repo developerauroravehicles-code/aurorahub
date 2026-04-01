@@ -28,8 +28,8 @@ export default async function MonitoringPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h2 className="text-lg font-semibold text-white mt-4">Monitoring</h2>
-        <p className="text-gray-400 text-sm">
+        <h2 className="text-lg font-semibold text-zinc-900 dark:text-white mt-4">Monitoring</h2>
+        <p className="text-zinc-500 dark:text-gray-400 text-sm">
           Monitor system health and key metrics.
         </p>
       </div>

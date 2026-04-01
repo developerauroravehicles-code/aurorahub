@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
+import { normalizeEmail } from '@/lib/email-normalize'
 
 export async function createPersonnel(formData: Record<string, string | undefined>) {
   const supabase = await createClient()
@@ -22,7 +23,7 @@ export async function createPersonnel(formData: Record<string, string | undefine
     full_name: formData.full_name!,
     avatar_url: formData.avatar_url,
     phone: formData.phone,
-    email: formData.email,
+    email: formData.email != null && String(formData.email).trim() !== '' ? normalizeEmail(formData.email) : null,
     address: formData.address,
     emergency_contact_name: formData.emergency_contact_name,
     emergency_contact_phone: formData.emergency_contact_phone,
@@ -85,7 +86,7 @@ export async function updatePersonnel(id: string, formData: Record<string, strin
     full_name: formData.full_name,
     avatar_url: formData.avatar_url,
     phone: formData.phone,
-    email: formData.email,
+    email: formData.email != null && String(formData.email).trim() !== '' ? normalizeEmail(formData.email) : null,
     address: formData.address,
     emergency_contact_name: formData.emergency_contact_name,
     emergency_contact_phone: formData.emergency_contact_phone,

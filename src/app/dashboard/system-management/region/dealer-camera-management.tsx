@@ -101,21 +101,21 @@ export const DealerCameraManagement = memo(function DealerCameraManagement({
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 top-full mt-2 w-80 bg-black border border-gray-700 rounded-lg shadow-xl z-10 p-4">
-          <h3 className="text-white font-semibold mb-3 text-sm">
+        <div className="absolute right-0 top-full mt-2 w-80 bg-zinc-50 dark:bg-black border border-zinc-300 dark:border-gray-700 rounded-lg shadow-xl z-10 p-4">
+          <h3 className="text-zinc-900 dark:text-white font-semibold mb-3 text-sm">
             Cameras for {dealerName}
           </h3>
 
           {assignedCameras.length > 0 && (
             <div className="mb-4">
-              <p className="text-xs text-gray-400 mb-2">Assigned Cameras:</p>
+              <p className="text-xs text-zinc-500 dark:text-gray-400 mb-2">Assigned Cameras:</p>
               <div className="space-y-1">
                 {assignedCameras.map((ac) => (
                   <div
                     key={ac.camera_model_id}
-                    className="flex items-center justify-between p-2 bg-white/5 rounded text-sm"
+                    className="flex items-center justify-between p-2 bg-zinc-200/50 dark:bg-white/5 rounded text-sm"
                   >
-                    <span className="text-white">
+                    <span className="text-zinc-900 dark:text-white">
                       {ac.camera_models?.name || 'Unknown'}
                     </span>
                     <button
@@ -133,14 +133,14 @@ export const DealerCameraManagement = memo(function DealerCameraManagement({
 
           {availableCameras.length > 0 && (
             <div>
-              <p className="text-xs text-gray-400 mb-2">Available Cameras:</p>
+              <p className="text-xs text-zinc-500 dark:text-gray-400 mb-2">Available Cameras:</p>
               <div className="space-y-1 max-h-40 overflow-y-auto">
                 {availableCameras.map((camera) => (
                   <button
                     key={camera.id}
                     onClick={() => handleAddCamera(camera.id)}
                     disabled={isLoading}
-                    className="w-full text-left p-2 bg-white/5 hover:bg-white/10 rounded text-sm text-white transition-colors disabled:opacity-50"
+                    className="w-full text-left p-2 bg-zinc-200/50 dark:bg-white/5 hover:bg-zinc-200 dark:bg-white/10 rounded text-sm text-zinc-900 dark:text-white transition-colors disabled:opacity-50"
                   >
                     + {camera.name}
                   </button>
@@ -150,13 +150,13 @@ export const DealerCameraManagement = memo(function DealerCameraManagement({
           )}
 
           {availableCameras.length === 0 && assignedCameras.length > 0 && (
-            <p className="text-xs text-gray-500 text-center py-2">
+            <p className="text-xs text-zinc-500 dark:text-gray-500 text-center py-2">
               All cameras are assigned
             </p>
           )}
 
           {allCameras.length === 0 && (
-            <p className="text-xs text-gray-500 text-center py-2">
+            <p className="text-xs text-zinc-500 dark:text-gray-500 text-center py-2">
               No cameras available. Add cameras first.
             </p>
           )}

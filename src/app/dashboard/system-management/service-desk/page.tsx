@@ -68,8 +68,8 @@ export default async function ServiceDeskPage({ searchParams }: { searchParams: 
   return (
     <div className="space-y-8">
       <div>
-        <h2 className="text-lg font-semibold text-white mt-4">Service Desk</h2>
-        <p className="text-gray-400 text-sm">Manage tickets, incidents, changes, releases and knowledge base.</p>
+        <h2 className="text-lg font-semibold text-zinc-900 dark:text-white mt-4">Service Desk</h2>
+        <p className="text-zinc-500 dark:text-gray-400 text-sm">Manage tickets, incidents, changes, releases and knowledge base.</p>
       </div>
       <ServiceDeskContent
         tickets={ticketsWithNames}

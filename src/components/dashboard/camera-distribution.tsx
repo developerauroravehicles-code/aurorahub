@@ -17,12 +17,12 @@ export function CameraDistribution({ items, monthLabel }: CameraDistributionProp
 
   if (total === 0 || sorted.length === 0) {
     return (
-      <div className="rounded-xl border border-gray-800/80 bg-gradient-to-b from-white/[0.04] to-transparent overflow-hidden p-6 shadow-lg">
-        <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+      <div className="rounded-xl border border-zinc-200 dark:border-gray-800/80 bg-gradient-to-b from-white/[0.04] to-transparent overflow-hidden p-6 shadow-lg">
+        <h2 className="text-lg font-semibold text-zinc-900 dark:text-white mb-4 flex items-center gap-2">
           <Camera className="h-5 w-5 text-[#C27E00]" />
           Camera Distribution
         </h2>
-        <p className="text-gray-500 text-sm">
+        <p className="text-zinc-500 dark:text-gray-500 text-sm">
           {monthLabel ? `No camera data for ${monthLabel}.` : 'No camera data available.'}
         </p>
       </div>
@@ -30,12 +30,12 @@ export function CameraDistribution({ items, monthLabel }: CameraDistributionProp
   }
 
   return (
-    <div className="rounded-xl border border-gray-800/80 bg-gradient-to-b from-white/[0.04] to-transparent overflow-hidden p-6 shadow-lg">
-      <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+    <div className="rounded-xl border border-zinc-200 dark:border-gray-800/80 bg-gradient-to-b from-white/[0.04] to-transparent overflow-hidden p-6 shadow-lg">
+      <h2 className="text-lg font-semibold text-zinc-900 dark:text-white mb-4 flex items-center gap-2">
         <Camera className="h-5 w-5 text-[#C27E00]" />
         Camera Distribution
       </h2>
-      <p className="text-sm text-gray-400 mb-4">
+      <p className="text-sm text-zinc-500 dark:text-gray-400 mb-4">
         {total} total demand{total !== 1 ? 's' : ''} by camera model
         {monthLabel ? ` (${monthLabel})` : ''}
       </p>
@@ -45,11 +45,11 @@ export function CameraDistribution({ items, monthLabel }: CameraDistributionProp
           return (
             <div
               key={model}
-              className="flex items-center justify-between rounded-lg border border-gray-800/80 bg-white/[0.02] px-4 py-2.5"
+              className="flex items-center justify-between rounded-lg border border-zinc-200 dark:border-gray-800/80 bg-white/[0.02] px-4 py-2.5"
             >
-              <span className="font-medium text-white">{model || 'Unknown'}</span>
+              <span className="font-medium text-zinc-900 dark:text-white">{model || 'Unknown'}</span>
               <div className="flex items-center gap-3">
-                <span className="text-sm text-gray-400">
+                <span className="text-sm text-zinc-500 dark:text-gray-400">
                   {count} unit{count !== 1 ? 's' : ''}
                 </span>
                 <span className="text-xs font-medium text-[#C27E00] min-w-[3rem] text-right">

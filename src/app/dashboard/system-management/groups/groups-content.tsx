@@ -134,13 +134,13 @@ export function GroupsContent({
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
         <div className="relative flex-1 w-full sm:max-w-xs">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500 dark:text-gray-500" />
           <input
             type="search"
             placeholder="Search groups..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-9 pr-3 py-2 rounded-md border border-gray-700 bg-black/30 text-white text-sm placeholder-gray-500"
+            className="w-full pl-9 pr-3 py-2 rounded-md border border-zinc-300 dark:border-gray-700 bg-zinc-100/90 dark:bg-black/30 text-zinc-900 dark:text-white text-sm placeholder-gray-500"
           />
         </div>
         <button
@@ -152,16 +152,16 @@ export function GroupsContent({
       </div>
 
       {creating && (
-        <form action={createAction} className="rounded-lg border border-gray-800 bg-white/5 p-4 space-y-3">
-          <h4 className="font-medium text-white">New Group</h4>
+        <form action={createAction} className="rounded-lg border border-zinc-200 dark:border-gray-800 bg-zinc-200/50 dark:bg-white/5 p-4 space-y-3">
+          <h4 className="font-medium text-zinc-900 dark:text-white">New Group</h4>
           {createState?.error && <p className="text-sm text-red-400">{createState.error}</p>}
-          <input name="name" placeholder="Group name" required className="w-full rounded border border-gray-700 bg-black/30 px-3 py-2 text-white" />
-          <input name="description" placeholder="Description (optional)" className="w-full rounded border border-gray-700 bg-black/30 px-3 py-2 text-gray-300" />
+          <input name="name" placeholder="Group name" required className="w-full rounded border border-zinc-300 dark:border-gray-700 bg-zinc-100/90 dark:bg-black/30 px-3 py-2 text-zinc-900 dark:text-white" />
+          <input name="description" placeholder="Description (optional)" className="w-full rounded border border-zinc-300 dark:border-gray-700 bg-zinc-100/90 dark:bg-black/30 px-3 py-2 text-zinc-600 dark:text-gray-300" />
           <div className="flex gap-2">
             <button type="submit" disabled={createPending} className="rounded bg-[#C27E00] px-4 py-2 text-sm text-white disabled:opacity-50">
               Create
             </button>
-            <button type="button" onClick={() => setCreating(false)} className="rounded border border-gray-600 px-4 py-2 text-sm text-gray-300">
+            <button type="button" onClick={() => setCreating(false)} className="rounded border border-zinc-300 dark:border-gray-600 px-4 py-2 text-sm text-zinc-600 dark:text-gray-300">
               Cancel
             </button>
           </div>
@@ -176,7 +176,7 @@ export function GroupsContent({
 
       <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
         {filteredGroups.map((g) => (
-          <div key={g.id} className="rounded-lg border border-gray-800 bg-black/30 overflow-hidden">
+          <div key={g.id} className="rounded-lg border border-zinc-200 dark:border-gray-800 bg-zinc-100/90 dark:bg-black/30 overflow-hidden">
             <div className="p-4">
               {editingId === g.id ? (
                 <GroupEditForm
@@ -192,24 +192,24 @@ export function GroupsContent({
                         <Users className="h-5 w-5 text-[#C27E00]" />
                       </div>
                       <div>
-                        <div className="font-medium text-white">{g.name}</div>
-                        <div className="text-xs text-gray-500">{g.member_count ?? 0} members</div>
+                        <div className="font-medium text-zinc-900 dark:text-white">{g.name}</div>
+                        <div className="text-xs text-zinc-500 dark:text-gray-500">{g.member_count ?? 0} members</div>
                       </div>
                     </div>
                     <div className="flex gap-1">
-                      <button onClick={() => setEditingId(g.id)} className="rounded p-1.5 text-gray-400 hover:bg-white/10 hover:text-white">
+                      <button onClick={() => setEditingId(g.id)} className="rounded p-1.5 text-zinc-500 dark:text-gray-400 hover:bg-zinc-200 dark:bg-white/10 hover:text-zinc-900 dark:text-white">
                         <Pencil className="h-4 w-4" />
                       </button>
                       <button
                         onClick={() => handleDelete(g.id)}
                         disabled={deletingId === g.id}
-                        className="rounded p-1.5 text-gray-400 hover:bg-red-500/20 hover:text-red-400 disabled:opacity-50"
+                        className="rounded p-1.5 text-zinc-500 dark:text-gray-400 hover:bg-red-500/20 hover:text-red-400 disabled:opacity-50"
                       >
                         {deletingId === g.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
                       </button>
                     </div>
                   </div>
-                  {g.description && <p className="mt-2 text-xs text-gray-500">{g.description}</p>}
+                  {g.description && <p className="mt-2 text-xs text-zinc-500 dark:text-gray-500">{g.description}</p>}
                   <button
                     onClick={() => setExpandedId(expandedId === g.id ? null : g.id)}
                     className="mt-3 text-xs text-[#C27E00] hover:underline"
@@ -220,9 +220,9 @@ export function GroupsContent({
               )}
             </div>
             {expandedId === g.id && (
-              <div className="border-t border-gray-800 p-4 bg-black/20 space-y-3">
+              <div className="border-t border-zinc-200 dark:border-gray-800 p-4 bg-zinc-50 dark:bg-black/20 space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-medium text-gray-400">MEMBERS</span>
+                  <span className="text-xs font-medium text-zinc-500 dark:text-gray-400">MEMBERS</span>
                   {addUserGroupId !== g.id && bulkAddGroupId !== g.id && (
                     <div className="flex items-center gap-2">
                       <button
@@ -231,7 +231,7 @@ export function GroupsContent({
                       >
                         <UserPlus className="h-3 w-3" /> Add one
                       </button>
-                      <span className="text-gray-600">|</span>
+                      <span className="text-zinc-600 dark:text-gray-600">|</span>
                       <button
                         onClick={() => { setBulkAddGroupId(g.id); setAddUserGroupId(null); setSelectedUserIds(new Set()); setAddError(null) }}
                         className="inline-flex items-center gap-1 text-xs text-[#C27E00] hover:underline"
@@ -242,26 +242,26 @@ export function GroupsContent({
                   )}
                 </div>
                 {bulkAddGroupId === g.id && (
-                  <div className="space-y-2 p-2 rounded border border-gray-700 bg-black/30">
-                    <p className="text-xs text-gray-400">Select users to add:</p>
+                  <div className="space-y-2 p-2 rounded border border-zinc-300 dark:border-gray-700 bg-zinc-100/90 dark:bg-black/30">
+                    <p className="text-xs text-zinc-500 dark:text-gray-400">Select users to add:</p>
                     <div className="max-h-36 overflow-y-auto space-y-1">
                       {allProfiles
                         .filter((p) => !currentMembers(g.id).some((m) => m.user_id === p.id))
                         .slice(0, 25)
                         .map((p) => (
-                          <label key={p.id} className="flex items-center gap-2 text-xs cursor-pointer hover:bg-white/5 px-2 py-1 rounded">
+                          <label key={p.id} className="flex items-center gap-2 text-xs cursor-pointer hover:bg-zinc-200/50 dark:bg-white/5 px-2 py-1 rounded">
                             <input
                               type="checkbox"
                               checked={selectedUserIds.has(p.id)}
                               onChange={() => toggleUserSelection(p.id, g.id)}
-                              className="rounded border-gray-600"
+                              className="rounded border-zinc-300 dark:border-gray-600"
                             />
                             <span>{p.full_name || p.email || p.id.slice(0, 8)} {(p as { dealer_code?: string | null }).dealer_code ? `(${(p as { dealer_code?: string | null }).dealer_code})` : ''}</span>
                           </label>
                         ))}
                     </div>
                     {allProfiles.filter((p) => !currentMembers(g.id).some((m) => m.user_id === p.id)).length > 25 && (
-                      <p className="text-gray-500 text-xs">Showing first 25. Use &quot;Add one&quot; for the rest.</p>
+                      <p className="text-zinc-500 dark:text-gray-500 text-xs">Showing first 25. Use &quot;Add one&quot; for the rest.</p>
                     )}
                     <div className="flex gap-2 pt-1">
                       <button
@@ -274,7 +274,7 @@ export function GroupsContent({
                       </button>
                       <button
                         onClick={() => { setBulkAddGroupId(null); setSelectedUserIds(new Set()); setAddError(null) }}
-                        className="text-xs text-gray-500 hover:text-gray-300"
+                        className="text-xs text-zinc-500 dark:text-gray-500 hover:text-zinc-600 dark:text-gray-300"
                       >
                         Cancel
                       </button>
@@ -284,7 +284,7 @@ export function GroupsContent({
                 {addUserGroupId === g.id && (
                     <div className="flex items-center gap-2 flex-wrap">
                       <select
-                        className="text-xs rounded border border-gray-700 bg-black/50 text-white py-1 min-w-[140px]"
+                        className="text-xs rounded border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 text-zinc-900 dark:text-white py-1 min-w-[140px]"
                         onChange={(e) => {
                           const uid = e.target.value
                           if (uid) handleAddMember(g.id, uid)
@@ -301,10 +301,10 @@ export function GroupsContent({
                             </option>
                           ))}
                       </select>
-                      {addingGroupId === g.id && <Loader2 className="h-3 w-3 animate-spin text-gray-400" />}
+                      {addingGroupId === g.id && <Loader2 className="h-3 w-3 animate-spin text-zinc-500 dark:text-gray-400" />}
                       <button
                         onClick={() => { setAddUserGroupId(null); setAddError(null) }}
-                        className="text-xs text-gray-500 hover:text-gray-300"
+                        className="text-xs text-zinc-500 dark:text-gray-500 hover:text-zinc-600 dark:text-gray-300"
                       >
                         Cancel
                       </button>
@@ -312,19 +312,19 @@ export function GroupsContent({
                 )}
                 <ul className="space-y-1">
                   {currentMembers(g.id).length === 0 ? (
-                    <li className="text-xs text-gray-500">No members yet</li>
+                    <li className="text-xs text-zinc-500 dark:text-gray-500">No members yet</li>
                   ) : (
                     currentMembers(g.id).map((m) => (
-                      <li key={m.user_id} className="flex items-center justify-between text-sm text-gray-300 py-1">
+                      <li key={m.user_id} className="flex items-center justify-between text-sm text-zinc-600 dark:text-gray-300 py-1">
                         <div>
                           <span className="font-medium">{m.profile?.full_name ?? (m.profile as { email?: string })?.email ?? m.user_id.slice(0, 8)}</span>
                           {(m.profile as { dealer_code?: string | null })?.dealer_code && (
-                            <span className="ml-2 text-xs text-gray-500">({(m.profile as { dealer_code?: string | null }).dealer_code})</span>
+                            <span className="ml-2 text-xs text-zinc-500 dark:text-gray-500">({(m.profile as { dealer_code?: string | null }).dealer_code})</span>
                           )}
                         </div>
                         <button
                           onClick={() => handleRemoveMember(g.id, m.user_id)}
-                          className="text-gray-500 hover:text-red-400 p-1"
+                          className="text-zinc-500 dark:text-gray-500 hover:text-red-400 p-1"
                           title="Remove member"
                         >
                           <UserMinus className="h-4 w-4" />
@@ -340,7 +340,7 @@ export function GroupsContent({
       </div>
 
       {filteredGroups.length === 0 && (
-        <p className="text-sm text-gray-500 py-6">
+        <p className="text-sm text-zinc-500 dark:text-gray-500 py-6">
           {groups.length === 0 && !creating
             ? 'No groups created yet. Click "New Group" to create one.'
             : `No groups match "${searchQuery}".`}
@@ -370,13 +370,13 @@ function GroupEditForm({
   return (
     <form action={formAction} className="space-y-3">
       {'error' in (state ?? {}) && (state as { error?: string }).error ? <p className="text-sm text-red-400">{(state as { error: string }).error}</p> : null}
-      <input name="name" defaultValue={group.name} required className="w-full rounded border border-gray-700 bg-black/30 px-3 py-2 text-white text-sm" />
-      <input name="description" defaultValue={group.description ?? ''} className="w-full rounded border border-gray-700 bg-black/30 px-3 py-2 text-gray-300 text-sm" />
+      <input name="name" defaultValue={group.name} required className="w-full rounded border border-zinc-300 dark:border-gray-700 bg-zinc-100/90 dark:bg-black/30 px-3 py-2 text-zinc-900 dark:text-white text-sm" />
+      <input name="description" defaultValue={group.description ?? ''} className="w-full rounded border border-zinc-300 dark:border-gray-700 bg-zinc-100/90 dark:bg-black/30 px-3 py-2 text-zinc-600 dark:text-gray-300 text-sm" />
       <div className="flex gap-2">
         <button type="submit" disabled={isPending} className="rounded bg-[#C27E00] px-3 py-1.5 text-xs text-white">
           Save
         </button>
-        <button type="button" onClick={onCancel} className="rounded border border-gray-600 px-3 py-1.5 text-xs text-gray-300">
+        <button type="button" onClick={onCancel} className="rounded border border-zinc-300 dark:border-gray-600 px-3 py-1.5 text-xs text-zinc-600 dark:text-gray-300">
           Cancel
         </button>
       </div>

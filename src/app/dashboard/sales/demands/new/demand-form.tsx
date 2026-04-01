@@ -110,12 +110,12 @@ export function DemandForm({ cameraModels, defaultAddress = '', timezoneName: pr
   }, [selectedDate, timezoneName, calendarSettings, systemNow])
 
   return (
-    <form action={formAction} className="space-y-6 max-w-4xl bg-white/5 p-8 rounded-lg shadow border border-gray-800">
+    <form action={formAction} className="space-y-6 max-w-4xl bg-zinc-200/50 dark:bg-white/5 p-6 sm:p-8 rounded-lg shadow border border-zinc-200 dark:border-gray-800 text-base">
       {state?.error && (
-        <div className="bg-red-900/50 border border-red-800 text-red-200 p-4 rounded-md">
+        <div className="bg-red-900/50 border border-red-800 text-red-200 p-4 rounded-md text-base">
           {state.error}
           {state.fieldErrors && (
-            <ul className="list-disc pl-5 mt-2 text-sm">
+            <ul className="list-disc pl-5 mt-2 text-base">
                 {Object.entries(state.fieldErrors).map(([key, errs]) => (
                     <li key={key}>{key}: {(errs as string[]).join(', ')}</li>
                 ))}
@@ -125,46 +125,46 @@ export function DemandForm({ cameraModels, defaultAddress = '', timezoneName: pr
       )}
 
       <div className="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-2">
-        <h3 className="col-span-full text-lg font-medium leading-6 text-white border-b border-gray-800 pb-2">Customer Information</h3>
+        <h3 className="col-span-full text-xl font-semibold leading-7 text-zinc-900 dark:text-white border-b border-zinc-200 dark:border-gray-800 pb-2">Customer Information</h3>
         
         <div>
-          <label className="block text-sm font-medium text-gray-300">First Name</label>
-          <input name="firstName" required style={{ textTransform: 'uppercase' }} onInput={(e) => { (e.target as HTMLInputElement).value = (e.target as HTMLInputElement).value.toUpperCase() }} className="mt-1 block w-full rounded-md border border-gray-700 bg-black/50 py-2 px-3 shadow-sm focus:border-[#C27E00] focus:outline-none focus:ring-[#C27E00] sm:text-sm text-white" />
+          <label className="block text-base font-medium text-zinc-600 dark:text-gray-300">First Name</label>
+          <input name="firstName" required style={{ textTransform: 'uppercase' }} onInput={(e) => { (e.target as HTMLInputElement).value = (e.target as HTMLInputElement).value.toUpperCase() }} className="mt-1.5 block w-full rounded-md border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 py-2.5 px-3 text-base shadow-sm focus:border-[#C27E00] focus:outline-none focus:ring-[#C27E00] text-white" />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-300">Last Name</label>
-          <input name="lastName" required style={{ textTransform: 'uppercase' }} onInput={(e) => { (e.target as HTMLInputElement).value = (e.target as HTMLInputElement).value.toUpperCase() }} className="mt-1 block w-full rounded-md border border-gray-700 bg-black/50 py-2 px-3 shadow-sm focus:border-[#C27E00] focus:outline-none focus:ring-[#C27E00] sm:text-sm text-white" />
+          <label className="block text-base font-medium text-zinc-600 dark:text-gray-300">Last Name</label>
+          <input name="lastName" required style={{ textTransform: 'uppercase' }} onInput={(e) => { (e.target as HTMLInputElement).value = (e.target as HTMLInputElement).value.toUpperCase() }} className="mt-1.5 block w-full rounded-md border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 py-2.5 px-3 shadow-sm focus:border-[#C27E00] focus:outline-none focus:ring-[#C27E00] text-base text-white" />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-300">
-            Phone Number <span className="text-xs text-gray-500">(416 - 123 - 4567)</span>
+          <label className="block text-base font-medium text-zinc-600 dark:text-gray-300">
+            Phone Number <span className="text-sm text-zinc-500 dark:text-gray-500">(416 - 123 - 4567)</span>
           </label>
           <CanadianPhoneInput
             name="phone"
             required
             placeholder="416 - 123 - 4567"
-            className="mt-1 block w-full rounded-md border border-gray-700 bg-black/50 py-2 px-3 shadow-sm focus:border-[#C27E00] focus:outline-none focus:ring-[#C27E00] sm:text-sm text-white"
+            className="mt-1.5 block w-full rounded-md border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 py-2.5 px-3 shadow-sm focus:border-[#C27E00] focus:outline-none focus:ring-[#C27E00] text-base text-white"
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-300">Customer Address</label>
+          <label className="block text-base font-medium text-zinc-600 dark:text-gray-300">Customer Address</label>
           <input 
             name="address" 
             value={defaultAddress}
             readOnly
-            className="mt-1 block w-full rounded-md border border-gray-700 bg-black/50 py-2 px-3 shadow-sm sm:text-sm text-white opacity-75 cursor-not-allowed" 
+            className="mt-1.5 block w-full rounded-md border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 py-2.5 px-3 text-base shadow-sm text-zinc-900 dark:text-white opacity-75 cursor-not-allowed" 
             placeholder="Address will be auto-filled with dealer name"
           />
-          <p className="mt-1 text-xs text-gray-500">Address is automatically set to your dealer name and cannot be edited.</p>
+          <p className="mt-1.5 text-sm text-zinc-500 dark:text-gray-500">Address is automatically set to your dealer name and cannot be edited.</p>
         </div>
 
-        <h3 className="col-span-full text-lg font-medium leading-6 text-white border-b border-gray-800 pb-2 mt-4">Vehicle Information</h3>
+        <h3 className="col-span-full text-xl font-semibold leading-7 text-zinc-900 dark:text-white border-b border-zinc-200 dark:border-gray-800 pb-2 mt-4">Vehicle Information</h3>
 
         <div>
-          <label className="block text-sm font-medium text-gray-300">Make</label>
+          <label className="block text-base font-medium text-zinc-600 dark:text-gray-300">Make</label>
           <select
             name="vehicleMake"
             value={selectedMake}
@@ -175,11 +175,11 @@ export function DemandForm({ cameraModels, defaultAddress = '', timezoneName: pr
               setCustomModel('')
             }}
             required
-            className="mt-1 block w-full rounded-md border border-gray-700 bg-black/50 py-2 px-3 shadow-sm focus:border-[#C27E00] focus:outline-none focus:ring-[#C27E00] sm:text-sm text-white"
+            className="mt-1.5 block w-full rounded-md border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 py-2.5 px-3 shadow-sm focus:border-[#C27E00] focus:outline-none focus:ring-[#C27E00] text-base text-white"
           >
             <option value="">-- Select make --</option>
             {VEHICLE_MAKES_CA.map((make) => (
-              <option key={make} value={make} className="bg-black text-white">
+              <option key={make} value={make} className="bg-zinc-50 dark:bg-black text-zinc-900 dark:text-white">
                 {make}
               </option>
             ))}
@@ -187,7 +187,7 @@ export function DemandForm({ cameraModels, defaultAddress = '', timezoneName: pr
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-300">Model</label>
+          <label className="block text-base font-medium text-zinc-600 dark:text-gray-300">Model</label>
           {selectedMake ? (
             <div className="space-y-2">
               <select
@@ -198,25 +198,25 @@ export function DemandForm({ cameraModels, defaultAddress = '', timezoneName: pr
                   setCustomModel(e.target.value === '__custom__' ? customModel : '')
                 }}
                 required={selectedModel !== '__custom__'}
-                className="mt-1 block w-full rounded-md border border-gray-700 bg-black/50 py-2 px-3 shadow-sm focus:border-[#C27E00] focus:outline-none focus:ring-[#C27E00] sm:text-sm text-white"
+                className="mt-1.5 block w-full rounded-md border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 py-2.5 px-3 shadow-sm focus:border-[#C27E00] focus:outline-none focus:ring-[#C27E00] text-base text-white"
               >
                 <option value="">-- Select model --</option>
                 {getModelsForMake(selectedMake).map((model) => (
-                  <option key={model} value={model} className="bg-black text-white">
+                  <option key={model} value={model} className="bg-zinc-50 dark:bg-black text-zinc-900 dark:text-white">
                     {model}
                   </option>
                 ))}
-                <option value="__custom__" className="bg-black text-white">Other</option>
+                <option value="__custom__" className="bg-zinc-50 dark:bg-black text-zinc-900 dark:text-white">Other</option>
               </select>
               {selectedModel && selectedModel !== '__custom__' && getTrimsForModel(selectedMake, selectedModel).length > 0 && (
                 <select
                   value={selectedTrim}
                   onChange={(e) => setSelectedTrim(e.target.value)}
-                  className="mt-1 block w-full rounded-md border border-gray-700 bg-black/50 py-2 px-3 shadow-sm focus:border-[#C27E00] focus:outline-none focus:ring-[#C27E00] sm:text-sm text-white"
+                  className="mt-1.5 block w-full rounded-md border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 py-2.5 px-3 shadow-sm focus:border-[#C27E00] focus:outline-none focus:ring-[#C27E00] text-base text-white"
                 >
                   <option value="">-- Select trim (optional) --</option>
                   {getTrimsForModel(selectedMake, selectedModel).map((trim) => (
-                    <option key={trim} value={trim} className="bg-black text-white">
+                    <option key={trim} value={trim} className="bg-zinc-50 dark:bg-black text-zinc-900 dark:text-white">
                       {trim}
                     </option>
                   ))}
@@ -230,7 +230,7 @@ export function DemandForm({ cameraModels, defaultAddress = '', timezoneName: pr
                   placeholder="Enter model name"
                   required
                   name="vehicleModel"
-                  className="block w-full rounded-md border border-gray-700 bg-black/50 py-2 px-3 shadow-sm focus:border-[#C27E00] focus:outline-none focus:ring-[#C27E00] sm:text-sm text-white"
+                  className="mt-1.5 block w-full rounded-md border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 py-2.5 px-3 shadow-sm focus:border-[#C27E00] focus:outline-none focus:ring-[#C27E00] text-base text-white"
                 />
               )}
               {(selectedModel && selectedModel !== '__custom__') && (
@@ -247,43 +247,43 @@ export function DemandForm({ cameraModels, defaultAddress = '', timezoneName: pr
               value=""
               readOnly
               placeholder="Select make first"
-              className="mt-1 block w-full rounded-md border border-gray-700 bg-black/50 py-2 px-3 shadow-sm sm:text-sm text-gray-500 cursor-not-allowed"
+              className="mt-1.5 block w-full rounded-md border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 py-2.5 px-3 text-base shadow-sm text-zinc-500 dark:text-gray-500 cursor-not-allowed"
             />
           )}
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-300">Year</label>
-          <input name="vehicleYear" type="number" min="1900" max="2100" required className="mt-1 block w-full rounded-md border border-gray-700 bg-black/50 py-2 px-3 shadow-sm focus:border-[#C27E00] focus:outline-none focus:ring-[#C27E00] sm:text-sm text-white" />
+          <label className="block text-base font-medium text-zinc-600 dark:text-gray-300">Year</label>
+          <input name="vehicleYear" type="number" min="1900" max="2100" required className="mt-1.5 block w-full rounded-md border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 py-2.5 px-3 shadow-sm focus:border-[#C27E00] focus:outline-none focus:ring-[#C27E00] text-base text-white" />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-300">Stock Number</label>
+          <label className="block text-base font-medium text-zinc-600 dark:text-gray-300">Stock Number</label>
           <input 
             name="stockNumber"
             style={{ textTransform: 'uppercase' }}
             onInput={(e) => { (e.target as HTMLInputElement).value = (e.target as HTMLInputElement).value.toUpperCase() }} 
             required 
-            className="mt-1 block w-full rounded-md border border-gray-700 bg-black/50 py-2 px-3 shadow-sm focus:border-[#C27E00] focus:outline-none focus:ring-[#C27E00] sm:text-sm text-white" 
+            className="mt-1.5 block w-full rounded-md border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 py-2.5 px-3 shadow-sm focus:border-[#C27E00] focus:outline-none focus:ring-[#C27E00] text-base text-white" 
             placeholder="Enter stock number"
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-300">VIN Last 6 Digits <span className="text-red-400">*</span></label>
+          <label className="block text-base font-medium text-zinc-600 dark:text-gray-300">VIN Last 6 Digits <span className="text-red-400">*</span></label>
           <input 
             name="vinLast6"
             style={{ textTransform: 'uppercase' }}
             onInput={(e) => { (e.target as HTMLInputElement).value = (e.target as HTMLInputElement).value.toUpperCase() }} 
             required
             minLength={6}
-            className="mt-1 block w-full rounded-md border border-gray-700 bg-black/50 py-2 px-3 shadow-sm focus:border-[#C27E00] focus:outline-none focus:ring-[#C27E00] sm:text-sm text-white" 
+            className="mt-1.5 block w-full rounded-md border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 py-2.5 px-3 shadow-sm focus:border-[#C27E00] focus:outline-none focus:ring-[#C27E00] text-base text-white" 
             placeholder="Last 6 digits"
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-300">
+          <label className="block text-base font-medium text-zinc-600 dark:text-gray-300">
             Camera Model <span className="text-red-400">*</span>
           </label>
           {cameraModels.length > 0 ? (
@@ -295,15 +295,15 @@ export function DemandForm({ cameraModels, defaultAddress = '', timezoneName: pr
                   setCustomCamera('')
                 }}
                 required
-                className="mt-1 block w-full rounded-md border border-gray-700 bg-black/50 py-2 px-3 shadow-sm focus:border-[#C27E00] focus:outline-none focus:ring-[#C27E00] sm:text-sm text-white"
+                className="mt-1.5 block w-full rounded-md border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 py-2.5 px-3 shadow-sm focus:border-[#C27E00] focus:outline-none focus:ring-[#C27E00] text-base text-white"
               >
                 <option value="">-- Select a camera model --</option>
                 {cameraModels.map((camera) => (
-                  <option key={camera.id} value={camera.name} className="bg-black text-white">
+                  <option key={camera.id} value={camera.name} className="bg-zinc-50 dark:bg-black text-zinc-900 dark:text-white">
                     {camera.name}
                   </option>
                 ))}
-                <option value="__custom__" className="bg-black text-white">Other (Custom)</option>
+                <option value="__custom__" className="bg-zinc-50 dark:bg-black text-zinc-900 dark:text-white">Other (Custom)</option>
               </select>
               {selectedCamera === '__custom__' && (
                 <input
@@ -312,11 +312,11 @@ export function DemandForm({ cameraModels, defaultAddress = '', timezoneName: pr
                   onChange={(e) => setCustomCamera(e.target.value)}
                   placeholder="Enter custom camera model"
                   required={selectedCamera === '__custom__'}
-                  className="block w-full rounded-md border border-gray-700 bg-black/50 py-2 px-3 shadow-sm focus:border-[#C27E00] focus:outline-none focus:ring-[#C27E00] sm:text-sm text-white"
+                  className="mt-1.5 block w-full rounded-md border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 py-2.5 px-3 shadow-sm focus:border-[#C27E00] focus:outline-none focus:ring-[#C27E00] text-base text-white"
                 />
               )}
               {!selectedCamera && (
-                <p className="text-xs text-gray-500">Please select a camera model</p>
+                <p className="text-sm text-zinc-500 dark:text-gray-500">Please select a camera model</p>
               )}
               {selectedCamera && selectedCamera !== '__custom__' && (
                 <input
@@ -340,17 +340,17 @@ export function DemandForm({ cameraModels, defaultAddress = '', timezoneName: pr
               <input
                 name="cameraModel"
                 required
-                className="mt-1 block w-full rounded-md border border-gray-700 bg-black/50 py-2 px-3 shadow-sm focus:border-[#C27E00] focus:outline-none focus:ring-[#C27E00] sm:text-sm text-white"
+                className="mt-1.5 block w-full rounded-md border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 py-2.5 px-3 shadow-sm focus:border-[#C27E00] focus:outline-none focus:ring-[#C27E00] text-base text-white"
                 placeholder="Enter camera model"
               />
-              <p className="text-xs text-gray-500 mt-1">No camera models available. Enter manually.</p>
+              <p className="text-sm text-zinc-500 dark:text-gray-500 mt-1.5">No camera models available. Enter manually.</p>
             </div>
           )}
         </div>
       </div>
 
       <div className="pt-6">
-        <h3 className="text-lg font-medium leading-6 text-white border-b border-gray-800 pb-2 mb-4">Appointment</h3>
+        <h3 className="text-xl font-semibold leading-7 text-zinc-900 dark:text-white border-b border-zinc-200 dark:border-gray-800 pb-2 mb-4">Appointment</h3>
         
         {/* Calendar View */}
         <div className="mb-6">
@@ -409,7 +409,7 @@ export function DemandForm({ cameraModels, defaultAddress = '', timezoneName: pr
             
             return (
                 <div className="space-y-2">
-                    <label className="block text-sm font-medium text-gray-300">Available Slots</label>
+                    <label className="block text-base font-medium text-zinc-600 dark:text-gray-300">Available Slots</label>
                     {availableOnlySlots.length > 0 ? (
                         <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-3">
                             {availableOnlySlots.map(slot => {
@@ -422,10 +422,10 @@ export function DemandForm({ cameraModels, defaultAddress = '', timezoneName: pr
                                         type="button" 
                                         key={slot} 
                                         onClick={() => setSelectedSlot(slot)}
-                                        className={`p-2 border rounded text-sm font-medium transition-colors
+                                        className={`p-3 border rounded text-base font-medium min-h-[44px] transition-colors
                                             ${selectedSlot === slot 
                                                 ? 'bg-[#C27E00] text-white border-[#C27E00]' 
-                                                : 'bg-black/50 hover:bg-white/10 text-gray-300 border-gray-700'}`}
+                                                : 'bg-white dark:bg-black/50 hover:bg-zinc-200 dark:bg-white/10 text-zinc-600 dark:text-gray-300 border-zinc-300 dark:border-gray-700'}`}
                                         title={slotTime}
                                     >
                                         {slotTime}
@@ -434,7 +434,7 @@ export function DemandForm({ cameraModels, defaultAddress = '', timezoneName: pr
                             })}
                         </div>
                     ) : (
-                        <p className="text-sm text-gray-500">No available slots for this date. All time slots are booked.</p>
+                        <p className="text-base text-zinc-500 dark:text-gray-500">No available slots for this date. All time slots are booked.</p>
                     )}
                 </div>
             )
@@ -442,12 +442,12 @@ export function DemandForm({ cameraModels, defaultAddress = '', timezoneName: pr
         <input type="hidden" name="appointmentDate" value={selectedSlot} />
 
         <div className="mt-6">
-          <label className="block text-sm font-medium text-gray-300">Comment</label>
+          <label className="block text-base font-medium text-zinc-600 dark:text-gray-300">Comment</label>
           <textarea
             name="comment"
             rows={3}
             placeholder="Optional note from the person creating this demand..."
-            className="mt-1 block w-full rounded-md border border-gray-700 bg-black/50 py-2 px-3 shadow-sm focus:border-[#C27E00] focus:outline-none focus:ring-[#C27E00] sm:text-sm text-white"
+            className="mt-1.5 block w-full rounded-md border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 py-2.5 px-3 shadow-sm focus:border-[#C27E00] focus:outline-none focus:ring-[#C27E00] text-base text-white"
           />
         </div>
       </div>
@@ -461,7 +461,7 @@ export function DemandForm({ cameraModels, defaultAddress = '', timezoneName: pr
               !selectedSlot || 
               (cameraModels.length > 0 && (!selectedCamera || (selectedCamera === '__custom__' && !customCamera)))
             }
-            className="ml-3 inline-flex justify-center rounded-md border border-transparent bg-[#C27E00] py-2 px-4 text-sm font-medium text-white shadow-sm hover:bg-[#a06900] focus:outline-none focus:ring-2 focus:ring-[#C27E00] focus:ring-offset-2 disabled:opacity-50 transition-colors"
+            className="ml-3 inline-flex justify-center rounded-md border border-transparent bg-[#C27E00] py-2.5 px-5 text-base font-semibold text-white shadow-sm hover:bg-[#a06900] focus:outline-none focus:ring-2 focus:ring-[#C27E00] focus:ring-offset-2 disabled:opacity-50 transition-colors"
           >
             {isPending ? 'Submitting...' : 'Create Demand'}
           </button>

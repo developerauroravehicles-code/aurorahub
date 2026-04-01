@@ -54,7 +54,7 @@ export default async function DemandDetailsPage({
   if (!demand) {
     return (
       <div className="space-y-8">
-        <div className="text-white">Demand not found</div>
+        <div className="text-zinc-900 dark:text-white">Demand not found</div>
         <Link href={backToDemandsHref} className="text-[#C27E00] hover:text-[#a06900]">
           ← Back to Demands
         </Link>
@@ -118,13 +118,13 @@ export default async function DemandDetailsPage({
         <div className="flex items-center gap-4">
           <Link 
             href={backToDemandsHref}
-            className="text-gray-400 hover:text-white transition-colors"
+            className="text-zinc-500 dark:text-gray-400 hover:text-zinc-900 dark:text-white transition-colors"
           >
             <ArrowLeft className="w-5 h-5" />
           </Link>
           <div>
-            <h1 className="text-2xl font-semibold text-white">Demand Details</h1>
-            <p className="text-gray-400">View complete information and process history</p>
+            <h1 className="text-2xl font-semibold text-zinc-900 dark:text-white">Demand Details</h1>
+            <p className="text-zinc-500 dark:text-gray-400">View complete information and process history</p>
           </div>
         </div>
         {isAuroraManager && (
@@ -141,24 +141,24 @@ export default async function DemandDetailsPage({
 
       {/* Status Badge */}
       <div className="flex items-center gap-4">
-        <span className={`px-4 py-2 rounded-lg text-sm font-medium border ${statusColors[demand.status as keyof typeof statusColors] || 'bg-gray-900/50 text-gray-300 border-gray-800'}`}>
+        <span className={`px-4 py-2 rounded-lg text-sm font-medium border ${statusColors[demand.status as keyof typeof statusColors] || 'bg-zinc-200/80 dark:bg-gray-900/50 text-zinc-600 dark:text-gray-300 border-zinc-200 dark:border-gray-800'}`}>
           {demand.status.replace('_', ' ').toUpperCase()}
         </span>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Demand ID (read-only) */}
-        <div className="bg-white/5 border border-gray-800 p-6 rounded-lg">
-          <h2 className="text-lg font-semibold text-white mb-4">Demand ID</h2>
+        <div className="bg-zinc-200/50 dark:bg-white/5 border border-zinc-200 dark:border-gray-800 p-6 rounded-lg">
+          <h2 className="text-lg font-semibold text-zinc-900 dark:text-white mb-4">Demand ID</h2>
           <div>
-            <p className="text-sm text-gray-400">Reference Number</p>
+            <p className="text-sm text-zinc-500 dark:text-gray-400">Reference Number</p>
             <p className="text-2xl font-bold text-[#C27E00]">#{demand.demand_number ?? '—'}</p>
           </div>
         </div>
 
         {/* Customer Information */}
-        <div className="bg-white/5 border border-gray-800 p-6 rounded-lg">
-          <h2 className="text-lg font-semibold text-white mb-4">Customer Information</h2>
+        <div className="bg-zinc-200/50 dark:bg-white/5 border border-zinc-200 dark:border-gray-800 p-6 rounded-lg">
+          <h2 className="text-lg font-semibold text-zinc-900 dark:text-white mb-4">Customer Information</h2>
           <EditCustomerForm
             demandId={id}
             firstName={demand.customer_firstname ?? ''}
@@ -170,19 +170,19 @@ export default async function DemandDetailsPage({
         </div>
 
         {/* Vehicle Information */}
-        <div className="bg-white/5 border border-gray-800 p-6 rounded-lg">
-          <h2 className="text-lg font-semibold text-white mb-4">Vehicle Information</h2>
+        <div className="bg-zinc-200/50 dark:bg-white/5 border border-zinc-200 dark:border-gray-800 p-6 rounded-lg">
+          <h2 className="text-lg font-semibold text-zinc-900 dark:text-white mb-4">Vehicle Information</h2>
           <div className="space-y-3">
             <div>
-              <p className="text-sm text-gray-400">Vehicle</p>
-              <p className="text-white font-medium">{demand.vehicle_year} {demand.vehicle_make} {demand.vehicle_model}</p>
+              <p className="text-sm text-zinc-500 dark:text-gray-400">Vehicle</p>
+              <p className="text-zinc-900 dark:text-white font-medium">{demand.vehicle_year} {demand.vehicle_make} {demand.vehicle_model}</p>
             </div>
             <div>
-              <p className="text-sm text-gray-400">Camera Model</p>
-              <p className="text-white">{demand.camera_model}</p>
+              <p className="text-sm text-zinc-500 dark:text-gray-400">Camera Model</p>
+              <p className="text-zinc-900 dark:text-white">{demand.camera_model}</p>
             </div>
             <div>
-              <p className="text-sm text-gray-400 mb-1">Stock Number</p>
+              <p className="text-sm text-zinc-500 dark:text-gray-400 mb-1">Stock Number</p>
               <EditStockNumberForm
                 demandId={id}
                 stockNumber={demand.stock_number}
@@ -190,7 +190,7 @@ export default async function DemandDetailsPage({
               />
             </div>
             <div>
-              <p className="text-sm text-gray-400 mb-1">VIN Last 6 Digits</p>
+              <p className="text-sm text-zinc-500 dark:text-gray-400 mb-1">VIN Last 6 Digits</p>
               <EditVinForm
                 demandId={id}
                 vinLast6={demand.vin_last6}
@@ -198,7 +198,7 @@ export default async function DemandDetailsPage({
               />
             </div>
             <div>
-              <p className="text-sm text-gray-400">Appointment Date</p>
+              <p className="text-sm text-zinc-500 dark:text-gray-400">Appointment Date</p>
               <p className="text-white font-semibold text-[#C27E00]">
                 {formatInTimeZone(new Date(demand.appointment_date), getEffectiveTimezone((demand.dealers as { region_codes?: { timezones?: { name: string } } } | null)?.region_codes?.timezones?.name ?? null), 'PPP h:mm a')}
               </p>
@@ -208,29 +208,29 @@ export default async function DemandDetailsPage({
 
         {/* Creator Comment (if any) */}
         {demand.comment && (
-          <div className="bg-white/5 border border-gray-800 p-6 rounded-lg lg:col-span-2">
-            <h2 className="text-lg font-semibold text-white mb-4">Comment (from creator)</h2>
-            <p className="text-gray-300 whitespace-pre-wrap">{demand.comment}</p>
+          <div className="bg-zinc-200/50 dark:bg-white/5 border border-zinc-200 dark:border-gray-800 p-6 rounded-lg lg:col-span-2">
+            <h2 className="text-lg font-semibold text-zinc-900 dark:text-white mb-4">Comment (from creator)</h2>
+            <p className="text-zinc-600 dark:text-gray-300 whitespace-pre-wrap">{demand.comment}</p>
           </div>
         )}
 
         {/* Assignment Information */}
-        <div className="bg-white/5 border border-gray-800 p-6 rounded-lg">
-          <h2 className="text-lg font-semibold text-white mb-4">Assignment Information</h2>
+        <div className="bg-zinc-200/50 dark:bg-white/5 border border-zinc-200 dark:border-gray-800 p-6 rounded-lg">
+          <h2 className="text-lg font-semibold text-zinc-900 dark:text-white mb-4">Assignment Information</h2>
           <div className="space-y-3">
             <div>
-              <p className="text-sm text-gray-400">Dealer</p>
-              <p className="text-white">{(demand.dealers as any)?.name || 'N/A'}</p>
+              <p className="text-sm text-zinc-500 dark:text-gray-400">Dealer</p>
+              <p className="text-zinc-900 dark:text-white">{(demand.dealers as any)?.name || 'N/A'}</p>
             </div>
             <div>
-              <p className="text-sm text-gray-400">Created By</p>
-              <p className="text-white">
+              <p className="text-sm text-zinc-500 dark:text-gray-400">Created By</p>
+              <p className="text-zinc-900 dark:text-white">
                 {(demand.profiles as any)?.full_name || 'Unknown'} 
-                <span className="text-gray-500 ml-2">({(demand.profiles as any)?.role || 'N/A'})</span>
+                <span className="text-zinc-500 dark:text-gray-500 ml-2">({(demand.profiles as any)?.role || 'N/A'})</span>
               </p>
             </div>
             <div>
-              <p className="text-sm text-gray-400 mb-1">Assigned Finance</p>
+              <p className="text-sm text-zinc-500 dark:text-gray-400 mb-1">Assigned Finance</p>
               {isAuroraManager && financeUsers && financeUsers.length > 0 ? (
                 <ChangeFinanceForm
                   demandId={id}
@@ -238,16 +238,16 @@ export default async function DemandDetailsPage({
                   financeUsers={financeUsers}
                 />
               ) : demand.assigned_finance_id ? (
-                <p className="text-white">
+                <p className="text-zinc-900 dark:text-white">
                   {(demand.assigned_finance as any)?.full_name || 'Unknown'}
-                  <span className="text-gray-500 ml-2">({(demand.assigned_finance as any)?.role || 'N/A'})</span>
+                  <span className="text-zinc-500 dark:text-gray-500 ml-2">({(demand.assigned_finance as any)?.role || 'N/A'})</span>
                 </p>
               ) : (
-                <p className="text-gray-500 text-sm">Unassigned</p>
+                <p className="text-zinc-500 dark:text-gray-500 text-sm">Unassigned</p>
               )}
             </div>
             <div>
-              <p className="text-sm text-gray-400 mb-1">Assigned Specialist</p>
+              <p className="text-sm text-zinc-500 dark:text-gray-400 mb-1">Assigned Specialist</p>
               {isAuroraManager && specialists && specialists.length > 0 ? (
                 <ChangeSpecialistForm
                   demandId={id}
@@ -256,28 +256,28 @@ export default async function DemandDetailsPage({
                   specialists={specialists}
                 />
               ) : demand.assigned_specialist_id ? (
-                <p className="text-white">
+                <p className="text-zinc-900 dark:text-white">
                   {(demand.assigned_specialist as any)?.full_name || 'Unknown'}
-                  <span className="text-gray-500 ml-2">({(demand.assigned_specialist as any)?.role || 'N/A'})</span>
+                  <span className="text-zinc-500 dark:text-gray-500 ml-2">({(demand.assigned_specialist as any)?.role || 'N/A'})</span>
                 </p>
               ) : (
-                <p className="text-gray-500 text-sm">Unassigned</p>
+                <p className="text-zinc-500 dark:text-gray-500 text-sm">Unassigned</p>
               )}
             </div>
           </div>
         </div>
 
         {/* Timeline Information */}
-        <div className="bg-white/5 border border-gray-800 p-6 rounded-lg">
-          <h2 className="text-lg font-semibold text-white mb-4">Timeline</h2>
+        <div className="bg-zinc-200/50 dark:bg-white/5 border border-zinc-200 dark:border-gray-800 p-6 rounded-lg">
+          <h2 className="text-lg font-semibold text-zinc-900 dark:text-white mb-4">Timeline</h2>
           <div className="space-y-3">
             <div>
-              <p className="text-sm text-gray-400">Created At</p>
-              <p className="text-white">{formatInTimeZone(new Date(demand.created_at), getEffectiveTimezone((demand.dealers as { region_codes?: { timezones?: { name: string } } } | null)?.region_codes?.timezones?.name ?? null), 'PPP h:mm a')}</p>
+              <p className="text-sm text-zinc-500 dark:text-gray-400">Created At</p>
+              <p className="text-zinc-900 dark:text-white">{formatInTimeZone(new Date(demand.created_at), getEffectiveTimezone((demand.dealers as { region_codes?: { timezones?: { name: string } } } | null)?.region_codes?.timezones?.name ?? null), 'PPP h:mm a')}</p>
             </div>
             <div>
-              <p className="text-sm text-gray-400">Last Updated</p>
-              <p className="text-white">{formatInTimeZone(new Date(demand.updated_at || demand.created_at), getEffectiveTimezone((demand.dealers as { region_codes?: { timezones?: { name: string } } } | null)?.region_codes?.timezones?.name ?? null), 'PPP h:mm a')}</p>
+              <p className="text-sm text-zinc-500 dark:text-gray-400">Last Updated</p>
+              <p className="text-zinc-900 dark:text-white">{formatInTimeZone(new Date(demand.updated_at || demand.created_at), getEffectiveTimezone((demand.dealers as { region_codes?: { timezones?: { name: string } } } | null)?.region_codes?.timezones?.name ?? null), 'PPP h:mm a')}</p>
             </div>
           </div>
         </div>
@@ -285,32 +285,32 @@ export default async function DemandDetailsPage({
 
       {/* Process History / Demand Logs */}
       {logs && logs.length > 0 && (
-        <div className="bg-white/5 border border-gray-800 p-6 rounded-lg">
-          <h2 className="text-lg font-semibold text-white mb-4">Process History</h2>
+        <div className="bg-zinc-200/50 dark:bg-white/5 border border-zinc-200 dark:border-gray-800 p-6 rounded-lg">
+          <h2 className="text-lg font-semibold text-zinc-900 dark:text-white mb-4">Process History</h2>
           <div className="space-y-4">
             {logs.map((log: any) => (
-              <div key={log.id} className="border-l-2 border-gray-700 pl-4 py-2">
+              <div key={log.id} className="border-l-2 border-zinc-300 dark:border-gray-700 pl-4 py-2">
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
-                    <p className="text-white font-medium">
+                    <p className="text-zinc-900 dark:text-white font-medium">
                       {(log.profiles as any)?.full_name || 'System'} 
-                      <span className="text-gray-500 ml-2">({(log.profiles as any)?.role || 'N/A'})</span>
+                      <span className="text-zinc-500 dark:text-gray-500 ml-2">({(log.profiles as any)?.role || 'N/A'})</span>
                     </p>
                     {log.previous_status !== log.new_status && log.new_status && (
-                      <p className="text-sm text-gray-400 mt-1">
+                      <p className="text-sm text-zinc-500 dark:text-gray-400 mt-1">
                         {log.previous_status ? (
-                          <>Changed status from <span className="text-gray-300">{String(log.previous_status).replace('_', ' ')}</span> to{' '}
-                          <span className="text-gray-300">{String(log.new_status).replace('_', ' ')}</span></>
+                          <>Changed status from <span className="text-zinc-600 dark:text-gray-300">{String(log.previous_status).replace('_', ' ')}</span> to{' '}
+                          <span className="text-zinc-600 dark:text-gray-300">{String(log.new_status).replace('_', ' ')}</span></>
                         ) : (
-                          <>Status: <span className="text-gray-300">{String(log.new_status).replace('_', ' ')}</span></>
+                          <>Status: <span className="text-zinc-600 dark:text-gray-300">{String(log.new_status).replace('_', ' ')}</span></>
                         )}
                       </p>
                     )}
                     {log.notes && (
-                      <p className="text-sm text-gray-500 mt-1 italic">{log.notes}</p>
+                      <p className="text-sm text-zinc-500 dark:text-gray-500 mt-1 italic">{log.notes}</p>
                     )}
                   </div>
-                  <p className="text-xs text-gray-500">
+                  <p className="text-xs text-zinc-500 dark:text-gray-500">
                     {formatInTimeZone(new Date(log.created_at), getEffectiveTimezone((demand.dealers as { region_codes?: { timezones?: { name: string } } } | null)?.region_codes?.timezones?.name ?? null), 'MMM d, yyyy h:mm a')}
                   </p>
                 </div>
@@ -321,9 +321,9 @@ export default async function DemandDetailsPage({
       )}
 
       {(!logs || logs.length === 0) && (
-        <div className="bg-white/5 border border-gray-800 p-6 rounded-lg">
-          <h2 className="text-lg font-semibold text-white mb-4">Process History</h2>
-          <p className="text-gray-400">No process history available yet.</p>
+        <div className="bg-zinc-200/50 dark:bg-white/5 border border-zinc-200 dark:border-gray-800 p-6 rounded-lg">
+          <h2 className="text-lg font-semibold text-zinc-900 dark:text-white mb-4">Process History</h2>
+          <p className="text-zinc-500 dark:text-gray-400">No process history available yet.</p>
         </div>
       )}
     </div>

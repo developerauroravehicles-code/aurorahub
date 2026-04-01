@@ -63,23 +63,23 @@ export function InvoiceSearchFilter({ searchValue, searchBy }: InvoiceSearchFilt
       <select
         value={selectedBy}
         onChange={(e) => setSelectedBy(e.target.value as InvoiceSearchBy)}
-        className="border border-gray-700 bg-white/5 px-3 py-2 rounded text-white text-sm focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00] min-w-[110px]"
+        className="border border-zinc-300 dark:border-gray-700 bg-zinc-200/50 dark:bg-white/5 px-3 py-2 rounded text-zinc-900 dark:text-white text-sm focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00] min-w-[110px]"
       >
         {SEARCH_OPTIONS.map(o => (
-          <option key={o.value} value={o.value} className="bg-black text-white">
+          <option key={o.value} value={o.value} className="bg-zinc-50 dark:bg-black text-zinc-900 dark:text-white">
             {o.label}
           </option>
         ))}
       </select>
       <div className="relative">
-        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500 dark:text-gray-500" />
         <input
           name="search"
           type="text"
           value={inputValue}
           onChange={handleInputChange}
           placeholder={placeholder}
-          className="border border-gray-700 bg-white/5 pl-8 pr-3 py-2 rounded text-white text-sm placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00] w-48 uppercase"
+          className="border border-zinc-300 dark:border-gray-700 bg-zinc-200/50 dark:bg-white/5 pl-8 pr-3 py-2 rounded text-zinc-900 dark:text-white text-sm placeholder-zinc-500 dark:placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00] w-48 uppercase"
         />
       </div>
       <button
@@ -92,7 +92,7 @@ export function InvoiceSearchFilter({ searchValue, searchBy }: InvoiceSearchFilt
         <button
           type="button"
           onClick={handleClear}
-          className="px-2 py-2 rounded text-sm text-gray-400 hover:text-white transition-colors"
+          className="px-2 py-2 rounded text-sm text-zinc-500 dark:text-gray-400 hover:text-zinc-900 dark:text-white transition-colors"
         >
           Clear
         </button>

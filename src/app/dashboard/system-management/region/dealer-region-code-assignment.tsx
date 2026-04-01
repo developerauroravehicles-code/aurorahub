@@ -52,14 +52,14 @@ export const DealerRegionCodeAssignment = memo(function DealerRegionCodeAssignme
     <>
       <button
         onClick={() => setShowModal(true)}
-        className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm transition-colors"
+        className="bg-blue-600 hover:bg-blue-700 text-zinc-900 dark:text-white px-3 py-1 rounded text-sm transition-colors"
       >
         {currentRegionCode ? `Region: ${currentRegionCode.code}` : 'Assign Region'}
       </button>
 
       {showModal && (
         <div 
-          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+          className="fixed inset-0 bg-white dark:bg-black/50 flex items-center justify-center z-50"
           role="dialog"
           aria-modal="true"
           aria-labelledby="region-assignment-title"
@@ -69,13 +69,13 @@ export const DealerRegionCodeAssignment = memo(function DealerRegionCodeAssignme
             }
           }}
         >
-          <div className="bg-black border border-gray-800 rounded-lg p-6 max-w-md w-full mx-4 shadow-2xl">
-            <h3 id="region-assignment-title" className="text-lg font-semibold text-white mb-4">
+          <div className="bg-zinc-50 dark:bg-black border border-zinc-200 dark:border-gray-800 rounded-lg p-6 max-w-md w-full mx-4 shadow-2xl">
+            <h3 id="region-assignment-title" className="text-lg font-semibold text-zinc-900 dark:text-white mb-4">
               Assign Region Code to {dealerName}
             </h3>
             <form onSubmit={handleUpdate} className="space-y-4">
               <div>
-                <label htmlFor="region_code_id" className="block text-sm font-medium text-gray-300 mb-2">
+                <label htmlFor="region_code_id" className="block text-sm font-medium text-zinc-600 dark:text-gray-300 mb-2">
                   Select Region Code
                 </label>
                 <select
@@ -84,11 +84,11 @@ export const DealerRegionCodeAssignment = memo(function DealerRegionCodeAssignme
                   defaultValue={currentRegionCodeId || 'none'}
                   required
                   aria-required="true"
-                  className="w-full border border-gray-700 bg-white/5 p-2 rounded text-white focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]"
+                  className="w-full border border-zinc-300 dark:border-gray-700 bg-zinc-200/50 dark:bg-white/5 p-2 rounded text-white focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]"
                 >
-                  <option value="none" className="bg-black text-white">No Region Code</option>
+                  <option value="none" className="bg-zinc-50 dark:bg-black text-zinc-900 dark:text-white">No Region Code</option>
                   {regionCodes.map(rc => (
-                    <option key={rc.id} value={rc.id} className="bg-black text-white">
+                    <option key={rc.id} value={rc.id} className="bg-zinc-50 dark:bg-black text-zinc-900 dark:text-white">
                       {rc.code} - {rc.name}
                     </option>
                   ))}

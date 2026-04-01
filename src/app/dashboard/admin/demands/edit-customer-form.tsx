@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { updateCustomerInfo } from './actions'
 import { CanadianPhoneInput, formatCanadianPhone } from '@/components/canadian-phone-input'
 
-const inputClass = 'w-full border border-gray-700 bg-white/5 p-2 rounded text-white text-sm focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]'
+const inputClass = 'w-full border border-zinc-300 dark:border-gray-700 bg-zinc-200/50 dark:bg-white/5 p-2 rounded text-zinc-900 dark:text-white text-sm focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]'
 
 interface EditCustomerFormProps {
   demandId: string
@@ -65,17 +65,17 @@ export function EditCustomerForm({
     return (
       <div className="space-y-3">
         <div>
-          <p className="text-sm text-gray-400">Name</p>
-          <p className="text-white font-medium">{firstName} {lastName}</p>
+          <p className="text-sm text-zinc-500 dark:text-gray-400">Name</p>
+          <p className="text-zinc-900 dark:text-white font-medium">{firstName} {lastName}</p>
         </div>
         <div>
-          <p className="text-sm text-gray-400">Phone</p>
-          <p className="text-white">{phone}</p>
+          <p className="text-sm text-zinc-500 dark:text-gray-400">Phone</p>
+          <p className="text-zinc-900 dark:text-white">{phone}</p>
         </div>
         {address && (
           <div>
-            <p className="text-sm text-gray-400">Address</p>
-            <p className="text-white">{address}</p>
+            <p className="text-sm text-zinc-500 dark:text-gray-400">Address</p>
+            <p className="text-zinc-900 dark:text-white">{address}</p>
           </div>
         )}
       </div>
@@ -85,7 +85,7 @@ export function EditCustomerForm({
   return (
     <div className="space-y-3">
       <div>
-        <label className="block text-xs font-medium text-gray-400 mb-1">First Name</label>
+        <label className="block text-xs font-medium text-zinc-500 dark:text-gray-400 mb-1">First Name</label>
         <input
           type="text"
           value={firstNameVal}
@@ -96,7 +96,7 @@ export function EditCustomerForm({
         />
       </div>
       <div>
-        <label className="block text-xs font-medium text-gray-400 mb-1">Last Name</label>
+        <label className="block text-xs font-medium text-zinc-500 dark:text-gray-400 mb-1">Last Name</label>
         <input
           type="text"
           value={lastNameVal}
@@ -107,7 +107,7 @@ export function EditCustomerForm({
         />
       </div>
       <div>
-        <label className="block text-xs font-medium text-gray-400 mb-1">Phone</label>
+        <label className="block text-xs font-medium text-zinc-500 dark:text-gray-400 mb-1">Phone</label>
         <CanadianPhoneInput
           value={phoneVal}
           onChange={setPhoneVal}
@@ -116,7 +116,7 @@ export function EditCustomerForm({
         />
       </div>
       <div>
-        <label className="block text-xs font-medium text-gray-400 mb-1">Address</label>
+        <label className="block text-xs font-medium text-zinc-500 dark:text-gray-400 mb-1">Address</label>
         <input
           type="text"
           value={addressVal}

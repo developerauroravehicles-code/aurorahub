@@ -60,9 +60,9 @@ export function WorkActions({ demandId, isAssigned, vinLast6 }: { demandId: stri
                     type="checkbox"
                     checked={directComplete}
                     onChange={(e) => setDirectComplete(e.target.checked)}
-                    className="rounded border-gray-600 bg-black/50 text-[#C27E00] focus:ring-[#C27E00] focus:ring-offset-0"
+                    className="rounded border-zinc-300 dark:border-gray-600 bg-white dark:bg-black/50 text-[#C27E00] focus:ring-[#C27E00] focus:ring-offset-0"
                 />
-                <span className="text-sm text-gray-300">Direct complete (use stored VIN)</span>
+                <span className="text-sm text-zinc-600 dark:text-gray-300">Direct complete (use stored VIN)</span>
             </label>
             <button 
                 onClick={handleComplete} 

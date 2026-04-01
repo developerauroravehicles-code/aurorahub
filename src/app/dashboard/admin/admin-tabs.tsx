@@ -16,7 +16,7 @@ export function AdminTabs() {
   ]
 
   return (
-    <div className="border-b border-gray-800 mb-8">
+    <div className="border-b border-zinc-200 dark:border-zinc-200 dark:border-gray-800 mb-8">
       <nav className="flex space-x-8" aria-label="Tabs">
         {tabs.map((tab) => {
           const Icon = tab.icon
@@ -28,12 +28,12 @@ export function AdminTabs() {
               className={clsx(
                 isActive
                   ? 'border-[#C27E00] text-[#C27E00]'
-                  : 'border-transparent text-gray-400 hover:text-gray-300 hover:border-gray-600',
+                  : 'border-transparent text-zinc-500 dark:text-zinc-500 dark:text-gray-400 hover:text-zinc-600 dark:text-zinc-600 dark:text-gray-300 hover:border-zinc-300 dark:border-zinc-300 dark:border-gray-600',
                 'group inline-flex items-center border-b-2 py-4 px-1 text-sm font-medium transition-colors'
               )}
             >
               <Icon className={clsx(
-                isActive ? 'text-[#C27E00]' : 'text-gray-400 group-hover:text-gray-300',
+                isActive ? 'text-[#C27E00]' : 'text-zinc-500 dark:text-zinc-500 dark:text-gray-400 group-hover:text-zinc-600 dark:text-zinc-600 dark:text-gray-300',
                 '-ml-0.5 mr-2 h-5 w-5'
               )} />
               {tab.name}

@@ -377,7 +377,7 @@ export function InvoiceTable({ invoices, logoDataUrl, canEdit = true }: InvoiceT
 
   if (invoices.length === 0) {
     return (
-      <div className="p-8 text-center text-gray-400">
+      <div className="p-8 text-center text-zinc-500 dark:text-gray-400">
         No completed demands yet. Invoices will appear here when demands are marked as completed.
       </div>
     )
@@ -388,8 +388,8 @@ export function InvoiceTable({ invoices, logoDataUrl, canEdit = true }: InvoiceT
     <div className="flex flex-col min-h-[calc(100vh-12rem)]">
     <div className="flex items-center gap-4 px-4 pt-4 pb-2 flex-wrap flex-shrink-0">
       <div className="flex items-center gap-2">
-        <ArrowUpDown className="w-4 h-4 text-gray-400" />
-        <span className="text-sm text-gray-400">Sort by:</span>
+        <ArrowUpDown className="w-4 h-4 text-zinc-500 dark:text-gray-400" />
+        <span className="text-sm text-zinc-500 dark:text-gray-400">Sort by:</span>
       </div>
       <select
         value={`${sortBy}-${sortDir}`}
@@ -398,34 +398,34 @@ export function InvoiceTable({ invoices, logoDataUrl, canEdit = true }: InvoiceT
           setSortBy(by)
           setSortDir(dir)
         }}
-        className="border border-gray-600 bg-black/50 text-white rounded px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-[#C27E00]"
+        className="border border-zinc-300 dark:border-gray-600 bg-white dark:bg-black/50 text-zinc-900 dark:text-white rounded px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-[#C27E00]"
       >
-        <option value="id-asc" className="bg-gray-900">ID (A→Z)</option>
-        <option value="id-desc" className="bg-gray-900">ID (Z→A)</option>
-        <option value="completeDate-desc" className="bg-gray-900">Complete Date (New→Old)</option>
-        <option value="completeDate-asc" className="bg-gray-900">Complete Date (Old→New)</option>
+        <option value="id-asc" className="bg-zinc-200 dark:bg-gray-900">ID (A→Z)</option>
+        <option value="id-desc" className="bg-zinc-200 dark:bg-gray-900">ID (Z→A)</option>
+        <option value="completeDate-desc" className="bg-zinc-200 dark:bg-gray-900">Complete Date (New→Old)</option>
+        <option value="completeDate-asc" className="bg-zinc-200 dark:bg-gray-900">Complete Date (Old→New)</option>
       </select>
     </div>
     {canEdit && selectedInvoiceIds.size > 0 && (
       <div className="mx-4 mb-2 flex flex-col gap-2 rounded-lg border border-[#C27E00]/35 bg-[#C27E00]/10 px-3 py-3 sm:flex-row sm:flex-wrap sm:items-end">
-        <div className="text-sm text-gray-200 sm:self-center">
-          <span className="font-medium text-white">{selectedInvoiceIds.size}</span>
+        <div className="text-sm text-zinc-800 dark:text-gray-200 sm:self-center">
+          <span className="font-medium text-zinc-900 dark:text-white">{selectedInvoiceIds.size}</span>
           {' '}
           selected
-          <span className="text-gray-400"> · max {BULK_EMAIL_MAX} per email</span>
+          <span className="text-zinc-500 dark:text-gray-400"> · max {BULK_EMAIL_MAX} per email</span>
         </div>
         <div className="flex flex-1 flex-col gap-1 min-w-[200px] max-w-md">
-          <label htmlFor="invoice-bulk-email" className="text-xs font-medium text-gray-400">
+          <label htmlFor="invoice-bulk-email" className="text-xs font-medium text-zinc-500 dark:text-gray-400">
             One email — all selected PDFs attached
           </label>
           <input
             id="invoice-bulk-email"
             type="text"
             value={bulkEmailTo}
-            onChange={(e) => setBulkEmailTo(e.target.value)}
+            onChange={(e) => setBulkEmailTo(e.target.value.toLowerCase())}
             placeholder="recipient@example.com (comma-separated)"
             autoComplete="email"
-            className="w-full border border-gray-600 bg-black/50 text-white rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-[#C27E00]"
+            className="w-full border border-zinc-300 dark:border-gray-600 bg-white dark:bg-black/50 text-zinc-900 dark:text-white rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-[#C27E00]"
           />
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -444,7 +444,7 @@ export function InvoiceTable({ invoices, logoDataUrl, canEdit = true }: InvoiceT
               setSelectedInvoiceIds(new Set())
               setBulkEmailMessage(null)
             }}
-            className="text-sm text-gray-400 hover:text-white px-2 py-1.5"
+            className="text-sm text-zinc-500 dark:text-gray-400 hover:text-zinc-900 dark:text-white px-2 py-1.5"
           >
             Clear selection
           </button>
@@ -461,8 +461,8 @@ export function InvoiceTable({ invoices, logoDataUrl, canEdit = true }: InvoiceT
       </div>
     )}
     <div className="flex-1 min-h-0 overflow-x-auto">
-      <table className="min-w-full divide-y divide-gray-800">
-        <thead className="bg-white/5">
+      <table className="min-w-full divide-y divide-zinc-200 dark:divide-gray-800">
+        <thead className="bg-zinc-200/50 dark:bg-white/5">
           <tr>
             {canEdit && (
               <th className="w-10 px-2 py-2.5 text-left align-middle" scope="col">
@@ -475,28 +475,28 @@ export function InvoiceTable({ invoices, logoDataUrl, canEdit = true }: InvoiceT
                     sortedInvoices.every((r) => selectedInvoiceIds.has(r.id))
                   }
                   onChange={toggleSelectAllInvoices}
-                  className="rounded border-gray-500 bg-black/50 text-[#C27E00] focus:ring-[#C27E00] w-4 h-4"
+                  className="rounded border-gray-500 bg-white dark:bg-black/50 text-[#C27E00] focus:ring-[#C27E00] w-4 h-4"
                   title="Select all invoices in list"
                   aria-label="Select all invoices in list"
                 />
               </th>
             )}
-            <th className="px-3 py-2.5 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Demand ID</th>
-            <th className="px-3 py-2.5 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Customer Name</th>
-            <th className="px-3 py-2.5 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Phone</th>
-            <th className="px-3 py-2.5 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Stock #</th>
-            <th className="px-3 py-2.5 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Customer Address</th>
-            <th className="px-3 py-2.5 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Vehicle & Stock</th>
-            <th className="px-3 py-2.5 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Product Model</th>
-            <th className="px-3 py-2.5 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Complete Date</th>
-            <th className="px-3 py-2.5 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Warranty End</th>
-            <th className="px-3 py-2.5 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Total Amount</th>
-            <th className="px-3 py-2.5 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Comments</th>
-            <th className="px-3 py-2.5 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Invoice Status</th>
-            <th className="px-3 py-2.5 text-right text-xs font-medium text-gray-400 uppercase tracking-wider">Actions</th>
+            <th className="px-3 py-2.5 text-left text-xs font-medium text-zinc-500 dark:text-gray-400 uppercase tracking-wider">Demand ID</th>
+            <th className="px-3 py-2.5 text-left text-xs font-medium text-zinc-500 dark:text-gray-400 uppercase tracking-wider">Customer Name</th>
+            <th className="px-3 py-2.5 text-left text-xs font-medium text-zinc-500 dark:text-gray-400 uppercase tracking-wider">Phone</th>
+            <th className="px-3 py-2.5 text-left text-xs font-medium text-zinc-500 dark:text-gray-400 uppercase tracking-wider">Stock #</th>
+            <th className="px-3 py-2.5 text-left text-xs font-medium text-zinc-500 dark:text-gray-400 uppercase tracking-wider">Customer Address</th>
+            <th className="px-3 py-2.5 text-left text-xs font-medium text-zinc-500 dark:text-gray-400 uppercase tracking-wider">Vehicle & Stock</th>
+            <th className="px-3 py-2.5 text-left text-xs font-medium text-zinc-500 dark:text-gray-400 uppercase tracking-wider">Product Model</th>
+            <th className="px-3 py-2.5 text-left text-xs font-medium text-zinc-500 dark:text-gray-400 uppercase tracking-wider">Complete Date</th>
+            <th className="px-3 py-2.5 text-left text-xs font-medium text-zinc-500 dark:text-gray-400 uppercase tracking-wider">Warranty End</th>
+            <th className="px-3 py-2.5 text-left text-xs font-medium text-zinc-500 dark:text-gray-400 uppercase tracking-wider">Total Amount</th>
+            <th className="px-3 py-2.5 text-left text-xs font-medium text-zinc-500 dark:text-gray-400 uppercase tracking-wider">Comments</th>
+            <th className="px-3 py-2.5 text-left text-xs font-medium text-zinc-500 dark:text-gray-400 uppercase tracking-wider">Invoice Status</th>
+            <th className="px-3 py-2.5 text-right text-xs font-medium text-zinc-500 dark:text-gray-400 uppercase tracking-wider">Actions</th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-gray-800">
+        <tbody className="divide-y divide-zinc-200 dark:divide-gray-800">
           {displayInvoices.map(row => {
             const displayRow = getRowWithOptimisticStatus(row)
             const dealer = getDealer(displayRow)
@@ -507,56 +507,56 @@ export function InvoiceTable({ invoices, logoDataUrl, canEdit = true }: InvoiceT
             const v = values[row.id] ?? { amount: displayRow.invoice_total_amount != null ? String(displayRow.invoice_total_amount) : '', comments: displayRow.invoice_comments ?? '' }
 
             return (
-              <tr key={row.id} className="hover:bg-white/5 transition-colors">
+              <tr key={row.id} className="hover:bg-zinc-200/50 dark:bg-white/5 transition-colors">
                 {canEdit && (
                   <td className="w-10 px-2 py-2.5 align-middle">
                     <input
                       type="checkbox"
                       checked={selectedInvoiceIds.has(row.id)}
                       onChange={() => toggleInvoiceSelected(row.id)}
-                      className="rounded border-gray-500 bg-black/50 text-[#C27E00] focus:ring-[#C27E00] w-4 h-4"
+                      className="rounded border-gray-500 bg-white dark:bg-black/50 text-[#C27E00] focus:ring-[#C27E00] w-4 h-4"
                       aria-label={row.demand_number ? `Select invoice ${row.demand_number}` : 'Select invoice'}
                     />
                   </td>
                 )}
-                <td className="px-3 py-2.5 text-sm text-gray-300 whitespace-nowrap">
+                <td className="px-3 py-2.5 text-sm text-zinc-600 dark:text-gray-300 whitespace-nowrap">
                   {row.demand_number ? `#${row.demand_number}` : '-'}
                 </td>
-                <td className="px-3 py-2.5 text-sm text-white">
+                <td className="px-3 py-2.5 text-sm text-zinc-900 dark:text-white">
                   {dealer?.name ?? '—'}
                 </td>
-                <td className="px-3 py-2.5 text-sm text-gray-300">
+                <td className="px-3 py-2.5 text-sm text-zinc-600 dark:text-gray-300">
                   {(getDealer(row)?.phone ?? row.customer_phone) ?? '—'}
                 </td>
-                <td className="px-3 py-2.5 text-sm text-gray-300">
+                <td className="px-3 py-2.5 text-sm text-zinc-600 dark:text-gray-300">
                   {row.stock_number ?? '—'}
                 </td>
-                <td className="px-3 py-2.5 text-sm text-gray-400 max-w-[200px] truncate" title={dealer?.address ?? ''}>
+                <td className="px-3 py-2.5 text-sm text-zinc-500 dark:text-gray-400 max-w-[200px] truncate" title={dealer?.address ?? ''}>
                   {dealer?.address ?? '—'}
                 </td>
-                <td className="px-3 py-2.5 text-sm text-gray-300">
+                <td className="px-3 py-2.5 text-sm text-zinc-600 dark:text-gray-300">
                   {row.vehicle_year} {row.vehicle_make} {row.vehicle_model} - Stock {row.stock_number ?? '—'}
                 </td>
-                <td className="px-3 py-2.5 text-sm text-gray-300">
+                <td className="px-3 py-2.5 text-sm text-zinc-600 dark:text-gray-300">
                   {row.camera_model}
                 </td>
-                <td className="px-3 py-2.5 text-sm text-gray-300 whitespace-nowrap">
+                <td className="px-3 py-2.5 text-sm text-zinc-600 dark:text-gray-300 whitespace-nowrap">
                   {formatInTimeZone(completionDate, SYSTEM_DEFAULT_TIMEZONE, 'd MMMM yyyy')}
                 </td>
-                <td className="px-3 py-2.5 text-sm text-gray-300 whitespace-nowrap">
+                <td className="px-3 py-2.5 text-sm text-zinc-600 dark:text-gray-300 whitespace-nowrap">
                   {formatInTimeZone(warrantyEnd, SYSTEM_DEFAULT_TIMEZONE, 'd MMMM yyyy')}
                 </td>
                 <td className="px-3 py-2.5 text-sm">
                   {canEdit && isEditingAmount ? (
                     <div className="flex items-center gap-1">
-                      <span className="text-gray-400">$</span>
+                      <span className="text-zinc-500 dark:text-gray-400">$</span>
                       <input
                         type="text"
                         value={v.amount}
                         onChange={e => setValues(x => ({ ...x, [row.id]: { ...v, amount: e.target.value } }))}
                         onBlur={() => saveEdit(row.id)}
                         onKeyDown={e => e.key === 'Enter' && saveEdit(row.id)}
-                        className="w-24 border border-gray-600 bg-black/50 text-white rounded px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-[#C27E00]"
+                        className="w-24 border border-zinc-300 dark:border-gray-600 bg-white dark:bg-black/50 text-zinc-900 dark:text-white rounded px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-[#C27E00]"
                         autoFocus
                       />
                     </div>
@@ -564,12 +564,12 @@ export function InvoiceTable({ invoices, logoDataUrl, canEdit = true }: InvoiceT
                     <button
                       type="button"
                       onClick={() => startEdit(row.id, 'amount', row)}
-                      className={`text-left hover:bg-white/10 rounded px-1 -mx-1 transition-colors ${row.invoice_total_amount != null ? 'text-[#C27E00] font-medium' : 'text-gray-500'}`}
+                      className={`text-left hover:bg-zinc-200 dark:bg-white/10 rounded px-1 -mx-1 transition-colors ${row.invoice_total_amount != null ? 'text-[#C27E00] font-medium' : 'text-zinc-500 dark:text-gray-500'}`}
                     >
                       {row.invoice_total_amount != null ? `$${Number(row.invoice_total_amount).toFixed(2)}` : 'Add amount'}
                     </button>
                   ) : (
-                    <span className={row.invoice_total_amount != null ? 'text-[#C27E00] font-medium' : 'text-gray-500'}>
+                    <span className={row.invoice_total_amount != null ? 'text-[#C27E00] font-medium' : 'text-zinc-500 dark:text-gray-500'}>
                       {row.invoice_total_amount != null ? `$${Number(row.invoice_total_amount).toFixed(2)}` : '—'}
                     </span>
                   )}
@@ -583,19 +583,19 @@ export function InvoiceTable({ invoices, logoDataUrl, canEdit = true }: InvoiceT
                       onBlur={() => saveEdit(row.id)}
                       onKeyDown={e => e.key === 'Enter' && saveEdit(row.id)}
                       placeholder="Add expenses / comments..."
-                      className="w-full border border-gray-600 bg-black/50 text-white rounded px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-[#C27E00]"
+                      className="w-full border border-zinc-300 dark:border-gray-600 bg-white dark:bg-black/50 text-zinc-900 dark:text-white rounded px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-[#C27E00]"
                       autoFocus
                     />
                   ) : canEdit ? (
                     <button
                       type="button"
                       onClick={() => startEdit(row.id, 'comments', row)}
-                      className="text-left w-full hover:bg-white/10 rounded px-1 -mx-1 truncate block text-gray-400 hover:text-gray-300 transition-colors"
+                      className="text-left w-full hover:bg-zinc-200 dark:bg-white/10 rounded px-1 -mx-1 truncate block text-zinc-500 dark:text-gray-400 hover:text-zinc-600 dark:text-gray-300 transition-colors"
                     >
                       {row.invoice_comments || 'Add expenses / comments...'}
                     </button>
                   ) : (
-                    <span className="text-gray-400 truncate block">{row.invoice_comments || '—'}</span>
+                    <span className="text-zinc-500 dark:text-gray-400 truncate block">{row.invoice_comments || '—'}</span>
                   )}
                 </td>
                 <td className="px-3 py-2.5 text-sm">
@@ -613,7 +613,7 @@ export function InvoiceTable({ invoices, logoDataUrl, canEdit = true }: InvoiceT
                         <button
                           type="button"
                           onClick={() => setStatusMenuOpen(isOpen ? null : row.id)}
-                          className={`flex items-center gap-1.5 px-2 py-1 -mx-2 -my-1 rounded hover:bg-white/10 transition-colors text-left w-full ${[edited, downloaded, drive].filter(Boolean).length === 3 ? 'text-[#C27E00] font-medium' : 'text-gray-400'}`}
+                          className={`flex items-center gap-1.5 px-2 py-1 -mx-2 -my-1 rounded hover:bg-zinc-200 dark:bg-white/10 transition-colors text-left w-full ${[edited, downloaded, drive].filter(Boolean).length === 3 ? 'text-[#C27E00] font-medium' : 'text-zinc-500 dark:text-gray-400'}`}
                         >
                           <span>{labels.join(' / ')}</span>
                           <ChevronDown className={`w-4 h-4 shrink-0 transition-transform ${isOpen ? 'rotate-180' : ''}`} aria-hidden />
@@ -621,7 +621,7 @@ export function InvoiceTable({ invoices, logoDataUrl, canEdit = true }: InvoiceT
                       )
                     }
                     return (
-                      <span className={`text-left ${[edited, downloaded, drive].filter(Boolean).length === 3 ? 'text-[#C27E00] font-medium' : 'text-gray-400'}`}>
+                      <span className={`text-left ${[edited, downloaded, drive].filter(Boolean).length === 3 ? 'text-[#C27E00] font-medium' : 'text-zinc-500 dark:text-gray-400'}`}>
                         {labels.join(' / ')}
                       </span>
                     )
@@ -660,11 +660,11 @@ export function InvoiceTable({ invoices, logoDataUrl, canEdit = true }: InvoiceT
     </div>
 
     {hasMoreRows && (
-      <div className="flex justify-center py-4 border-t border-gray-800 flex-shrink-0">
+      <div className="flex justify-center py-4 border-t border-zinc-200 dark:border-gray-800 flex-shrink-0">
         <button
           type="button"
           onClick={() => setTableExpanded(!tableExpanded)}
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-600 bg-black/30 text-gray-300 hover:bg-gray-800 hover:text-white transition-colors text-sm font-medium"
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-zinc-300 dark:border-gray-600 bg-zinc-100/90 dark:bg-black/30 text-zinc-600 dark:text-gray-300 hover:bg-gray-800 hover:text-zinc-900 dark:text-white transition-colors text-sm font-medium"
         >
           {tableExpanded ? (
             <>
@@ -692,16 +692,16 @@ export function InvoiceTable({ invoices, logoDataUrl, canEdit = true }: InvoiceT
       const drive = !!displayRow.invoice_drive_uploaded_at
       return (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-zinc-900/50 dark:bg-black/70 backdrop-blur-sm"
           onClick={() => setStatusMenuOpen(null)}
         >
           <div
-            className="bg-gray-900 border border-gray-700 rounded-xl shadow-2xl w-full max-w-sm overflow-hidden"
+            className="bg-zinc-200 dark:bg-gray-900 border border-zinc-300 dark:border-gray-700 rounded-xl shadow-2xl w-full max-w-sm overflow-hidden"
             onClick={e => e.stopPropagation()}
           >
-            <div className="px-4 py-3 border-b border-gray-700">
-              <h3 className="text-sm font-semibold text-white uppercase">Edit Status</h3>
-              <p className="text-xs text-gray-400 mt-0.5">
+            <div className="px-4 py-3 border-b border-zinc-300 dark:border-gray-700">
+              <h3 className="text-sm font-semibold text-zinc-900 dark:text-white uppercase">Edit Status</h3>
+              <p className="text-xs text-zinc-500 dark:text-gray-400 mt-0.5">
                 {row.demand_number ? `#${row.demand_number}` : 'Invoice'}
               </p>
             </div>
@@ -714,7 +714,7 @@ export function InvoiceTable({ invoices, logoDataUrl, canEdit = true }: InvoiceT
               ].map(({ key, label, checked }) => (
                 <label
                   key={key}
-                  className="flex items-center gap-3 px-3 py-3 hover:bg-white/5 rounded-lg cursor-pointer transition-colors"
+                  className="flex items-center gap-3 px-3 py-3 hover:bg-zinc-200/50 dark:bg-white/5 rounded-lg cursor-pointer transition-colors"
                 >
                   <input
                     type="checkbox"
@@ -736,13 +736,13 @@ export function InvoiceTable({ invoices, logoDataUrl, canEdit = true }: InvoiceT
                       if (res.error) setOptimisticStatus(s => ({ ...s, [row.id]: prev }))
                       else router.refresh()
                     }}
-                    className="rounded border-gray-500 bg-black/50 text-[#C27E00] focus:ring-[#C27E00] w-4 h-4"
+                    className="rounded border-gray-500 bg-white dark:bg-black/50 text-[#C27E00] focus:ring-[#C27E00] w-4 h-4"
                   />
-                  <span className="text-sm text-gray-200">{label}</span>
+                  <span className="text-sm text-zinc-800 dark:text-gray-200">{label}</span>
                 </label>
               ))}
             </div>
-            <div className="p-3 border-t border-gray-700">
+            <div className="p-3 border-t border-zinc-300 dark:border-gray-700">
               <button
                 type="button"
                 onClick={() => setStatusMenuOpen(null)}
@@ -758,22 +758,22 @@ export function InvoiceTable({ invoices, logoDataUrl, canEdit = true }: InvoiceT
 
     {/* Preview modal with editable fields */}
     {previewRow && (
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/70 backdrop-blur-sm overflow-y-auto">
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-zinc-900/50 dark:bg-black/70 backdrop-blur-sm overflow-y-auto">
         <div
-          className="bg-gray-900 border border-gray-700 rounded-lg shadow-xl flex flex-col my-auto"
+          className="bg-zinc-200 dark:bg-gray-900 border border-zinc-300 dark:border-gray-700 rounded-lg shadow-xl flex flex-col my-auto"
           style={{
             width: 'clamp(320px, 95vw, 1100px)',
             height: 'clamp(400px, 85dvh, 92dvh)',
           }}
         >
-          <div className="flex items-center justify-between p-2 sm:p-3 border-b border-gray-700 flex-shrink-0">
-            <h2 className="text-base sm:text-lg font-semibold text-white truncate pr-2">
+          <div className="flex items-center justify-between p-2 sm:p-3 border-b border-zinc-300 dark:border-gray-700 flex-shrink-0">
+            <h2 className="text-base sm:text-lg font-semibold text-zinc-900 dark:text-white truncate pr-2">
               Invoice Preview — {previewRow.demand_number ? `#${previewRow.demand_number}` : 'Invoice'}
             </h2>
             <button
               type="button"
               onClick={closePreview}
-              className="p-2 rounded-lg hover:bg-white/10 text-gray-400 hover:text-white transition-colors flex-shrink-0"
+              className="p-2 rounded-lg hover:bg-zinc-200 dark:bg-white/10 text-zinc-500 dark:text-gray-400 hover:text-zinc-900 dark:text-white transition-colors flex-shrink-0"
             >
               <X className="w-5 h-5" />
             </button>
@@ -781,37 +781,37 @@ export function InvoiceTable({ invoices, logoDataUrl, canEdit = true }: InvoiceT
 
           <div className="flex-1 min-h-0 flex flex-col lg:flex-row overflow-hidden">
           {canEdit && (
-          <div className="lg:w-[clamp(200px,22vw,300px)] lg:min-w-[180px] lg:border-r lg:border-b-0 border-b border-gray-700 p-3 space-y-3 overflow-y-auto flex-shrink-0">
+          <div className="lg:w-[clamp(200px,22vw,300px)] lg:min-w-[180px] lg:border-r lg:border-b-0 border-b border-zinc-300 dark:border-gray-700 p-3 space-y-3 overflow-y-auto flex-shrink-0">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-3">
               <div>
-                <label className="block text-xs font-medium text-gray-400 mb-1">Calculated Total (Column 2 + taxes)</label>
-                <div className="flex items-center gap-2 px-2 py-1.5 rounded border border-gray-600 bg-black/30 text-[#C27E00] font-semibold text-sm">
+                <label className="block text-xs font-medium text-zinc-500 dark:text-gray-400 mb-1">Calculated Total (Column 2 + taxes)</label>
+                <div className="flex items-center gap-2 px-2 py-1.5 rounded border border-zinc-300 dark:border-gray-600 bg-zinc-100/90 dark:bg-black/30 text-[#C27E00] font-semibold text-sm">
                   $ {getCalculatedTotal().toFixed(2)} CAD
                 </div>
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-400 mb-1">Comments</label>
+                <label className="block text-xs font-medium text-zinc-500 dark:text-gray-400 mb-1">Comments</label>
                 <input
                   type="text"
                   value={previewComments}
                   onChange={e => setPreviewComments(e.target.value)}
-                  className="w-full border border-gray-600 bg-black/50 text-white rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-[#C27E00]"
+                  className="w-full border border-zinc-300 dark:border-gray-600 bg-white dark:bg-black/50 text-zinc-900 dark:text-white rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-[#C27E00]"
                   placeholder="Add expenses / comments..."
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-gray-400 mb-1.5">Financial summary (bottom right)</label>
-              <div className="flex flex-col gap-3 p-3 rounded-lg border border-gray-600 bg-black/30">
+              <label className="block text-xs font-medium text-zinc-500 dark:text-gray-400 mb-1.5">Financial summary (bottom right)</label>
+              <div className="flex flex-col gap-3 p-3 rounded-lg border border-zinc-300 dark:border-gray-600 bg-zinc-100/90 dark:bg-black/30">
                 <label className="flex items-center gap-3 cursor-pointer min-w-0">
                   <input
                     type="checkbox"
                     checked={previewFinancialSummary.gstEnabled}
                     onChange={e => setPreviewFinancialSummary(f => ({ ...f, gstEnabled: e.target.checked }))}
-                    className="rounded border-gray-500 bg-black/50 text-[#C27E00] focus:ring-[#C27E00] shrink-0"
+                    className="rounded border-gray-500 bg-white dark:bg-black/50 text-[#C27E00] focus:ring-[#C27E00] shrink-0"
                   />
-                  <span className="text-sm text-gray-300 w-20 shrink-0">GST</span>
+                  <span className="text-sm text-zinc-600 dark:text-gray-300 w-20 shrink-0">GST</span>
                   <input
                     type="number"
                     min={0}
@@ -820,18 +820,18 @@ export function InvoiceTable({ invoices, logoDataUrl, canEdit = true }: InvoiceT
                     value={previewFinancialSummary.gstPercent}
                     onChange={e => setPreviewFinancialSummary(f => ({ ...f, gstPercent: parseFloat(e.target.value) || 0 }))}
                     disabled={!previewFinancialSummary.gstEnabled}
-                    className="w-16 px-2 py-1 text-sm border border-gray-600 bg-black/50 text-white rounded focus:outline-none focus:ring-1 focus:ring-[#C27E00] disabled:opacity-50"
+                    className="w-16 px-2 py-1 text-sm border border-zinc-300 dark:border-gray-600 bg-white dark:bg-black/50 text-zinc-900 dark:text-white rounded focus:outline-none focus:ring-1 focus:ring-[#C27E00] disabled:opacity-50"
                   />
-                  <span className="text-xs text-gray-500">%</span>
+                  <span className="text-xs text-zinc-500 dark:text-gray-500">%</span>
                 </label>
                 <label className="flex items-center gap-3 cursor-pointer min-w-0">
                   <input
                     type="checkbox"
                     checked={previewFinancialSummary.pstEnabled}
                     onChange={e => setPreviewFinancialSummary(f => ({ ...f, pstEnabled: e.target.checked }))}
-                    className="rounded border-gray-500 bg-black/50 text-[#C27E00] focus:ring-[#C27E00] shrink-0"
+                    className="rounded border-gray-500 bg-white dark:bg-black/50 text-[#C27E00] focus:ring-[#C27E00] shrink-0"
                   />
-                  <span className="text-sm text-gray-300 w-20 shrink-0">PST</span>
+                  <span className="text-sm text-zinc-600 dark:text-gray-300 w-20 shrink-0">PST</span>
                   <input
                     type="number"
                     min={0}
@@ -840,18 +840,18 @@ export function InvoiceTable({ invoices, logoDataUrl, canEdit = true }: InvoiceT
                     value={previewFinancialSummary.pstPercent}
                     onChange={e => setPreviewFinancialSummary(f => ({ ...f, pstPercent: parseFloat(e.target.value) || 0 }))}
                     disabled={!previewFinancialSummary.pstEnabled}
-                    className="w-16 px-2 py-1 text-sm border border-gray-600 bg-black/50 text-white rounded focus:outline-none focus:ring-1 focus:ring-[#C27E00] disabled:opacity-50"
+                    className="w-16 px-2 py-1 text-sm border border-zinc-300 dark:border-gray-600 bg-white dark:bg-black/50 text-zinc-900 dark:text-white rounded focus:outline-none focus:ring-1 focus:ring-[#C27E00] disabled:opacity-50"
                   />
-                  <span className="text-xs text-gray-500">%</span>
+                  <span className="text-xs text-zinc-500 dark:text-gray-500">%</span>
                 </label>
                 <label className="flex items-center gap-3 cursor-pointer min-w-0">
                   <input
                     type="checkbox"
                     checked={previewFinancialSummary.salesTaxEnabled}
                     onChange={e => setPreviewFinancialSummary(f => ({ ...f, salesTaxEnabled: e.target.checked }))}
-                    className="rounded border-gray-500 bg-black/50 text-[#C27E00] focus:ring-[#C27E00] shrink-0"
+                    className="rounded border-gray-500 bg-white dark:bg-black/50 text-[#C27E00] focus:ring-[#C27E00] shrink-0"
                   />
-                  <span className="text-sm text-gray-300 w-20 shrink-0">SALES TAX</span>
+                  <span className="text-sm text-zinc-600 dark:text-gray-300 w-20 shrink-0">SALES TAX</span>
                   <input
                     type="number"
                     min={0}
@@ -860,18 +860,18 @@ export function InvoiceTable({ invoices, logoDataUrl, canEdit = true }: InvoiceT
                     value={previewFinancialSummary.salesTaxPercent}
                     onChange={e => setPreviewFinancialSummary(f => ({ ...f, salesTaxPercent: parseFloat(e.target.value) || 0 }))}
                     disabled={!previewFinancialSummary.salesTaxEnabled}
-                    className="w-16 px-2 py-1 text-sm border border-gray-600 bg-black/50 text-white rounded focus:outline-none focus:ring-1 focus:ring-[#C27E00] disabled:opacity-50"
+                    className="w-16 px-2 py-1 text-sm border border-zinc-300 dark:border-gray-600 bg-white dark:bg-black/50 text-zinc-900 dark:text-white rounded focus:outline-none focus:ring-1 focus:ring-[#C27E00] disabled:opacity-50"
                   />
-                  <span className="text-xs text-gray-500">%</span>
+                  <span className="text-xs text-zinc-500 dark:text-gray-500">%</span>
                 </label>
                 <label className="flex items-center gap-3 cursor-pointer min-w-0">
                   <input
                     type="checkbox"
                     checked={previewFinancialSummary.otherEnabled}
                     onChange={e => setPreviewFinancialSummary(f => ({ ...f, otherEnabled: e.target.checked }))}
-                    className="rounded border-gray-500 bg-black/50 text-[#C27E00] focus:ring-[#C27E00] shrink-0"
+                    className="rounded border-gray-500 bg-white dark:bg-black/50 text-[#C27E00] focus:ring-[#C27E00] shrink-0"
                   />
-                  <span className="text-sm text-gray-300 w-20 shrink-0">OTHER $</span>
+                  <span className="text-sm text-zinc-600 dark:text-gray-300 w-20 shrink-0">OTHER $</span>
                   <input
                     type="number"
                     min={0}
@@ -879,7 +879,7 @@ export function InvoiceTable({ invoices, logoDataUrl, canEdit = true }: InvoiceT
                     value={previewFinancialSummary.otherAmount || ''}
                     onChange={e => setPreviewFinancialSummary(f => ({ ...f, otherAmount: parseFloat(e.target.value) || 0 }))}
                     disabled={!previewFinancialSummary.otherEnabled}
-                    className="w-20 px-2 py-1 text-sm border border-gray-600 bg-black/50 text-white rounded focus:outline-none focus:ring-1 focus:ring-[#C27E00] disabled:opacity-50"
+                    className="w-20 px-2 py-1 text-sm border border-zinc-300 dark:border-gray-600 bg-white dark:bg-black/50 text-zinc-900 dark:text-white rounded focus:outline-none focus:ring-1 focus:ring-[#C27E00] disabled:opacity-50"
                   />
                 </label>
               </div>
@@ -887,7 +887,7 @@ export function InvoiceTable({ invoices, logoDataUrl, canEdit = true }: InvoiceT
 
             <div>
               <div className="flex items-center justify-between mb-1.5">
-                <label className="block text-xs font-medium text-gray-400">Additional table (optional)</label>
+                <label className="block text-xs font-medium text-zinc-500 dark:text-gray-400">Additional table (optional)</label>
                 <button
                   type="button"
                   onClick={() => setPreviewExtraRows(rows => [...rows, { col1: '', col2: '' }])}
@@ -897,33 +897,33 @@ export function InvoiceTable({ invoices, logoDataUrl, canEdit = true }: InvoiceT
                   Add Row
                 </button>
               </div>
-              <div className="border border-gray-600 rounded overflow-hidden">
-                <div className="grid grid-cols-2 bg-[#C27E00]/20 border-b border-gray-600">
-                  <div className="px-2 py-1.5 text-xs font-bold text-gray-300">Description</div>
-                  <div className="px-2 py-1.5 text-xs font-bold text-gray-300 border-l border-gray-600">Amount (CAD)</div>
+              <div className="border border-zinc-300 dark:border-gray-600 rounded overflow-hidden">
+                <div className="grid grid-cols-2 bg-[#C27E00]/20 border-b border-zinc-300 dark:border-gray-600">
+                  <div className="px-2 py-1.5 text-xs font-bold text-zinc-600 dark:text-gray-300">Description</div>
+                  <div className="px-2 py-1.5 text-xs font-bold text-zinc-600 dark:text-gray-300 border-l border-zinc-300 dark:border-gray-600">Amount (CAD)</div>
                 </div>
                 {previewExtraRows.map((row, i) => (
-                  <div key={i} className="grid grid-cols-[1fr_auto] border-b border-gray-600 last:border-b-0">
+                  <div key={i} className="grid grid-cols-[1fr_auto] border-b border-zinc-300 dark:border-gray-600 last:border-b-0">
                     <div className="grid grid-cols-2 divide-x divide-gray-600">
                       <input
                         type="text"
                         value={row.col1}
                         onChange={e => setPreviewExtraRows(rows => rows.map((r, j) => j === i ? { ...r, col1: e.target.value } : r))}
-                        className="px-2 py-1.5 bg-black/30 text-white text-sm focus:outline-none focus:ring-1 focus:ring-[#C27E00] min-w-0"
+                        className="px-2 py-1.5 bg-zinc-100/90 dark:bg-black/30 text-zinc-900 dark:text-white text-sm focus:outline-none focus:ring-1 focus:ring-[#C27E00] min-w-0"
                         placeholder="..."
                       />
                       <input
                         type="text"
                         value={row.col2}
                         onChange={e => setPreviewExtraRows(rows => rows.map((r, j) => j === i ? { ...r, col2: e.target.value } : r))}
-                        className="px-2 py-1.5 bg-black/30 text-white text-sm focus:outline-none focus:ring-1 focus:ring-[#C27E00] min-w-0"
+                        className="px-2 py-1.5 bg-zinc-100/90 dark:bg-black/30 text-zinc-900 dark:text-white text-sm focus:outline-none focus:ring-1 focus:ring-[#C27E00] min-w-0"
                         placeholder="..."
                       />
                     </div>
                     <button
                       type="button"
                       onClick={() => setPreviewExtraRows(rows => rows.length > 1 ? rows.filter((_, j) => j !== i) : [{ col1: '', col2: '' }])}
-                      className="px-2 py-1.5 text-gray-400 hover:text-red-400 hover:bg-white/5 transition-colors"
+                      className="px-2 py-1.5 text-zinc-500 dark:text-gray-400 hover:text-red-400 hover:bg-zinc-200/50 dark:bg-white/5 transition-colors"
                       title="Delete row"
                     >
                       <Trash2 className="w-4 h-4" />
@@ -955,20 +955,20 @@ export function InvoiceTable({ invoices, logoDataUrl, canEdit = true }: InvoiceT
               {driveMessage.text}
             </div>
           )}
-          <div className="flex flex-col gap-2 p-2 sm:p-3 border-t border-gray-700 flex-shrink-0 bg-gray-900">
+          <div className="flex flex-col gap-2 p-2 sm:p-3 border-t border-zinc-300 dark:border-gray-700 flex-shrink-0 bg-zinc-200 dark:bg-gray-900">
             <div className="flex flex-wrap items-end gap-2">
               <div className="flex-1 min-w-[200px] max-w-md">
-                <label htmlFor="invoice-preview-email" className="block text-xs font-medium text-gray-400 mb-1">
+                <label htmlFor="invoice-preview-email" className="block text-xs font-medium text-zinc-500 dark:text-gray-400 mb-1">
                   Send PDF by email
                 </label>
                 <input
                   id="invoice-preview-email"
                   type="text"
                   value={previewEmailTo}
-                  onChange={e => setPreviewEmailTo(e.target.value)}
+                  onChange={e => setPreviewEmailTo(e.target.value.toLowerCase())}
                   placeholder="recipient@example.com (comma-separated)"
                   autoComplete="email"
-                  className="w-full border border-gray-600 bg-black/50 text-white rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-[#C27E00]"
+                  className="w-full border border-zinc-300 dark:border-gray-600 bg-white dark:bg-black/50 text-zinc-900 dark:text-white rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-[#C27E00]"
                 />
               </div>
               <button

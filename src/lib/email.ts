@@ -18,7 +18,7 @@ export function parseEmailRecipients(raw: string): string[] {
     const t = part.trim().toLowerCase()
     if (!t || !EMAIL_RE.test(t) || seen.has(t)) continue
     seen.add(t)
-    out.push(part.trim())
+    out.push(t)
   }
   return out
 }

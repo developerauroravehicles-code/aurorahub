@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { SystemLogo } from '@/components/system-logo'
 import { LandingContent } from '@/components/landing-content'
+import { FixedThemeToggle } from '@/components/fixed-theme-toggle'
 
 export default async function LandingPage() {
   const supabase = await createClient()
@@ -13,7 +14,8 @@ export default async function LandingPage() {
   }
 
   return (
-    <div className="min-h-screen bg-black text-white flex items-center justify-center">
+    <div className="min-h-screen bg-zinc-50 dark:bg-black text-zinc-900 dark:text-white flex items-center justify-center">
+      <FixedThemeToggle />
       <div className="w-full max-w-7xl mx-auto px-8 py-16">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-20 lg:gap-24 items-center">
           {/* Left: Logo - Fixed, no animation */}

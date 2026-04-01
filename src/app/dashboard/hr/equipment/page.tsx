@@ -15,8 +15,8 @@ export default async function EquipmentPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-semibold text-white mb-2">Equipment & Asset Assignment</h1>
-        <p className="text-gray-400">Installation tools, dashcam demo devices, testing equipment, vehicle gear.</p>
+        <h1 className="text-2xl font-semibold text-zinc-900 dark:text-white mb-2">Equipment & Asset Assignment</h1>
+        <p className="text-zinc-500 dark:text-gray-400">Installation tools, dashcam demo devices, testing equipment, vehicle gear.</p>
       </div>
       <EquipmentContent types={types} assignments={assignments} personnel={personnel} />
     </div>

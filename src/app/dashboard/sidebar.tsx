@@ -8,6 +8,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { DealerClock } from '@/components/dealer-clock'
+import { ThemeToggle } from '@/components/theme-toggle'
 
 interface Profile {
   role: string
@@ -179,11 +180,11 @@ export function Sidebar({
   ]
 
   return (
-    <div className="flex w-64 flex-col bg-black text-white border-r border-gray-800">
+    <div className="flex w-64 flex-col bg-zinc-50 dark:bg-black text-zinc-900 dark:text-white border-r border-zinc-200 dark:border-gray-800">
       <div className="flex flex-1 flex-col overflow-y-auto">
         {/* Dealer Clock - Top of Sidebar */}
         {timezoneName && (
-          <div className="px-4 pt-6 pb-4 border-b border-gray-800">
+          <div className="px-4 pt-6 pb-4 border-b border-zinc-200 dark:border-gray-800">
             <DealerClock timezoneName={timezoneName} timezoneDisplayName={timezoneDisplayName} />
           </div>
         )}
@@ -199,14 +200,14 @@ export function Sidebar({
                     href={link.href}
                     className={clsx(
                       pathname.startsWith(link.href) && link.href !== '/dashboard' || (pathname === '/dashboard' && link.href === '/dashboard')
-                        ? 'bg-white/10 text-white'
-                        : 'text-gray-400 hover:bg-white/5 hover:text-white',
+                        ? 'bg-zinc-200 dark:bg-white/10 text-zinc-900 dark:text-white'
+                        : 'text-zinc-500 dark:text-gray-400 hover:bg-zinc-200/50 dark:bg-white/5 hover:text-zinc-900 dark:text-white',
                       'group flex items-center rounded-md px-3 py-2.5 text-sm font-medium transition-colors'
                     )}
                   >
                     <Icon className={clsx(
                       "mr-3 h-5 w-5 flex-shrink-0 transition-colors",
-                      pathname.startsWith(link.href) ? "text-[#C27E00]" : "text-gray-500 group-hover:text-gray-300"
+                      pathname.startsWith(link.href) ? "text-[#C27E00]" : "text-zinc-500 dark:text-gray-500 group-hover:text-zinc-600 dark:text-gray-300"
                     )} />
                     {link.name}
                   </Link>
@@ -216,10 +217,10 @@ export function Sidebar({
                 const sectionKey = sec.title.toLowerCase().replace(/\s+/g, '')
                 const isExpanded = expandedSections[sectionKey] ?? true
                 return (
-                  <div key={sec.title} className="pt-2 mt-2 border-t border-gray-800">
+                  <div key={sec.title} className="pt-2 mt-2 border-t border-zinc-200 dark:border-gray-800">
                     <button
                       onClick={() => toggleSection(sectionKey)}
-                      className="flex items-center w-full px-3 py-2 text-xs font-semibold uppercase tracking-wider text-gray-500 hover:text-gray-300"
+                      className="flex items-center w-full px-3 py-2 text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-gray-500 hover:text-zinc-600 dark:text-gray-300"
                     >
                       {isExpanded ? <ChevronDown className="w-4 h-4 mr-1" /> : <ChevronRight className="w-4 h-4 mr-1" />}
                       {sec.title}
@@ -234,11 +235,11 @@ export function Sidebar({
                               key={link.name}
                               href={link.href}
                               className={clsx(
-                                isActive ? 'bg-white/10 text-white' : 'text-gray-400 hover:bg-white/5 hover:text-white',
+                                isActive ? 'bg-zinc-200 dark:bg-white/10 text-zinc-900 dark:text-white' : 'text-zinc-500 dark:text-gray-400 hover:bg-zinc-200/50 dark:bg-white/5 hover:text-zinc-900 dark:text-white',
                                 'group flex items-center rounded-md px-3 py-2 text-sm font-medium transition-colors ml-1'
                               )}
                             >
-                              <Icon className={clsx("mr-2 h-4 w-4 flex-shrink-0", isActive ? "text-[#C27E00]" : "text-gray-500 group-hover:text-gray-300")} />
+                              <Icon className={clsx("mr-2 h-4 w-4 flex-shrink-0", isActive ? "text-[#C27E00]" : "text-zinc-500 dark:text-gray-500 group-hover:text-zinc-600 dark:text-gray-300")} />
                               {link.name}
                             </Link>
                           )
@@ -259,14 +260,14 @@ export function Sidebar({
                     href={link.href}
                     className={clsx(
                       pathname.startsWith(link.href) && link.href !== '/dashboard' || (pathname === '/dashboard' && link.href === '/dashboard')
-                        ? 'bg-white/10 text-white'
-                        : 'text-gray-400 hover:bg-white/5 hover:text-white',
+                        ? 'bg-zinc-200 dark:bg-white/10 text-zinc-900 dark:text-white'
+                        : 'text-zinc-500 dark:text-gray-400 hover:bg-zinc-200/50 dark:bg-white/5 hover:text-zinc-900 dark:text-white',
                       'group flex items-center rounded-md px-3 py-2.5 text-sm font-medium transition-colors'
                     )}
                   >
                     <Icon className={clsx(
                       "mr-3 h-5 w-5 flex-shrink-0 transition-colors",
-                      pathname.startsWith(link.href) ? "text-[#C27E00]" : "text-gray-500 group-hover:text-gray-300"
+                      pathname.startsWith(link.href) ? "text-[#C27E00]" : "text-zinc-500 dark:text-gray-500 group-hover:text-zinc-600 dark:text-gray-300"
                     )} />
                     {link.name}
                   </Link>
@@ -276,10 +277,10 @@ export function Sidebar({
                 const sectionKey = 'platform'
                 const isExpanded = expandedSections[sectionKey] ?? true
                 return (
-                  <div key={sec.title} className="pt-2 mt-2 border-t border-gray-800">
+                  <div key={sec.title} className="pt-2 mt-2 border-t border-zinc-200 dark:border-gray-800">
                     <button
                       onClick={() => toggleSection(sectionKey)}
-                      className="flex items-center w-full px-3 py-2 text-xs font-semibold uppercase tracking-wider text-gray-500 hover:text-gray-300"
+                      className="flex items-center w-full px-3 py-2 text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-gray-500 hover:text-zinc-600 dark:text-gray-300"
                     >
                       {isExpanded ? <ChevronDown className="w-4 h-4 mr-1" /> : <ChevronRight className="w-4 h-4 mr-1" />}
                       {sec.title}
@@ -294,11 +295,11 @@ export function Sidebar({
                               key={link.name}
                               href={link.href}
                               className={clsx(
-                                isActive ? 'bg-white/10 text-white' : 'text-gray-400 hover:bg-white/5 hover:text-white',
+                                isActive ? 'bg-zinc-200 dark:bg-white/10 text-zinc-900 dark:text-white' : 'text-zinc-500 dark:text-gray-400 hover:bg-zinc-200/50 dark:bg-white/5 hover:text-zinc-900 dark:text-white',
                                 'group flex items-center rounded-md px-3 py-2 text-sm font-medium transition-colors ml-1'
                               )}
                             >
-                              <Icon className={clsx("mr-2 h-4 w-4 flex-shrink-0", isActive ? "text-[#C27E00]" : "text-gray-500 group-hover:text-gray-300")} />
+                              <Icon className={clsx("mr-2 h-4 w-4 flex-shrink-0", isActive ? "text-[#C27E00]" : "text-zinc-500 dark:text-gray-500 group-hover:text-zinc-600 dark:text-gray-300")} />
                               {link.name}
                             </Link>
                           )
@@ -318,14 +319,14 @@ export function Sidebar({
                   href={link.href}
                   className={clsx(
                     pathname.startsWith(link.href) && link.href !== '/dashboard' || (pathname === '/dashboard' && link.href === '/dashboard')
-                      ? 'bg-white/10 text-white'
-                      : 'text-gray-400 hover:bg-white/5 hover:text-white',
+                      ? 'bg-zinc-200 dark:bg-white/10 text-zinc-900 dark:text-white'
+                      : 'text-zinc-500 dark:text-gray-400 hover:bg-zinc-200/50 dark:bg-white/5 hover:text-zinc-900 dark:text-white',
                     'group flex items-center rounded-md px-3 py-2.5 text-sm font-medium transition-colors'
                   )}
                 >
                   <Icon className={clsx(
                     "mr-3 h-5 w-5 flex-shrink-0 transition-colors",
-                    pathname.startsWith(link.href) ? "text-[#C27E00]" : "text-gray-500 group-hover:text-gray-300"
+                    pathname.startsWith(link.href) ? "text-[#C27E00]" : "text-zinc-500 dark:text-gray-500 group-hover:text-zinc-600 dark:text-gray-300"
                   )} />
                   {link.name}
                 </Link>
@@ -334,30 +335,31 @@ export function Sidebar({
           )}
         </nav>
       </div>
-      <div className="border-t border-gray-800 p-6">
+      <div className="border-t border-zinc-200 dark:border-gray-800 p-6">
         {!profile.dealer_id && (
           <Link
             href="/dashboard/self"
             className={clsx(
               'flex items-center gap-2 w-full rounded-md px-3 py-2 mb-4 text-sm font-medium transition-colors',
               pathname.startsWith('/dashboard/self')
-                ? 'bg-white/10 text-[#C27E00]'
-                : 'text-gray-400 hover:bg-white/5 hover:text-white'
+                ? 'bg-zinc-200 dark:bg-white/10 text-[#C27E00]'
+                : 'text-zinc-500 dark:text-gray-400 hover:bg-zinc-200/50 dark:bg-white/5 hover:text-zinc-900 dark:text-white'
             )}
           >
             <UserCircle className="h-5 w-5 flex-shrink-0" />
             Self Portal
           </Link>
         )}
-        <div className="flex items-center mb-6">
-          <div className="ml-0">
-            <p className="text-sm font-medium text-white">{profile.full_name || 'User'}</p>
-            <p className="text-xs font-medium text-gray-500 capitalize">{role === 'specialist' ? 'Technical Support' : role?.replace('_', ' ')}</p>
+        <div className="flex items-start justify-between gap-3 mb-6">
+          <div className="min-w-0">
+            <p className="text-sm font-medium text-zinc-900 dark:text-white">{profile.full_name || 'User'}</p>
+            <p className="text-xs font-medium text-zinc-500 dark:text-gray-500 capitalize">{role === 'specialist' ? 'Technical Support' : role?.replace('_', ' ')}</p>
           </div>
+          <ThemeToggle className="shrink-0" />
         </div>
         <button
           onClick={handleSignOut}
-          className="flex w-full items-center justify-center rounded-md bg-white/5 border border-gray-700 px-4 py-2 text-sm font-medium text-gray-300 hover:bg-white/10 hover:text-white transition-colors"
+          className="flex w-full items-center justify-center rounded-md bg-zinc-200/50 dark:bg-white/5 border border-zinc-300 dark:border-gray-700 px-4 py-2 text-sm font-medium text-zinc-600 dark:text-gray-300 hover:bg-zinc-200 dark:bg-white/10 hover:text-zinc-900 dark:text-white transition-colors"
         >
           <LogOut className="mr-2 h-4 w-4" /> Sign Out
         </button>

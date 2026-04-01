@@ -6,7 +6,7 @@ export async function SystemLogo() {
   if (!logoUrl) {
     return (
       <div className="flex flex-col items-center justify-center">
-        <div className="text-[12rem] font-bold tracking-wider text-white" style={{
+        <div className="text-[12rem] font-bold tracking-wider text-zinc-900 dark:text-white" style={{
           fontFamily: 'system-ui, -apple-system, sans-serif',
           fontWeight: 700,
           letterSpacing: '0.05em'
@@ -20,7 +20,7 @@ export async function SystemLogo() {
       <img
         src={logoUrl}
         alt="Aurora Vehicles Logo"
-        className="max-w-xl max-h-[30rem] object-contain brightness-0 invert"
+        className="max-w-xl max-h-[30rem] object-contain dark:brightness-0 dark:invert"
       />
     </div>
   )

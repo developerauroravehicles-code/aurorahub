@@ -7,6 +7,8 @@ import { createUser, getProfileForEdit, updateUser, deleteUser, createLoginForPe
 import { ResetPasswordButton } from '@/app/dashboard/admin/employees/reset-password-button'
 import { Pencil, Trash2, X, Loader2, UserPlus, KeyRound, Eye, EyeOff, Check } from 'lucide-react'
 import type { Dealer } from '@/types/system-management'
+import { EmailInput } from '@/components/email-input'
+import { normalizeEmail } from '@/lib/email-normalize'
 
 function UserForm({ dealers }: { dealers: Dealer[] }) {
   const [state, formAction, isPending] = useActionState(createUser, null)
@@ -27,77 +29,76 @@ function UserForm({ dealers }: { dealers: Dealer[] }) {
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="space-y-1">
-          <label className="block text-sm font-medium text-gray-300">Full Name</label>
+          <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300">Full Name</label>
           <input
             name="fullName"
             required
-            className="block w-full rounded-md border border-gray-700 bg-white/5 px-3 py-2 text-white placeholder-gray-500 focus:border-[#C27E00] focus:outline-none focus:ring-1 focus:ring-[#C27E00] sm:text-sm"
+            className="block w-full rounded-md border border-zinc-300 dark:border-gray-700 bg-zinc-200/50 dark:bg-white/5 px-3 py-2 text-zinc-900 dark:text-white placeholder-zinc-500 dark:placeholder-gray-500 focus:border-[#C27E00] focus:outline-none focus:ring-1 focus:ring-[#C27E00] sm:text-sm"
             placeholder="John Doe"
           />
         </div>
 
         <div className="space-y-1">
-          <label className="block text-sm font-medium text-gray-300">Phone</label>
+          <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300">Phone</label>
           <input
             name="phone"
-            className="block w-full rounded-md border border-gray-700 bg-white/5 px-3 py-2 text-white placeholder-gray-500 focus:border-[#C27E00] focus:outline-none focus:ring-1 focus:ring-[#C27E00] sm:text-sm"
+            className="block w-full rounded-md border border-zinc-300 dark:border-gray-700 bg-zinc-200/50 dark:bg-white/5 px-3 py-2 text-zinc-900 dark:text-white placeholder-zinc-500 dark:placeholder-gray-500 focus:border-[#C27E00] focus:outline-none focus:ring-1 focus:ring-[#C27E00] sm:text-sm"
             placeholder="+1 555..."
           />
         </div>
       </div>
 
       <div className="space-y-1">
-        <label className="block text-sm font-medium text-gray-300">Email</label>
-        <input
+        <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300">Email</label>
+        <EmailInput
           name="email"
-          type="email"
           required
-          className="block w-full rounded-md border border-gray-700 bg-white/5 px-3 py-2 text-white placeholder-gray-500 focus:border-[#C27E00] focus:outline-none focus:ring-1 focus:ring-[#C27E00] sm:text-sm"
+          className="block w-full rounded-md border border-zinc-300 dark:border-gray-700 bg-zinc-200/50 dark:bg-white/5 px-3 py-2 text-zinc-900 dark:text-white placeholder-zinc-500 dark:placeholder-gray-500 focus:border-[#C27E00] focus:outline-none focus:ring-1 focus:ring-[#C27E00] sm:text-sm"
           placeholder="user@example.com"
         />
       </div>
 
       <div className="space-y-1">
-        <label className="block text-sm font-medium text-gray-300">Password</label>
+        <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300">Password</label>
         <input
           name="password"
           type="password"
           required
-          className="block w-full rounded-md border border-gray-700 bg-white/5 px-3 py-2 text-white placeholder-gray-500 focus:border-[#C27E00] focus:outline-none focus:ring-1 focus:ring-[#C27E00] sm:text-sm"
+          className="block w-full rounded-md border border-zinc-300 dark:border-gray-700 bg-zinc-200/50 dark:bg-white/5 px-3 py-2 text-zinc-900 dark:text-white placeholder-zinc-500 dark:placeholder-gray-500 focus:border-[#C27E00] focus:outline-none focus:ring-1 focus:ring-[#C27E00] sm:text-sm"
           placeholder="••••••••"
         />
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="space-y-1">
-          <label className="block text-sm font-medium text-gray-300">Role</label>
+          <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300">Role</label>
           <select
             name="role"
-            className="block w-full rounded-md border border-gray-700 bg-white/5 px-3 py-2 text-white focus:border-[#C27E00] focus:outline-none focus:ring-1 focus:ring-[#C27E00] sm:text-sm"
+            className="block w-full rounded-md border border-zinc-300 dark:border-gray-700 bg-zinc-200/50 dark:bg-white/5 px-3 py-2 text-zinc-900 dark:text-white focus:border-[#C27E00] focus:outline-none focus:ring-1 focus:ring-[#C27E00] sm:text-sm"
           >
-            <option value="sales" className="bg-black text-white">Sales</option>
-            <option value="finance" className="bg-black text-white">Finance</option>
-            <option value="specialist" className="bg-black text-white">Technical Support</option>
-            <option value="aurora_manager" className="bg-black text-white">Aurora Manager</option>
-            <option value="general_manager" className="bg-black text-white">General Manager</option>
-            <option value="hr" className="bg-black text-white">HR</option>
-            <option value="it" className="bg-black text-white">IT</option>
+            <option value="sales" className="bg-zinc-50 dark:bg-black text-zinc-900 dark:text-white">Sales</option>
+            <option value="finance" className="bg-zinc-50 dark:bg-black text-zinc-900 dark:text-white">Finance</option>
+            <option value="specialist" className="bg-zinc-50 dark:bg-black text-zinc-900 dark:text-white">Technical Support</option>
+            <option value="aurora_manager" className="bg-zinc-50 dark:bg-black text-zinc-900 dark:text-white">Aurora Manager</option>
+            <option value="general_manager" className="bg-zinc-50 dark:bg-black text-zinc-900 dark:text-white">General Manager</option>
+            <option value="hr" className="bg-zinc-50 dark:bg-black text-zinc-900 dark:text-white">HR</option>
+            <option value="it" className="bg-zinc-50 dark:bg-black text-zinc-900 dark:text-white">IT</option>
           </select>
         </div>
 
         <div className="space-y-1">
-          <label className="block text-sm font-medium text-gray-300">Dealer / Platform</label>
+          <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300">Dealer / Platform</label>
           <select
             name="dealerCode"
             required
             value={dealerCode}
             onChange={(e) => setDealerCode(e.target.value)}
-            className="block w-full rounded-md border border-gray-700 bg-white/5 px-3 py-2 text-white focus:border-[#C27E00] focus:outline-none focus:ring-1 focus:ring-[#C27E00] sm:text-sm"
+            className="block w-full rounded-md border border-zinc-300 dark:border-gray-700 bg-zinc-200/50 dark:bg-white/5 px-3 py-2 text-zinc-900 dark:text-white focus:border-[#C27E00] focus:outline-none focus:ring-1 focus:ring-[#C27E00] sm:text-sm"
           >
-            <option value="" className="bg-black">— Select —</option>
-            <option value="HQ" className="bg-black">Platform (HQ)</option>
+            <option value="" className="bg-zinc-50 dark:bg-black">— Select —</option>
+            <option value="HQ" className="bg-zinc-50 dark:bg-black">Platform (HQ)</option>
             {dealers.map((d) => (
-              <option key={d.id} value={d.code} className="bg-black">{d.name} ({d.code})</option>
+              <option key={d.id} value={d.code} className="bg-zinc-50 dark:bg-black">{d.name} ({d.code})</option>
             ))}
           </select>
         </div>
@@ -156,17 +157,17 @@ function EditUserModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-      <div className="bg-[#1a1a1a] border border-gray-800 rounded-lg p-6 w-full max-w-md shadow-xl">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-900/60 dark:bg-black/80 backdrop-blur-sm p-4">
+      <div className="bg-[#1a1a1a] border border-zinc-200 dark:border-gray-800 rounded-lg p-6 w-full max-w-md shadow-xl">
         <div className="flex justify-between items-center mb-4">
-          <h3 className="text-lg font-semibold text-white">Edit User</h3>
-          <button type="button" onClick={onClose} className="text-gray-400 hover:text-white">
+          <h3 className="text-lg font-semibold text-zinc-900 dark:text-white">Edit User</h3>
+          <button type="button" onClick={onClose} className="text-zinc-500 dark:text-gray-400 hover:text-zinc-900 dark:text-white">
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {loading && (
-          <div className="flex items-center justify-center py-8 text-gray-400">
+          <div className="flex items-center justify-center py-8 text-zinc-500 dark:text-gray-400">
             <Loader2 className="w-8 h-8 animate-spin" />
           </div>
         )}
@@ -179,58 +180,57 @@ function EditUserModal({
           <form action={formAction} className="space-y-4">
             <input type="hidden" name="userId" value={profile.id} />
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">Full Name</label>
+              <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300 mb-1">Full Name</label>
               <input
                 name="fullName"
                 required
                 defaultValue={profile.full_name ?? ''}
-                className="block w-full rounded-md border border-gray-700 bg-white/5 px-3 py-2 text-white sm:text-sm focus:border-[#C27E00] focus:ring-1 focus:ring-[#C27E00]"
+                className="block w-full rounded-md border border-zinc-300 dark:border-gray-700 bg-zinc-200/50 dark:bg-white/5 px-3 py-2 text-zinc-900 dark:text-white sm:text-sm focus:border-[#C27E00] focus:ring-1 focus:ring-[#C27E00]"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">Phone</label>
+              <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300 mb-1">Phone</label>
               <input
                 name="phone"
                 defaultValue={profile.phone ?? ''}
-                className="block w-full rounded-md border border-gray-700 bg-white/5 px-3 py-2 text-white sm:text-sm focus:border-[#C27E00] focus:ring-1 focus:ring-[#C27E00]"
+                className="block w-full rounded-md border border-zinc-300 dark:border-gray-700 bg-zinc-200/50 dark:bg-white/5 px-3 py-2 text-zinc-900 dark:text-white sm:text-sm focus:border-[#C27E00] focus:ring-1 focus:ring-[#C27E00]"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">Email</label>
-              <input
+              <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300 mb-1">Email</label>
+              <EmailInput
                 name="email"
-                type="email"
-                defaultValue={profile.email ?? ''}
-                className="block w-full rounded-md border border-gray-700 bg-white/5 px-3 py-2 text-white sm:text-sm focus:border-[#C27E00] focus:ring-1 focus:ring-[#C27E00]"
+                defaultValue={normalizeEmail(profile.email ?? '')}
+                className="block w-full rounded-md border border-zinc-300 dark:border-gray-700 bg-zinc-200/50 dark:bg-white/5 px-3 py-2 text-zinc-900 dark:text-white sm:text-sm focus:border-[#C27E00] focus:ring-1 focus:ring-[#C27E00]"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">Role</label>
+              <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300 mb-1">Role</label>
               <select
                 name="role"
                 defaultValue={profile.role}
-                className="block w-full rounded-md border border-gray-700 bg-white/5 px-3 py-2 text-white sm:text-sm focus:border-[#C27E00] focus:ring-1 focus:ring-[#C27E00]"
+                className="block w-full rounded-md border border-zinc-300 dark:border-gray-700 bg-zinc-200/50 dark:bg-white/5 px-3 py-2 text-zinc-900 dark:text-white sm:text-sm focus:border-[#C27E00] focus:ring-1 focus:ring-[#C27E00]"
               >
-                <option value="sales" className="bg-black">Sales</option>
-                <option value="finance" className="bg-black">Finance</option>
-                <option value="specialist" className="bg-black">Technical Support</option>
-                <option value="aurora_manager" className="bg-black">Aurora Manager</option>
-                <option value="general_manager" className="bg-black">General Manager</option>
-                <option value="hr" className="bg-black">HR</option>
-                <option value="it" className="bg-black">IT</option>
+                <option value="sales" className="bg-zinc-50 dark:bg-black">Sales</option>
+                <option value="finance" className="bg-zinc-50 dark:bg-black">Finance</option>
+                <option value="specialist" className="bg-zinc-50 dark:bg-black">Technical Support</option>
+                <option value="aurora_manager" className="bg-zinc-50 dark:bg-black">Aurora Manager</option>
+                <option value="general_manager" className="bg-zinc-50 dark:bg-black">General Manager</option>
+                <option value="hr" className="bg-zinc-50 dark:bg-black">HR</option>
+                <option value="it" className="bg-zinc-50 dark:bg-black">IT</option>
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">Dealer / Platform</label>
+              <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300 mb-1">Dealer / Platform</label>
               <select
                 name="dealerCode"
                 defaultValue={profile.dealer_id ? ((profile.dealers as any)?.code ?? '') : 'HQ'}
-                className="block w-full rounded-md border border-gray-700 bg-white/5 px-3 py-2 text-white sm:text-sm focus:border-[#C27E00] focus:ring-1 focus:ring-[#C27E00]"
+                className="block w-full rounded-md border border-zinc-300 dark:border-gray-700 bg-zinc-200/50 dark:bg-white/5 px-3 py-2 text-zinc-900 dark:text-white sm:text-sm focus:border-[#C27E00] focus:ring-1 focus:ring-[#C27E00]"
               >
-                <option value="" className="bg-black">— None —</option>
-                <option value="HQ" className="bg-black">Platform (HQ)</option>
+                <option value="" className="bg-zinc-50 dark:bg-black">— None —</option>
+                <option value="HQ" className="bg-zinc-50 dark:bg-black">Platform (HQ)</option>
                 {dealers.map((d) => (
-                  <option key={d.id} value={d.code} className="bg-black">{d.name} ({d.code})</option>
+                  <option key={d.id} value={d.code} className="bg-zinc-50 dark:bg-black">{d.name} ({d.code})</option>
                 ))}
               </select>
             </div>
@@ -247,7 +247,7 @@ function EditUserModal({
               <button
                 type="button"
                 onClick={onClose}
-                className="rounded-md border border-gray-600 px-4 py-2 text-sm text-gray-300 hover:bg-white/5"
+                className="rounded-md border border-zinc-300 dark:border-gray-600 px-4 py-2 text-sm text-zinc-600 dark:text-gray-300 hover:bg-zinc-200/50 dark:bg-white/5"
               >
                 Cancel
               </button>
@@ -280,7 +280,7 @@ function CreateLoginButton({
     e.preventDefault()
     setStatus('loading')
     setErrorMessage('')
-    const email = personnelEmail?.trim()
+    const email = normalizeEmail(personnelEmail ?? '')
     if (!email) {
       setErrorMessage('Personnel record has no email. Add email in HR Personnel first.')
       setStatus('error')
@@ -306,21 +306,21 @@ function CreateLoginButton({
       <button
         type="button"
         onClick={() => setIsOpen(true)}
-        className="text-gray-400 hover:text-[#C27E00] transition-colors p-1"
+        className="text-zinc-500 dark:text-gray-400 hover:text-[#C27E00] transition-colors p-1"
         title="Assign Password / Create Login"
       >
         <KeyRound className="w-4 h-4" />
       </button>
       {isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-          <div className="bg-[#1a1a1a] border border-gray-800 rounded-lg p-6 w-full max-w-sm shadow-xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-900/60 dark:bg-black/80 backdrop-blur-sm p-4">
+          <div className="bg-[#1a1a1a] border border-zinc-200 dark:border-gray-800 rounded-lg p-6 w-full max-w-sm shadow-xl">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold text-white">Assign Password</h3>
-              <button onClick={() => { setIsOpen(false); setStatus('idle'); setErrorMessage('') }} className="text-gray-400 hover:text-white">
+              <h3 className="text-lg font-semibold text-zinc-900 dark:text-white">Assign Password</h3>
+              <button onClick={() => { setIsOpen(false); setStatus('idle'); setErrorMessage('') }} className="text-zinc-500 dark:text-gray-400 hover:text-zinc-900 dark:text-white">
                 <X className="w-5 h-5" />
               </button>
             </div>
-            <p className="text-sm text-gray-400 mb-4">
+            <p className="text-sm text-zinc-500 dark:text-gray-400 mb-4">
               Create login for <span className="text-[#C27E00]">{userName}</span>. Assign password only (email from HR record).
             </p>
             {!personnelEmail?.trim() ? (
@@ -335,23 +335,22 @@ function CreateLoginButton({
             ) : (
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
-                  <label className="block text-xs text-gray-400 mb-1">Email (from HR)</label>
-                  <input
-                    type="email"
-                    value={personnelEmail || ''}
+                  <label className="block text-xs text-zinc-500 dark:text-gray-400 mb-1">Email (from HR)</label>
+                  <EmailInput
+                    value={normalizeEmail(personnelEmail || '')}
                     readOnly
-                    className="w-full bg-black/30 border border-gray-700 rounded px-3 py-2 text-gray-400 cursor-not-allowed"
+                    className="w-full bg-zinc-100/90 dark:bg-black/30 border border-zinc-300 dark:border-gray-700 rounded px-3 py-2 text-zinc-500 dark:text-gray-400 cursor-not-allowed"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs text-gray-400 mb-1">Password (min 6 characters)</label>
+                  <label className="block text-xs text-zinc-500 dark:text-gray-400 mb-1">Password (min 6 characters)</label>
                   <div className="relative">
                     <input
                       type={showPassword ? 'text' : 'password'}
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder="••••••••"
-                      className="w-full bg-black/50 border border-gray-700 rounded px-3 py-2 pr-10 text-white focus:outline-none focus:border-[#C27E00]"
+                      className="w-full bg-white dark:bg-black/50 border border-zinc-300 dark:border-gray-700 rounded px-3 py-2 pr-10 text-zinc-900 dark:text-white focus:outline-none focus:border-[#C27E00]"
                       required
                       minLength={6}
                       autoComplete="new-password"
@@ -359,7 +358,7 @@ function CreateLoginButton({
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white p-1"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-500 dark:text-gray-400 hover:text-zinc-900 dark:text-white p-1"
                     >
                       {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
@@ -415,16 +414,16 @@ function DeleteUserButton({
       <button
         type="button"
         onClick={() => setShowConfirm(true)}
-        className="text-gray-400 hover:text-red-400 transition-colors p-1"
+        className="text-zinc-500 dark:text-gray-400 hover:text-red-400 transition-colors p-1"
         title="Delete user"
       >
         <Trash2 className="w-4 h-4" />
       </button>
       {showConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-          <div className="bg-[#1a1a1a] border border-gray-800 rounded-lg p-6 w-full max-w-sm shadow-xl">
-            <h3 className="text-lg font-semibold text-white mb-2">Delete User</h3>
-            <p className="text-sm text-gray-400 mb-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-900/60 dark:bg-black/80 backdrop-blur-sm p-4">
+          <div className="bg-[#1a1a1a] border border-zinc-200 dark:border-gray-800 rounded-lg p-6 w-full max-w-sm shadow-xl">
+            <h3 className="text-lg font-semibold text-zinc-900 dark:text-white mb-2">Delete User</h3>
+            <p className="text-sm text-zinc-500 dark:text-gray-400 mb-4">
               Are you sure you want to delete <span className="text-[#C27E00] font-medium">{userName}</span>? This cannot be undone.
             </p>
             {status === 'error' && <p className="text-red-400 text-sm mb-4">{errorMessage}</p>}
@@ -441,7 +440,7 @@ function DeleteUserButton({
               <button
                 type="button"
                 onClick={() => { setShowConfirm(false); setStatus('idle'); setErrorMessage('') }}
-                className="rounded-md border border-gray-600 px-4 py-2 text-sm text-gray-300 hover:bg-white/5"
+                className="rounded-md border border-zinc-300 dark:border-gray-600 px-4 py-2 text-sm text-zinc-600 dark:text-gray-300 hover:bg-zinc-200/50 dark:bg-white/5"
               >
                 Cancel
               </button>
@@ -468,11 +467,11 @@ function UserList({
 
   return (
     <div className="mt-6">
-      <h3 className="text-lg font-semibold text-white mb-4">User List ({profiles.length})</h3>
+      <h3 className="text-lg font-semibold text-zinc-900 dark:text-white mb-4">User List ({profiles.length})</h3>
       {errors.profiles && <p className="text-red-500 text-sm mb-2">{errors.profiles}</p>}
-      <div className="bg-white/5 rounded shadow overflow-hidden border border-gray-800">
-        <table className="min-w-full divide-y divide-gray-800 text-sm text-gray-300">
-          <thead className="bg-white/5">
+      <div className="bg-zinc-200/50 dark:bg-white/5 rounded shadow overflow-hidden border border-zinc-200 dark:border-gray-800">
+        <table className="min-w-full divide-y divide-zinc-200 dark:divide-gray-800 text-sm text-zinc-600 dark:text-gray-300">
+          <thead className="bg-zinc-200/50 dark:bg-white/5">
             <tr>
               <th className="px-4 py-2 text-left">Name</th>
               <th className="px-4 py-2 text-left">Role</th>
@@ -481,13 +480,13 @@ function UserList({
               <th className="px-4 py-2 text-right">Actions</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-800">
+          <tbody className="divide-y divide-zinc-200 dark:divide-gray-800">
             {profiles.map((profile: any) => {
               const isPersonnelOnly = profile.id?.startsWith?.('personnel-') || profile._source === 'personnel'
               const personnelId = profile._personnelId
               return (
                 <tr key={profile.id}>
-                  <td className="px-4 py-2 font-medium text-white">
+                  <td className="px-4 py-2 font-medium text-zinc-900 dark:text-white">
                     {isPersonnelOnly && personnelId ? (
                       <Link href={`/dashboard/hr/personnel/${personnelId}`} className="text-[#C27E00] hover:text-[#a06900] transition-colors">
                         {profile.full_name}
@@ -503,9 +502,9 @@ function UserList({
                   <td className="px-4 py-2">{profile.phone || '-'}</td>
                   <td className="px-4 py-2">
                     {profile.dealers ? (
-                      <span className="text-white">{profile.dealers.name}</span>
+                      <span className="text-zinc-900 dark:text-white">{profile.dealers.name}</span>
                     ) : (
-                      <span className="text-gray-500">Platform</span>
+                      <span className="text-zinc-500 dark:text-gray-500">Platform</span>
                     )}
                   </td>
                   <td className="px-4 py-2 text-right">
@@ -521,7 +520,7 @@ function UserList({
                             />
                             <Link
                               href={`/dashboard/hr/personnel/${personnelId}`}
-                              className="text-gray-400 hover:text-[#C27E00] transition-colors p-1 inline-flex items-center gap-1 text-xs"
+                              className="text-zinc-500 dark:text-gray-400 hover:text-[#C27E00] transition-colors p-1 inline-flex items-center gap-1 text-xs"
                               title="View in HR Personnel"
                             >
                               <UserPlus className="w-4 h-4" /> HR
@@ -534,7 +533,7 @@ function UserList({
                         <button
                           type="button"
                           onClick={() => setEditingUserId(profile.id)}
-                          className="text-gray-400 hover:text-[#C27E00] transition-colors p-1"
+                          className="text-zinc-500 dark:text-gray-400 hover:text-[#C27E00] transition-colors p-1"
                           title="Edit user"
                         >
                           <Pencil className="w-4 h-4" />
@@ -552,7 +551,7 @@ function UserList({
               )
             })}
             {profiles.length === 0 && (
-              <tr><td colSpan={5} className="px-4 py-4 text-center text-gray-500">No profiles found.</td></tr>
+              <tr><td colSpan={5} className="px-4 py-4 text-center text-zinc-500 dark:text-gray-500">No profiles found.</td></tr>
             )}
           </tbody>
         </table>
@@ -582,8 +581,8 @@ export function UserManagementContent({
   return (
     <div className="space-y-6">
       <div>
-        <h3 className="text-lg font-semibold text-white mb-2">Create New User</h3>
-        <p className="text-sm text-gray-400 mb-4">Add a new user to the system</p>
+        <h3 className="text-lg font-semibold text-zinc-900 dark:text-white mb-2">Create New User</h3>
+        <p className="text-sm text-zinc-500 dark:text-gray-400 mb-4">Add a new user to the system</p>
         <UserForm dealers={dealers} />
       </div>
       <UserList

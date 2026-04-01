@@ -46,7 +46,7 @@ export function RecruitmentPositionActions({
         value={status}
         onChange={(e) => handleStatusChange(e.target.value)}
         disabled={loading}
-        className="rounded bg-gray-900 border border-gray-700 text-white text-xs px-2 py-1 focus:outline-none focus:ring-1 focus:ring-[#C27E00] disabled:opacity-50 [&>option]:bg-gray-900 [&>option]:text-white"
+        className="rounded bg-zinc-200 dark:bg-gray-900 border border-zinc-300 dark:border-gray-700 text-white text-xs px-2 py-1 focus:outline-none focus:ring-1 focus:ring-[#C27E00] disabled:opacity-50 [&>option]:bg-zinc-200 dark:bg-gray-900 [&>option]:text-white"
         style={{ colorScheme: 'light' }}
       >
         {STATUS_OPTIONS.map((s) => (
@@ -57,10 +57,10 @@ export function RecruitmentPositionActions({
       </select>
 
       {showFillModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70">
-          <div className="bg-gray-900 border border-gray-700 rounded-lg p-6 max-w-md w-full mx-4">
-            <h3 className="text-lg font-semibold text-white mb-4">Mark as Filled</h3>
-            <p className="text-sm text-gray-400 mb-4">Select the employee who was hired for this position.</p>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-900/50 dark:bg-black/70">
+          <div className="bg-zinc-200 dark:bg-gray-900 border border-zinc-300 dark:border-gray-700 rounded-lg p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-semibold text-zinc-900 dark:text-white mb-4">Mark as Filled</h3>
+            <p className="text-sm text-zinc-500 dark:text-gray-400 mb-4">Select the employee who was hired for this position.</p>
             <form
               onSubmit={(e) => {
                 e.preventDefault()
@@ -72,7 +72,7 @@ export function RecruitmentPositionActions({
               <select
                 name="employee"
                 required
-                className="w-full rounded-md bg-gray-900 border border-gray-700 text-white px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#C27E00] [&>option]:bg-gray-900 [&>option]:text-white"
+                className="w-full rounded-md bg-zinc-200 dark:bg-gray-900 border border-zinc-300 dark:border-gray-700 text-white px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#C27E00] [&>option]:bg-zinc-200 dark:bg-gray-900 [&>option]:text-white"
                 style={{ colorScheme: 'light' }}
               >
                 <option value="">Select employee</option>
@@ -86,7 +86,7 @@ export function RecruitmentPositionActions({
                 <button
                   type="button"
                   onClick={() => setShowFillModal(false)}
-                  className="px-4 py-2 rounded-md bg-white/5 text-white border border-gray-600 hover:bg-white/10"
+                  className="px-4 py-2 rounded-md bg-zinc-200/50 dark:bg-white/5 text-zinc-900 dark:text-white border border-zinc-300 dark:border-gray-600 hover:bg-zinc-200 dark:bg-white/10"
                 >
                   Cancel
                 </button>

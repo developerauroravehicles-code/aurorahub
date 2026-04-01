@@ -9,8 +9,8 @@ export default async function IdentityPermissionsPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h2 className="text-lg font-semibold text-white mt-4">Permission Assignment</h2>
-        <p className="text-gray-400 text-sm">Assign permissions to roles and manage platform access.</p>
+        <h2 className="text-lg font-semibold text-zinc-900 dark:text-white mt-4">Permission Assignment</h2>
+        <p className="text-zinc-500 dark:text-gray-400 text-sm">Assign permissions to roles and manage platform access.</p>
       </div>
       <PermissionsContent permissions={permissions} rolePermissions={rolePermissions} />
     </div>

@@ -46,7 +46,7 @@ function DemandContentCard({
   const tz = getDealerTimezone(demand)
 
   return (
-    <div className="p-5 sm:px-6 rounded-lg border border-gray-800/80 bg-white/[0.02] hover:bg-white/[0.04] transition-colors">
+    <div className="p-5 sm:px-6 rounded-lg border border-zinc-200 dark:border-gray-800/80 bg-white/[0.02] hover:bg-white/[0.04] transition-colors">
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
         <div className="flex-1 min-w-0 space-y-4">
           {/* Header */}
@@ -55,35 +55,35 @@ function DemandContentCard({
               {demand.customer_firstname} {demand.customer_lastname}
             </p>
             {demand.demand_number != null && (
-              <span className="text-xs font-medium text-gray-500">#{demand.demand_number}</span>
+              <span className="text-xs font-medium text-zinc-500 dark:text-gray-500">#{demand.demand_number}</span>
             )}
             {demand.stock_number && duplicateStockNumbers.includes((demand.stock_number || '').trim().toUpperCase()) && (
               <span className="text-xs text-amber-400">(Duplicate Stock No)</span>
             )}
             {statusBadge}
             {dealerName !== '—' && (
-              <span className="text-xs text-gray-500">· {dealerName}</span>
+              <span className="text-xs text-zinc-500 dark:text-gray-500">· {dealerName}</span>
             )}
           </div>
 
           {/* Customer & Contact */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3 text-sm">
             <div>
-              <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-0.5">Customer</p>
-              <p className="text-gray-300">{demand.customer_phone || '—'}</p>
+              <p className="text-xs font-medium text-zinc-500 dark:text-gray-500 uppercase tracking-wider mb-0.5">Customer</p>
+              <p className="text-zinc-600 dark:text-gray-300">{demand.customer_phone || '—'}</p>
             </div>
           </div>
 
           {/* Vehicle */}
           <div>
-            <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Vehicle</p>
-            <p className="text-gray-300">
+            <p className="text-xs font-medium text-zinc-500 dark:text-gray-500 uppercase tracking-wider mb-1">Vehicle</p>
+            <p className="text-zinc-600 dark:text-gray-300">
               {demand.vehicle_year} {demand.vehicle_make} {demand.vehicle_model}
               {demand.stock_number && (
-                <span className="ml-2 text-gray-500">Stock: {demand.stock_number}</span>
+                <span className="ml-2 text-zinc-500 dark:text-gray-500">Stock: {demand.stock_number}</span>
               )}
               {demand.vin_last6 && (
-                <span className="ml-2 text-gray-500">VIN: …{demand.vin_last6}</span>
+                <span className="ml-2 text-zinc-500 dark:text-gray-500">VIN: …{demand.vin_last6}</span>
               )}
             </p>
           </div>
@@ -91,12 +91,12 @@ function DemandContentCard({
           {/* Installation */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3">
             <div>
-              <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-0.5">Camera Model</p>
-              <p className="text-gray-300">{demand.camera_model || '—'}</p>
+              <p className="text-xs font-medium text-zinc-500 dark:text-gray-500 uppercase tracking-wider mb-0.5">Camera Model</p>
+              <p className="text-zinc-600 dark:text-gray-300">{demand.camera_model || '—'}</p>
             </div>
             <div>
-              <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-0.5">Appointment</p>
-              <p className="font-medium text-white">{formatAppointment(demand.appointment_date, tz)}</p>
+              <p className="text-xs font-medium text-zinc-500 dark:text-gray-500 uppercase tracking-wider mb-0.5">Appointment</p>
+              <p className="font-medium text-zinc-900 dark:text-white">{formatAppointment(demand.appointment_date, tz)}</p>
             </div>
           </div>
 
@@ -105,21 +105,21 @@ function DemandContentCard({
             <div className="space-y-2">
               {demand.customer_address && (
                 <div>
-                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-0.5">Address</p>
-                  <p className="text-gray-300">{demand.customer_address}</p>
+                  <p className="text-xs font-medium text-zinc-500 dark:text-gray-500 uppercase tracking-wider mb-0.5">Address</p>
+                  <p className="text-zinc-600 dark:text-gray-300">{demand.customer_address}</p>
                 </div>
               )}
               {demand.comment && (
                 <div>
-                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-0.5">Notes</p>
-                  <p className="text-gray-400 italic whitespace-pre-wrap">{demand.comment}</p>
+                  <p className="text-xs font-medium text-zinc-500 dark:text-gray-500 uppercase tracking-wider mb-0.5">Notes</p>
+                  <p className="text-zinc-500 dark:text-gray-400 italic whitespace-pre-wrap">{demand.comment}</p>
                 </div>
               )}
             </div>
           )}
 
           {/* Meta */}
-          <p className="text-xs text-gray-600">
+          <p className="text-xs text-zinc-600 dark:text-gray-600">
             Created: {formatInTimeZone(new Date(demand.created_at), getEffectiveTimezone(tz ?? null), 'PPP h:mm a')}
           </p>
         </div>
@@ -137,7 +137,7 @@ export default async function SpecialistWorkPage() {
 
     const { data: profile } = await supabase.from('profiles').select('dealer_id').eq('id', user.id).single()
     
-    if (!profile) return <div className="text-white">Profile error</div>
+    if (!profile) return <div className="text-zinc-900 dark:text-white">Profile error</div>
 
     // Specialist can see demands from dealers assigned via specialist_dealers, or fallback to profile.dealer_id
     const { data: specialistDealers } = await supabase
@@ -192,14 +192,14 @@ export default async function SpecialistWorkPage() {
     return (
         <div className="space-y-8">
             <div>
-                <h1 className="text-2xl font-semibold text-white mb-2">Work Management</h1>
-                <p className="text-gray-400">Assign work to yourself from the pool or manage your assigned work.</p>
+                <h1 className="text-2xl font-semibold text-zinc-900 dark:text-white mb-2">Work Management</h1>
+                <p className="text-zinc-500 dark:text-gray-400">Assign work to yourself from the pool or manage your assigned work.</p>
             </div>
 
             {/* My Assigned Work */}
             {myAssignedWork && myAssignedWork.length > 0 && (
                 <div>
-                    <h2 className="text-xl font-semibold text-white mb-4">My Assigned Work ({myAssignedWork.length})</h2>
+                    <h2 className="text-xl font-semibold text-zinc-900 dark:text-white mb-4">My Assigned Work ({myAssignedWork.length})</h2>
                     <div className="space-y-4">
                         {myAssignedWork.map(demand => (
                             <DemandContentCard
@@ -223,12 +223,12 @@ export default async function SpecialistWorkPage() {
 
             {/* Work Pool - Unassigned Work */}
             <div>
-                <h2 className="text-xl font-semibold text-white mb-4">
+                <h2 className="text-xl font-semibold text-zinc-900 dark:text-white mb-4">
                     Work Pool - Unassigned ({unassignedWork?.length || 0})
                 </h2>
                 <div>
                     {(!unassignedWork || unassignedWork.length === 0) ? (
-                        <p className="p-4 text-gray-400 text-center rounded-lg border border-gray-800 bg-white/5">No unassigned work in the pool.</p>
+                        <p className="p-4 text-zinc-500 dark:text-gray-400 text-center rounded-lg border border-zinc-200 dark:border-gray-800 bg-zinc-200/50 dark:bg-white/5">No unassigned work in the pool.</p>
                     ) : (
                         <div className="space-y-4">
                             {unassignedWork.map(demand => (
@@ -236,7 +236,7 @@ export default async function SpecialistWorkPage() {
                                     key={demand.id}
                                     demand={demand}
                                     statusBadge={
-                                        <span className="px-2 py-1 rounded text-xs font-medium bg-gray-900/50 text-gray-300 border border-gray-800">
+                                        <span className="px-2 py-1 rounded text-xs font-medium bg-zinc-200/80 dark:bg-gray-900/50 text-zinc-600 dark:text-gray-300 border border-zinc-200 dark:border-gray-800">
                                             UNASSIGNED
                                         </span>
                                     }
@@ -255,7 +255,7 @@ export default async function SpecialistWorkPage() {
             {/* Other Assigned Work (for reference) */}
             {allAssignedWork && allAssignedWork.length > 0 && (
                 <div>
-                    <h2 className="text-xl font-semibold text-white mb-4">
+                    <h2 className="text-xl font-semibold text-zinc-900 dark:text-white mb-4">
                         Assigned to Others ({allAssignedWork.filter(w => w.assigned_specialist_id !== user.id).length})
                     </h2>
                     <div className="space-y-4">

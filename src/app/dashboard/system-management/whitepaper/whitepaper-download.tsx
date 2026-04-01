@@ -24,7 +24,7 @@ export function WhitepaperDownload() {
         </div>
         <div className="flex-1">
           <h2 className="font-medium text-gray-900">AuroraHub Operational Platform Whitepaper</h2>
-          <p className="mt-1 text-sm text-gray-500">
+          <p className="mt-1 text-sm text-zinc-500 dark:text-gray-500">
             Technical and operational documentation covering platform architecture, roles, communication, and security.
           </p>
           <button

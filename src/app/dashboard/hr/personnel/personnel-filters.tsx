@@ -48,45 +48,45 @@ export function PersonnelFilters({
   return (
     <div className="flex flex-wrap gap-4 items-center">
       <div className="flex items-center gap-2">
-        <label className="text-sm text-gray-400">Type</label>
+        <label className="text-sm text-zinc-500 dark:text-gray-400">Type</label>
         <select
           value={currentType ?? ''}
           onChange={(e) => handleChange('worker_type', e.target.value)}
-          className="rounded-md bg-gray-900 border border-gray-700 text-white px-3 py-2 text-sm min-w-[200px] focus:ring-1 focus:ring-[#C27E00] focus:outline-none"
+          className="rounded-md bg-zinc-200 dark:bg-gray-900 border border-zinc-300 dark:border-gray-700 text-white px-3 py-2 text-sm min-w-[200px] focus:ring-1 focus:ring-[#C27E00] focus:outline-none"
           style={{ colorScheme: 'light' }}
         >
           {WORKER_TYPES.map((r) => (
-            <option key={r.value || 'all'} value={r.value} className="bg-gray-900 text-white">
+            <option key={r.value || 'all'} value={r.value} className="bg-zinc-200 dark:bg-gray-900 text-zinc-900 dark:text-white">
               {r.label}
             </option>
           ))}
         </select>
       </div>
       <div className="flex items-center gap-2">
-        <label className="text-sm text-gray-400">Status</label>
+        <label className="text-sm text-zinc-500 dark:text-gray-400">Status</label>
         <select
           value={currentStatus ?? ''}
           onChange={(e) => handleChange('status', e.target.value)}
-          className="rounded-md bg-gray-900 border border-gray-700 text-white px-3 py-2 text-sm min-w-[180px] focus:ring-1 focus:ring-[#C27E00]"
+          className="rounded-md bg-zinc-200 dark:bg-gray-900 border border-zinc-300 dark:border-gray-700 text-white px-3 py-2 text-sm min-w-[180px] focus:ring-1 focus:ring-[#C27E00]"
           style={{ colorScheme: 'light' }}
         >
           {STATUSES.map((s) => (
-            <option key={s.value || 'all'} value={s.value} className="bg-gray-900 text-white">{s.label}</option>
+            <option key={s.value || 'all'} value={s.value} className="bg-zinc-200 dark:bg-gray-900 text-zinc-900 dark:text-white">{s.label}</option>
           ))}
         </select>
       </div>
       <div className="flex items-center gap-2">
-        <label className="text-sm text-gray-400">Dealer</label>
+        <label className="text-sm text-zinc-500 dark:text-gray-400">Dealer</label>
         <select
           value={currentDealer ?? ''}
           onChange={(e) => handleChange('dealer', e.target.value)}
-          className="rounded-md bg-gray-900 border border-gray-700 text-white px-3 py-2 text-sm min-w-[160px] focus:ring-1 focus:ring-[#C27E00]"
+          className="rounded-md bg-zinc-200 dark:bg-gray-900 border border-zinc-300 dark:border-gray-700 text-white px-3 py-2 text-sm min-w-[160px] focus:ring-1 focus:ring-[#C27E00]"
           style={{ colorScheme: 'light' }}
         >
-          <option value="" className="bg-gray-900 text-white">All</option>
-          <option value="platform" className="bg-gray-900 text-white">Platform</option>
+          <option value="" className="bg-zinc-200 dark:bg-gray-900 text-zinc-900 dark:text-white">All</option>
+          <option value="platform" className="bg-zinc-200 dark:bg-gray-900 text-zinc-900 dark:text-white">Platform</option>
           {dealers.map((d) => (
-            <option key={d.id} value={d.id} className="bg-gray-900 text-white">{d.name}</option>
+            <option key={d.id} value={d.id} className="bg-zinc-200 dark:bg-gray-900 text-zinc-900 dark:text-white">{d.name}</option>
           ))}
         </select>
       </div>

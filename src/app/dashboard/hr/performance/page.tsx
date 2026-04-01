@@ -17,8 +17,8 @@ export default async function PerformancePage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-semibold text-white mb-2">Performance & Quality</h1>
-        <p className="text-gray-400">Installation success rate, customer satisfaction, rework rate, feedback, and performance reviews.</p>
+        <h1 className="text-2xl font-semibold text-zinc-900 dark:text-white mb-2">Performance & Quality</h1>
+        <p className="text-zinc-500 dark:text-gray-400">Installation success rate, customer satisfaction, rework rate, feedback, and performance reviews.</p>
       </div>
       <PerformanceContent metrics={metrics} feedback={feedback} reviews={reviews} personnel={personnel} />
     </div>

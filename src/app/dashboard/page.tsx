@@ -40,7 +40,7 @@ export default async function DashboardPage({
     .eq('id', user.id)
     .single()
 
-  if (!profile) return <div className="text-white">Profile not found</div>
+  if (!profile) return <div className="text-zinc-900 dark:text-white">Profile not found</div>
 
   // If sales user, fetch their demands
   if (profile.role === 'sales') {
@@ -95,7 +95,7 @@ export default async function DashboardPage({
         >
           {(!demands || demands.length === 0) ? (
               <div className="py-12 text-center">
-                <p className="text-gray-400 mb-5">You haven't created any demands yet.</p>
+                <p className="text-zinc-500 dark:text-gray-400 mb-5">You haven't created any demands yet.</p>
                 <Link
                   href="/dashboard/sales/demands/new"
                   className="inline-flex items-center gap-2 rounded-xl bg-[#C27E00] px-5 py-2.5 text-sm font-semibold text-white shadow-lg transition-all hover:bg-[#a06900] hover:shadow-[#C27E00]/25"
@@ -104,7 +104,7 @@ export default async function DashboardPage({
                 </Link>
               </div>
             ) : (
-              <ul className="divide-y divide-gray-800/80">
+              <ul className="divide-y divide-zinc-200 dark:divide-gray-800/80">
                 {demands.slice(0, 10).map(demand => {
                   const statusColors: Record<string, string> = {
                     pending_finance: 'bg-yellow-900/50 text-yellow-300 border-yellow-800',
@@ -117,25 +117,25 @@ export default async function DashboardPage({
                       <div className="flex justify-between items-start">
                         <div className="flex-1">
                           <div className="flex items-center gap-3 mb-2">
-                            <p className="font-semibold text-white">
+                            <p className="font-semibold text-zinc-900 dark:text-white">
                               {demand.customer_firstname} {demand.customer_lastname}
                             </p>
                             {(demand as { demand_number?: number }).demand_number != null && (
-                              <span className="text-xs font-medium text-gray-500">#{(demand as { demand_number?: number }).demand_number}</span>
+                              <span className="text-xs font-medium text-zinc-500 dark:text-gray-500">#{(demand as { demand_number?: number }).demand_number}</span>
                             )}
-                            <span className={`px-2 py-1 rounded text-xs font-medium border ${statusColors[demand.status as keyof typeof statusColors] || 'bg-gray-900/50 text-gray-300 border-gray-800'}`}>
+                            <span className={`px-2 py-1 rounded text-xs font-medium border ${statusColors[demand.status as keyof typeof statusColors] || 'bg-zinc-200/80 dark:bg-gray-900/50 text-zinc-600 dark:text-gray-300 border-zinc-200 dark:border-gray-800'}`}>
                               {demand.status.replace('_', ' ').toUpperCase()}
                             </span>
                           </div>
-                          <p className="text-sm text-gray-400">
+                          <p className="text-sm text-zinc-500 dark:text-gray-400">
                             {demand.vehicle_year} {demand.vehicle_make} {demand.vehicle_model}
                           </p>
-                          <p className="text-xs text-gray-500 mt-1">
+                          <p className="text-xs text-zinc-500 dark:text-gray-500 mt-1">
                             Appointment: {formatInTimeZone(new Date(demand.appointment_date), getEffectiveTimezone(salesTimezoneName), 'PPP h:mm a')}
                           </p>
                         </div>
                         <div className="text-right">
-                          <p className="text-xs text-gray-500">
+                          <p className="text-xs text-zinc-500 dark:text-gray-500">
                             {formatInTimeZone(new Date(demand.created_at), getEffectiveTimezone(salesTimezoneName), 'MMM d, yyyy')}
                           </p>
                         </div>
@@ -213,7 +213,7 @@ export default async function DashboardPage({
         <DataCard title="My Assigned Demands" action={{ label: 'View All', href: '/dashboard/finance/demands' }}>
           {(!assignedDemands || assignedDemands.length === 0) ? (
             <div className="py-12 text-center">
-              <p className="text-gray-400 mb-5">You haven't assigned any demands yet.</p>
+              <p className="text-zinc-500 dark:text-gray-400 mb-5">You haven't assigned any demands yet.</p>
               <Link
                 href="/dashboard/finance/demands"
                 className="inline-flex items-center gap-2 rounded-xl bg-[#C27E00] px-5 py-2.5 text-sm font-semibold text-white shadow-lg transition-all hover:bg-[#a06900] hover:shadow-[#C27E00]/25"
@@ -222,7 +222,7 @@ export default async function DashboardPage({
               </Link>
             </div>
           ) : (
-              <ul className="divide-y divide-gray-800/80">
+              <ul className="divide-y divide-zinc-200 dark:divide-gray-800/80">
                 {assignedDemands.slice(0, 10).map(demand => {
                   const statusColors = {
                     pending_finance: 'bg-yellow-900/50 text-yellow-300 border-yellow-800',
@@ -236,20 +236,20 @@ export default async function DashboardPage({
                       <div className="flex justify-between items-start">
                         <div className="flex-1">
                           <div className="flex items-center gap-3 mb-2">
-                            <p className="font-semibold text-white">
+                            <p className="font-semibold text-zinc-900 dark:text-white">
                               {demand.customer_firstname} {demand.customer_lastname}
                             </p>
                             {(demand as { demand_number?: number }).demand_number != null && (
-                              <span className="text-xs font-medium text-gray-500">#{(demand as { demand_number?: number }).demand_number}</span>
+                              <span className="text-xs font-medium text-zinc-500 dark:text-gray-500">#{(demand as { demand_number?: number }).demand_number}</span>
                             )}
-                            <span className={`px-2 py-1 rounded text-xs font-medium border ${statusColors[demand.status as keyof typeof statusColors] || 'bg-gray-900/50 text-gray-300 border-gray-800'}`}>
+                            <span className={`px-2 py-1 rounded text-xs font-medium border ${statusColors[demand.status as keyof typeof statusColors] || 'bg-zinc-200/80 dark:bg-gray-900/50 text-zinc-600 dark:text-gray-300 border-zinc-200 dark:border-gray-800'}`}>
                               {demand.status.replace('_', ' ').toUpperCase()}
                             </span>
                           </div>
-                          <p className="text-sm text-gray-400">
+                          <p className="text-sm text-zinc-500 dark:text-gray-400">
                             {demand.vehicle_year} {demand.vehicle_make} {demand.vehicle_model}
                           </p>
-                          <p className="text-xs text-gray-500 mt-1">
+                          <p className="text-xs text-zinc-500 dark:text-gray-500 mt-1">
                             Appointment: {(() => {
                               const dealers = (demand as { dealers?: { region_codes?: { timezones?: { name: string } } } | null }).dealers
                               const tz = dealers?.region_codes?.timezones?.name ?? null
@@ -258,7 +258,7 @@ export default async function DashboardPage({
                           </p>
                         </div>
                         <div className="text-right">
-                          <p className="text-xs text-gray-500">
+                          <p className="text-xs text-zinc-500 dark:text-gray-500">
                             {formatInTimeZone(new Date(demand.created_at), getEffectiveTimezone((demand as { dealers?: { region_codes?: { timezones?: { name: string } } } | null }).dealers?.region_codes?.timezones?.name ?? null), 'MMM d, yyyy')}
                           </p>
                         </div>
@@ -414,8 +414,8 @@ export default async function DashboardPage({
 
         {/* Status Breakdown - scope: demands from specialist's dealers */}
         {totalScope > 0 && (
-          <div className="rounded-xl border border-gray-800/80 bg-gradient-to-b from-white/[0.04] to-transparent overflow-hidden p-6 shadow-lg">
-            <h2 className="text-lg font-semibold text-white mb-5">Demand Status (Your Dealers)</h2>
+          <div className="rounded-xl border border-zinc-200 dark:border-gray-800/80 bg-gradient-to-b from-white/[0.04] to-transparent overflow-hidden p-6 shadow-lg">
+            <h2 className="text-lg font-semibold text-zinc-900 dark:text-white mb-5">Demand Status (Your Dealers)</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <div className="p-4 rounded-lg border bg-yellow-900/50 text-yellow-300 border-yellow-800">
                 <p className="text-sm font-medium mb-1">PENDING FINANCE</p>
@@ -452,20 +452,20 @@ export default async function DashboardPage({
         {/* Today's Appointments */}
         {todayCount > 0 && (
           <DataCard title="Today's Appointments" action={{ label: 'View All Work', href: '/dashboard/specialist/work' }}>
-              <ul className="divide-y divide-gray-800/80">
+              <ul className="divide-y divide-zinc-200 dark:divide-gray-800/80">
                 {todayAppointments?.slice(0, 5).map(demand => (
                   <li key={demand.id} className="px-6 py-4 hover:bg-white/[0.03] transition-colors">
                     <div className="flex justify-between items-start">
                       <div className="flex-1">
                         <div className="flex items-center gap-3 mb-2">
-                          <p className="font-semibold text-white">
+                          <p className="font-semibold text-zinc-900 dark:text-white">
                             {demand.customer_firstname} {demand.customer_lastname}
                           </p>
                         </div>
-                        <p className="text-sm text-gray-400">
+                        <p className="text-sm text-zinc-500 dark:text-gray-400">
                           {demand.vehicle_year} {demand.vehicle_make} {demand.vehicle_model}
                         </p>
-                        <p className="text-sm text-gray-400 mt-1">
+                        <p className="text-sm text-zinc-500 dark:text-gray-400 mt-1">
                           {demand.camera_model}
                         </p>
                         <p className="text-xs text-[#C27E00] mt-1 font-semibold">
@@ -477,7 +477,7 @@ export default async function DashboardPage({
                         </p>
                       </div>
                       <div className="text-right">
-                        <p className="text-xs text-gray-500">
+                        <p className="text-xs text-zinc-500 dark:text-gray-500">
                           {demand.customer_address || 'No address'}
                         </p>
                       </div>
@@ -491,7 +491,7 @@ export default async function DashboardPage({
         <DataCard title="My Assigned Work" action={{ label: 'View All', href: '/dashboard/specialist/work' }}>
             {(!assignedWork || assignedWork.length === 0) ? (
               <div className="py-12 text-center">
-                <p className="text-gray-400 mb-5">You don't have any assigned work yet.</p>
+                <p className="text-zinc-500 dark:text-gray-400 mb-5">You don't have any assigned work yet.</p>
                 <Link
                   href="/dashboard/specialist/work"
                   className="inline-flex items-center gap-2 rounded-xl bg-[#C27E00] px-5 py-2.5 text-sm font-semibold text-white shadow-lg transition-all hover:bg-[#a06900] hover:shadow-[#C27E00]/25"
@@ -500,39 +500,39 @@ export default async function DashboardPage({
                 </Link>
               </div>
             ) : (
-              <ul className="divide-y divide-gray-800/80">
+              <ul className="divide-y divide-zinc-200 dark:divide-gray-800/80">
                 {assignedWork.slice(0, 10).map(demand => (
                   <li key={demand.id} className="px-6 py-4 hover:bg-white/[0.03] transition-colors">
                     <div className="flex justify-between items-start">
                       <div className="flex-1">
                         <div className="flex items-center gap-3 mb-2">
-                          <p className="font-semibold text-white">
+                          <p className="font-semibold text-zinc-900 dark:text-white">
                             {demand.customer_firstname} {demand.customer_lastname}
                           </p>
                           {(demand as { demand_number?: number }).demand_number != null && (
-                            <span className="text-xs font-medium text-gray-500">#{(demand as { demand_number?: number }).demand_number}</span>
+                            <span className="text-xs font-medium text-zinc-500 dark:text-gray-500">#{(demand as { demand_number?: number }).demand_number}</span>
                           )}
                           <span className="px-2 py-1 rounded text-xs font-medium border bg-blue-900/50 text-blue-300 border-blue-800">
                             ASSIGNED
                           </span>
                         </div>
-                        <p className="text-sm text-gray-400">
+                        <p className="text-sm text-zinc-500 dark:text-gray-400">
                           {demand.vehicle_year} {demand.vehicle_make} {demand.vehicle_model}
                         </p>
-                        <p className="text-sm text-gray-400 mt-1">
+                        <p className="text-sm text-zinc-500 dark:text-gray-400 mt-1">
                           {demand.camera_model}
                         </p>
                         <p className="text-xs text-[#C27E00] mt-1 font-semibold">
                           Appointment: {formatInTimeZone(new Date(demand.appointment_date), getEffectiveTimezone(demand.timezoneName ?? null), 'PPP h:mm a')}
                         </p>
                         {demand.customer_address && (
-                          <p className="text-xs text-gray-500 mt-1">
+                          <p className="text-xs text-zinc-500 dark:text-gray-500 mt-1">
                             Address: {demand.customer_address}
                           </p>
                         )}
                       </div>
                       <div className="text-right">
-                        <p className="text-xs text-gray-500">
+                        <p className="text-xs text-zinc-500 dark:text-gray-500">
                           {formatInTimeZone(new Date(demand.appointment_date), getEffectiveTimezone(demand.timezoneName ?? null), 'MMM d, yyyy')}
                         </p>
                       </div>
@@ -546,7 +546,7 @@ export default async function DashboardPage({
         {/* Recent Completed Work */}
         {myCompleted > 0 && (
           <DataCard title="Recent Completed Work" action={{ label: 'View Reports', href: '/dashboard/specialist/reports' }}>
-              <ul className="divide-y divide-gray-800/80">
+              <ul className="divide-y divide-zinc-200 dark:divide-gray-800/80">
                 {completedWork?.slice(0, 5).map(demand => {
                   const completedDealers = (demand as { dealers?: { region_codes?: { timezones?: { name: string } } } | null }).dealers
                   const completedTz = (Array.isArray(completedDealers) ? completedDealers[0] : completedDealers)?.region_codes?.timezones?.name ?? null
@@ -556,28 +556,28 @@ export default async function DashboardPage({
                     <div className="flex justify-between items-start">
                       <div className="flex-1">
                         <div className="flex items-center gap-3 mb-2">
-                          <p className="font-semibold text-white">
+                          <p className="font-semibold text-zinc-900 dark:text-white">
                             {demand.customer_firstname} {demand.customer_lastname}
                           </p>
                           {(demand as { demand_number?: number }).demand_number != null && (
-                            <span className="text-xs font-medium text-gray-500">#{(demand as { demand_number?: number }).demand_number}</span>
+                            <span className="text-xs font-medium text-zinc-500 dark:text-gray-500">#{(demand as { demand_number?: number }).demand_number}</span>
                           )}
                           <span className="px-2 py-1 rounded text-xs font-medium border bg-green-900/50 text-green-300 border-green-800">
                             COMPLETED
                           </span>
                         </div>
-                        <p className="text-sm text-gray-400">
+                        <p className="text-sm text-zinc-500 dark:text-gray-400">
                           {demand.vehicle_year} {demand.vehicle_make} {demand.vehicle_model}
                         </p>
-                        <p className="text-sm text-gray-400 mt-1">
+                        <p className="text-sm text-zinc-500 dark:text-gray-400 mt-1">
                           {demand.camera_model}
                         </p>
-                        <p className="text-xs text-gray-500 mt-1">
+                        <p className="text-xs text-zinc-500 dark:text-gray-500 mt-1">
                           Completed: {fmt(new Date(demand.updated_at || demand.created_at), 'MMM d, yyyy')}
                         </p>
                       </div>
                       <div className="text-right">
-                        <p className="text-xs text-gray-500">
+                        <p className="text-xs text-zinc-500 dark:text-gray-500">
                           {fmt(new Date(demand.appointment_date), 'MMM d, yyyy')}
                         </p>
                       </div>
@@ -714,92 +714,92 @@ export default async function DashboardPage({
 
         {/* IT Statistics */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-          <Link href="/dashboard/operations/service-desk?tab=tickets" className="bg-white/5 border border-gray-800 p-6 rounded-lg hover:bg-white/10 transition-colors">
-            <h3 className="text-sm font-medium text-gray-400 mb-2">Open Tickets</h3>
-            <p className="text-3xl font-bold text-white">{openTickets.length}</p>
-            <p className="text-xs text-gray-500 mt-1">Active tickets</p>
+          <Link href="/dashboard/operations/service-desk?tab=tickets" className="bg-zinc-200/50 dark:bg-white/5 border border-zinc-200 dark:border-gray-800 p-6 rounded-lg hover:bg-zinc-200 dark:bg-white/10 transition-colors">
+            <h3 className="text-sm font-medium text-zinc-500 dark:text-gray-400 mb-2">Open Tickets</h3>
+            <p className="text-3xl font-bold text-zinc-900 dark:text-white">{openTickets.length}</p>
+            <p className="text-xs text-zinc-500 dark:text-gray-500 mt-1">Active tickets</p>
           </Link>
-          <Link href="/dashboard/operations/service-desk?tab=tickets" className="bg-white/5 border border-gray-800 p-6 rounded-lg hover:bg-white/10 transition-colors">
-            <h3 className="text-sm font-medium text-gray-400 mb-2">Critical Tickets</h3>
+          <Link href="/dashboard/operations/service-desk?tab=tickets" className="bg-zinc-200/50 dark:bg-white/5 border border-zinc-200 dark:border-gray-800 p-6 rounded-lg hover:bg-zinc-200 dark:bg-white/10 transition-colors">
+            <h3 className="text-sm font-medium text-zinc-500 dark:text-gray-400 mb-2">Critical Tickets</h3>
             <p className="text-3xl font-bold text-red-500">{criticalTickets.length}</p>
-            <p className="text-xs text-gray-500 mt-1">Requires attention</p>
+            <p className="text-xs text-zinc-500 dark:text-gray-500 mt-1">Requires attention</p>
           </Link>
-          <Link href="/dashboard/operations/service-desk?tab=tickets" className="bg-white/5 border border-gray-800 p-6 rounded-lg hover:bg-white/10 transition-colors">
-            <h3 className="text-sm font-medium text-gray-400 mb-2">SLA Breaches</h3>
+          <Link href="/dashboard/operations/service-desk?tab=tickets" className="bg-zinc-200/50 dark:bg-white/5 border border-zinc-200 dark:border-gray-800 p-6 rounded-lg hover:bg-zinc-200 dark:bg-white/10 transition-colors">
+            <h3 className="text-sm font-medium text-zinc-500 dark:text-gray-400 mb-2">SLA Breaches</h3>
             <p className="text-3xl font-bold text-amber-500">{slaBreachCount}</p>
-            <p className="text-xs text-gray-500 mt-1">Past due</p>
+            <p className="text-xs text-zinc-500 dark:text-gray-500 mt-1">Past due</p>
           </Link>
-          <Link href="/dashboard/operations/service-desk?tab=incidents" className="bg-white/5 border border-gray-800 p-6 rounded-lg hover:bg-white/10 transition-colors">
-            <h3 className="text-sm font-medium text-gray-400 mb-2">Critical Incidents</h3>
+          <Link href="/dashboard/operations/service-desk?tab=incidents" className="bg-zinc-200/50 dark:bg-white/5 border border-zinc-200 dark:border-gray-800 p-6 rounded-lg hover:bg-zinc-200 dark:bg-white/10 transition-colors">
+            <h3 className="text-sm font-medium text-zinc-500 dark:text-gray-400 mb-2">Critical Incidents</h3>
             <p className="text-3xl font-bold text-red-500">{criticalIncidents.length}</p>
-            <p className="text-xs text-gray-500 mt-1">Open critical</p>
+            <p className="text-xs text-zinc-500 dark:text-gray-500 mt-1">Open critical</p>
           </Link>
-          <div className="bg-white/5 border border-gray-800 p-6 rounded-lg">
-            <h3 className="text-sm font-medium text-gray-400 mb-2">My Assigned</h3>
+          <div className="bg-zinc-200/50 dark:bg-white/5 border border-zinc-200 dark:border-gray-800 p-6 rounded-lg">
+            <h3 className="text-sm font-medium text-zinc-500 dark:text-gray-400 mb-2">My Assigned</h3>
             <p className="text-3xl font-bold text-blue-500">{myTickets.length}</p>
-            <p className="text-xs text-gray-500 mt-1">Tickets assigned to me</p>
+            <p className="text-xs text-zinc-500 dark:text-gray-500 mt-1">Tickets assigned to me</p>
           </div>
         </div>
 
         {/* System Health */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Link href="/dashboard/identity/users" className="bg-white/5 border border-gray-800 p-4 rounded-lg hover:bg-white/10 transition-colors">
-            <h3 className="text-sm font-medium text-gray-400 mb-1">Users</h3>
-            <p className="text-2xl font-bold text-white">{profilesRes.count ?? 0}</p>
+          <Link href="/dashboard/identity/users" className="bg-zinc-200/50 dark:bg-white/5 border border-zinc-200 dark:border-gray-800 p-4 rounded-lg hover:bg-zinc-200 dark:bg-white/10 transition-colors">
+            <h3 className="text-sm font-medium text-zinc-500 dark:text-gray-400 mb-1">Users</h3>
+            <p className="text-2xl font-bold text-zinc-900 dark:text-white">{profilesRes.count ?? 0}</p>
           </Link>
-          <Link href="/dashboard/observability/logs?type=sms" className="bg-white/5 border border-gray-800 p-4 rounded-lg hover:bg-white/10 transition-colors">
-            <h3 className="text-sm font-medium text-gray-400 mb-1">SMS Sent</h3>
-            <p className="text-2xl font-bold text-white">{smsLogsRes.count ?? 0}</p>
+          <Link href="/dashboard/observability/logs?type=sms" className="bg-zinc-200/50 dark:bg-white/5 border border-zinc-200 dark:border-gray-800 p-4 rounded-lg hover:bg-zinc-200 dark:bg-white/10 transition-colors">
+            <h3 className="text-sm font-medium text-zinc-500 dark:text-gray-400 mb-1">SMS Sent</h3>
+            <p className="text-2xl font-bold text-zinc-900 dark:text-white">{smsLogsRes.count ?? 0}</p>
           </Link>
-          <Link href="/dashboard/observability/logs?type=mail" className="bg-white/5 border border-gray-800 p-4 rounded-lg hover:bg-white/10 transition-colors">
-            <h3 className="text-sm font-medium text-gray-400 mb-1">Emails Sent</h3>
-            <p className="text-2xl font-bold text-white">{mailLogsRes.count ?? 0}</p>
+          <Link href="/dashboard/observability/logs?type=mail" className="bg-zinc-200/50 dark:bg-white/5 border border-zinc-200 dark:border-gray-800 p-4 rounded-lg hover:bg-zinc-200 dark:bg-white/10 transition-colors">
+            <h3 className="text-sm font-medium text-zinc-500 dark:text-gray-400 mb-1">Emails Sent</h3>
+            <p className="text-2xl font-bold text-zinc-900 dark:text-white">{mailLogsRes.count ?? 0}</p>
           </Link>
-          <div className="bg-white/5 border border-green-900/30 p-4 rounded-lg">
-            <h3 className="text-sm font-medium text-gray-400 mb-1">Database</h3>
+          <div className="bg-zinc-200/50 dark:bg-white/5 border border-green-900/30 p-4 rounded-lg">
+            <h3 className="text-sm font-medium text-zinc-500 dark:text-gray-400 mb-1">Database</h3>
             <p className="text-2xl font-bold text-green-500">Healthy</p>
           </div>
         </div>
 
         {/* My Assigned Tickets & Recent Alerts */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="bg-white/5 rounded-lg border border-gray-800 p-6">
+          <div className="bg-zinc-200/50 dark:bg-white/5 rounded-lg border border-zinc-200 dark:border-gray-800 p-6">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-lg font-semibold text-white">My Assigned Tickets</h2>
+              <h2 className="text-lg font-semibold text-zinc-900 dark:text-white">My Assigned Tickets</h2>
               <Link href="/dashboard/operations/service-desk?tab=tickets" className="text-sm text-[#C27E00] hover:underline">View All →</Link>
             </div>
             {myTickets.length === 0 ? (
-              <p className="text-gray-500">No tickets assigned to you.</p>
+              <p className="text-zinc-500 dark:text-gray-500">No tickets assigned to you.</p>
             ) : (
-              <ul className="divide-y divide-gray-800 space-y-0">
+              <ul className="divide-y divide-zinc-200 dark:divide-gray-800 space-y-0">
                 {myTickets.slice(0, 5).map((t: { id: string; ticket_number: string; title: string; priority: string; status: string }) => (
                   <li key={t.id} className="py-3">
-                    <Link href="/dashboard/operations/service-desk?tab=tickets" className="block hover:bg-white/5 -mx-2 px-2 py-1 rounded">
+                    <Link href="/dashboard/operations/service-desk?tab=tickets" className="block hover:bg-zinc-200/50 dark:bg-white/5 -mx-2 px-2 py-1 rounded">
                       <div className="flex justify-between items-start">
-                        <span className="font-medium text-white">{t.ticket_number}: {t.title}</span>
-                        <span className={`px-2 py-0.5 rounded text-xs ${t.priority === 'critical' ? 'bg-red-500/20 text-red-400' : 'bg-gray-700 text-gray-400'}`}>{t.priority}</span>
+                        <span className="font-medium text-zinc-900 dark:text-white">{t.ticket_number}: {t.title}</span>
+                        <span className={`px-2 py-0.5 rounded text-xs ${t.priority === 'critical' ? 'bg-red-500/20 text-red-400' : 'bg-gray-700 text-zinc-500 dark:text-gray-400'}`}>{t.priority}</span>
                       </div>
-                      <p className="text-xs text-gray-500 mt-0.5">{t.status}</p>
+                      <p className="text-xs text-zinc-500 dark:text-gray-500 mt-0.5">{t.status}</p>
                     </Link>
                   </li>
                 ))}
               </ul>
             )}
           </div>
-          <div className="bg-white/5 rounded-lg border border-gray-800 p-6">
+          <div className="bg-zinc-200/50 dark:bg-white/5 rounded-lg border border-zinc-200 dark:border-gray-800 p-6">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-lg font-semibold text-white">Recent Alerts</h2>
+              <h2 className="text-lg font-semibold text-zinc-900 dark:text-white">Recent Alerts</h2>
               <Link href="/dashboard/observability/alerts" className="text-sm text-[#C27E00] hover:underline">Configure →</Link>
             </div>
             {recentAlerts.length === 0 ? (
-              <p className="text-gray-500">No recent alerts.</p>
+              <p className="text-zinc-500 dark:text-gray-500">No recent alerts.</p>
             ) : (
-              <ul className="divide-y divide-gray-800 space-y-0">
+              <ul className="divide-y divide-zinc-200 dark:divide-gray-800 space-y-0">
                 {recentAlerts.map((a: { id: string; alert_type: string; subject: string | null; success: boolean; created_at: string }) => (
                   <li key={a.id} className="py-3 flex justify-between items-start">
                     <div>
-                      <p className="text-sm text-white truncate max-w-[200px]">{a.subject ?? a.alert_type}</p>
-                      <p className="text-xs text-gray-500">{formatInTimeZone(new Date(a.created_at), SYSTEM_DEFAULT_TIMEZONE, 'MMM d, yyyy h:mm a')}</p>
+                      <p className="text-sm text-zinc-900 dark:text-white truncate max-w-[200px]">{a.subject ?? a.alert_type}</p>
+                      <p className="text-xs text-zinc-500 dark:text-gray-500">{formatInTimeZone(new Date(a.created_at), SYSTEM_DEFAULT_TIMEZONE, 'MMM d, yyyy h:mm a')}</p>
                     </div>
                     <span className={`px-2 py-0.5 rounded text-xs ${a.success ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>{a.success ? 'Sent' : 'Failed'}</span>
                   </li>
@@ -1024,8 +1024,8 @@ export default async function DashboardPage({
           <StatCard title="Today's Appointments" value={todayCount} subtitle="Scheduled for today" icon={Calendar} accentColor="orange" />
           <StatCard title="Completed" value={completed} subtitle={totalDemands > 0 ? `${Math.round((completed / totalDemands) * 100)}% completion rate` : undefined} icon={CheckCircle} accentColor="green" />
           <StatCard title="Total Amount" value={`$${totalAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} subtitle="All completed invoices" icon={DollarSign} accentColor="white" />
-          <div className="rounded-xl border border-gray-800/80 bg-gradient-to-br from-white/[0.06] to-transparent p-6 shadow-lg backdrop-blur-sm transition-all duration-300 hover:border-gray-700/80">
-            <p className="text-xs font-medium uppercase tracking-wider text-gray-400/90">Monthly Amount</p>
+          <div className="rounded-xl border border-zinc-200 dark:border-gray-800/80 bg-gradient-to-br from-white/[0.06] to-transparent p-6 shadow-lg backdrop-blur-sm transition-all duration-300 hover:border-zinc-300 dark:border-gray-700/80">
+            <p className="text-xs font-medium uppercase tracking-wider text-zinc-500 dark:text-gray-400/90">Monthly Amount</p>
             <p className="mt-2 text-3xl font-bold tabular-nums tracking-tight text-[#C27E00]">${monthlyAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
             <div className="mt-1"><GMDashboardMonthSelector currentMonth={monthParam ?? `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`} /></div>
           </div>
@@ -1033,8 +1033,8 @@ export default async function DashboardPage({
 
         <CameraDistribution items={getCameraDistribution(monthlyDemandsForCameras)} monthLabel={monthLabel} />
 
-        <div className="rounded-xl border border-gray-800/80 bg-gradient-to-b from-white/[0.04] to-transparent overflow-hidden p-6 shadow-lg">
-          <h2 className="text-lg font-semibold text-white mb-5">Demand Status Breakdown</h2>
+        <div className="rounded-xl border border-zinc-200 dark:border-gray-800/80 bg-gradient-to-b from-white/[0.04] to-transparent overflow-hidden p-6 shadow-lg">
+          <h2 className="text-lg font-semibold text-zinc-900 dark:text-white mb-5">Demand Status Breakdown</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="p-4 rounded-lg border bg-yellow-900/50 text-yellow-300 border-yellow-800">
               <p className="text-sm font-medium mb-1">PENDING FINANCE</p>
@@ -1069,23 +1069,23 @@ export default async function DashboardPage({
 
         {todayCount > 0 && (
           <DataCard title="Today's Appointments" action={{ label: 'View All Demands', href: '/dashboard/admin/demands' }}>
-              <ul className="divide-y divide-gray-800/80">
+              <ul className="divide-y divide-zinc-200 dark:divide-gray-800/80">
                 {todayAppointments?.slice(0, 5).map(demand => (
                   <li key={demand.id} className="px-6 py-4 hover:bg-white/[0.03] transition-colors">
                     <div className="flex justify-between items-start">
                       <div className="flex-1">
                         <div className="flex items-center gap-3 mb-2">
-                          <p className="font-semibold text-white">
+                          <p className="font-semibold text-zinc-900 dark:text-white">
                             {demand.customer_firstname} {demand.customer_lastname}
                           </p>
                           {(demand as { demand_number?: number }).demand_number != null && (
-                            <span className="text-xs font-medium text-gray-500">#{(demand as { demand_number?: number }).demand_number}</span>
+                            <span className="text-xs font-medium text-zinc-500 dark:text-gray-500">#{(demand as { demand_number?: number }).demand_number}</span>
                           )}
                         </div>
-                        <p className="text-sm text-gray-400">
+                        <p className="text-sm text-zinc-500 dark:text-gray-400">
                           {demand.vehicle_year} {demand.vehicle_make} {demand.vehicle_model}
                         </p>
-                        <p className="text-sm text-gray-400 mt-1">
+                        <p className="text-sm text-zinc-500 dark:text-gray-400 mt-1">
                           {demand.camera_model}
                         </p>
                         <p className="text-xs text-[#C27E00] mt-1 font-semibold">
@@ -1102,10 +1102,10 @@ export default async function DashboardPage({
         <DataCard title="Recent Demands" action={{ label: 'View All', href: '/dashboard/admin/demands' }}>
             {recentDemands.length === 0 ? (
               <div className="py-12 text-center">
-                <p className="text-gray-400">No demands found for your dealer.</p>
+                <p className="text-zinc-500 dark:text-gray-400">No demands found for your dealer.</p>
               </div>
             ) : (
-              <ul className="divide-y divide-gray-800/80">
+              <ul className="divide-y divide-zinc-200 dark:divide-gray-800/80">
                 {recentDemands.map(demand => {
                   const statusColors = {
                     pending_finance: 'bg-yellow-900/50 text-yellow-300 border-yellow-800',
@@ -1118,28 +1118,28 @@ export default async function DashboardPage({
                       <div className="flex justify-between items-start">
                         <div className="flex-1">
                           <div className="flex items-center gap-3 mb-2">
-                            <p className="font-semibold text-white">
+                            <p className="font-semibold text-zinc-900 dark:text-white">
                               {demand.customer_firstname} {demand.customer_lastname}
                             </p>
                             {(demand as { demand_number?: number }).demand_number != null && (
-                              <span className="text-xs font-medium text-gray-500">#{(demand as { demand_number?: number }).demand_number}</span>
+                              <span className="text-xs font-medium text-zinc-500 dark:text-gray-500">#{(demand as { demand_number?: number }).demand_number}</span>
                             )}
-                            <span className={`px-2 py-1 rounded text-xs font-medium border ${statusColors[demand.status as keyof typeof statusColors] || 'bg-gray-900/50 text-gray-300 border-gray-800'}`}>
+                            <span className={`px-2 py-1 rounded text-xs font-medium border ${statusColors[demand.status as keyof typeof statusColors] || 'bg-zinc-200/80 dark:bg-gray-900/50 text-zinc-600 dark:text-gray-300 border-zinc-200 dark:border-gray-800'}`}>
                               {demand.status.replace('_', ' ').toUpperCase()}
                             </span>
                           </div>
-                          <p className="text-sm text-gray-400">
+                          <p className="text-sm text-zinc-500 dark:text-gray-400">
                             {demand.vehicle_year} {demand.vehicle_make} {demand.vehicle_model}
                           </p>
-                          <p className="text-sm text-gray-400">
+                          <p className="text-sm text-zinc-500 dark:text-gray-400">
                             Camera: {demand.camera_model}
                           </p>
-                          <p className="text-xs text-gray-500 mt-1">
+                          <p className="text-xs text-zinc-500 dark:text-gray-500 mt-1">
                             Appointment: {formatInTimeZone(new Date(demand.appointment_date), getEffectiveTimezone(gmTimezoneName ?? null), 'PPP h:mm a')}
                           </p>
                         </div>
                         <div className="text-right">
-                          <p className="text-xs text-gray-500">
+                          <p className="text-xs text-zinc-500 dark:text-gray-500">
                             {formatInTimeZone(new Date(demand.created_at), getEffectiveTimezone(gmTimezoneName ?? null), 'MMM d, yyyy')}
                           </p>
                         </div>

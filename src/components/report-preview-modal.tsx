@@ -36,10 +36,10 @@ export function ReportPreviewModal({
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-      <div className="bg-gray-900 border border-gray-800 rounded-lg shadow-xl w-full max-w-4xl h-[90vh] flex flex-col">
-        <div className="flex items-center justify-between p-4 border-b border-gray-800 flex-shrink-0">
-          <h2 className="text-lg font-semibold text-white">Report Sample</h2>
+    <div className="fixed inset-0 bg-zinc-900/50 dark:bg-black/70 flex items-center justify-center z-50 p-4">
+      <div className="bg-zinc-200 dark:bg-gray-900 border border-zinc-200 dark:border-gray-800 rounded-lg shadow-xl w-full max-w-4xl h-[90vh] flex flex-col">
+        <div className="flex items-center justify-between p-4 border-b border-zinc-200 dark:border-gray-800 flex-shrink-0">
+          <h2 className="text-lg font-semibold text-zinc-900 dark:text-white">Report Sample</h2>
           <div className="flex items-center gap-2">
             <button
               type="button"
@@ -53,7 +53,7 @@ export function ReportPreviewModal({
             <button
               type="button"
               onClick={onClose}
-              className="p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-md transition-colors"
+              className="p-2 text-zinc-500 dark:text-gray-400 hover:text-zinc-900 dark:text-white hover:bg-zinc-200 dark:bg-white/10 rounded-md transition-colors"
               aria-label="Close"
             >
               <X className="w-5 h-5" />
@@ -65,11 +65,11 @@ export function ReportPreviewModal({
             <iframe
               src={pdfDataUrl}
               title="Report preview"
-              className="w-full h-full rounded-md border border-gray-700 bg-white"
+              className="w-full h-full rounded-md border border-zinc-300 dark:border-gray-700 bg-white"
             />
           ) : (
-            <div className="w-full h-full flex items-center justify-center bg-white/5 rounded-md border border-gray-700">
-              <p className="text-gray-400">Report could not be loaded.</p>
+            <div className="w-full h-full flex items-center justify-center bg-zinc-200/50 dark:bg-white/5 rounded-md border border-zinc-300 dark:border-gray-700">
+              <p className="text-zinc-500 dark:text-gray-400">Report could not be loaded.</p>
             </div>
           )}
         </div>

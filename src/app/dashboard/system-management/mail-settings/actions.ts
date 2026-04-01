@@ -3,6 +3,7 @@
 import { getMailSettings, getMailSettingsWithPassword, saveMailSettings } from '@/lib/mail-settings'
 import { sendEmailViaSMTP } from '@/lib/mail-sender'
 import type { MailSettings } from '@/lib/mail-sender'
+import { normalizeEmail } from '@/lib/email-normalize'
 
 export async function loadMailSettings(): Promise<{ settings: Partial<MailSettings> | null; error?: string }> {
   const settings = await getMailSettings()
@@ -10,6 +11,7 @@ export async function loadMailSettings(): Promise<{ settings: Partial<MailSettin
   return {
     settings: {
       ...settings,
+      fromEmail: settings.fromEmail ? normalizeEmail(settings.fromEmail) : settings.fromEmail,
       password: '', // Never send password to client
     },
   }
@@ -25,8 +27,11 @@ export async function sendTestEmail(toEmail: string): Promise<{ success: boolean
     return { success: false, error: 'Mail settings not configured or disabled' }
   }
 
+  const to = normalizeEmail(toEmail)
+  if (!to) return { success: false, error: 'Enter a valid email address' }
+
   return sendEmailViaSMTP(settings, {
-    to: [toEmail],
+    to: [to],
     subject: 'AuroraHub Test Email',
     html: `
       <div style="font-family: Arial, sans-serif;">

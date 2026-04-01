@@ -5,8 +5,9 @@ import { logDemandChange } from '@/lib/demand-logger'
 import { dispatchWebhooks } from '@/lib/webhook-dispatch'
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
-import { fromZonedTime } from 'date-fns-tz'
+import { toDate } from 'date-fns-tz'
 import { SYSTEM_DEFAULT_TIMEZONE } from '@/lib/timezone-defaults'
+import { getTimezoneFromDealer } from '@/lib/dealer-timezone'
 import { lookupCameraModelId } from '@/lib/camera-model-resolve'
 
 const schema = z.object({
@@ -66,9 +67,20 @@ export async function createExternalDemand(prevState: CreateExternalDemandState,
 
   const data = result.data
 
-  // HQ uses PT — external demand date stored as PT noon (no slot, does not affect normal demands)
-  const [y, m, d] = data.appointmentDate.split('-').map(Number)
-  const appointmentDateISO = fromZonedTime(new Date(y, m - 1, d, 12, 0, 0), SYSTEM_DEFAULT_TIMEZONE).toISOString()
+  // Calendar date is a business day for the dealer: store as 12:00 in that dealer's timezone (fallback: Pacific).
+  // Use toDate(...) so server TZ (often UTC) does not skew fromZonedTime(new Date(y,m,d,...)).
+  const { data: dealerRow } = await supabase
+    .from('dealers')
+    .select('region_codes(timezone_id, timezones(name))')
+    .eq('id', data.dealerId)
+    .single()
+
+  const tz = getTimezoneFromDealer(dealerRow as Parameters<typeof getTimezoneFromDealer>[0]) ?? SYSTEM_DEFAULT_TIMEZONE
+  const atLocalNoon = toDate(`${data.appointmentDate}T12:00:00`, { timeZone: tz })
+  if (Number.isNaN(atLocalNoon.getTime())) {
+    return { error: 'Invalid appointment date' }
+  }
+  const appointmentDateISO = atLocalNoon.toISOString()
 
   const completeOnCreate = formData.get('completeOnCreate') === 'true'
 

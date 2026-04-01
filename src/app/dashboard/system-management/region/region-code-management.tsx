@@ -97,7 +97,7 @@ export function RegionCodeManagement({
       {regionCodes.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 mb-4">
           {regionCodes.map(rc => (
-            <div key={rc.id} className="bg-white/5 border border-gray-800 p-3 rounded relative group">
+            <div key={rc.id} className="bg-zinc-200/50 dark:bg-white/5 border border-zinc-200 dark:border-gray-800 p-3 rounded relative group">
               {editingId === rc.id ? (
                 <form onSubmit={(e) => handleUpdate(e, rc.id)} className="space-y-2">
                   <div>
@@ -105,7 +105,7 @@ export function RegionCodeManagement({
                       name="code" 
                       defaultValue={rc.code}
                       required 
-                      className="border border-gray-700 bg-white/5 p-1.5 w-full rounded text-white focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00] text-sm"
+                      className="border border-zinc-300 dark:border-gray-700 bg-zinc-200/50 dark:bg-white/5 p-1.5 w-full rounded text-zinc-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00] text-sm"
                       placeholder="Code"
                     />
                   </div>
@@ -114,7 +114,7 @@ export function RegionCodeManagement({
                       name="name" 
                       defaultValue={rc.name}
                       required 
-                      className="border border-gray-700 bg-white/5 p-1.5 w-full rounded text-white focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00] text-sm"
+                      className="border border-zinc-300 dark:border-gray-700 bg-zinc-200/50 dark:bg-white/5 p-1.5 w-full rounded text-zinc-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00] text-sm"
                       placeholder="Name"
                     />
                   </div>
@@ -122,7 +122,7 @@ export function RegionCodeManagement({
                     <input 
                       name="description" 
                       defaultValue={rc.description || ''}
-                      className="border border-gray-700 bg-white/5 p-1.5 w-full rounded text-white focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00] text-sm"
+                      className="border border-zinc-300 dark:border-gray-700 bg-zinc-200/50 dark:bg-white/5 p-1.5 w-full rounded text-zinc-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00] text-sm"
                       placeholder="Description (optional)"
                     />
                   </div>
@@ -130,7 +130,7 @@ export function RegionCodeManagement({
                     <select
                       name="timezone_id"
                       defaultValue={rc.timezone_id || 'none'}
-                      className="border border-gray-700 bg-white/5 p-1.5 w-full rounded text-white focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00] text-sm"
+                      className="border border-zinc-300 dark:border-gray-700 bg-zinc-200/50 dark:bg-white/5 p-1.5 w-full rounded text-zinc-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00] text-sm"
                     >
                       <option value="none">No Timezone</option>
                       {timezones.map(tz => (
@@ -161,11 +161,11 @@ export function RegionCodeManagement({
                 <>
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
-                      <p className="font-medium text-white">
+                      <p className="font-medium text-zinc-900 dark:text-white">
                         <span className="text-[#C27E00]">{rc.code}</span> - {rc.name}
                       </p>
                       {rc.description && (
-                        <p className="text-xs text-gray-400 mt-1">{rc.description}</p>
+                        <p className="text-xs text-zinc-500 dark:text-gray-400 mt-1">{rc.description}</p>
                       )}
                       {rc.timezones && (
                         <p className="text-xs text-[#C27E00] mt-1">
@@ -207,39 +207,39 @@ export function RegionCodeManagement({
           + Add Region Code
         </button>
       ) : (
-        <form onSubmit={handleCreate} className="space-y-3 bg-white/5 p-4 rounded border border-gray-800">
+        <form onSubmit={handleCreate} className="space-y-3 bg-zinc-200/50 dark:bg-white/5 p-4 rounded border border-zinc-200 dark:border-gray-800">
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">Region Code</label>
+            <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300 mb-1">Region Code</label>
             <input 
               name="code" 
               required 
-              className="border border-gray-700 bg-white/5 p-2 w-full rounded text-white focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00] text-sm"
+              className="border border-zinc-300 dark:border-gray-700 bg-zinc-200/50 dark:bg-white/5 p-2 w-full rounded text-zinc-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00] text-sm"
               placeholder="e.g. REG001"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">Region Name</label>
+            <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300 mb-1">Region Name</label>
             <input 
               name="name" 
               required 
-              className="border border-gray-700 bg-white/5 p-2 w-full rounded text-white focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00] text-sm"
+              className="border border-zinc-300 dark:border-gray-700 bg-zinc-200/50 dark:bg-white/5 p-2 w-full rounded text-zinc-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00] text-sm"
               placeholder="e.g. North Region"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">Description (Optional)</label>
+            <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300 mb-1">Description (Optional)</label>
             <input 
               name="description" 
-              className="border border-gray-700 bg-white/5 p-2 w-full rounded text-white focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00] text-sm"
+              className="border border-zinc-300 dark:border-gray-700 bg-zinc-200/50 dark:bg-white/5 p-2 w-full rounded text-zinc-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00] text-sm"
               placeholder="Optional description"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">Timezone</label>
+            <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300 mb-1">Timezone</label>
             <select
               name="timezone_id"
               defaultValue="none"
-              className="border border-gray-700 bg-white/5 p-2 w-full rounded text-white focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00] text-sm"
+              className="border border-zinc-300 dark:border-gray-700 bg-zinc-200/50 dark:bg-white/5 p-2 w-full rounded text-zinc-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00] text-sm"
             >
               <option value="none">No Timezone</option>
               {timezones.map(tz => (

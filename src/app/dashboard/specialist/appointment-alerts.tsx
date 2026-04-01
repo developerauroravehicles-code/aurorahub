@@ -48,7 +48,7 @@ function getStatusColor(status: AlertStatus): string {
     case 'tomorrow':
       return 'bg-yellow-900/30 border-yellow-800 text-yellow-200'
     default:
-      return 'bg-white/5 border-gray-800 text-gray-300'
+      return 'bg-zinc-200/50 dark:bg-white/5 border-zinc-200 dark:border-gray-800 text-zinc-600 dark:text-gray-300'
   }
 }
 
@@ -91,11 +91,11 @@ export function AppointmentAlerts({ appointments }: AppointmentAlertsProps) {
   return (
     <div>
       <div className="flex justify-between items-center mb-4">
-        <h2 className="text-xl font-semibold text-white">Appointment Alerts</h2>
+        <h2 className="text-xl font-semibold text-zinc-900 dark:text-white">Appointment Alerts</h2>
       </div>
       
-      <div className="bg-white/5 rounded-lg border border-gray-800 shadow overflow-hidden">
-        <ul className="divide-y divide-gray-800">
+      <div className="bg-zinc-200/50 dark:bg-white/5 rounded-lg border border-zinc-200 dark:border-gray-800 shadow overflow-hidden">
+        <ul className="divide-y divide-zinc-200 dark:divide-gray-800">
           {sortedAppointments.map(appointment => {
             const status = getAlertStatus(appointment.appointment_date)
             const statusColor = getStatusColor(status)
@@ -104,12 +104,12 @@ export function AppointmentAlerts({ appointments }: AppointmentAlertsProps) {
             return (
               <li 
                 key={appointment.id} 
-                className={`p-4 border-l-4 ${statusColor} hover:bg-white/5 transition-colors`}
+                className={`p-4 border-l-4 ${statusColor} hover:bg-zinc-200/50 dark:bg-white/5 transition-colors`}
               >
                 <div className="flex justify-between items-start">
                   <div className="flex-1">
                     <div className="flex items-center gap-3 mb-2">
-                      <p className="font-semibold text-white">
+                      <p className="font-semibold text-zinc-900 dark:text-white">
                         {appointment.customer_firstname} {appointment.customer_lastname}
                       </p>
                       {statusLabel && (
@@ -118,14 +118,14 @@ export function AppointmentAlerts({ appointments }: AppointmentAlertsProps) {
                         </span>
                       )}
                     </div>
-                    <p className="text-sm text-gray-400">
+                    <p className="text-sm text-zinc-500 dark:text-gray-400">
                       {appointment.vehicle_year} {appointment.vehicle_make} {appointment.vehicle_model}
                     </p>
-                    <p className="text-sm text-gray-400 mt-1">
+                    <p className="text-sm text-zinc-500 dark:text-gray-400 mt-1">
                       Camera: {appointment.camera_model}
                     </p>
                     {appointment.stock_number && (
-                      <p className="text-sm text-gray-400 mt-1">
+                      <p className="text-sm text-zinc-500 dark:text-gray-400 mt-1">
                         Stock: {appointment.stock_number}
                       </p>
                     )}
@@ -135,13 +135,13 @@ export function AppointmentAlerts({ appointments }: AppointmentAlertsProps) {
                         : format(new Date(appointment.appointment_date), 'PPP h:mm a')}
                     </p>
                     {appointment.customer_address && (
-                      <p className="text-xs text-gray-500 mt-1">
+                      <p className="text-xs text-zinc-500 dark:text-gray-500 mt-1">
                         Address: {appointment.customer_address}
                       </p>
                     )}
                   </div>
                   <div className="text-right">
-                    <p className="text-xs text-gray-500">
+                    <p className="text-xs text-zinc-500 dark:text-gray-500">
                       {appointment.timezoneName
                         ? formatInTimeZone(new Date(appointment.appointment_date), appointment.timezoneName, 'MMM d, yyyy')
                         : format(new Date(appointment.appointment_date), 'MMM d, yyyy')}

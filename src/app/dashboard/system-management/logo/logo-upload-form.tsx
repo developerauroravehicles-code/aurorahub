@@ -38,7 +38,7 @@ export function LogoUploadForm() {
 
       <form action={formAction} className="space-y-6">
         <div>
-          <label className="block text-sm font-medium text-gray-300 mb-2">
+          <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300 mb-2">
             Upload System Logo
           </label>
           <input
@@ -47,15 +47,15 @@ export function LogoUploadForm() {
             accept="image/*"
             onChange={handleFileChange}
             required
-            className="block w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-[#C27E00] file:text-white hover:file:bg-[#a06900] file:cursor-pointer"
+            className="block w-full text-sm text-zinc-500 dark:text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-[#C27E00] file:text-white hover:file:bg-[#a06900] file:cursor-pointer"
           />
-          <p className="mt-1 text-xs text-gray-500">Maximum file size: 5MB</p>
+          <p className="mt-1 text-xs text-zinc-500 dark:text-gray-500">Maximum file size: 5MB</p>
         </div>
 
         {preview && (
-          <div className="bg-white/5 p-4 rounded-lg border border-gray-800">
-            <p className="text-sm text-gray-400 mb-2">Preview:</p>
-            <div className="relative w-64 h-32 bg-black rounded flex items-center justify-center">
+          <div className="bg-zinc-200/50 dark:bg-white/5 p-4 rounded-lg border border-zinc-200 dark:border-gray-800">
+            <p className="text-sm text-zinc-500 dark:text-gray-400 mb-2">Preview:</p>
+            <div className="relative w-64 h-32 bg-zinc-50 dark:bg-black rounded flex items-center justify-center">
               <img
                 src={preview}
                 alt="Logo preview"

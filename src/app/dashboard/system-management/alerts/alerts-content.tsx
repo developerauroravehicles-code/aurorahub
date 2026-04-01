@@ -90,24 +90,24 @@ export function AlertsContent() {
   return (
     <div className="space-y-8">
       {/* Recipients info */}
-      <div className="rounded-lg border border-gray-800 bg-amber-900/10 p-4">
+      <div className="rounded-lg border border-zinc-200 dark:border-gray-800 bg-amber-900/10 p-4">
         <div className="flex items-center gap-2 text-amber-400">
           <Mail className="h-5 w-5" />
           <span className="font-medium">Recipients</span>
         </div>
-        <p className="mt-1 text-sm text-gray-400">
+        <p className="mt-1 text-sm text-zinc-500 dark:text-gray-400">
           Alerts are sent via email to all users with IT and Aurora Manager roles. Ensure mail settings are configured in Infrastructure → Mail Settings.
         </p>
       </div>
 
       {/* Alert rules */}
       <div>
-        <h3 className="text-sm font-medium text-gray-400 mb-3">Alert rules</h3>
+        <h3 className="text-sm font-medium text-zinc-500 dark:text-gray-400 mb-3">Alert rules</h3>
         <div className="space-y-3">
           {rules.map((rule) => (
             <div
               key={rule.id}
-              className="flex flex-wrap items-center justify-between gap-4 rounded-lg border border-gray-800 bg-black/30 p-4"
+              className="flex flex-wrap items-center justify-between gap-4 rounded-lg border border-zinc-200 dark:border-gray-800 bg-zinc-100/90 dark:bg-black/30 p-4"
             >
               <div className="flex items-center gap-3">
                 <button
@@ -124,22 +124,22 @@ export function AlertsContent() {
                   />
                 </button>
                 <div>
-                  <div className="font-medium text-white">{rule.name}</div>
+                  <div className="font-medium text-zinc-900 dark:text-white">{rule.name}</div>
                   {rule.description && (
-                    <div className="text-sm text-gray-500">{rule.description}</div>
+                    <div className="text-sm text-zinc-500 dark:text-gray-500">{rule.description}</div>
                   )}
                 </div>
               </div>
               {rule.type === 'low_stock' && (
                 <div className="flex items-center gap-2">
-                  <label className="text-sm text-gray-400">Threshold:</label>
+                  <label className="text-sm text-zinc-500 dark:text-gray-400">Threshold:</label>
                   <input
                     type="number"
                     min={1}
                     max={999}
                     value={Number(rule.params?.threshold ?? 5)}
                     onChange={(e) => setThreshold(rule.id, parseInt(e.target.value, 10) || 5)}
-                    className="w-20 rounded bg-gray-900 border border-gray-700 px-2 py-1 text-white text-sm"
+                    className="w-20 rounded bg-zinc-200 dark:bg-gray-900 border border-zinc-300 dark:border-gray-700 px-2 py-1 text-zinc-900 dark:text-white text-sm"
                   />
                 </div>
               )}
@@ -166,12 +166,12 @@ export function AlertsContent() {
       )}
 
       {/* Cron setup */}
-      <div className="rounded-lg border border-gray-800 bg-black/30 p-4">
-        <div className="flex items-center gap-2 text-gray-400">
+      <div className="rounded-lg border border-zinc-200 dark:border-gray-800 bg-zinc-100/90 dark:bg-black/30 p-4">
+        <div className="flex items-center gap-2 text-zinc-500 dark:text-gray-400">
           <Bell className="h-5 w-5" />
           <span className="font-medium">Automatic triggers</span>
         </div>
-        <p className="mt-2 text-sm text-gray-400">
+        <p className="mt-2 text-sm text-zinc-500 dark:text-gray-400">
           Alerts run automatically via cron. Call <code className="rounded bg-gray-800 px-1">GET /api/run-alerts</code> periodically
           (e.g. every 5–15 minutes). If CRON_SECRET is set, include <code className="rounded bg-gray-800 px-1">Authorization: Bearer &#123;CRON_SECRET&#125;</code>.
         </p>
@@ -179,36 +179,36 @@ export function AlertsContent() {
 
       {/* Recent alerts */}
       <div>
-        <h3 className="text-sm font-medium text-gray-400 mb-3">Recent alerts</h3>
+        <h3 className="text-sm font-medium text-zinc-500 dark:text-gray-400 mb-3">Recent alerts</h3>
         {logs.length === 0 ? (
-          <div className="rounded-lg border border-gray-800 bg-black/30 p-8 text-center text-gray-500">
+          <div className="rounded-lg border border-zinc-200 dark:border-gray-800 bg-zinc-100/90 dark:bg-black/30 p-8 text-center text-zinc-500 dark:text-gray-500">
             No alerts sent yet.
           </div>
         ) : (
-          <div className="overflow-x-auto rounded-lg border border-gray-800">
+          <div className="overflow-x-auto rounded-lg border border-zinc-200 dark:border-gray-800">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-gray-800 bg-black/30">
-                  <th className="px-4 py-2 text-left text-gray-400">Time</th>
-                  <th className="px-4 py-2 text-left text-gray-400">Type</th>
-                  <th className="px-4 py-2 text-left text-gray-400">Subject</th>
-                  <th className="px-4 py-2 text-center text-gray-400">Recipients</th>
-                  <th className="px-4 py-2 text-center text-gray-400">Status</th>
+                <tr className="border-b border-zinc-200 dark:border-gray-800 bg-zinc-100/90 dark:bg-black/30">
+                  <th className="px-4 py-2 text-left text-zinc-500 dark:text-gray-400">Time</th>
+                  <th className="px-4 py-2 text-left text-zinc-500 dark:text-gray-400">Type</th>
+                  <th className="px-4 py-2 text-left text-zinc-500 dark:text-gray-400">Subject</th>
+                  <th className="px-4 py-2 text-center text-zinc-500 dark:text-gray-400">Recipients</th>
+                  <th className="px-4 py-2 text-center text-zinc-500 dark:text-gray-400">Status</th>
                 </tr>
               </thead>
               <tbody>
                 {logs.map((log) => (
-                  <tr key={log.id} className="border-b border-gray-800/50 hover:bg-white/5">
-                    <td className="px-4 py-2 text-gray-300">
+                  <tr key={log.id} className="border-b border-zinc-200 dark:border-gray-800/50 hover:bg-zinc-200/50 dark:bg-white/5">
+                    <td className="px-4 py-2 text-zinc-600 dark:text-gray-300">
                       {formatInPT(log.created_at, 'MMM d, yyyy h:mm:ss a')}
                     </td>
-                    <td className="px-4 py-2 text-gray-300">
+                    <td className="px-4 py-2 text-zinc-600 dark:text-gray-300">
                       {ALERT_TYPE_LABELS[log.alert_type] ?? log.alert_type}
                     </td>
-                    <td className="px-4 py-2 text-gray-400 max-w-xs truncate">
+                    <td className="px-4 py-2 text-zinc-500 dark:text-gray-400 max-w-xs truncate">
                       {log.subject ?? '—'}
                     </td>
-                    <td className="px-4 py-2 text-center text-gray-400">
+                    <td className="px-4 py-2 text-center text-zinc-500 dark:text-gray-400">
                       {log.recipient_count ?? 0}
                     </td>
                     <td className="px-4 py-2">

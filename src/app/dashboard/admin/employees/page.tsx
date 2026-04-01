@@ -105,20 +105,20 @@ export default async function EmployeesPage({
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-semibold mb-4 text-white">Employees</h1>
+        <h1 className="text-2xl font-semibold mb-4 text-zinc-900 dark:text-white">Employees</h1>
         {showDealerFilter && (
           <EmployeesDealerFilter
             dealers={dealers ?? []}
             selectedDealerId={dealerFilter}
           />
         )}
-        <div className="bg-white/5 rounded-lg border border-gray-800 shadow overflow-hidden">
-            <ul className="divide-y divide-gray-800">
+        <div className="bg-zinc-200/50 dark:bg-white/5 rounded-lg border border-zinc-200 dark:border-gray-800 shadow overflow-hidden">
+            <ul className="divide-y divide-zinc-200 dark:divide-gray-800">
                 {employees?.map(e => (
-                    <li key={e.id} className="px-4 py-4 hover:bg-white/5 transition-colors">
+                    <li key={e.id} className="px-4 py-4 hover:bg-zinc-200/50 dark:bg-white/5 transition-colors">
                         <div className="flex justify-between items-center">
                             <div>
-                                <p className="font-bold text-white">
+                                <p className="font-bold text-zinc-900 dark:text-white">
                                     {e.role === 'specialist' ? (
                                         <Link href={`/dashboard/admin/employees/${e.id}`} className="hover:text-[#C27E00] hover:underline transition-colors">
                                             {e.full_name}
@@ -127,16 +127,16 @@ export default async function EmployeesPage({
                                         e.full_name
                                     )}
                                 </p>
-                                <p className="text-sm text-gray-400 capitalize">{e.role === 'specialist' ? 'Technical Support' : e.role.replace('_', ' ')}</p>
+                                <p className="text-sm text-zinc-500 dark:text-gray-400 capitalize">{e.role === 'specialist' ? 'Technical Support' : e.role.replace('_', ' ')}</p>
                             </div>
                             <div className="flex items-center gap-4">
-                                <div className="text-right text-sm text-gray-400">
+                                <div className="text-right text-sm text-zinc-500 dark:text-gray-400">
                                     {e.role === 'specialist' && ['aurora_manager', 'hr'].includes(currentUserProfile.role ?? '') && specialistDealersMap.has(e.id) ? (
                                         <p className="text-[#C27E00]">
                                           {specialistDealersMap.get(e.id)?.map(d => d.name).join(', ') || 'No dealers assigned'}
                                         </p>
                                       ) : e.role === 'specialist' ? (
-                                        <p className="text-gray-600">—</p>
+                                        <p className="text-zinc-600 dark:text-gray-600">—</p>
                                       ) : (
                                         <p>{(e.dealers as any)?.name || 'Platform'}</p>
                                       )}

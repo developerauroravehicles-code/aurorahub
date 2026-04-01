@@ -78,13 +78,13 @@ export function SchedulingContent({
 
   return (
     <div className="space-y-6">
-      <div className="flex gap-2 border-b border-gray-800 pb-2">
+      <div className="flex gap-2 border-b border-zinc-200 dark:border-gray-800 pb-2">
         <button
           onClick={() => setActiveTab('availability')}
           className={`px-4 py-2 rounded-t text-sm font-medium transition-colors flex items-center gap-2 ${
             activeTab === 'availability'
-              ? 'bg-white/10 text-white border border-b-0 border-gray-800'
-              : 'text-gray-400 hover:text-white hover:bg-white/5'
+              ? 'bg-zinc-200 dark:bg-white/10 text-zinc-900 dark:text-white border border-b-0 border-zinc-200 dark:border-gray-800'
+              : 'text-zinc-500 dark:text-gray-400 hover:text-zinc-900 dark:text-white hover:bg-zinc-200/50 dark:bg-white/5'
           }`}
         >
           <Clock className="w-4 h-4" /> Availability
@@ -93,8 +93,8 @@ export function SchedulingContent({
           onClick={() => setActiveTab('leave')}
           className={`px-4 py-2 rounded-t text-sm font-medium transition-colors flex items-center gap-2 ${
             activeTab === 'leave'
-              ? 'bg-white/10 text-white border border-b-0 border-gray-800'
-              : 'text-gray-400 hover:text-white hover:bg-white/5'
+              ? 'bg-zinc-200 dark:bg-white/10 text-zinc-900 dark:text-white border border-b-0 border-zinc-200 dark:border-gray-800'
+              : 'text-zinc-500 dark:text-gray-400 hover:text-zinc-900 dark:text-white hover:bg-zinc-200/50 dark:bg-white/5'
           }`}
         >
           <Calendar className="w-4 h-4" /> Leave Blocks
@@ -102,9 +102,9 @@ export function SchedulingContent({
       </div>
 
       {activeTab === 'availability' && (
-        <div className="bg-white/5 rounded-lg border border-gray-800 p-6">
+        <div className="bg-zinc-200/50 dark:bg-white/5 rounded-lg border border-zinc-200 dark:border-gray-800 p-6">
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-lg font-semibold text-white">Weekly Availability</h2>
+            <h2 className="text-lg font-semibold text-zinc-900 dark:text-white">Weekly Availability</h2>
             <button
               onClick={() => {
                 setEditingAvailabilityId(null)
@@ -131,40 +131,40 @@ export function SchedulingContent({
             />
           )}
           <div className="mt-4 overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-800 text-sm">
+            <table className="min-w-full divide-y divide-zinc-200 dark:divide-gray-800 text-sm">
               <thead>
                 <tr>
-                  <th className="px-4 py-2 text-left text-gray-400">Personnel</th>
-                  <th className="px-4 py-2 text-left text-gray-400">Day</th>
-                  <th className="px-4 py-2 text-left text-gray-400">Time</th>
-                  <th className="px-4 py-2 text-left text-gray-400">Valid</th>
-                  <th className="px-4 py-2 text-left text-gray-400">Available</th>
-                  <th className="px-4 py-2 text-right text-gray-400">Actions</th>
+                  <th className="px-4 py-2 text-left text-zinc-500 dark:text-gray-400">Personnel</th>
+                  <th className="px-4 py-2 text-left text-zinc-500 dark:text-gray-400">Day</th>
+                  <th className="px-4 py-2 text-left text-zinc-500 dark:text-gray-400">Time</th>
+                  <th className="px-4 py-2 text-left text-zinc-500 dark:text-gray-400">Valid</th>
+                  <th className="px-4 py-2 text-left text-zinc-500 dark:text-gray-400">Available</th>
+                  <th className="px-4 py-2 text-right text-zinc-500 dark:text-gray-400">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-800">
+              <tbody className="divide-y divide-zinc-200 dark:divide-gray-800">
                 {availability.map((a) => (
                   <tr key={a.id}>
-                    <td className="px-4 py-2 text-white">
+                    <td className="px-4 py-2 text-zinc-900 dark:text-white">
                       <Link href={`/dashboard/hr/personnel/${a.personnel_id}`} className="text-[#C27E00] hover:underline">
                         {a.personnel?.full_name ?? '—'}
                       </Link>
                     </td>
-                    <td className="px-4 py-2 text-gray-300">
+                    <td className="px-4 py-2 text-zinc-600 dark:text-gray-300">
                       {a.day_of_week != null ? DAY_NAMES[a.day_of_week] ?? `Day ${a.day_of_week}` : '—'}
                     </td>
-                    <td className="px-4 py-2 text-gray-300">
+                    <td className="px-4 py-2 text-zinc-600 dark:text-gray-300">
                       {a.start_time || a.end_time
                         ? `${formatTime(a.start_time)} – ${formatTime(a.end_time)}`
                         : 'All day'}
                     </td>
-                    <td className="px-4 py-2 text-gray-400">
+                    <td className="px-4 py-2 text-zinc-500 dark:text-gray-400">
                       {a.valid_from || a.valid_to
                         ? `${a.valid_from ? new Date(a.valid_from).toLocaleDateString() : '…'} – ${a.valid_to ? new Date(a.valid_to).toLocaleDateString() : '…'}`
                         : '—'}
                     </td>
                     <td className="px-4 py-2">
-                      <span className={`px-2 py-0.5 rounded text-xs ${a.is_available ? 'bg-green-500/20 text-green-400' : 'bg-gray-800 text-gray-400'}`}>
+                      <span className={`px-2 py-0.5 rounded text-xs ${a.is_available ? 'bg-green-500/20 text-green-400' : 'bg-gray-800 text-zinc-500 dark:text-gray-400'}`}>
                         {a.is_available ? 'Yes' : 'No'}
                       </span>
                     </td>
@@ -174,13 +174,13 @@ export function SchedulingContent({
                           setEditingAvailabilityId(a.id)
                           setShowAvailabilityForm(true)
                         }}
-                        className="p-1.5 text-gray-400 hover:text-[#C27E00] mr-1"
+                        className="p-1.5 text-zinc-500 dark:text-gray-400 hover:text-[#C27E00] mr-1"
                         title="Edit"
                       >
                         <Pencil className="w-4 h-4 inline" />
                       </button>
                       <form action={async () => { if (confirm('Delete this availability?')) { await deleteAvailability(a.id); router.refresh() } }} className="inline">
-                        <button type="submit" className="p-1.5 text-gray-400 hover:text-red-400" title="Delete">
+                        <button type="submit" className="p-1.5 text-zinc-500 dark:text-gray-400 hover:text-red-400" title="Delete">
                           <Trash2 className="w-4 h-4 inline" />
                         </button>
                       </form>
@@ -190,16 +190,16 @@ export function SchedulingContent({
               </tbody>
             </table>
             {availability.length === 0 && !showAvailabilityForm && (
-              <p className="text-gray-500 py-6 text-center">No availability records. Add one to define weekly schedules.</p>
+              <p className="text-zinc-500 dark:text-gray-500 py-6 text-center">No availability records. Add one to define weekly schedules.</p>
             )}
           </div>
         </div>
       )}
 
       {activeTab === 'leave' && (
-        <div className="bg-white/5 rounded-lg border border-gray-800 p-6">
+        <div className="bg-zinc-200/50 dark:bg-white/5 rounded-lg border border-zinc-200 dark:border-gray-800 p-6">
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-lg font-semibold text-white">Leave Blocks</h2>
+            <h2 className="text-lg font-semibold text-zinc-900 dark:text-white">Leave Blocks</h2>
             <button
               onClick={() => {
                 setEditingLeaveId(null)
@@ -226,42 +226,42 @@ export function SchedulingContent({
             />
           )}
           <div className="mt-4 overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-800 text-sm">
+            <table className="min-w-full divide-y divide-zinc-200 dark:divide-gray-800 text-sm">
               <thead>
                 <tr>
-                  <th className="px-4 py-2 text-left text-gray-400">Personnel</th>
-                  <th className="px-4 py-2 text-left text-gray-400">Start</th>
-                  <th className="px-4 py-2 text-left text-gray-400">End</th>
-                  <th className="px-4 py-2 text-left text-gray-400">Reason</th>
-                  <th className="px-4 py-2 text-right text-gray-400">Actions</th>
+                  <th className="px-4 py-2 text-left text-zinc-500 dark:text-gray-400">Personnel</th>
+                  <th className="px-4 py-2 text-left text-zinc-500 dark:text-gray-400">Start</th>
+                  <th className="px-4 py-2 text-left text-zinc-500 dark:text-gray-400">End</th>
+                  <th className="px-4 py-2 text-left text-zinc-500 dark:text-gray-400">Reason</th>
+                  <th className="px-4 py-2 text-right text-zinc-500 dark:text-gray-400">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-800">
+              <tbody className="divide-y divide-zinc-200 dark:divide-gray-800">
                 {leaveBlocks.map((l) => {
                   const isPast = l.end_date < today
                   return (
                     <tr key={l.id} className={isPast ? 'opacity-60' : ''}>
-                      <td className="px-4 py-2 text-white">
+                      <td className="px-4 py-2 text-zinc-900 dark:text-white">
                         <Link href={`/dashboard/hr/personnel/${l.personnel_id}`} className="text-[#C27E00] hover:underline">
                           {l.personnel?.full_name ?? '—'}
                         </Link>
                       </td>
-                      <td className="px-4 py-2 text-gray-300">{new Date(l.start_date).toLocaleDateString()}</td>
-                      <td className="px-4 py-2 text-gray-300">{new Date(l.end_date).toLocaleDateString()}</td>
-                      <td className="px-4 py-2 text-gray-400">{l.reason || '—'}</td>
+                      <td className="px-4 py-2 text-zinc-600 dark:text-gray-300">{new Date(l.start_date).toLocaleDateString()}</td>
+                      <td className="px-4 py-2 text-zinc-600 dark:text-gray-300">{new Date(l.end_date).toLocaleDateString()}</td>
+                      <td className="px-4 py-2 text-zinc-500 dark:text-gray-400">{l.reason || '—'}</td>
                       <td className="px-4 py-2 text-right">
                         <button
                           onClick={() => {
                             setEditingLeaveId(l.id)
                             setShowLeaveForm(true)
                           }}
-                          className="p-1.5 text-gray-400 hover:text-[#C27E00] mr-1"
+                          className="p-1.5 text-zinc-500 dark:text-gray-400 hover:text-[#C27E00] mr-1"
                           title="Edit"
                         >
                           <Pencil className="w-4 h-4 inline" />
                         </button>
                         <form action={async () => { if (confirm('Delete this leave block?')) { await deleteLeaveBlock(l.id); router.refresh() } }} className="inline">
-                          <button type="submit" className="p-1.5 text-gray-400 hover:text-red-400" title="Delete">
+                          <button type="submit" className="p-1.5 text-zinc-500 dark:text-gray-400 hover:text-red-400" title="Delete">
                             <Trash2 className="w-4 h-4 inline" />
                           </button>
                         </form>
@@ -272,7 +272,7 @@ export function SchedulingContent({
               </tbody>
             </table>
             {leaveBlocks.length === 0 && !showLeaveForm && (
-              <p className="text-gray-500 py-6 text-center">No leave blocks. Add vacation, sick leave, or other absences.</p>
+              <p className="text-zinc-500 dark:text-gray-500 py-6 text-center">No leave blocks. Add vacation, sick leave, or other absences.</p>
             )}
           </div>
         </div>
@@ -340,12 +340,12 @@ function AvailabilityForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="mb-6 p-4 rounded bg-black/30 border border-gray-700 space-y-3">
-      <h3 className="text-white font-medium">{isEdit ? 'Edit Availability' : 'Add Availability'}</h3>
+    <form onSubmit={handleSubmit} className="mb-6 p-4 rounded bg-zinc-100/90 dark:bg-black/30 border border-zinc-300 dark:border-gray-700 space-y-3">
+      <h3 className="text-zinc-900 dark:text-white font-medium">{isEdit ? 'Edit Availability' : 'Add Availability'}</h3>
       {!isEdit && (
         <div>
-          <label className="block text-xs text-gray-400 mb-1">Personnel</label>
-          <select name="personnel_id" required defaultValue="" className="w-full rounded bg-gray-900 border border-gray-700 px-3 py-2 text-white text-sm [&>option]:bg-gray-900" style={{ colorScheme: 'dark' }}>
+          <label className="block text-xs text-zinc-500 dark:text-gray-400 mb-1">Personnel</label>
+          <select name="personnel_id" required defaultValue="" className="w-full rounded bg-zinc-200 dark:bg-gray-900 border border-zinc-300 dark:border-gray-700 px-3 py-2 text-zinc-900 dark:text-white text-sm [&>option]:bg-zinc-200 dark:bg-gray-900" style={{ colorScheme: 'dark' }}>
             <option value="">Select...</option>
             {personnel.map((p) => (
               <option key={p.id} value={p.id}>{p.full_name}</option>
@@ -355,47 +355,47 @@ function AvailabilityForm({
       )}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         <div>
-          <label className="block text-xs text-gray-400 mb-1">Day of Week</label>
-          <select name="day_of_week" required defaultValue={String(availability?.day_of_week ?? 1)} className="w-full rounded bg-gray-900 border border-gray-700 px-3 py-2 text-white text-sm [&>option]:bg-gray-900" style={{ colorScheme: 'dark' }}>
+          <label className="block text-xs text-zinc-500 dark:text-gray-400 mb-1">Day of Week</label>
+          <select name="day_of_week" required defaultValue={String(availability?.day_of_week ?? 1)} className="w-full rounded bg-zinc-200 dark:bg-gray-900 border border-zinc-300 dark:border-gray-700 px-3 py-2 text-zinc-900 dark:text-white text-sm [&>option]:bg-zinc-200 dark:bg-gray-900" style={{ colorScheme: 'dark' }}>
             {Object.entries(DAY_NAMES).map(([v, label]) => (
               <option key={v} value={v}>{label}</option>
             ))}
           </select>
         </div>
         <div>
-          <label className="block text-xs text-gray-400 mb-1">Available</label>
-          <select name="is_available" defaultValue={availability?.is_available !== false ? 'true' : 'false'} className="w-full rounded bg-gray-900 border border-gray-700 px-3 py-2 text-white text-sm [&>option]:bg-gray-900" style={{ colorScheme: 'dark' }}>
+          <label className="block text-xs text-zinc-500 dark:text-gray-400 mb-1">Available</label>
+          <select name="is_available" defaultValue={availability?.is_available !== false ? 'true' : 'false'} className="w-full rounded bg-zinc-200 dark:bg-gray-900 border border-zinc-300 dark:border-gray-700 px-3 py-2 text-zinc-900 dark:text-white text-sm [&>option]:bg-zinc-200 dark:bg-gray-900" style={{ colorScheme: 'dark' }}>
             <option value="true">Yes</option>
             <option value="false">No (unavailable)</option>
           </select>
         </div>
         <div>
-          <label className="block text-xs text-gray-400 mb-1">Start Time</label>
-          <input name="start_time" type="time" defaultValue={toTimeInputValue(availability?.start_time ?? null)} className="w-full rounded bg-gray-900 border border-gray-700 px-3 py-2 text-white text-sm" />
+          <label className="block text-xs text-zinc-500 dark:text-gray-400 mb-1">Start Time</label>
+          <input name="start_time" type="time" defaultValue={toTimeInputValue(availability?.start_time ?? null)} className="w-full rounded bg-zinc-200 dark:bg-gray-900 border border-zinc-300 dark:border-gray-700 px-3 py-2 text-zinc-900 dark:text-white text-sm" />
         </div>
         <div>
-          <label className="block text-xs text-gray-400 mb-1">End Time</label>
-          <input name="end_time" type="time" defaultValue={toTimeInputValue(availability?.end_time ?? null)} className="w-full rounded bg-gray-900 border border-gray-700 px-3 py-2 text-white text-sm" />
+          <label className="block text-xs text-zinc-500 dark:text-gray-400 mb-1">End Time</label>
+          <input name="end_time" type="time" defaultValue={toTimeInputValue(availability?.end_time ?? null)} className="w-full rounded bg-zinc-200 dark:bg-gray-900 border border-zinc-300 dark:border-gray-700 px-3 py-2 text-zinc-900 dark:text-white text-sm" />
         </div>
         <div>
-          <label className="block text-xs text-gray-400 mb-1">Valid From</label>
-          <input name="valid_from" type="date" defaultValue={availability?.valid_from ?? ''} className="w-full rounded bg-gray-900 border border-gray-700 px-3 py-2 text-white text-sm" />
+          <label className="block text-xs text-zinc-500 dark:text-gray-400 mb-1">Valid From</label>
+          <input name="valid_from" type="date" defaultValue={availability?.valid_from ?? ''} className="w-full rounded bg-zinc-200 dark:bg-gray-900 border border-zinc-300 dark:border-gray-700 px-3 py-2 text-zinc-900 dark:text-white text-sm" />
         </div>
         <div>
-          <label className="block text-xs text-gray-400 mb-1">Valid To</label>
-          <input name="valid_to" type="date" defaultValue={availability?.valid_to ?? ''} className="w-full rounded bg-gray-900 border border-gray-700 px-3 py-2 text-white text-sm" />
+          <label className="block text-xs text-zinc-500 dark:text-gray-400 mb-1">Valid To</label>
+          <input name="valid_to" type="date" defaultValue={availability?.valid_to ?? ''} className="w-full rounded bg-zinc-200 dark:bg-gray-900 border border-zinc-300 dark:border-gray-700 px-3 py-2 text-zinc-900 dark:text-white text-sm" />
         </div>
       </div>
       <div>
-        <label className="block text-xs text-gray-400 mb-1">Notes</label>
-        <textarea name="notes" rows={2} defaultValue={availability?.notes ?? ''} className="w-full rounded bg-gray-900 border border-gray-700 px-3 py-2 text-white text-sm" />
+        <label className="block text-xs text-zinc-500 dark:text-gray-400 mb-1">Notes</label>
+        <textarea name="notes" rows={2} defaultValue={availability?.notes ?? ''} className="w-full rounded bg-zinc-200 dark:bg-gray-900 border border-zinc-300 dark:border-gray-700 px-3 py-2 text-zinc-900 dark:text-white text-sm" />
       </div>
       {error && <p className="text-red-400 text-sm">{error}</p>}
       <div className="flex gap-2">
         <button type="submit" disabled={loading} className="px-3 py-1.5 rounded bg-[#C27E00] text-white text-sm disabled:opacity-50">
           {loading ? <Loader2 className="w-4 h-4 animate-spin inline" /> : (isEdit ? 'Save' : 'Add')}
         </button>
-        <button type="button" onClick={onClose} className="px-3 py-1.5 rounded bg-white/10 text-gray-400 text-sm">
+        <button type="button" onClick={onClose} className="px-3 py-1.5 rounded bg-zinc-200 dark:bg-white/10 text-zinc-500 dark:text-gray-400 text-sm">
           Cancel
         </button>
       </div>
@@ -441,12 +441,12 @@ function LeaveBlockForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="mb-6 p-4 rounded bg-black/30 border border-gray-700 space-y-3">
-      <h3 className="text-white font-medium">{isEdit ? 'Edit Leave Block' : 'Add Leave Block'}</h3>
+    <form onSubmit={handleSubmit} className="mb-6 p-4 rounded bg-zinc-100/90 dark:bg-black/30 border border-zinc-300 dark:border-gray-700 space-y-3">
+      <h3 className="text-zinc-900 dark:text-white font-medium">{isEdit ? 'Edit Leave Block' : 'Add Leave Block'}</h3>
       {!isEdit && (
         <div>
-          <label className="block text-xs text-gray-400 mb-1">Personnel</label>
-          <select name="personnel_id" required defaultValue="" className="w-full rounded bg-gray-900 border border-gray-700 px-3 py-2 text-white text-sm [&>option]:bg-gray-900" style={{ colorScheme: 'dark' }}>
+          <label className="block text-xs text-zinc-500 dark:text-gray-400 mb-1">Personnel</label>
+          <select name="personnel_id" required defaultValue="" className="w-full rounded bg-zinc-200 dark:bg-gray-900 border border-zinc-300 dark:border-gray-700 px-3 py-2 text-zinc-900 dark:text-white text-sm [&>option]:bg-zinc-200 dark:bg-gray-900" style={{ colorScheme: 'dark' }}>
             <option value="">Select...</option>
             {personnel.map((p) => (
               <option key={p.id} value={p.id}>{p.full_name}</option>
@@ -456,24 +456,24 @@ function LeaveBlockForm({
       )}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         <div>
-          <label className="block text-xs text-gray-400 mb-1">Start Date</label>
-          <input name="start_date" type="date" required defaultValue={leaveBlock?.start_date ?? ''} className="w-full rounded bg-gray-900 border border-gray-700 px-3 py-2 text-white text-sm" />
+          <label className="block text-xs text-zinc-500 dark:text-gray-400 mb-1">Start Date</label>
+          <input name="start_date" type="date" required defaultValue={leaveBlock?.start_date ?? ''} className="w-full rounded bg-zinc-200 dark:bg-gray-900 border border-zinc-300 dark:border-gray-700 px-3 py-2 text-zinc-900 dark:text-white text-sm" />
         </div>
         <div>
-          <label className="block text-xs text-gray-400 mb-1">End Date</label>
-          <input name="end_date" type="date" required defaultValue={leaveBlock?.end_date ?? ''} className="w-full rounded bg-gray-900 border border-gray-700 px-3 py-2 text-white text-sm" />
+          <label className="block text-xs text-zinc-500 dark:text-gray-400 mb-1">End Date</label>
+          <input name="end_date" type="date" required defaultValue={leaveBlock?.end_date ?? ''} className="w-full rounded bg-zinc-200 dark:bg-gray-900 border border-zinc-300 dark:border-gray-700 px-3 py-2 text-zinc-900 dark:text-white text-sm" />
         </div>
       </div>
       <div>
-        <label className="block text-xs text-gray-400 mb-1">Reason</label>
-        <textarea name="reason" rows={2} defaultValue={leaveBlock?.reason ?? ''} placeholder="Vacation, sick leave, personal..." className="w-full rounded bg-gray-900 border border-gray-700 px-3 py-2 text-white text-sm" />
+        <label className="block text-xs text-zinc-500 dark:text-gray-400 mb-1">Reason</label>
+        <textarea name="reason" rows={2} defaultValue={leaveBlock?.reason ?? ''} placeholder="Vacation, sick leave, personal..." className="w-full rounded bg-zinc-200 dark:bg-gray-900 border border-zinc-300 dark:border-gray-700 px-3 py-2 text-zinc-900 dark:text-white text-sm" />
       </div>
       {error && <p className="text-red-400 text-sm">{error}</p>}
       <div className="flex gap-2">
         <button type="submit" disabled={loading} className="px-3 py-1.5 rounded bg-[#C27E00] text-white text-sm disabled:opacity-50">
           {loading ? <Loader2 className="w-4 h-4 animate-spin inline" /> : (isEdit ? 'Save' : 'Add')}
         </button>
-        <button type="button" onClick={onClose} className="px-3 py-1.5 rounded bg-white/10 text-gray-400 text-sm">
+        <button type="button" onClick={onClose} className="px-3 py-1.5 rounded bg-zinc-200 dark:bg-white/10 text-zinc-500 dark:text-gray-400 text-sm">
           Cancel
         </button>
       </div>

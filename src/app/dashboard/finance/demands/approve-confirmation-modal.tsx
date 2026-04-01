@@ -48,10 +48,10 @@ export function ApproveConfirmationModal({ demandId, isOpen, onClose, hasAssigne
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-gray-900 border border-gray-800 rounded-lg shadow-xl max-w-md w-full">
+    <div className="fixed inset-0 bg-white dark:bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-zinc-200 dark:bg-gray-900 border border-zinc-200 dark:border-gray-800 rounded-lg shadow-xl max-w-md w-full">
         <div className="p-6">
-          <h2 className="text-2xl font-semibold text-white mb-6">Approve Demand</h2>
+          <h2 className="text-2xl font-semibold text-zinc-900 dark:text-white mb-6">Approve Demand</h2>
 
           {error && (
             <div className="bg-red-900/50 border border-red-800 text-red-200 p-4 rounded-md mb-4">
@@ -67,9 +67,9 @@ export function ApproveConfirmationModal({ demandId, isOpen, onClose, hasAssigne
                 id="confirmApprove"
                 checked={confirmApprove}
                 onChange={(e) => setConfirmApprove(e.target.checked)}
-                className="mt-1 w-5 h-5 rounded border-gray-700 bg-black/50 text-[#C27E00] focus:ring-[#C27E00] focus:ring-offset-gray-900"
+                className="mt-1 w-5 h-5 rounded border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 text-[#C27E00] focus:ring-[#C27E00] focus:ring-offset-gray-900"
               />
-              <label htmlFor="confirmApprove" className="text-white cursor-pointer">
+              <label htmlFor="confirmApprove" className="text-zinc-900 dark:text-white cursor-pointer">
                 Are you sure you want to approve this demand?
               </label>
             </div>
@@ -81,9 +81,9 @@ export function ApproveConfirmationModal({ demandId, isOpen, onClose, hasAssigne
                 id="sendSMSToCustomer"
                 checked={sendSMSToCustomer}
                 onChange={(e) => setSendSMSToCustomer(e.target.checked)}
-                className="mt-1 w-5 h-5 rounded border-gray-700 bg-black/50 text-[#C27E00] focus:ring-[#C27E00] focus:ring-offset-gray-900"
+                className="mt-1 w-5 h-5 rounded border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 text-[#C27E00] focus:ring-[#C27E00] focus:ring-offset-gray-900"
               />
-              <label htmlFor="sendSMSToCustomer" className="text-white cursor-pointer">
+              <label htmlFor="sendSMSToCustomer" className="text-zinc-900 dark:text-white cursor-pointer">
                 Send appointment information to customer via SMS
               </label>
             </div>
@@ -96,11 +96,11 @@ export function ApproveConfirmationModal({ demandId, isOpen, onClose, hasAssigne
                 checked={sendSMSToSpecialist}
                 onChange={(e) => setSendSMSToSpecialist(e.target.checked)}
                 disabled
-                className="mt-1 w-5 h-5 rounded border-gray-700 bg-black/50 text-[#C27E00] focus:ring-[#C27E00] focus:ring-offset-gray-900 disabled:opacity-75 disabled:cursor-not-allowed"
+                className="mt-1 w-5 h-5 rounded border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 text-[#C27E00] focus:ring-[#C27E00] focus:ring-offset-gray-900 disabled:opacity-75 disabled:cursor-not-allowed"
               />
-              <label htmlFor="sendSMSToSpecialist" className="text-white cursor-not-allowed opacity-75">
+              <label htmlFor="sendSMSToSpecialist" className="text-zinc-900 dark:text-white cursor-not-allowed opacity-75">
                 Send information to Specialist
-                <span className="text-xs text-gray-500 ml-2">(Will be auto-assigned to dealer's specialist)</span>
+                <span className="text-xs text-zinc-500 dark:text-gray-500 ml-2">(Will be auto-assigned to dealer's specialist)</span>
               </label>
             </div>
 
@@ -111,20 +111,20 @@ export function ApproveConfirmationModal({ demandId, isOpen, onClose, hasAssigne
                 id="sendSMSToAuroraManager"
                 checked={sendSMSToAuroraManager}
                 onChange={(e) => setSendSMSToAuroraManager(e.target.checked)}
-                className="mt-1 w-5 h-5 rounded border-gray-700 bg-black/50 text-[#C27E00] focus:ring-[#C27E00] focus:ring-offset-gray-900"
+                className="mt-1 w-5 h-5 rounded border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 text-[#C27E00] focus:ring-[#C27E00] focus:ring-offset-gray-900"
               />
-              <label htmlFor="sendSMSToAuroraManager" className="text-white cursor-pointer">
+              <label htmlFor="sendSMSToAuroraManager" className="text-zinc-900 dark:text-white cursor-pointer">
                 Send demand created notification to Aurora Manager(s)
               </label>
             </div>
           </div>
 
-          <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-gray-800">
+          <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-zinc-200 dark:border-gray-800">
             <button
               type="button"
               onClick={onClose}
               disabled={loading}
-              className="px-4 py-2 text-gray-300 hover:text-white transition-colors disabled:opacity-50"
+              className="px-4 py-2 text-zinc-600 dark:text-gray-300 hover:text-zinc-900 dark:text-white transition-colors disabled:opacity-50"
             >
               Cancel
             </button>

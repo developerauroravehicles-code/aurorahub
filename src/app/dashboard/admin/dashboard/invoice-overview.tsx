@@ -18,9 +18,9 @@ export function InvoiceOverview({ summary }: { summary: InvoiceSummary }) {
   ].filter(d => d.value > 0)
 
   return (
-    <div className="bg-white/5 border border-gray-800 rounded-lg p-6">
+    <div className="bg-zinc-200/50 dark:bg-white/5 border border-zinc-200 dark:border-gray-800 rounded-lg p-6">
       <div className="flex justify-between items-center mb-4">
-        <h2 className="text-lg font-semibold text-white">Invoice Overview</h2>
+        <h2 className="text-lg font-semibold text-zinc-900 dark:text-white">Invoice Overview</h2>
         <Link
           href="/dashboard/admin/invoices"
           className="text-sm text-[#C27E00] hover:text-[#a06900] transition-colors"
@@ -30,7 +30,7 @@ export function InvoiceOverview({ summary }: { summary: InvoiceSummary }) {
       </div>
 
       {total === 0 ? (
-        <p className="text-gray-500 text-sm">No completed demands with invoice data.</p>
+        <p className="text-zinc-500 dark:text-gray-500 text-sm">No completed demands with invoice data.</p>
       ) : (
         <>
           <div className="h-[120px] mb-4">
@@ -54,13 +54,13 @@ export function InvoiceOverview({ summary }: { summary: InvoiceSummary }) {
           </div>
           {incompleteList.length > 0 && (
             <div>
-              <p className="text-xs text-gray-500 mb-2">Incomplete (Drive not uploaded) — {drive}/{total} fully complete:</p>
+              <p className="text-xs text-zinc-500 dark:text-gray-500 mb-2">Incomplete (Drive not uploaded) — {drive}/{total} fully complete:</p>
               <ul className="space-y-1 max-h-[80px] overflow-y-auto">
                 {incompleteList.slice(0, 5).map(d => (
                   <li key={d.id}>
                     <Link
                       href={`/dashboard/admin/invoices`}
-                      className="text-sm text-gray-300 hover:text-[#C27E00] truncate block"
+                      className="text-sm text-zinc-600 dark:text-gray-300 hover:text-[#C27E00] truncate block"
                     >
                       {d.dealerName} {d.demand_number ? `#${d.demand_number}` : ''}
                     </Link>

@@ -11,7 +11,7 @@ interface StatCardProps {
 }
 
 const accentMap = {
-  white: 'text-white',
+  white: 'text-zinc-900 dark:text-white',
   blue: 'text-blue-400',
   green: 'text-green-400',
   yellow: 'text-yellow-400',
@@ -24,15 +24,15 @@ const accentMap = {
 export function StatCard({ title, value, subtitle, icon: Icon, accentColor = 'white', href }: StatCardProps) {
   const accent = accentMap[accentColor]
   const content = (
-    <div className="group relative h-full rounded-xl border border-gray-800/80 bg-gradient-to-br from-white/[0.06] to-transparent p-6 shadow-lg backdrop-blur-sm transition-all duration-300 hover:border-gray-700/80 hover:from-white/[0.08] hover:shadow-xl">
+    <div className="group relative h-full rounded-xl border border-zinc-200 dark:border-gray-800/80 bg-gradient-to-br from-white/[0.06] to-transparent p-6 shadow-lg backdrop-blur-sm transition-all duration-300 hover:border-zinc-300 dark:border-gray-700/80 hover:from-white/[0.08] hover:shadow-xl">
       <div className="flex items-start justify-between">
         <div>
-          <p className="text-xs font-medium uppercase tracking-wider text-gray-400/90">{title}</p>
+          <p className="text-xs font-medium uppercase tracking-wider text-zinc-500 dark:text-gray-400/90">{title}</p>
           <p className={`mt-2 text-3xl font-bold tabular-nums tracking-tight ${accent}`}>{value}</p>
-          {subtitle && <p className="mt-1 text-xs text-gray-500">{subtitle}</p>}
+          {subtitle && <p className="mt-1 text-xs text-zinc-500 dark:text-gray-500">{subtitle}</p>}
         </div>
         {Icon && (
-          <div className={`rounded-lg bg-white/5 p-3 transition-colors group-hover:bg-white/10 ${accent}`}>
+          <div className={`rounded-lg bg-zinc-200/50 dark:bg-white/5 p-3 transition-colors group-hover:bg-zinc-200 dark:bg-white/10 ${accent}`}>
             <Icon className="h-6 w-6" strokeWidth={1.75} />
           </div>
         )}

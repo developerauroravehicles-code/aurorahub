@@ -86,13 +86,13 @@ export function ComplianceContent({
 
   return (
     <div className="space-y-6">
-      <div className="flex gap-2 border-b border-gray-800 pb-2">
+      <div className="flex gap-2 border-b border-zinc-200 dark:border-gray-800 pb-2">
         <button
           onClick={() => setActiveTab('documents')}
           className={`px-4 py-2 rounded-t text-sm font-medium transition-colors flex items-center gap-2 ${
             activeTab === 'documents'
-              ? 'bg-white/10 text-white border border-b-0 border-gray-800'
-              : 'text-gray-400 hover:text-white hover:bg-white/5'
+              ? 'bg-zinc-200 dark:bg-white/10 text-zinc-900 dark:text-white border border-b-0 border-zinc-200 dark:border-gray-800'
+              : 'text-zinc-500 dark:text-gray-400 hover:text-zinc-900 dark:text-white hover:bg-zinc-200/50 dark:bg-white/5'
           }`}
         >
           <FileText className="w-4 h-4" /> Documents
@@ -101,8 +101,8 @@ export function ComplianceContent({
           onClick={() => setActiveTab('checklists')}
           className={`px-4 py-2 rounded-t text-sm font-medium transition-colors flex items-center gap-2 ${
             activeTab === 'checklists'
-              ? 'bg-white/10 text-white border border-b-0 border-gray-800'
-              : 'text-gray-400 hover:text-white hover:bg-white/5'
+              ? 'bg-zinc-200 dark:bg-white/10 text-zinc-900 dark:text-white border border-b-0 border-zinc-200 dark:border-gray-800'
+              : 'text-zinc-500 dark:text-gray-400 hover:text-zinc-900 dark:text-white hover:bg-zinc-200/50 dark:bg-white/5'
           }`}
         >
           <CheckSquare className="w-4 h-4" /> Checklists
@@ -110,7 +110,7 @@ export function ComplianceContent({
       </div>
 
       {activeTab === 'documents' && (
-        <div className="bg-white/5 rounded-lg border border-gray-800 p-6">
+        <div className="bg-zinc-200/50 dark:bg-white/5 rounded-lg border border-zinc-200 dark:border-gray-800 p-6">
           {(expiringSoon.length > 0 || expired.length > 0) && (
             <div className="mb-4 space-y-2">
               {expiringSoon.length > 0 && (
@@ -126,7 +126,7 @@ export function ComplianceContent({
             </div>
           )}
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-lg font-semibold text-white">Compliance Documents</h2>
+            <h2 className="text-lg font-semibold text-zinc-900 dark:text-white">Compliance Documents</h2>
             <button
               onClick={() => { setEditingDocId(null); setShowDocForm(true) }}
               className="flex items-center gap-2 px-3 py-1.5 rounded bg-[#C27E00] text-white text-sm hover:bg-[#a06900]"
@@ -143,34 +143,34 @@ export function ComplianceContent({
             />
           )}
           <div className="mt-4 overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-800 text-sm">
+            <table className="min-w-full divide-y divide-zinc-200 dark:divide-gray-800 text-sm">
               <thead>
                 <tr>
-                  <th className="px-4 py-2 text-left text-gray-400">Personnel</th>
-                  <th className="px-4 py-2 text-left text-gray-400">Type</th>
-                  <th className="px-4 py-2 text-left text-gray-400">Title</th>
-                  <th className="px-4 py-2 text-left text-gray-400">Province</th>
-                  <th className="px-4 py-2 text-left text-gray-400">Expiry</th>
-                  <th className="px-4 py-2 text-left text-gray-400">Status</th>
-                  <th className="px-4 py-2 text-right text-gray-400">Actions</th>
+                  <th className="px-4 py-2 text-left text-zinc-500 dark:text-gray-400">Personnel</th>
+                  <th className="px-4 py-2 text-left text-zinc-500 dark:text-gray-400">Type</th>
+                  <th className="px-4 py-2 text-left text-zinc-500 dark:text-gray-400">Title</th>
+                  <th className="px-4 py-2 text-left text-zinc-500 dark:text-gray-400">Province</th>
+                  <th className="px-4 py-2 text-left text-zinc-500 dark:text-gray-400">Expiry</th>
+                  <th className="px-4 py-2 text-left text-zinc-500 dark:text-gray-400">Status</th>
+                  <th className="px-4 py-2 text-right text-zinc-500 dark:text-gray-400">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-800">
+              <tbody className="divide-y divide-zinc-200 dark:divide-gray-800">
                 {documents.map((d) => {
                   const isExpired = d.expiry_date && d.expiry_date < today
                   const isExpiringSoon = d.expiry_date && d.expiry_date >= today && d.expiry_date <= in30Days
                   return (
                     <tr key={d.id} className={isExpired ? 'bg-red-500/5' : isExpiringSoon ? 'bg-yellow-500/5' : ''}>
-                      <td className="px-4 py-2 text-white">
+                      <td className="px-4 py-2 text-zinc-900 dark:text-white">
                         <Link href={`/dashboard/hr/personnel/${d.personnel_id}`} className="text-[#C27E00] hover:underline">
                           {d.personnel?.full_name ?? '—'}
                         </Link>
                       </td>
-                      <td className="px-4 py-2 text-gray-300">{DOCUMENT_TYPES[d.document_type ?? ''] ?? d.document_type ?? '—'}</td>
-                      <td className="px-4 py-2 text-gray-300">{d.title || '—'}</td>
-                      <td className="px-4 py-2 text-gray-400">{d.province ? PROVINCES[d.province] ?? d.province : '—'}</td>
+                      <td className="px-4 py-2 text-zinc-600 dark:text-gray-300">{DOCUMENT_TYPES[d.document_type ?? ''] ?? d.document_type ?? '—'}</td>
+                      <td className="px-4 py-2 text-zinc-600 dark:text-gray-300">{d.title || '—'}</td>
+                      <td className="px-4 py-2 text-zinc-500 dark:text-gray-400">{d.province ? PROVINCES[d.province] ?? d.province : '—'}</td>
                       <td className="px-4 py-2">
-                        <span className={isExpired ? 'text-red-400' : isExpiringSoon ? 'text-yellow-400' : 'text-gray-400'}>
+                        <span className={isExpired ? 'text-red-400' : isExpiringSoon ? 'text-yellow-400' : 'text-zinc-500 dark:text-gray-400'}>
                           {d.expiry_date ? new Date(d.expiry_date).toLocaleDateString() : '—'}
                         </span>
                       </td>
@@ -178,7 +178,7 @@ export function ComplianceContent({
                         {d.verified_at ? (
                           <span className="px-2 py-0.5 rounded text-xs bg-green-500/20 text-green-400">Verified</span>
                         ) : (
-                          <span className="px-2 py-0.5 rounded text-xs bg-gray-800 text-gray-400">Pending</span>
+                          <span className="px-2 py-0.5 rounded text-xs bg-gray-800 text-zinc-500 dark:text-gray-400">Pending</span>
                         )}
                       </td>
                       <td className="px-4 py-2 text-right">
@@ -189,16 +189,16 @@ export function ComplianceContent({
                         )}
                         {!d.verified_at && (
                           <form action={async () => { await markDocumentVerified(d.id); router.refresh() }} className="inline mr-1">
-                            <button type="submit" className="p-1.5 text-gray-400 hover:text-green-400" title="Mark verified">
+                            <button type="submit" className="p-1.5 text-zinc-500 dark:text-gray-400 hover:text-green-400" title="Mark verified">
                               <Check className="w-4 h-4 inline" />
                             </button>
                           </form>
                         )}
-                        <button onClick={() => { setEditingDocId(d.id); setShowDocForm(true) }} className="p-1.5 text-gray-400 hover:text-[#C27E00] mr-1" title="Edit">
+                        <button onClick={() => { setEditingDocId(d.id); setShowDocForm(true) }} className="p-1.5 text-zinc-500 dark:text-gray-400 hover:text-[#C27E00] mr-1" title="Edit">
                           <Pencil className="w-4 h-4 inline" />
                         </button>
                         <form action={async () => { if (confirm('Delete this document?')) { await deleteComplianceDocument(d.id); router.refresh() } }} className="inline">
-                          <button type="submit" className="p-1.5 text-gray-400 hover:text-red-400" title="Delete"><Trash2 className="w-4 h-4 inline" /></button>
+                          <button type="submit" className="p-1.5 text-zinc-500 dark:text-gray-400 hover:text-red-400" title="Delete"><Trash2 className="w-4 h-4 inline" /></button>
                         </form>
                       </td>
                     </tr>
@@ -207,21 +207,21 @@ export function ComplianceContent({
               </tbody>
             </table>
             {documents.length === 0 && !showDocForm && (
-              <p className="text-gray-500 py-6 text-center">No compliance documents. Add work permits, SIN, driver licenses, insurance, etc.</p>
+              <p className="text-zinc-500 dark:text-gray-500 py-6 text-center">No compliance documents. Add work permits, SIN, driver licenses, insurance, etc.</p>
             )}
           </div>
         </div>
       )}
 
       {activeTab === 'checklists' && (
-        <div className="bg-white/5 rounded-lg border border-gray-800 p-6">
+        <div className="bg-zinc-200/50 dark:bg-white/5 rounded-lg border border-zinc-200 dark:border-gray-800 p-6">
           {pendingChecklists.length > 0 && (
             <div className="mb-4 bg-amber-500/10 border border-amber-500/30 text-amber-400 px-4 py-2 rounded text-sm">
               {pendingChecklists.length} pending checklist item(s)
             </div>
           )}
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-lg font-semibold text-white">Compliance Checklists</h2>
+            <h2 className="text-lg font-semibold text-zinc-900 dark:text-white">Compliance Checklists</h2>
             <button
               onClick={() => { setEditingChecklistId(null); setShowChecklistForm(true) }}
               className="flex items-center gap-2 px-3 py-1.5 rounded bg-[#C27E00] text-white text-sm hover:bg-[#a06900]"
@@ -238,44 +238,44 @@ export function ComplianceContent({
             />
           )}
           <div className="mt-4 overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-800 text-sm">
+            <table className="min-w-full divide-y divide-zinc-200 dark:divide-gray-800 text-sm">
               <thead>
                 <tr>
-                  <th className="px-4 py-2 text-left text-gray-400">Personnel</th>
-                  <th className="px-4 py-2 text-left text-gray-400">Item</th>
-                  <th className="px-4 py-2 text-left text-gray-400">Status</th>
-                  <th className="px-4 py-2 text-left text-gray-400">Completed</th>
-                  <th className="px-4 py-2 text-right text-gray-400">Actions</th>
+                  <th className="px-4 py-2 text-left text-zinc-500 dark:text-gray-400">Personnel</th>
+                  <th className="px-4 py-2 text-left text-zinc-500 dark:text-gray-400">Item</th>
+                  <th className="px-4 py-2 text-left text-zinc-500 dark:text-gray-400">Status</th>
+                  <th className="px-4 py-2 text-left text-zinc-500 dark:text-gray-400">Completed</th>
+                  <th className="px-4 py-2 text-right text-zinc-500 dark:text-gray-400">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-800">
+              <tbody className="divide-y divide-zinc-200 dark:divide-gray-800">
                 {checklists.map((c) => (
                   <tr key={c.id} className={c.completed ? 'opacity-70' : ''}>
-                    <td className="px-4 py-2 text-white">
+                    <td className="px-4 py-2 text-zinc-900 dark:text-white">
                       <Link href={`/dashboard/hr/personnel/${c.personnel_id}`} className="text-[#C27E00] hover:underline">
                         {c.personnel?.full_name ?? '—'}
                       </Link>
                     </td>
-                    <td className="px-4 py-2 text-gray-300">{c.item_name}</td>
+                    <td className="px-4 py-2 text-zinc-600 dark:text-gray-300">{c.item_name}</td>
                     <td className="px-4 py-2">
                       <span className={`px-2 py-0.5 rounded text-xs ${c.completed ? 'bg-green-500/20 text-green-400' : 'bg-amber-500/20 text-amber-400'}`}>
                         {c.completed ? 'Done' : 'Pending'}
                       </span>
                     </td>
-                    <td className="px-4 py-2 text-gray-400">{c.completed_at ? new Date(c.completed_at).toLocaleDateString() : '—'}</td>
+                    <td className="px-4 py-2 text-zinc-500 dark:text-gray-400">{c.completed_at ? new Date(c.completed_at).toLocaleDateString() : '—'}</td>
                     <td className="px-4 py-2 text-right">
                       {!c.completed && (
                         <form action={async () => { await updateComplianceChecklist(c.id, { completed: true }); router.refresh() }} className="inline mr-1">
-                          <button type="submit" className="p-1.5 text-gray-400 hover:text-green-400" title="Mark done">
+                          <button type="submit" className="p-1.5 text-zinc-500 dark:text-gray-400 hover:text-green-400" title="Mark done">
                             <Check className="w-4 h-4 inline" />
                           </button>
                         </form>
                       )}
-                      <button onClick={() => { setEditingChecklistId(c.id); setShowChecklistForm(true) }} className="p-1.5 text-gray-400 hover:text-[#C27E00] mr-1" title="Edit">
+                      <button onClick={() => { setEditingChecklistId(c.id); setShowChecklistForm(true) }} className="p-1.5 text-zinc-500 dark:text-gray-400 hover:text-[#C27E00] mr-1" title="Edit">
                         <Pencil className="w-4 h-4 inline" />
                       </button>
                       <form action={async () => { if (confirm('Delete?')) { await deleteComplianceChecklist(c.id); router.refresh() } }} className="inline">
-                        <button type="submit" className="p-1.5 text-gray-400 hover:text-red-400" title="Delete"><Trash2 className="w-4 h-4 inline" /></button>
+                        <button type="submit" className="p-1.5 text-zinc-500 dark:text-gray-400 hover:text-red-400" title="Delete"><Trash2 className="w-4 h-4 inline" /></button>
                       </form>
                     </td>
                   </tr>
@@ -283,7 +283,7 @@ export function ComplianceContent({
               </tbody>
             </table>
             {checklists.length === 0 && !showChecklistForm && (
-              <p className="text-gray-500 py-6 text-center">No checklist items. Add onboarding, provincial, or policy compliance items.</p>
+              <p className="text-zinc-500 dark:text-gray-500 py-6 text-center">No checklist items. Add onboarding, provincial, or policy compliance items.</p>
             )}
           </div>
         </div>
@@ -326,12 +326,12 @@ function DocumentForm({ personnel, doc, onClose, onSuccess }: {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="mb-6 p-4 rounded bg-black/30 border border-gray-700 space-y-3">
-      <h3 className="text-white font-medium">{isEdit ? 'Edit Document' : 'Add Document'}</h3>
+    <form onSubmit={handleSubmit} className="mb-6 p-4 rounded bg-zinc-100/90 dark:bg-black/30 border border-zinc-300 dark:border-gray-700 space-y-3">
+      <h3 className="text-zinc-900 dark:text-white font-medium">{isEdit ? 'Edit Document' : 'Add Document'}</h3>
       {!isEdit && (
         <div>
-          <label className="block text-xs text-gray-400 mb-1">Personnel</label>
-          <select name="personnel_id" required className="w-full rounded bg-gray-900 border border-gray-700 px-3 py-2 text-white text-sm">
+          <label className="block text-xs text-zinc-500 dark:text-gray-400 mb-1">Personnel</label>
+          <select name="personnel_id" required className="w-full rounded bg-zinc-200 dark:bg-gray-900 border border-zinc-300 dark:border-gray-700 px-3 py-2 text-zinc-900 dark:text-white text-sm">
             <option value="">Select...</option>
             {personnel.map((p) => <option key={p.id} value={p.id}>{p.full_name}</option>)}
           </select>
@@ -339,38 +339,38 @@ function DocumentForm({ personnel, doc, onClose, onSuccess }: {
       )}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         <div>
-          <label className="block text-xs text-gray-400 mb-1">Document Type</label>
-          <select name="document_type" defaultValue={doc?.document_type ?? ''} className="w-full rounded bg-gray-900 border border-gray-700 px-3 py-2 text-white text-sm">
+          <label className="block text-xs text-zinc-500 dark:text-gray-400 mb-1">Document Type</label>
+          <select name="document_type" defaultValue={doc?.document_type ?? ''} className="w-full rounded bg-zinc-200 dark:bg-gray-900 border border-zinc-300 dark:border-gray-700 px-3 py-2 text-zinc-900 dark:text-white text-sm">
             <option value="">—</option>
             {Object.entries(DOCUMENT_TYPES).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
           </select>
         </div>
         <div>
-          <label className="block text-xs text-gray-400 mb-1">Title</label>
-          <input name="title" defaultValue={doc?.title ?? ''} className="w-full rounded bg-gray-900 border border-gray-700 px-3 py-2 text-white text-sm" placeholder="Optional" />
+          <label className="block text-xs text-zinc-500 dark:text-gray-400 mb-1">Title</label>
+          <input name="title" defaultValue={doc?.title ?? ''} className="w-full rounded bg-zinc-200 dark:bg-gray-900 border border-zinc-300 dark:border-gray-700 px-3 py-2 text-zinc-900 dark:text-white text-sm" placeholder="Optional" />
         </div>
         <div>
-          <label className="block text-xs text-gray-400 mb-1">Province</label>
-          <select name="province" defaultValue={doc?.province ?? ''} className="w-full rounded bg-gray-900 border border-gray-700 px-3 py-2 text-white text-sm">
+          <label className="block text-xs text-zinc-500 dark:text-gray-400 mb-1">Province</label>
+          <select name="province" defaultValue={doc?.province ?? ''} className="w-full rounded bg-zinc-200 dark:bg-gray-900 border border-zinc-300 dark:border-gray-700 px-3 py-2 text-zinc-900 dark:text-white text-sm">
             <option value="">—</option>
             {Object.entries(PROVINCES).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
           </select>
         </div>
         <div>
-          <label className="block text-xs text-gray-400 mb-1">Expiry Date</label>
-          <input name="expiry_date" type="date" defaultValue={doc?.expiry_date ?? ''} className="w-full rounded bg-gray-900 border border-gray-700 px-3 py-2 text-white text-sm" />
+          <label className="block text-xs text-zinc-500 dark:text-gray-400 mb-1">Expiry Date</label>
+          <input name="expiry_date" type="date" defaultValue={doc?.expiry_date ?? ''} className="w-full rounded bg-zinc-200 dark:bg-gray-900 border border-zinc-300 dark:border-gray-700 px-3 py-2 text-zinc-900 dark:text-white text-sm" />
         </div>
       </div>
       <div>
-        <label className="block text-xs text-gray-400 mb-1">Document URL</label>
-        <input name="document_url" type="url" defaultValue={doc?.document_url ?? ''} className="w-full rounded bg-gray-900 border border-gray-700 px-3 py-2 text-white text-sm" placeholder="https://..." />
+        <label className="block text-xs text-zinc-500 dark:text-gray-400 mb-1">Document URL</label>
+        <input name="document_url" type="url" defaultValue={doc?.document_url ?? ''} className="w-full rounded bg-zinc-200 dark:bg-gray-900 border border-zinc-300 dark:border-gray-700 px-3 py-2 text-zinc-900 dark:text-white text-sm" placeholder="https://..." />
       </div>
       {error && <p className="text-red-400 text-sm">{error}</p>}
       <div className="flex gap-2">
         <button type="submit" disabled={loading} className="px-3 py-1.5 rounded bg-[#C27E00] text-white text-sm disabled:opacity-50">
           {loading ? <Loader2 className="w-4 h-4 animate-spin inline" /> : (isEdit ? 'Save' : 'Add')}
         </button>
-        <button type="button" onClick={onClose} className="px-3 py-1.5 rounded bg-white/10 text-gray-400 text-sm">Cancel</button>
+        <button type="button" onClick={onClose} className="px-3 py-1.5 rounded bg-zinc-200 dark:bg-white/10 text-zinc-500 dark:text-gray-400 text-sm">Cancel</button>
       </div>
     </form>
   )
@@ -406,31 +406,31 @@ function ChecklistForm({ personnel, item, onClose, onSuccess }: {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="mb-6 p-4 rounded bg-black/30 border border-gray-700 space-y-3">
-      <h3 className="text-white font-medium">{isEdit ? 'Edit Item' : 'Add Checklist Item'}</h3>
+    <form onSubmit={handleSubmit} className="mb-6 p-4 rounded bg-zinc-100/90 dark:bg-black/30 border border-zinc-300 dark:border-gray-700 space-y-3">
+      <h3 className="text-zinc-900 dark:text-white font-medium">{isEdit ? 'Edit Item' : 'Add Checklist Item'}</h3>
       {!isEdit && (
         <div>
-          <label className="block text-xs text-gray-400 mb-1">Personnel</label>
-          <select name="personnel_id" required className="w-full rounded bg-gray-900 border border-gray-700 px-3 py-2 text-white text-sm">
+          <label className="block text-xs text-zinc-500 dark:text-gray-400 mb-1">Personnel</label>
+          <select name="personnel_id" required className="w-full rounded bg-zinc-200 dark:bg-gray-900 border border-zinc-300 dark:border-gray-700 px-3 py-2 text-zinc-900 dark:text-white text-sm">
             <option value="">Select...</option>
             {personnel.map((p) => <option key={p.id} value={p.id}>{p.full_name}</option>)}
           </select>
         </div>
       )}
       <div>
-        <label className="block text-xs text-gray-400 mb-1">Item Name</label>
-        <input name="item_name" required defaultValue={item?.item_name ?? ''} className="w-full rounded bg-gray-900 border border-gray-700 px-3 py-2 text-white text-sm" placeholder="e.g. WSIB registration, Safety training" />
+        <label className="block text-xs text-zinc-500 dark:text-gray-400 mb-1">Item Name</label>
+        <input name="item_name" required defaultValue={item?.item_name ?? ''} className="w-full rounded bg-zinc-200 dark:bg-gray-900 border border-zinc-300 dark:border-gray-700 px-3 py-2 text-zinc-900 dark:text-white text-sm" placeholder="e.g. WSIB registration, Safety training" />
       </div>
       <div>
-        <label className="block text-xs text-gray-400 mb-1">Notes</label>
-        <textarea name="notes" rows={2} defaultValue={item?.notes ?? ''} className="w-full rounded bg-gray-900 border border-gray-700 px-3 py-2 text-white text-sm" />
+        <label className="block text-xs text-zinc-500 dark:text-gray-400 mb-1">Notes</label>
+        <textarea name="notes" rows={2} defaultValue={item?.notes ?? ''} className="w-full rounded bg-zinc-200 dark:bg-gray-900 border border-zinc-300 dark:border-gray-700 px-3 py-2 text-zinc-900 dark:text-white text-sm" />
       </div>
       {error && <p className="text-red-400 text-sm">{error}</p>}
       <div className="flex gap-2">
         <button type="submit" disabled={loading} className="px-3 py-1.5 rounded bg-[#C27E00] text-white text-sm disabled:opacity-50">
           {loading ? <Loader2 className="w-4 h-4 animate-spin inline" /> : (isEdit ? 'Save' : 'Add')}
         </button>
-        <button type="button" onClick={onClose} className="px-3 py-1.5 rounded bg-white/10 text-gray-400 text-sm">Cancel</button>
+        <button type="button" onClick={onClose} className="px-3 py-1.5 rounded bg-zinc-200 dark:bg-white/10 text-zinc-500 dark:text-gray-400 text-sm">Cancel</button>
       </div>
     </form>
   )

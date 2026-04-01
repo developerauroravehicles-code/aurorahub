@@ -252,18 +252,18 @@ export function CalendarManagementContent({
 
       {/* Single global calendar – default; dealers can override hours below */}
       <div className="mb-6 p-4 rounded-lg bg-[#C27E00]/10 border border-[#C27E00]/30">
-        <p className="text-sm text-white">
+        <p className="text-sm text-zinc-900 dark:text-white">
           <strong>Single calendar for all dealers.</strong> Default: 09:00–16:30, 90 min between slots (75 min appointment). Set custom start/end per dealer below. Times are shown in each dealer&apos;s timezone.
         </p>
       </div>
 
       {/* Dealer hours – start/end per dealer (weekday, saturday, sunday) */}
       <div className="mb-10">
-        <h2 className="text-lg font-medium text-white mb-2 flex items-center gap-2">
+        <h2 className="text-lg font-medium text-zinc-900 dark:text-white mb-2 flex items-center gap-2">
           <Clock className="w-5 h-5 text-[#C27E00]" />
           Dealer hours
         </h2>
-        <p className="text-sm text-gray-400 mb-4">
+        <p className="text-sm text-zinc-500 dark:text-gray-400 mb-4">
           Set when each dealer can take appointments (start and end time). If not set, default 09:00–16:30 is used.
         </p>
         {dealers.map(dealer => {
@@ -271,12 +271,12 @@ export function CalendarManagementContent({
           const saturdaySetting = getSetting(dealer.id, 'saturday')
           const sundaySetting = getSetting(dealer.id, 'sunday')
           return (
-            <div key={dealer.id} className="bg-white/5 border border-gray-800 rounded-lg p-6 mb-4">
-              <h3 className="text-md font-semibold text-white mb-4">{dealer.name}</h3>
+            <div key={dealer.id} className="bg-zinc-200/50 dark:bg-white/5 border border-zinc-200 dark:border-gray-800 rounded-lg p-6 mb-4">
+              <h3 className="text-md font-semibold text-zinc-900 dark:text-white mb-4">{dealer.name}</h3>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 {/* Weekday */}
-                <div className="bg-black/30 rounded-lg p-4">
-                  <p className="text-sm font-medium text-gray-300 mb-3">Weekday (Mon–Fri)</p>
+                <div className="bg-zinc-100/90 dark:bg-black/30 rounded-lg p-4">
+                  <p className="text-sm font-medium text-zinc-600 dark:text-gray-300 mb-3">Weekday (Mon–Fri)</p>
                   {weekdaySetting ? (
                     editingId === weekdaySetting.id ? (
                       <form
@@ -285,25 +285,25 @@ export function CalendarManagementContent({
                       >
                         <div className="flex flex-wrap gap-3 items-end">
                           <div>
-                            <label className="block text-xs text-gray-400 mb-1">Start</label>
+                            <label className="block text-xs text-zinc-500 dark:text-gray-400 mb-1">Start</label>
                             <input
                               type="number"
                               name="startHour"
                               min={0}
                               max={23}
                               defaultValue={weekdaySetting.start_hour}
-                              className="w-20 border border-gray-700 bg-black/50 text-white rounded px-2 py-1.5 text-sm"
+                              className="w-20 border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 text-zinc-900 dark:text-white rounded px-2 py-1.5 text-sm"
                             />
                           </div>
                           <div>
-                            <label className="block text-xs text-gray-400 mb-1">End</label>
+                            <label className="block text-xs text-zinc-500 dark:text-gray-400 mb-1">End</label>
                             <input
                               type="number"
                               name="endHour"
                               min={0}
                               max={23}
                               defaultValue={weekdaySetting.end_hour}
-                              className="w-20 border border-gray-700 bg-black/50 text-white rounded px-2 py-1.5 text-sm"
+                              className="w-20 border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 text-zinc-900 dark:text-white rounded px-2 py-1.5 text-sm"
                             />
                           </div>
                           <input type="hidden" name="slotIntervalMinutes" value={CALENDAR_DEFAULTS.slotIntervalMinutes} />
@@ -314,10 +314,10 @@ export function CalendarManagementContent({
                       </form>
                     ) : (
                       <div className="flex items-center justify-between">
-                        <span className="text-white">{weekdaySetting.start_hour}:00 – {weekdaySetting.end_hour}:00</span>
+                        <span className="text-zinc-900 dark:text-white">{weekdaySetting.start_hour}:00 – {weekdaySetting.end_hour}:00</span>
                         <div className="flex gap-2">
-                          <button type="button" onClick={() => setEditingId(weekdaySetting.id)} className="p-1.5 text-[#C27E00] hover:bg-white/10 rounded" title="Edit"><Edit className="w-4 h-4" /></button>
-                          <button type="button" onClick={() => handleDelete(weekdaySetting.id)} className="p-1.5 text-red-400 hover:bg-white/10 rounded" title="Delete"><Trash2 className="w-4 h-4" /></button>
+                          <button type="button" onClick={() => setEditingId(weekdaySetting.id)} className="p-1.5 text-[#C27E00] hover:bg-zinc-200 dark:bg-white/10 rounded" title="Edit"><Edit className="w-4 h-4" /></button>
+                          <button type="button" onClick={() => handleDelete(weekdaySetting.id)} className="p-1.5 text-red-400 hover:bg-zinc-200 dark:bg-white/10 rounded" title="Delete"><Trash2 className="w-4 h-4" /></button>
                         </div>
                       </div>
                     )
@@ -337,19 +337,19 @@ export function CalendarManagementContent({
                     >
                       <div className="flex flex-wrap gap-3 items-end">
                         <div>
-                          <label className="block text-xs text-gray-400 mb-1">Start (hour 0–23)</label>
-                          <input type="number" name="startHour" min={0} max={23} defaultValue={9} required className="w-20 border border-gray-700 bg-black/50 text-white rounded px-2 py-1.5 text-sm" />
+                          <label className="block text-xs text-zinc-500 dark:text-gray-400 mb-1">Start (hour 0–23)</label>
+                          <input type="number" name="startHour" min={0} max={23} defaultValue={9} required className="w-20 border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 text-zinc-900 dark:text-white rounded px-2 py-1.5 text-sm" />
                         </div>
                         <div>
-                          <label className="block text-xs text-gray-400 mb-1">End (hour 0–23)</label>
-                          <input type="number" name="endHour" min={0} max={23} defaultValue={16} required className="w-20 border border-gray-700 bg-black/50 text-white rounded px-2 py-1.5 text-sm" />
+                          <label className="block text-xs text-zinc-500 dark:text-gray-400 mb-1">End (hour 0–23)</label>
+                          <input type="number" name="endHour" min={0} max={23} defaultValue={16} required className="w-20 border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 text-zinc-900 dark:text-white rounded px-2 py-1.5 text-sm" />
                         </div>
                         <button type="submit" className="px-3 py-1.5 bg-[#C27E00] text-white rounded text-sm hover:bg-[#a06900]">Save</button>
-                        <button type="button" onClick={() => setShowAddHoursFor(null)} className="px-3 py-1.5 bg-gray-700 text-white rounded text-sm">Cancel</button>
+                        <button type="button" onClick={() => setShowAddHoursFor(null)} className="px-3 py-1.5 bg-gray-700 text-zinc-900 dark:text-white rounded text-sm">Cancel</button>
                       </div>
                     </form>
                   ) : (
-                    <p className="text-gray-500 text-sm">Default 09:00–16:30</p>
+                    <p className="text-zinc-500 dark:text-gray-500 text-sm">Default 09:00–16:30</p>
                   )}
                   {!weekdaySetting && !(showAddHoursFor?.dealerId === dealer.id && showAddHoursFor?.dayType === 'weekday') && (
                     <button type="button" onClick={() => setShowAddHoursFor({ dealerId: dealer.id, dayType: 'weekday' })} className="mt-2 flex items-center gap-1 text-sm text-[#C27E00] hover:underline">
@@ -358,8 +358,8 @@ export function CalendarManagementContent({
                   )}
                 </div>
                 {/* Saturday */}
-                <div className="bg-black/30 rounded-lg p-4">
-                  <p className="text-sm font-medium text-gray-300 mb-3">Saturday</p>
+                <div className="bg-zinc-100/90 dark:bg-black/30 rounded-lg p-4">
+                  <p className="text-sm font-medium text-zinc-600 dark:text-gray-300 mb-3">Saturday</p>
                   {saturdaySetting ? (
                     editingId === saturdaySetting.id ? (
                       <form
@@ -368,25 +368,25 @@ export function CalendarManagementContent({
                       >
                         <div className="flex flex-wrap gap-3 items-end">
                           <div>
-                            <label className="block text-xs text-gray-400 mb-1">Start</label>
-                            <input type="number" name="startHour" min={0} max={23} defaultValue={saturdaySetting.start_hour} className="w-20 border border-gray-700 bg-black/50 text-white rounded px-2 py-1.5 text-sm" />
+                            <label className="block text-xs text-zinc-500 dark:text-gray-400 mb-1">Start</label>
+                            <input type="number" name="startHour" min={0} max={23} defaultValue={saturdaySetting.start_hour} className="w-20 border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 text-zinc-900 dark:text-white rounded px-2 py-1.5 text-sm" />
                           </div>
                           <div>
-                            <label className="block text-xs text-gray-400 mb-1">End</label>
-                            <input type="number" name="endHour" min={0} max={23} defaultValue={saturdaySetting.end_hour} className="w-20 border border-gray-700 bg-black/50 text-white rounded px-2 py-1.5 text-sm" />
+                            <label className="block text-xs text-zinc-500 dark:text-gray-400 mb-1">End</label>
+                            <input type="number" name="endHour" min={0} max={23} defaultValue={saturdaySetting.end_hour} className="w-20 border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 text-zinc-900 dark:text-white rounded px-2 py-1.5 text-sm" />
                           </div>
                           <input type="hidden" name="slotIntervalMinutes" value={CALENDAR_DEFAULTS.slotIntervalMinutes} />
                           <input type="hidden" name="appointmentDurationMinutes" value={CALENDAR_DEFAULTS.appointmentDurationMinutes} />
                           <button type="submit" className="px-3 py-1.5 bg-[#C27E00] text-white rounded text-sm hover:bg-[#a06900]">Save</button>
-                          <button type="button" onClick={() => setEditingId(null)} className="px-3 py-1.5 bg-gray-700 text-white rounded text-sm">Cancel</button>
+                          <button type="button" onClick={() => setEditingId(null)} className="px-3 py-1.5 bg-gray-700 text-zinc-900 dark:text-white rounded text-sm">Cancel</button>
                         </div>
                       </form>
                     ) : (
                       <div className="flex items-center justify-between">
-                        <span className="text-white">{saturdaySetting.start_hour}:00 – {saturdaySetting.end_hour}:00</span>
+                        <span className="text-zinc-900 dark:text-white">{saturdaySetting.start_hour}:00 – {saturdaySetting.end_hour}:00</span>
                         <div className="flex gap-2">
-                          <button type="button" onClick={() => setEditingId(saturdaySetting.id)} className="p-1.5 text-[#C27E00] hover:bg-white/10 rounded" title="Edit"><Edit className="w-4 h-4" /></button>
-                          <button type="button" onClick={() => handleDelete(saturdaySetting.id)} className="p-1.5 text-red-400 hover:bg-white/10 rounded" title="Delete"><Trash2 className="w-4 h-4" /></button>
+                          <button type="button" onClick={() => setEditingId(saturdaySetting.id)} className="p-1.5 text-[#C27E00] hover:bg-zinc-200 dark:bg-white/10 rounded" title="Edit"><Edit className="w-4 h-4" /></button>
+                          <button type="button" onClick={() => handleDelete(saturdaySetting.id)} className="p-1.5 text-red-400 hover:bg-zinc-200 dark:bg-white/10 rounded" title="Delete"><Trash2 className="w-4 h-4" /></button>
                         </div>
                       </div>
                     )
@@ -406,19 +406,19 @@ export function CalendarManagementContent({
                     >
                       <div className="flex flex-wrap gap-3 items-end">
                         <div>
-                          <label className="block text-xs text-gray-400 mb-1">Start (hour 0–23)</label>
-                          <input type="number" name="startHour" min={0} max={23} defaultValue={9} required className="w-20 border border-gray-700 bg-black/50 text-white rounded px-2 py-1.5 text-sm" />
+                          <label className="block text-xs text-zinc-500 dark:text-gray-400 mb-1">Start (hour 0–23)</label>
+                          <input type="number" name="startHour" min={0} max={23} defaultValue={9} required className="w-20 border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 text-zinc-900 dark:text-white rounded px-2 py-1.5 text-sm" />
                         </div>
                         <div>
-                          <label className="block text-xs text-gray-400 mb-1">End (hour 0–23)</label>
-                          <input type="number" name="endHour" min={0} max={23} defaultValue={16} required className="w-20 border border-gray-700 bg-black/50 text-white rounded px-2 py-1.5 text-sm" />
+                          <label className="block text-xs text-zinc-500 dark:text-gray-400 mb-1">End (hour 0–23)</label>
+                          <input type="number" name="endHour" min={0} max={23} defaultValue={16} required className="w-20 border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 text-zinc-900 dark:text-white rounded px-2 py-1.5 text-sm" />
                         </div>
                         <button type="submit" className="px-3 py-1.5 bg-[#C27E00] text-white rounded text-sm hover:bg-[#a06900]">Save</button>
-                        <button type="button" onClick={() => setShowAddHoursFor(null)} className="px-3 py-1.5 bg-gray-700 text-white rounded text-sm">Cancel</button>
+                        <button type="button" onClick={() => setShowAddHoursFor(null)} className="px-3 py-1.5 bg-gray-700 text-zinc-900 dark:text-white rounded text-sm">Cancel</button>
                       </div>
                     </form>
                   ) : (
-                    <p className="text-gray-500 text-sm">Default 09:00–16:30</p>
+                    <p className="text-zinc-500 dark:text-gray-500 text-sm">Default 09:00–16:30</p>
                   )}
                   {!saturdaySetting && !(showAddHoursFor?.dealerId === dealer.id && showAddHoursFor?.dayType === 'saturday') && (
                     <button type="button" onClick={() => setShowAddHoursFor({ dealerId: dealer.id, dayType: 'saturday' })} className="mt-2 flex items-center gap-1 text-sm text-[#C27E00] hover:underline">
@@ -427,8 +427,8 @@ export function CalendarManagementContent({
                   )}
                 </div>
                 {/* Sunday */}
-                <div className="bg-black/30 rounded-lg p-4">
-                  <p className="text-sm font-medium text-gray-300 mb-3">Sunday</p>
+                <div className="bg-zinc-100/90 dark:bg-black/30 rounded-lg p-4">
+                  <p className="text-sm font-medium text-zinc-600 dark:text-gray-300 mb-3">Sunday</p>
                   {sundaySetting ? (
                     editingId === sundaySetting.id ? (
                       <form
@@ -437,25 +437,25 @@ export function CalendarManagementContent({
                       >
                         <div className="flex flex-wrap gap-3 items-end">
                           <div>
-                            <label className="block text-xs text-gray-400 mb-1">Start</label>
-                            <input type="number" name="startHour" min={0} max={23} defaultValue={sundaySetting.start_hour} className="w-20 border border-gray-700 bg-black/50 text-white rounded px-2 py-1.5 text-sm" />
+                            <label className="block text-xs text-zinc-500 dark:text-gray-400 mb-1">Start</label>
+                            <input type="number" name="startHour" min={0} max={23} defaultValue={sundaySetting.start_hour} className="w-20 border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 text-zinc-900 dark:text-white rounded px-2 py-1.5 text-sm" />
                           </div>
                           <div>
-                            <label className="block text-xs text-gray-400 mb-1">End</label>
-                            <input type="number" name="endHour" min={0} max={23} defaultValue={sundaySetting.end_hour} className="w-20 border border-gray-700 bg-black/50 text-white rounded px-2 py-1.5 text-sm" />
+                            <label className="block text-xs text-zinc-500 dark:text-gray-400 mb-1">End</label>
+                            <input type="number" name="endHour" min={0} max={23} defaultValue={sundaySetting.end_hour} className="w-20 border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 text-zinc-900 dark:text-white rounded px-2 py-1.5 text-sm" />
                           </div>
                           <input type="hidden" name="slotIntervalMinutes" value={CALENDAR_DEFAULTS.slotIntervalMinutes} />
                           <input type="hidden" name="appointmentDurationMinutes" value={CALENDAR_DEFAULTS.appointmentDurationMinutes} />
                           <button type="submit" className="px-3 py-1.5 bg-[#C27E00] text-white rounded text-sm hover:bg-[#a06900]">Save</button>
-                          <button type="button" onClick={() => setEditingId(null)} className="px-3 py-1.5 bg-gray-700 text-white rounded text-sm">Cancel</button>
+                          <button type="button" onClick={() => setEditingId(null)} className="px-3 py-1.5 bg-gray-700 text-zinc-900 dark:text-white rounded text-sm">Cancel</button>
                         </div>
                       </form>
                     ) : (
                       <div className="flex items-center justify-between">
-                        <span className="text-white">{sundaySetting.start_hour}:00 – {sundaySetting.end_hour}:00</span>
+                        <span className="text-zinc-900 dark:text-white">{sundaySetting.start_hour}:00 – {sundaySetting.end_hour}:00</span>
                         <div className="flex gap-2">
-                          <button type="button" onClick={() => setEditingId(sundaySetting.id)} className="p-1.5 text-[#C27E00] hover:bg-white/10 rounded" title="Edit"><Edit className="w-4 h-4" /></button>
-                          <button type="button" onClick={() => handleDelete(sundaySetting.id)} className="p-1.5 text-red-400 hover:bg-white/10 rounded" title="Delete"><Trash2 className="w-4 h-4" /></button>
+                          <button type="button" onClick={() => setEditingId(sundaySetting.id)} className="p-1.5 text-[#C27E00] hover:bg-zinc-200 dark:bg-white/10 rounded" title="Edit"><Edit className="w-4 h-4" /></button>
+                          <button type="button" onClick={() => handleDelete(sundaySetting.id)} className="p-1.5 text-red-400 hover:bg-zinc-200 dark:bg-white/10 rounded" title="Delete"><Trash2 className="w-4 h-4" /></button>
                         </div>
                       </div>
                     )
@@ -475,19 +475,19 @@ export function CalendarManagementContent({
                     >
                       <div className="flex flex-wrap gap-3 items-end">
                         <div>
-                          <label className="block text-xs text-gray-400 mb-1">Start (hour 0–23)</label>
-                          <input type="number" name="startHour" min={0} max={23} defaultValue={9} required className="w-20 border border-gray-700 bg-black/50 text-white rounded px-2 py-1.5 text-sm" />
+                          <label className="block text-xs text-zinc-500 dark:text-gray-400 mb-1">Start (hour 0–23)</label>
+                          <input type="number" name="startHour" min={0} max={23} defaultValue={9} required className="w-20 border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 text-zinc-900 dark:text-white rounded px-2 py-1.5 text-sm" />
                         </div>
                         <div>
-                          <label className="block text-xs text-gray-400 mb-1">End (hour 0–23)</label>
-                          <input type="number" name="endHour" min={0} max={23} defaultValue={16} required className="w-20 border border-gray-700 bg-black/50 text-white rounded px-2 py-1.5 text-sm" />
+                          <label className="block text-xs text-zinc-500 dark:text-gray-400 mb-1">End (hour 0–23)</label>
+                          <input type="number" name="endHour" min={0} max={23} defaultValue={16} required className="w-20 border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 text-zinc-900 dark:text-white rounded px-2 py-1.5 text-sm" />
                         </div>
                         <button type="submit" className="px-3 py-1.5 bg-[#C27E00] text-white rounded text-sm hover:bg-[#a06900]">Save</button>
-                        <button type="button" onClick={() => setShowAddHoursFor(null)} className="px-3 py-1.5 bg-gray-700 text-white rounded text-sm">Cancel</button>
+                        <button type="button" onClick={() => setShowAddHoursFor(null)} className="px-3 py-1.5 bg-gray-700 text-zinc-900 dark:text-white rounded text-sm">Cancel</button>
                       </div>
                     </form>
                   ) : (
-                    <p className="text-gray-500 text-sm">Default 09:00–16:30</p>
+                    <p className="text-zinc-500 dark:text-gray-500 text-sm">Default 09:00–16:30</p>
                   )}
                   {!sundaySetting && !(showAddHoursFor?.dealerId === dealer.id && showAddHoursFor?.dayType === 'sunday') && (
                     <button type="button" onClick={() => setShowAddHoursFor({ dealerId: dealer.id, dayType: 'sunday' })} className="mt-2 flex items-center gap-1 text-sm text-[#C27E00] hover:underline">
@@ -503,11 +503,11 @@ export function CalendarManagementContent({
 
       {/* Close slots or days (dealer-based) */}
       <div className="mb-10">
-        <h2 className="text-lg font-medium text-white mb-2 flex items-center gap-2">
+        <h2 className="text-lg font-medium text-zinc-900 dark:text-white mb-2 flex items-center gap-2">
           <CalendarX2 className="w-5 h-5 text-[#C27E00]" />
           Close Slots or Days
         </h2>
-        <p className="text-sm text-gray-400 mb-4">
+        <p className="text-sm text-zinc-500 dark:text-gray-400 mb-4">
           Close entire days or select specific time slots per dealer. Appointments cannot be created for closed days or slots.
         </p>
         {dealers.map(dealer => {
@@ -518,18 +518,18 @@ export function CalendarManagementContent({
           const isSlotSelected = (s: { start_minutes: number; end_minutes: number }) =>
             selectedSlots.some(x => x.start_minutes === s.start_minutes && x.end_minutes === s.end_minutes)
           return (
-            <div key={dealer.id} className="bg-white/5 border border-gray-800 rounded-lg p-6 mb-4">
-              <h3 className="text-md font-semibold text-white mb-4">{dealer.name}</h3>
+            <div key={dealer.id} className="bg-zinc-200/50 dark:bg-white/5 border border-zinc-200 dark:border-gray-800 rounded-lg p-6 mb-4">
+              <h3 className="text-md font-semibold text-zinc-900 dark:text-white mb-4">{dealer.name}</h3>
               <div className="space-y-4 mb-6">
                 <div className="flex flex-wrap items-end gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-1">Date</label>
+                    <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300 mb-1">Date</label>
                     <input
                       type="date"
                       value={blockDate}
                       onChange={(e) => setBlockDateByDealer(prev => ({ ...prev, [dealer.id]: e.target.value }))}
                       min={new Date().toISOString().slice(0, 10)}
-                      className="w-full border border-gray-700 bg-black/50 text-white rounded-md px-3 py-2 focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]"
+                      className="w-full border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 text-zinc-900 dark:text-white rounded-md px-3 py-2 focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]"
                     />
                   </div>
                   {blockDate && (
@@ -543,7 +543,7 @@ export function CalendarManagementContent({
                       </button>
                       {slotsForDate.length > 0 && (
                         <div className="w-full mt-2">
-                          <p className="text-sm font-medium text-gray-300 mb-2">
+                          <p className="text-sm font-medium text-zinc-600 dark:text-gray-300 mb-2">
                             Select slots to close (click to toggle). These are the same slots used for appointments.
                           </p>
                           <div className="flex flex-wrap gap-2">
@@ -555,7 +555,7 @@ export function CalendarManagementContent({
                                 className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
                                   isSlotSelected(slot)
                                     ? 'bg-[#C27E00] text-white border border-[#C27E00]'
-                                    : 'bg-black/50 text-gray-300 border border-gray-700 hover:bg-white/10'
+                                    : 'bg-white dark:bg-black/50 text-zinc-600 dark:text-gray-300 border border-zinc-300 dark:border-gray-700 hover:bg-zinc-200 dark:bg-white/10'
                                 }`}
                               >
                                 {slot.label}
@@ -578,15 +578,15 @@ export function CalendarManagementContent({
               </div>
               {dealerBlocks.length > 0 ? (
                 <div className="space-y-2">
-                  <p className="text-sm text-gray-400">Closed days / slots:</p>
+                  <p className="text-sm text-zinc-500 dark:text-gray-400">Closed days / slots:</p>
                   <ul className="space-y-1">
                     {dealerBlocks.map(block => (
-                      <li key={block.id} className="flex items-center justify-between bg-black/30 rounded px-3 py-2 text-sm text-gray-300">
+                      <li key={block.id} className="flex items-center justify-between bg-zinc-100/90 dark:bg-black/30 rounded px-3 py-2 text-sm text-zinc-600 dark:text-gray-300">
                         <span>{formatBlockLabel(block)}</span>
                         <button
                           type="button"
                           onClick={() => handleDeleteBlock(block.id)}
-                          className="p-1.5 text-red-400 hover:bg-white/10 rounded transition-colors"
+                          className="p-1.5 text-red-400 hover:bg-zinc-200 dark:bg-white/10 rounded transition-colors"
                           title="Remove block"
                         >
                           <Trash2 className="w-4 h-4" />
@@ -596,7 +596,7 @@ export function CalendarManagementContent({
                   </ul>
                 </div>
               ) : (
-                <p className="text-sm text-gray-500">No closed days or slots for this dealer yet.</p>
+                <p className="text-sm text-zinc-500 dark:text-gray-500">No closed days or slots for this dealer yet.</p>
               )}
             </div>
           )

@@ -48,8 +48,8 @@ export default async function PersonnelPage({
     <div className="space-y-8">
       <div className="flex justify-between items-start">
         <div>
-          <h1 className="text-2xl font-semibold text-white mb-2">Personnel Registry</h1>
-          <p className="text-gray-400">Master record for all workers: employees, contractors, installers, dealer staff.</p>
+          <h1 className="text-2xl font-semibold text-zinc-900 dark:text-white mb-2">Personnel Registry</h1>
+          <p className="text-zinc-500 dark:text-gray-400">Master record for all workers: employees, contractors, installers, dealer staff.</p>
         </div>
         <Link
           href="/dashboard/hr/personnel/new"
@@ -61,46 +61,46 @@ export default async function PersonnelPage({
 
       <PersonnelFilters dealers={dealers || []} currentType={params.worker_type} currentStatus={params.status} currentDealer={params.dealer} />
 
-      <div className="bg-white/5 rounded-lg border border-gray-800 overflow-hidden">
+      <div className="bg-zinc-200/50 dark:bg-white/5 rounded-lg border border-zinc-200 dark:border-gray-800 overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-800">
+          <table className="min-w-full divide-y divide-zinc-200 dark:divide-gray-800">
             <thead>
               <tr>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Worker ID</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Name</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Type</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Status</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Position</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Dealer / Location</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Start Date</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Actions</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500 dark:text-gray-400 uppercase">Worker ID</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500 dark:text-gray-400 uppercase">Name</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500 dark:text-gray-400 uppercase">Type</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500 dark:text-gray-400 uppercase">Status</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500 dark:text-gray-400 uppercase">Position</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500 dark:text-gray-400 uppercase">Dealer / Location</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500 dark:text-gray-400 uppercase">Start Date</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500 dark:text-gray-400 uppercase">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-800">
+            <tbody className="divide-y divide-zinc-200 dark:divide-gray-800">
               {personnel?.map((p) => (
-                <tr key={p.id} className="hover:bg-white/5 transition-colors">
-                  <td className="px-4 py-3 text-sm text-gray-400">{p.worker_id || '—'}</td>
+                <tr key={p.id} className="hover:bg-zinc-200/50 dark:bg-white/5 transition-colors">
+                  <td className="px-4 py-3 text-sm text-zinc-500 dark:text-gray-400">{p.worker_id || '—'}</td>
                   <td className="px-4 py-3">
                     <Link href={`/dashboard/hr/personnel/${p.id}`} className="font-medium text-white hover:text-[#C27E00]">
                       {p.full_name}
                     </Link>
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-300">{WORKER_TYPE_LABELS[p.worker_type] ?? p.worker_type}</td>
+                  <td className="px-4 py-3 text-sm text-zinc-600 dark:text-gray-300">{WORKER_TYPE_LABELS[p.worker_type] ?? p.worker_type}</td>
                   <td className="px-4 py-3">
                     <span className={`px-2 py-1 rounded text-xs border ${
                       p.status === 'active' ? 'bg-green-900/50 text-green-300 border-green-800' :
                       p.status === 'onboarding' ? 'bg-yellow-900/50 text-yellow-300 border-yellow-800' :
                       p.status === 'suspended' ? 'bg-red-900/50 text-red-300 border-red-800' :
-                      'bg-gray-800 text-gray-300 border-gray-700'
+                      'bg-gray-800 text-zinc-600 dark:text-gray-300 border-zinc-300 dark:border-gray-700'
                     }`}>
                       {STATUS_LABELS[p.status] ?? p.status}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-400">{p.position || '—'}</td>
-                  <td className="px-4 py-3 text-sm text-gray-400">
+                  <td className="px-4 py-3 text-sm text-zinc-500 dark:text-gray-400">{p.position || '—'}</td>
+                  <td className="px-4 py-3 text-sm text-zinc-500 dark:text-gray-400">
                     {(p.dealers as { name?: string } | null)?.name ?? 'Platform'}
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-400">
+                  <td className="px-4 py-3 text-sm text-zinc-500 dark:text-gray-400">
                     {p.start_date ? new Date(p.start_date).toLocaleDateString() : '—'}
                   </td>
                   <td className="px-4 py-3">
@@ -114,7 +114,7 @@ export default async function PersonnelPage({
           </table>
         </div>
         {(!personnel || personnel.length === 0) && (
-          <div className="p-8 text-center text-gray-400">No personnel records. Add your first person to get started.</div>
+          <div className="p-8 text-center text-zinc-500 dark:text-gray-400">No personnel records. Add your first person to get started.</div>
         )}
       </div>
     </div>

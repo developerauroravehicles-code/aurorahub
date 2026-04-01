@@ -39,7 +39,7 @@ export default async function DemandsPage() {
   return (
     <div>
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-semibold text-white">Demands</h1>
+        <h1 className="text-2xl font-semibold text-zinc-900 dark:text-white">Demands</h1>
         <Link href="/dashboard/sales/demands/new" className="flex items-center bg-[#C27E00] text-white px-4 py-2 rounded-md hover:bg-[#a06900] transition-colors">
             <Plus className="w-4 h-4 mr-2" />
             New Demand

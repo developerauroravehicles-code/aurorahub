@@ -63,27 +63,27 @@ export default async function HREmployeesPage({
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-semibold text-white mb-2">Platform Employees</h1>
-        <p className="text-gray-400">Platform workforce from personnel registry. Filter by role.</p>
+        <h1 className="text-2xl font-semibold text-zinc-900 dark:text-white mb-2">Platform Employees</h1>
+        <p className="text-zinc-500 dark:text-gray-400">Platform workforce from personnel registry. Filter by role.</p>
       </div>
 
       <EmployeesFilters currentRole={params.role} />
 
-      <div className="bg-white/5 rounded-lg border border-gray-800 shadow overflow-hidden">
+      <div className="bg-zinc-200/50 dark:bg-white/5 rounded-lg border border-zinc-200 dark:border-gray-800 shadow overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-800">
+          <table className="min-w-full divide-y divide-zinc-200 dark:divide-gray-800">
             <thead>
               <tr>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Name</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Role / Type</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Position</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Phone</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Status</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500 dark:text-gray-400 uppercase">Name</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500 dark:text-gray-400 uppercase">Role / Type</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500 dark:text-gray-400 uppercase">Position</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500 dark:text-gray-400 uppercase">Phone</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500 dark:text-gray-400 uppercase">Status</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-800">
+            <tbody className="divide-y divide-zinc-200 dark:divide-gray-800">
               {employees?.map((e) => (
-                <tr key={e.id} className="hover:bg-white/5 transition-colors">
+                <tr key={e.id} className="hover:bg-zinc-200/50 dark:bg-white/5 transition-colors">
                   <td className="px-4 py-3">
                     <Link
                       href={`/dashboard/hr/personnel/${e.id}`}
@@ -93,18 +93,18 @@ export default async function HREmployeesPage({
                     </Link>
                   </td>
                   <td className="px-4 py-3">
-                    <span className="text-sm text-gray-300">
+                    <span className="text-sm text-zinc-600 dark:text-gray-300">
                       {(e.platform_role && ROLE_LABELS[e.platform_role]) || WORKER_TYPE_LABELS[e.worker_type] || e.platform_role || e.worker_type || '—'}
                     </span>
                   </td>
                   <td className="px-4 py-3">
-                    <span className="text-sm text-gray-400">{e.position || '—'}</span>
+                    <span className="text-sm text-zinc-500 dark:text-gray-400">{e.position || '—'}</span>
                   </td>
                   <td className="px-4 py-3">
-                    <span className="text-sm text-gray-400">{e.phone || '—'}</span>
+                    <span className="text-sm text-zinc-500 dark:text-gray-400">{e.phone || '—'}</span>
                   </td>
                   <td className="px-4 py-3">
-                    <span className="text-sm text-gray-400 capitalize">{e.status || '—'}</span>
+                    <span className="text-sm text-zinc-500 dark:text-gray-400 capitalize">{e.status || '—'}</span>
                   </td>
                 </tr>
               ))}
@@ -112,12 +112,12 @@ export default async function HREmployeesPage({
           </table>
         </div>
         {(!employees || employees.length === 0) && (
-          <div className="p-8 text-center text-gray-400">No employees match the filters.</div>
+          <div className="p-8 text-center text-zinc-500 dark:text-gray-400">No employees match the filters.</div>
         )}
       </div>
 
       {Object.keys(roleCounts).length > 0 && (
-        <div className="flex flex-wrap gap-4 text-sm text-gray-400">
+        <div className="flex flex-wrap gap-4 text-sm text-zinc-500 dark:text-gray-400">
           {Object.entries(roleCounts).map(([role, count]) => (
             <span key={role}>
               {ROLE_LABELS[role] ?? WORKER_TYPE_LABELS[role] ?? role}: {count}

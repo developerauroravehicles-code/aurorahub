@@ -177,14 +177,14 @@ export function SystemManagementTabs({ activeTab, userRole }: { activeTab: strin
   return (
     <div className="space-y-4">
       {/* Top-level: Platform | Dealers */}
-      <div className="flex flex-wrap gap-2 border-b border-gray-800 pb-2">
+      <div className="flex flex-wrap gap-2 border-b border-zinc-200 dark:border-gray-800 pb-2">
         <Link
           href="/dashboard/identity"
           className={clsx(
             'px-4 py-2 rounded-t-md text-sm font-medium transition-colors',
             !isDealersSection
               ? 'bg-[#C27E00]/20 border border-b-0 border-[#C27E00]/50 text-[#C27E00] -mb-0.5'
-              : 'text-gray-500 hover:text-gray-300 hover:bg-white/5'
+              : 'text-zinc-500 dark:text-gray-500 hover:text-zinc-600 dark:text-gray-300 hover:bg-zinc-200/50 dark:bg-white/5'
           )}
         >
           Platform
@@ -195,7 +195,7 @@ export function SystemManagementTabs({ activeTab, userRole }: { activeTab: strin
             'px-4 py-2 rounded-t-md text-sm font-medium transition-colors',
             isDealersSection
               ? 'bg-[#C27E00]/20 border border-b-0 border-[#C27E00]/50 text-[#C27E00] -mb-0.5'
-              : 'text-gray-500 hover:text-gray-300 hover:bg-white/5'
+              : 'text-zinc-500 dark:text-gray-500 hover:text-zinc-600 dark:text-gray-300 hover:bg-zinc-200/50 dark:bg-white/5'
           )}
         >
           Dealers
@@ -203,7 +203,7 @@ export function SystemManagementTabs({ activeTab, userRole }: { activeTab: strin
       </div>
 
       {/* Only tabs for the current category (e.g. Infrastructure: Database | Automation | Mail | SMS) */}
-      <div className="flex flex-wrap gap-2 border-b border-gray-800 pb-4">
+      <div className="flex flex-wrap gap-2 border-b border-zinc-200 dark:border-gray-800 pb-4">
         {tabs.map((tab) => {
           const Icon = tab.icon
           const resolvedTab = activeTab || tabId
@@ -220,10 +220,10 @@ export function SystemManagementTabs({ activeTab, userRole }: { activeTab: strin
               href={tab.href}
               className={clsx(
                 'inline-flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors',
-                isActive ? 'bg-[#C27E00] text-white' : 'text-gray-500 hover:text-gray-300 hover:bg-white/5'
+                isActive ? 'bg-[#C27E00] text-white' : 'text-zinc-500 dark:text-gray-500 hover:text-zinc-600 dark:text-gray-300 hover:bg-zinc-200/50 dark:bg-white/5'
               )}
             >
-              <Icon className={clsx('h-4 w-4', isActive ? 'text-white' : 'text-gray-500')} />
+              <Icon className={clsx('h-4 w-4', isActive ? 'text-zinc-900 dark:text-white' : 'text-zinc-500 dark:text-gray-500')} />
               {tab.name}
             </Link>
           )

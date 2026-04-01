@@ -41,13 +41,13 @@ export function RegionManagementContent({
     <div className="space-y-8">
       {/* Timezone Management */}
       <div>
-        <h2 className="text-lg font-medium mb-4 text-white">Timezone Management</h2>
+        <h2 className="text-lg font-medium mb-4 text-zinc-900 dark:text-white">Timezone Management</h2>
         <TimezoneManagement timezones={timezones} />
       </div>
 
       {/* Region Codes Management */}
       <div>
-        <h2 className="text-lg font-medium mb-4 text-white">Region Codes Management</h2>
+        <h2 className="text-lg font-medium mb-4 text-zinc-900 dark:text-white">Region Codes Management</h2>
         <RegionCodeManagement 
           regionCodes={regionCodes}
           timezones={timezones}

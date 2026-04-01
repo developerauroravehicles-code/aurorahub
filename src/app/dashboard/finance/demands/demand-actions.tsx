@@ -80,7 +80,7 @@ export function DemandActions({ demandId, isAssigned, status, demand }: {
                     <button 
                         onClick={() => setShowEditModal(true)} 
                         disabled={loading} 
-                        className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm disabled:opacity-50 transition-colors"
+                        className="bg-blue-600 hover:bg-blue-700 text-zinc-900 dark:text-white px-3 py-1 rounded text-sm disabled:opacity-50 transition-colors"
                     >
                         Edit
                     </button>

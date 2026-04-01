@@ -30,7 +30,7 @@ export default async function SpecialistDetailsPage({ params }: { params: Promis
     .eq('id', id)
     .single()
 
-  if (!profile) return <div className="text-white">Technical Support not found</div>
+  if (!profile) return <div className="text-zinc-900 dark:text-white">Technical Support not found</div>
 
   // Fetch assigned dealers for this specialist (only if Aurora Manager)
   const { data: assignedDealersRaw } = isAuroraManager
@@ -115,11 +115,11 @@ export default async function SpecialistDetailsPage({ params }: { params: Promis
   return (
     <div className="space-y-8">
       <div>
-        <Link href="/dashboard/admin/employees" className="flex items-center text-gray-400 hover:text-white mb-4 transition-colors">
+        <Link href="/dashboard/admin/employees" className="flex items-center text-zinc-500 dark:text-gray-400 hover:text-zinc-900 dark:text-white mb-4 transition-colors">
             <ArrowLeft className="w-4 h-4 mr-2" /> Back to Employees
         </Link>
-        <h1 className="text-2xl font-bold text-white mb-2">{profile.full_name}</h1>
-        <p className="text-gray-400">
+        <h1 className="text-2xl font-bold text-zinc-900 dark:text-white mb-2">{profile.full_name}</h1>
+        <p className="text-zinc-500 dark:text-gray-400">
           {profile.role.replace('_', ' ')}
           {isAuroraManager && assignedDealers && assignedDealers.length > 0 ? (
             <span className="text-[#C27E00]">
@@ -142,38 +142,38 @@ export default async function SpecialistDetailsPage({ params }: { params: Promis
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Stats Cards */}
-          <div className="bg-white/5 border border-gray-800 p-6 rounded-lg">
-              <h3 className="text-lg font-medium text-gray-300">Completed Jobs</h3>
+          <div className="bg-zinc-200/50 dark:bg-white/5 border border-zinc-200 dark:border-gray-800 p-6 rounded-lg">
+              <h3 className="text-lg font-medium text-zinc-600 dark:text-gray-300">Completed Jobs</h3>
               <p className="text-4xl font-bold text-[#C27E00] mt-2">{completedJobs?.length || 0}</p>
           </div>
-          <div className="bg-white/5 border border-gray-800 p-6 rounded-lg">
-              <h3 className="text-lg font-medium text-gray-300">Pending Jobs (Dealer Pool)</h3>
-              <p className="text-4xl font-bold text-white mt-2">{pendingJobs?.length || 0}</p>
+          <div className="bg-zinc-200/50 dark:bg-white/5 border border-zinc-200 dark:border-gray-800 p-6 rounded-lg">
+              <h3 className="text-lg font-medium text-zinc-600 dark:text-gray-300">Pending Jobs (Dealer Pool)</h3>
+              <p className="text-4xl font-bold text-zinc-900 dark:text-white mt-2">{pendingJobs?.length || 0}</p>
           </div>
       </div>
 
       {/* Detailed Lists */}
       <div className="space-y-6">
           <div>
-              <h2 className="text-xl font-semibold text-white mb-4">Pending Jobs</h2>
-              <div className="bg-white/5 border border-gray-800 rounded-lg overflow-hidden">
+              <h2 className="text-xl font-semibold text-zinc-900 dark:text-white mb-4">Pending Jobs</h2>
+              <div className="bg-zinc-200/50 dark:bg-white/5 border border-zinc-200 dark:border-gray-800 rounded-lg overflow-hidden">
                   {pendingJobs?.length === 0 ? (
-                      <p className="p-4 text-gray-500">No pending jobs.</p>
+                      <p className="p-4 text-zinc-500 dark:text-gray-500">No pending jobs.</p>
                   ) : (
-                      <ul className="divide-y divide-gray-800">
+                      <ul className="divide-y divide-zinc-200 dark:divide-gray-800">
                           {pendingJobs?.map(job => {
                               const jobTz = (job.dealers as { region_codes?: { timezones?: { name: string } } } | null)?.region_codes?.timezones?.name ?? null
                               return (
-                              <li key={job.id} className="p-4 hover:bg-white/5 transition-colors">
+                              <li key={job.id} className="p-4 hover:bg-zinc-200/50 dark:bg-white/5 transition-colors">
                                   <div className="flex justify-between items-center">
                                       <div>
-                                          <p className="font-medium text-white">{job.vehicle_year} {job.vehicle_make} {job.vehicle_model}</p>
-                                          <p className="text-sm text-gray-400">{job.customer_firstname} {job.customer_lastname}</p>
+                                          <p className="font-medium text-zinc-900 dark:text-white">{job.vehicle_year} {job.vehicle_make} {job.vehicle_model}</p>
+                                          <p className="text-sm text-zinc-500 dark:text-gray-400">{job.customer_firstname} {job.customer_lastname}</p>
                                           {(job as { demand_number?: number }).demand_number != null && (
-                                            <p className="text-xs text-gray-500 mt-1">Demand ID: #{(job as { demand_number?: number }).demand_number}</p>
+                                            <p className="text-xs text-zinc-500 dark:text-gray-500 mt-1">Demand ID: #{(job as { demand_number?: number }).demand_number}</p>
                                           )}
                                           {isAuroraManager && (job.dealers as any)?.name && (
-                                            <p className="text-xs text-gray-500 mt-1">Dealer: {(job.dealers as any).name}</p>
+                                            <p className="text-xs text-zinc-500 dark:text-gray-500 mt-1">Dealer: {(job.dealers as any).name}</p>
                                           )}
                                       </div>
                                       <div className="text-right">
@@ -189,30 +189,30 @@ export default async function SpecialistDetailsPage({ params }: { params: Promis
           </div>
 
           <div>
-              <h2 className="text-xl font-semibold text-white mb-4">Completed Jobs History</h2>
-              <div className="bg-white/5 border border-gray-800 rounded-lg overflow-hidden">
+              <h2 className="text-xl font-semibold text-zinc-900 dark:text-white mb-4">Completed Jobs History</h2>
+              <div className="bg-zinc-200/50 dark:bg-white/5 border border-zinc-200 dark:border-gray-800 rounded-lg overflow-hidden">
                   {completedJobs?.length === 0 ? (
-                      <p className="p-4 text-gray-500">No completed jobs.</p>
+                      <p className="p-4 text-zinc-500 dark:text-gray-500">No completed jobs.</p>
                   ) : (
-                      <ul className="divide-y divide-gray-800">
+                      <ul className="divide-y divide-zinc-200 dark:divide-gray-800">
                           {completedJobs?.map(job => {
                               const jobTz = (job.dealers as { region_codes?: { timezones?: { name: string } } } | null)?.region_codes?.timezones?.name ?? null
                               return (
-                              <li key={job.id} className="p-4 hover:bg-white/5 transition-colors">
+                              <li key={job.id} className="p-4 hover:bg-zinc-200/50 dark:bg-white/5 transition-colors">
                                   <div className="flex justify-between items-center">
                                       <div>
-                                          <p className="font-medium text-white">{job.vehicle_year} {job.vehicle_make} {job.vehicle_model}</p>
-                                          <p className="text-sm text-gray-400">{job.customer_firstname} {job.customer_lastname}</p>
+                                          <p className="font-medium text-zinc-900 dark:text-white">{job.vehicle_year} {job.vehicle_make} {job.vehicle_model}</p>
+                                          <p className="text-sm text-zinc-500 dark:text-gray-400">{job.customer_firstname} {job.customer_lastname}</p>
                                           {(job as { demand_number?: number }).demand_number != null && (
-                                            <p className="text-xs text-gray-500 mt-1">Demand ID: #{(job as { demand_number?: number }).demand_number}</p>
+                                            <p className="text-xs text-zinc-500 dark:text-gray-500 mt-1">Demand ID: #{(job as { demand_number?: number }).demand_number}</p>
                                           )}
                                           {isAuroraManager && (job.dealers as any)?.name && (
-                                            <p className="text-xs text-gray-500 mt-1">Dealer: {(job.dealers as any).name}</p>
+                                            <p className="text-xs text-zinc-500 dark:text-gray-500 mt-1">Dealer: {(job.dealers as any).name}</p>
                                           )}
                                       </div>
                                       <div className="text-right">
                                           <p className="text-sm text-green-500">Completed</p>
-                                          <p className="text-xs text-gray-500">{jobTz ? formatInTimeZone(new Date(job.updated_at), jobTz, 'PPP') : format(new Date(job.updated_at), 'PPP')}</p>
+                                          <p className="text-xs text-zinc-500 dark:text-gray-500">{jobTz ? formatInTimeZone(new Date(job.updated_at), jobTz, 'PPP') : format(new Date(job.updated_at), 'PPP')}</p>
                                       </div>
                                   </div>
                               </li>

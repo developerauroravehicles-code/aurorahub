@@ -242,7 +242,7 @@ export function ServiceDeskContent({
 
   return (
     <div className="space-y-6">
-      <div className="flex gap-2 border-b border-gray-800 pb-2">
+      <div className="flex gap-2 border-b border-zinc-200 dark:border-gray-800 pb-2">
         {tabs.map((t) => {
           const Icon = t.icon
           return (
@@ -251,8 +251,8 @@ export function ServiceDeskContent({
               onClick={() => setActiveTab(t.id)}
               className={`px-4 py-2 rounded-t text-sm font-medium transition-colors flex items-center gap-2 ${
                 activeTab === t.id
-                  ? 'bg-white/10 text-white border border-b-0 border-gray-800'
-                  : 'text-gray-400 hover:text-white hover:bg-white/5'
+                  ? 'bg-zinc-200 dark:bg-white/10 text-zinc-900 dark:text-white border border-b-0 border-zinc-200 dark:border-gray-800'
+                  : 'text-zinc-500 dark:text-gray-400 hover:text-zinc-900 dark:text-white hover:bg-zinc-200/50 dark:bg-white/5'
               }`}
             >
               <Icon className="w-4 h-4" /> {t.name}
@@ -262,9 +262,9 @@ export function ServiceDeskContent({
       </div>
 
       {activeTab === 'tickets' && (
-        <div className="bg-white/5 rounded-lg border border-gray-800 p-6">
+        <div className="bg-zinc-200/50 dark:bg-white/5 rounded-lg border border-zinc-200 dark:border-gray-800 p-6">
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-lg font-semibold text-white">Tickets</h2>
+            <h2 className="text-lg font-semibold text-zinc-900 dark:text-white">Tickets</h2>
             <button
               onClick={() => { setEditingTicketId(null); setShowTicketForm(true) }}
               className="flex items-center gap-2 px-3 py-1.5 rounded bg-[#C27E00] text-white text-sm hover:bg-[#a06900]"
@@ -281,48 +281,48 @@ export function ServiceDeskContent({
             />
           )}
           <div className="mt-4 overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-800 text-sm">
+            <table className="min-w-full divide-y divide-zinc-200 dark:divide-gray-800 text-sm">
               <thead>
                 <tr>
-                  <th className="px-4 py-2 text-left text-gray-400">#</th>
-                  <th className="px-4 py-2 text-left text-gray-400">Title</th>
-                  <th className="px-4 py-2 text-left text-gray-400">Category</th>
-                  <th className="px-4 py-2 text-left text-gray-400">Priority</th>
-                  <th className="px-4 py-2 text-left text-gray-400">Status</th>
-                  <th className="px-4 py-2 text-left text-gray-400">Assigned</th>
-                  <th className="px-4 py-2 text-left text-gray-400">Requested By</th>
-                  <th className="px-4 py-2 text-left text-gray-400">SLA</th>
-                  <th className="px-4 py-2 text-left text-gray-400">Duration</th>
-                  <th className="px-4 py-2 text-right text-gray-400">Actions</th>
+                  <th className="px-4 py-2 text-left text-zinc-500 dark:text-gray-400">#</th>
+                  <th className="px-4 py-2 text-left text-zinc-500 dark:text-gray-400">Title</th>
+                  <th className="px-4 py-2 text-left text-zinc-500 dark:text-gray-400">Category</th>
+                  <th className="px-4 py-2 text-left text-zinc-500 dark:text-gray-400">Priority</th>
+                  <th className="px-4 py-2 text-left text-zinc-500 dark:text-gray-400">Status</th>
+                  <th className="px-4 py-2 text-left text-zinc-500 dark:text-gray-400">Assigned</th>
+                  <th className="px-4 py-2 text-left text-zinc-500 dark:text-gray-400">Requested By</th>
+                  <th className="px-4 py-2 text-left text-zinc-500 dark:text-gray-400">SLA</th>
+                  <th className="px-4 py-2 text-left text-zinc-500 dark:text-gray-400">Duration</th>
+                  <th className="px-4 py-2 text-right text-zinc-500 dark:text-gray-400">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-800">
+              <tbody className="divide-y divide-zinc-200 dark:divide-gray-800">
                 {tickets.map((t) => (
                   <tr key={t.id}>
                     <td className="px-4 py-2 text-[#C27E00] font-mono">{t.ticket_number ?? '—'}</td>
-                    <td className="px-4 py-2 text-white max-w-[200px] truncate" title={t.title}>{t.title}</td>
-                    <td className="px-4 py-2 text-gray-300">{TICKET_CATEGORIES[t.category] ?? t.category}</td>
+                    <td className="px-4 py-2 text-zinc-900 dark:text-white max-w-[200px] truncate" title={t.title}>{t.title}</td>
+                    <td className="px-4 py-2 text-zinc-600 dark:text-gray-300">{TICKET_CATEGORIES[t.category] ?? t.category}</td>
                     <td className="px-4 py-2">
                       <span className={`px-2 py-0.5 rounded text-xs ${
                         t.priority === 'critical' ? 'bg-red-500/20 text-red-400' :
                         t.priority === 'high' ? 'bg-orange-500/20 text-orange-400' :
-                        t.priority === 'medium' ? 'bg-yellow-500/20 text-yellow-400' : 'bg-gray-800 text-gray-400'
+                        t.priority === 'medium' ? 'bg-yellow-500/20 text-yellow-400' : 'bg-gray-800 text-zinc-500 dark:text-gray-400'
                       }`}>{PRIORITIES[t.priority] ?? t.priority}</span>
                     </td>
                     <td className="px-4 py-2">{TICKET_STATUSES[t.status] ?? t.status}</td>
-                    <td className="px-4 py-2 text-gray-400">{t.assigned?.full_name ?? '—'}</td>
-                    <td className="px-4 py-2 text-gray-400">{t.requester?.full_name ?? '—'}</td>
-                    <td className="px-4 py-2 text-gray-400 whitespace-nowrap">{t.sla_due_at ? formatInPT(t.sla_due_at, 'MMM d, yyyy h:mm a') : '—'}</td>
-                    <td className="px-4 py-2 text-gray-400">{t.resolved_at ? formatDuration(getClosingDuration(t.created_at, t.resolved_at) ?? 0) : '—'}</td>
+                    <td className="px-4 py-2 text-zinc-500 dark:text-gray-400">{t.assigned?.full_name ?? '—'}</td>
+                    <td className="px-4 py-2 text-zinc-500 dark:text-gray-400">{t.requester?.full_name ?? '—'}</td>
+                    <td className="px-4 py-2 text-zinc-500 dark:text-gray-400 whitespace-nowrap">{t.sla_due_at ? formatInPT(t.sla_due_at, 'MMM d, yyyy h:mm a') : '—'}</td>
+                    <td className="px-4 py-2 text-zinc-500 dark:text-gray-400">{t.resolved_at ? formatDuration(getClosingDuration(t.created_at, t.resolved_at) ?? 0) : '—'}</td>
                     <td className="px-4 py-2 text-right">
-                      <button onClick={() => setViewingTicketId(t.id)} className="p-1.5 text-gray-400 hover:text-blue-400 mr-1" title="View details">
+                      <button onClick={() => setViewingTicketId(t.id)} className="p-1.5 text-zinc-500 dark:text-gray-400 hover:text-blue-400 mr-1" title="View details">
                         <Eye className="w-4 h-4 inline" />
                       </button>
-                      <button onClick={() => { setEditingTicketId(t.id); setShowTicketForm(true) }} className="p-1.5 text-gray-400 hover:text-[#C27E00] mr-1" title="Edit">
+                      <button onClick={() => { setEditingTicketId(t.id); setShowTicketForm(true) }} className="p-1.5 text-zinc-500 dark:text-gray-400 hover:text-[#C27E00] mr-1" title="Edit">
                         <Pencil className="w-4 h-4 inline" />
                       </button>
                       <form action={async () => { if (confirm('Delete this ticket?')) { await deleteTicket(t.id); router.refresh() } }} className="inline">
-                        <button type="submit" className="p-1.5 text-gray-400 hover:text-red-400" title="Delete"><Trash2 className="w-4 h-4 inline" /></button>
+                        <button type="submit" className="p-1.5 text-zinc-500 dark:text-gray-400 hover:text-red-400" title="Delete"><Trash2 className="w-4 h-4 inline" /></button>
                       </form>
                     </td>
                   </tr>
@@ -333,18 +333,18 @@ export function ServiceDeskContent({
               const t = tickets.find((x) => x.id === viewingTicketId)
               if (!t) return null
               return (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70" onClick={() => setViewingTicketId(null)}>
-                  <div className="bg-gray-900 border border-gray-800 rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto p-6" onClick={(e) => e.stopPropagation()}>
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-900/50 dark:bg-black/70" onClick={() => setViewingTicketId(null)}>
+                  <div className="bg-zinc-200 dark:bg-gray-900 border border-zinc-200 dark:border-gray-800 rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto p-6" onClick={(e) => e.stopPropagation()}>
                     <div className="flex justify-between items-start mb-4">
-                      <h3 className="text-lg font-semibold text-white">{t.ticket_number ?? 'Ticket'}: {t.title}</h3>
-                      <button onClick={() => setViewingTicketId(null)} className="p-1 text-gray-400 hover:text-white"><X className="w-5 h-5" /></button>
+                      <h3 className="text-lg font-semibold text-zinc-900 dark:text-white">{t.ticket_number ?? 'Ticket'}: {t.title}</h3>
+                      <button onClick={() => setViewingTicketId(null)} className="p-1 text-zinc-500 dark:text-gray-400 hover:text-zinc-900 dark:text-white"><X className="w-5 h-5" /></button>
                     </div>
                     <div className="space-y-3 text-sm">
                       <div>
-                        <span className="text-gray-500">Description:</span>
-                        <p className="text-gray-300 mt-1 whitespace-pre-wrap">{t.description || '—'}</p>
+                        <span className="text-zinc-500 dark:text-gray-500">Description:</span>
+                        <p className="text-zinc-600 dark:text-gray-300 mt-1 whitespace-pre-wrap">{t.description || '—'}</p>
                       </div>
-                      <div className="grid grid-cols-2 gap-2 text-gray-400">
+                      <div className="grid grid-cols-2 gap-2 text-zinc-500 dark:text-gray-400">
                         <span>Category: {TICKET_CATEGORIES[t.category] ?? t.category}</span>
                         <span>Priority: {PRIORITIES[t.priority] ?? t.priority}</span>
                         <span>Status: {TICKET_STATUSES[t.status] ?? t.status}</span>
@@ -355,8 +355,8 @@ export function ServiceDeskContent({
                       </div>
                       {t.resolution_notes && (
                         <div>
-                          <span className="text-gray-500">Resolution Notes:</span>
-                          <p className="text-gray-300 mt-1 whitespace-pre-wrap">{t.resolution_notes}</p>
+                          <span className="text-zinc-500 dark:text-gray-500">Resolution Notes:</span>
+                          <p className="text-zinc-600 dark:text-gray-300 mt-1 whitespace-pre-wrap">{t.resolution_notes}</p>
                         </div>
                       )}
                     </div>
@@ -370,16 +370,16 @@ export function ServiceDeskContent({
               )
             })()}
             {tickets.length === 0 && !showTicketForm && (
-              <p className="text-gray-500 py-6 text-center">No tickets yet.</p>
+              <p className="text-zinc-500 dark:text-gray-500 py-6 text-center">No tickets yet.</p>
             )}
           </div>
         </div>
       )}
 
       {activeTab === 'incidents' && (
-        <div className="bg-white/5 rounded-lg border border-gray-800 p-6">
+        <div className="bg-zinc-200/50 dark:bg-white/5 rounded-lg border border-zinc-200 dark:border-gray-800 p-6">
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-lg font-semibold text-white">Incidents</h2>
+            <h2 className="text-lg font-semibold text-zinc-900 dark:text-white">Incidents</h2>
             <button
               onClick={() => { setEditingIncidentId(null); setShowIncidentForm(true) }}
               className="flex items-center gap-2 px-3 py-1.5 rounded bg-[#C27E00] text-white text-sm hover:bg-[#a06900]"
@@ -395,36 +395,36 @@ export function ServiceDeskContent({
             />
           )}
           <div className="mt-4 overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-800 text-sm">
+            <table className="min-w-full divide-y divide-zinc-200 dark:divide-gray-800 text-sm">
               <thead>
                 <tr>
-                  <th className="px-4 py-2 text-left text-gray-400">#</th>
-                  <th className="px-4 py-2 text-left text-gray-400">Title</th>
-                  <th className="px-4 py-2 text-left text-gray-400">Severity</th>
-                  <th className="px-4 py-2 text-left text-gray-400">Status</th>
-                  <th className="px-4 py-2 text-left text-gray-400">Impact</th>
-                  <th className="px-4 py-2 text-right text-gray-400">Actions</th>
+                  <th className="px-4 py-2 text-left text-zinc-500 dark:text-gray-400">#</th>
+                  <th className="px-4 py-2 text-left text-zinc-500 dark:text-gray-400">Title</th>
+                  <th className="px-4 py-2 text-left text-zinc-500 dark:text-gray-400">Severity</th>
+                  <th className="px-4 py-2 text-left text-zinc-500 dark:text-gray-400">Status</th>
+                  <th className="px-4 py-2 text-left text-zinc-500 dark:text-gray-400">Impact</th>
+                  <th className="px-4 py-2 text-right text-zinc-500 dark:text-gray-400">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-800">
+              <tbody className="divide-y divide-zinc-200 dark:divide-gray-800">
                 {incidents.map((i) => (
                   <tr key={i.id}>
                     <td className="px-4 py-2 text-[#C27E00] font-mono">{i.incident_number ?? '—'}</td>
-                    <td className="px-4 py-2 text-white max-w-[220px] truncate" title={i.title}>{i.title}</td>
+                    <td className="px-4 py-2 text-zinc-900 dark:text-white max-w-[220px] truncate" title={i.title}>{i.title}</td>
                     <td className="px-4 py-2">
                       <span className={`px-2 py-0.5 rounded text-xs ${
                         i.severity === 'critical' ? 'bg-red-500/20 text-red-400' :
-                        i.severity === 'high' ? 'bg-orange-500/20 text-orange-400' : 'bg-gray-800 text-gray-400'
+                        i.severity === 'high' ? 'bg-orange-500/20 text-orange-400' : 'bg-gray-800 text-zinc-500 dark:text-gray-400'
                       }`}>{INCIDENT_SEVERITIES[i.severity] ?? i.severity}</span>
                     </td>
                     <td className="px-4 py-2">{INCIDENT_STATUSES[i.status] ?? i.status}</td>
-                    <td className="px-4 py-2 text-gray-400 max-w-[150px] truncate">{i.impact_scope ?? '—'}</td>
+                    <td className="px-4 py-2 text-zinc-500 dark:text-gray-400 max-w-[150px] truncate">{i.impact_scope ?? '—'}</td>
                     <td className="px-4 py-2 text-right">
-                      <button onClick={() => { setEditingIncidentId(i.id); setShowIncidentForm(true) }} className="p-1.5 text-gray-400 hover:text-[#C27E00] mr-1" title="Edit">
+                      <button onClick={() => { setEditingIncidentId(i.id); setShowIncidentForm(true) }} className="p-1.5 text-zinc-500 dark:text-gray-400 hover:text-[#C27E00] mr-1" title="Edit">
                         <Pencil className="w-4 h-4 inline" />
                       </button>
                       <form action={async () => { if (confirm('Delete?')) { await deleteIncident(i.id); router.refresh() } }} className="inline">
-                        <button type="submit" className="p-1.5 text-gray-400 hover:text-red-400" title="Delete"><Trash2 className="w-4 h-4 inline" /></button>
+                        <button type="submit" className="p-1.5 text-zinc-500 dark:text-gray-400 hover:text-red-400" title="Delete"><Trash2 className="w-4 h-4 inline" /></button>
                       </form>
                     </td>
                   </tr>
@@ -432,16 +432,16 @@ export function ServiceDeskContent({
               </tbody>
             </table>
             {incidents.length === 0 && !showIncidentForm && (
-              <p className="text-gray-500 py-6 text-center">No incidents yet.</p>
+              <p className="text-zinc-500 dark:text-gray-500 py-6 text-center">No incidents yet.</p>
             )}
           </div>
         </div>
       )}
 
       {activeTab === 'changes' && (
-        <div className="bg-white/5 rounded-lg border border-gray-800 p-6">
+        <div className="bg-zinc-200/50 dark:bg-white/5 rounded-lg border border-zinc-200 dark:border-gray-800 p-6">
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-lg font-semibold text-white">Changes</h2>
+            <h2 className="text-lg font-semibold text-zinc-900 dark:text-white">Changes</h2>
             <button
               onClick={() => { setEditingChangeId(null); setShowChangeForm(true) }}
               className="flex items-center gap-2 px-3 py-1.5 rounded bg-[#C27E00] text-white text-sm hover:bg-[#a06900]"
@@ -457,33 +457,33 @@ export function ServiceDeskContent({
             />
           )}
           <div className="mt-4 overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-800 text-sm">
+            <table className="min-w-full divide-y divide-zinc-200 dark:divide-gray-800 text-sm">
               <thead>
                 <tr>
-                  <th className="px-4 py-2 text-left text-gray-400">#</th>
-                  <th className="px-4 py-2 text-left text-gray-400">Title</th>
-                  <th className="px-4 py-2 text-left text-gray-400">Type</th>
-                  <th className="px-4 py-2 text-left text-gray-400">Risk</th>
-                  <th className="px-4 py-2 text-left text-gray-400">Status</th>
-                  <th className="px-4 py-2 text-left text-gray-400">Scheduled</th>
-                  <th className="px-4 py-2 text-right text-gray-400">Actions</th>
+                  <th className="px-4 py-2 text-left text-zinc-500 dark:text-gray-400">#</th>
+                  <th className="px-4 py-2 text-left text-zinc-500 dark:text-gray-400">Title</th>
+                  <th className="px-4 py-2 text-left text-zinc-500 dark:text-gray-400">Type</th>
+                  <th className="px-4 py-2 text-left text-zinc-500 dark:text-gray-400">Risk</th>
+                  <th className="px-4 py-2 text-left text-zinc-500 dark:text-gray-400">Status</th>
+                  <th className="px-4 py-2 text-left text-zinc-500 dark:text-gray-400">Scheduled</th>
+                  <th className="px-4 py-2 text-right text-zinc-500 dark:text-gray-400">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-800">
+              <tbody className="divide-y divide-zinc-200 dark:divide-gray-800">
                 {changes.map((c) => (
                   <tr key={c.id}>
                     <td className="px-4 py-2 text-[#C27E00] font-mono">{c.change_number ?? '—'}</td>
-                    <td className="px-4 py-2 text-white max-w-[200px] truncate" title={c.title}>{c.title}</td>
-                    <td className="px-4 py-2 text-gray-300">{CHANGE_TYPES[c.change_type] ?? c.change_type}</td>
+                    <td className="px-4 py-2 text-zinc-900 dark:text-white max-w-[200px] truncate" title={c.title}>{c.title}</td>
+                    <td className="px-4 py-2 text-zinc-600 dark:text-gray-300">{CHANGE_TYPES[c.change_type] ?? c.change_type}</td>
                     <td className="px-4 py-2">{c.risk_level}</td>
                     <td className="px-4 py-2">{CHANGE_STATUSES[c.status] ?? c.status}</td>
-                    <td className="px-4 py-2 text-gray-400">{c.scheduled_at ? formatInPT(c.scheduled_at, 'MMM d, yyyy h:mm a') : '—'}</td>
+                    <td className="px-4 py-2 text-zinc-500 dark:text-gray-400">{c.scheduled_at ? formatInPT(c.scheduled_at, 'MMM d, yyyy h:mm a') : '—'}</td>
                     <td className="px-4 py-2 text-right">
-                      <button onClick={() => { setEditingChangeId(c.id); setShowChangeForm(true) }} className="p-1.5 text-gray-400 hover:text-[#C27E00] mr-1" title="Edit">
+                      <button onClick={() => { setEditingChangeId(c.id); setShowChangeForm(true) }} className="p-1.5 text-zinc-500 dark:text-gray-400 hover:text-[#C27E00] mr-1" title="Edit">
                         <Pencil className="w-4 h-4 inline" />
                       </button>
                       <form action={async () => { if (confirm('Delete?')) { await deleteChange(c.id); router.refresh() } }} className="inline">
-                        <button type="submit" className="p-1.5 text-gray-400 hover:text-red-400" title="Delete"><Trash2 className="w-4 h-4 inline" /></button>
+                        <button type="submit" className="p-1.5 text-zinc-500 dark:text-gray-400 hover:text-red-400" title="Delete"><Trash2 className="w-4 h-4 inline" /></button>
                       </form>
                     </td>
                   </tr>
@@ -491,16 +491,16 @@ export function ServiceDeskContent({
               </tbody>
             </table>
             {changes.length === 0 && !showChangeForm && (
-              <p className="text-gray-500 py-6 text-center">No changes yet.</p>
+              <p className="text-zinc-500 dark:text-gray-500 py-6 text-center">No changes yet.</p>
             )}
           </div>
         </div>
       )}
 
       {activeTab === 'releases' && (
-        <div className="bg-white/5 rounded-lg border border-gray-800 p-6">
+        <div className="bg-zinc-200/50 dark:bg-white/5 rounded-lg border border-zinc-200 dark:border-gray-800 p-6">
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-lg font-semibold text-white">Releases</h2>
+            <h2 className="text-lg font-semibold text-zinc-900 dark:text-white">Releases</h2>
             <button
               onClick={() => { setEditingReleaseId(null); setShowReleaseForm(true) }}
               className="flex items-center gap-2 px-3 py-1.5 rounded bg-[#C27E00] text-white text-sm hover:bg-[#a06900]"
@@ -516,31 +516,31 @@ export function ServiceDeskContent({
             />
           )}
           <div className="mt-4 overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-800 text-sm">
+            <table className="min-w-full divide-y divide-zinc-200 dark:divide-gray-800 text-sm">
               <thead>
                 <tr>
-                  <th className="px-4 py-2 text-left text-gray-400">Version</th>
-                  <th className="px-4 py-2 text-left text-gray-400">Build</th>
-                  <th className="px-4 py-2 text-left text-gray-400">Environment</th>
-                  <th className="px-4 py-2 text-left text-gray-400">Status</th>
-                  <th className="px-4 py-2 text-left text-gray-400">Deployed</th>
-                  <th className="px-4 py-2 text-right text-gray-400">Actions</th>
+                  <th className="px-4 py-2 text-left text-zinc-500 dark:text-gray-400">Version</th>
+                  <th className="px-4 py-2 text-left text-zinc-500 dark:text-gray-400">Build</th>
+                  <th className="px-4 py-2 text-left text-zinc-500 dark:text-gray-400">Environment</th>
+                  <th className="px-4 py-2 text-left text-zinc-500 dark:text-gray-400">Status</th>
+                  <th className="px-4 py-2 text-left text-zinc-500 dark:text-gray-400">Deployed</th>
+                  <th className="px-4 py-2 text-right text-zinc-500 dark:text-gray-400">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-800">
+              <tbody className="divide-y divide-zinc-200 dark:divide-gray-800">
                 {releases.map((r) => (
                   <tr key={r.id}>
-                    <td className="px-4 py-2 text-white font-mono">{r.version}</td>
-                    <td className="px-4 py-2 text-gray-400">{r.build_number ?? '—'}</td>
-                    <td className="px-4 py-2 text-gray-300">{RELEASE_ENVS[r.environment] ?? r.environment}</td>
+                    <td className="px-4 py-2 text-zinc-900 dark:text-white font-mono">{r.version}</td>
+                    <td className="px-4 py-2 text-zinc-500 dark:text-gray-400">{r.build_number ?? '—'}</td>
+                    <td className="px-4 py-2 text-zinc-600 dark:text-gray-300">{RELEASE_ENVS[r.environment] ?? r.environment}</td>
                     <td className="px-4 py-2">{RELEASE_STATUSES[r.status] ?? r.status}</td>
-                    <td className="px-4 py-2 text-gray-400">{r.deployed_at ? formatInPT(r.deployed_at, 'MMM d, yyyy h:mm:ss a') : '—'}</td>
+                    <td className="px-4 py-2 text-zinc-500 dark:text-gray-400">{r.deployed_at ? formatInPT(r.deployed_at, 'MMM d, yyyy h:mm:ss a') : '—'}</td>
                     <td className="px-4 py-2 text-right">
-                      <button onClick={() => { setEditingReleaseId(r.id); setShowReleaseForm(true) }} className="p-1.5 text-gray-400 hover:text-[#C27E00] mr-1" title="Edit">
+                      <button onClick={() => { setEditingReleaseId(r.id); setShowReleaseForm(true) }} className="p-1.5 text-zinc-500 dark:text-gray-400 hover:text-[#C27E00] mr-1" title="Edit">
                         <Pencil className="w-4 h-4 inline" />
                       </button>
                       <form action={async () => { if (confirm('Delete?')) { await deleteRelease(r.id); router.refresh() } }} className="inline">
-                        <button type="submit" className="p-1.5 text-gray-400 hover:text-red-400" title="Delete"><Trash2 className="w-4 h-4 inline" /></button>
+                        <button type="submit" className="p-1.5 text-zinc-500 dark:text-gray-400 hover:text-red-400" title="Delete"><Trash2 className="w-4 h-4 inline" /></button>
                       </form>
                     </td>
                   </tr>
@@ -548,16 +548,16 @@ export function ServiceDeskContent({
               </tbody>
             </table>
             {releases.length === 0 && !showReleaseForm && (
-              <p className="text-gray-500 py-6 text-center">No releases yet.</p>
+              <p className="text-zinc-500 dark:text-gray-500 py-6 text-center">No releases yet.</p>
             )}
           </div>
         </div>
       )}
 
       {activeTab === 'knowledge' && (
-        <div className="bg-white/5 rounded-lg border border-gray-800 p-6">
+        <div className="bg-zinc-200/50 dark:bg-white/5 rounded-lg border border-zinc-200 dark:border-gray-800 p-6">
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-lg font-semibold text-white">Knowledge Base</h2>
+            <h2 className="text-lg font-semibold text-zinc-900 dark:text-white">Knowledge Base</h2>
             <button
               onClick={() => { setEditingKbId(null); setShowKbForm(true) }}
               className="flex items-center gap-2 px-3 py-1.5 rounded bg-[#C27E00] text-white text-sm hover:bg-[#a06900]"
@@ -574,23 +574,23 @@ export function ServiceDeskContent({
           )}
           <div className="mt-4 space-y-2">
             {knowledge.map((k) => (
-              <div key={k.id} className="flex items-center justify-between p-3 rounded bg-black/30 border border-gray-800">
+              <div key={k.id} className="flex items-center justify-between p-3 rounded bg-zinc-100/90 dark:bg-black/30 border border-zinc-200 dark:border-gray-800">
                 <div>
-                  <div className="text-white font-medium">{k.title}</div>
-                  {k.category && <span className="text-xs text-gray-500">{KB_CATEGORIES[k.category] ?? k.category}</span>}
+                  <div className="text-zinc-900 dark:text-white font-medium">{k.title}</div>
+                  {k.category && <span className="text-xs text-zinc-500 dark:text-gray-500">{KB_CATEGORIES[k.category] ?? k.category}</span>}
                 </div>
                 <div>
-                  <button onClick={() => { setEditingKbId(k.id); setShowKbForm(true) }} className="p-1.5 text-gray-400 hover:text-[#C27E00] mr-1" title="Edit">
+                  <button onClick={() => { setEditingKbId(k.id); setShowKbForm(true) }} className="p-1.5 text-zinc-500 dark:text-gray-400 hover:text-[#C27E00] mr-1" title="Edit">
                     <Pencil className="w-4 h-4 inline" />
                   </button>
                   <form action={async () => { if (confirm('Delete?')) { await deleteKnowledgeArticle(k.id); router.refresh() } }} className="inline">
-                    <button type="submit" className="p-1.5 text-gray-400 hover:text-red-400" title="Delete"><Trash2 className="w-4 h-4 inline" /></button>
+                    <button type="submit" className="p-1.5 text-zinc-500 dark:text-gray-400 hover:text-red-400" title="Delete"><Trash2 className="w-4 h-4 inline" /></button>
                   </form>
                 </div>
               </div>
             ))}
             {knowledge.length === 0 && !showKbForm && (
-              <p className="text-gray-500 py-6 text-center">No knowledge base articles yet.</p>
+              <p className="text-zinc-500 dark:text-gray-500 py-6 text-center">No knowledge base articles yet.</p>
             )}
           </div>
         </div>
@@ -640,33 +640,33 @@ function TicketForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="mb-6 p-4 rounded bg-black/30 border border-gray-700 space-y-3">
-      <h3 className="text-white font-medium">{isEdit ? 'Edit Ticket' : 'New Ticket'}</h3>
+    <form onSubmit={handleSubmit} className="mb-6 p-4 rounded bg-zinc-100/90 dark:bg-black/30 border border-zinc-300 dark:border-gray-700 space-y-3">
+      <h3 className="text-zinc-900 dark:text-white font-medium">{isEdit ? 'Edit Ticket' : 'New Ticket'}</h3>
       <div>
-        <label className="block text-xs text-gray-400 mb-1">Title *</label>
-        <input name="title" required defaultValue={ticket?.title ?? ''} className="w-full rounded bg-gray-900 border border-gray-700 px-3 py-2 text-white text-sm" />
+        <label className="block text-xs text-zinc-500 dark:text-gray-400 mb-1">Title *</label>
+        <input name="title" required defaultValue={ticket?.title ?? ''} className="w-full rounded bg-zinc-200 dark:bg-gray-900 border border-zinc-300 dark:border-gray-700 px-3 py-2 text-zinc-900 dark:text-white text-sm" />
       </div>
       <div>
-        <label className="block text-xs text-gray-400 mb-1">Description</label>
-        <textarea name="description" rows={2} defaultValue={ticket?.description ?? ''} className="w-full rounded bg-gray-900 border border-gray-700 px-3 py-2 text-white text-sm" />
+        <label className="block text-xs text-zinc-500 dark:text-gray-400 mb-1">Description</label>
+        <textarea name="description" rows={2} defaultValue={ticket?.description ?? ''} className="w-full rounded bg-zinc-200 dark:bg-gray-900 border border-zinc-300 dark:border-gray-700 px-3 py-2 text-zinc-900 dark:text-white text-sm" />
       </div>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
         <div>
-          <label className="block text-xs text-gray-400 mb-1">Category</label>
-          <select name="category" required defaultValue={ticket?.category ?? ''} className="w-full rounded bg-gray-900 border border-gray-700 px-3 py-2 text-white text-sm">
+          <label className="block text-xs text-zinc-500 dark:text-gray-400 mb-1">Category</label>
+          <select name="category" required defaultValue={ticket?.category ?? ''} className="w-full rounded bg-zinc-200 dark:bg-gray-900 border border-zinc-300 dark:border-gray-700 px-3 py-2 text-zinc-900 dark:text-white text-sm">
             {Object.entries(TICKET_CATEGORIES).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
           </select>
         </div>
         <div>
-          <label className="block text-xs text-gray-400 mb-1">Priority</label>
-          <select name="priority" defaultValue={ticket?.priority ?? 'medium'} className="w-full rounded bg-gray-900 border border-gray-700 px-3 py-2 text-white text-sm">
+          <label className="block text-xs text-zinc-500 dark:text-gray-400 mb-1">Priority</label>
+          <select name="priority" defaultValue={ticket?.priority ?? 'medium'} className="w-full rounded bg-zinc-200 dark:bg-gray-900 border border-zinc-300 dark:border-gray-700 px-3 py-2 text-zinc-900 dark:text-white text-sm">
             {Object.entries(PRIORITIES).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
           </select>
         </div>
         {isEdit && (
           <div>
-            <label className="block text-xs text-gray-400 mb-1">Status</label>
-            <select name="status" defaultValue={ticket?.status ?? 'open'} className="w-full rounded bg-gray-900 border border-gray-700 px-3 py-2 text-white text-sm">
+            <label className="block text-xs text-zinc-500 dark:text-gray-400 mb-1">Status</label>
+            <select name="status" defaultValue={ticket?.status ?? 'open'} className="w-full rounded bg-zinc-200 dark:bg-gray-900 border border-zinc-300 dark:border-gray-700 px-3 py-2 text-zinc-900 dark:text-white text-sm">
               {Object.entries(TICKET_STATUSES).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
             </select>
           </div>
@@ -676,20 +676,20 @@ function TicketForm({
         <>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs text-gray-400 mb-1">Assigned To</label>
-              <select name="assigned_to" defaultValue={ticket?.assigned_to ?? ''} className="w-full rounded bg-gray-900 border border-gray-700 px-3 py-2 text-white text-sm">
+              <label className="block text-xs text-zinc-500 dark:text-gray-400 mb-1">Assigned To</label>
+              <select name="assigned_to" defaultValue={ticket?.assigned_to ?? ''} className="w-full rounded bg-zinc-200 dark:bg-gray-900 border border-zinc-300 dark:border-gray-700 px-3 py-2 text-zinc-900 dark:text-white text-sm">
                 <option value="">—</option>
                 {assignees.map((p) => <option key={p.id} value={p.id}>{p.full_name ?? p.id}</option>)}
               </select>
             </div>
             <div>
-              <label className="block text-xs text-gray-400 mb-1">SLA Due (Pacific Time)</label>
-              <input name="sla_due_at" type="datetime-local" defaultValue={ticket?.sla_due_at ? formatInPT(ticket.sla_due_at, "yyyy-MM-dd'T'HH:mm") : ''} className="w-full rounded bg-gray-900 border border-gray-700 px-3 py-2 text-white text-sm" />
+              <label className="block text-xs text-zinc-500 dark:text-gray-400 mb-1">SLA Due (Pacific Time)</label>
+              <input name="sla_due_at" type="datetime-local" defaultValue={ticket?.sla_due_at ? formatInPT(ticket.sla_due_at, "yyyy-MM-dd'T'HH:mm") : ''} className="w-full rounded bg-zinc-200 dark:bg-gray-900 border border-zinc-300 dark:border-gray-700 px-3 py-2 text-zinc-900 dark:text-white text-sm" />
             </div>
           </div>
           <div>
-            <label className="block text-xs text-gray-400 mb-1">Resolution Notes</label>
-            <textarea name="resolution_notes" rows={2} defaultValue={ticket?.resolution_notes ?? ''} className="w-full rounded bg-gray-900 border border-gray-700 px-3 py-2 text-white text-sm" />
+            <label className="block text-xs text-zinc-500 dark:text-gray-400 mb-1">Resolution Notes</label>
+            <textarea name="resolution_notes" rows={2} defaultValue={ticket?.resolution_notes ?? ''} className="w-full rounded bg-zinc-200 dark:bg-gray-900 border border-zinc-300 dark:border-gray-700 px-3 py-2 text-zinc-900 dark:text-white text-sm" />
           </div>
         </>
       )}
@@ -698,7 +698,7 @@ function TicketForm({
         <button type="submit" disabled={loading} className="px-3 py-1.5 rounded bg-[#C27E00] text-white text-sm disabled:opacity-50">
           {loading ? <Loader2 className="w-4 h-4 animate-spin inline" /> : (isEdit ? 'Save' : 'Create')}
         </button>
-        <button type="button" onClick={onClose} className="px-3 py-1.5 rounded bg-white/10 text-gray-400 text-sm">Cancel</button>
+        <button type="button" onClick={onClose} className="px-3 py-1.5 rounded bg-zinc-200 dark:bg-white/10 text-zinc-500 dark:text-gray-400 text-sm">Cancel</button>
       </div>
     </form>
   )
@@ -742,31 +742,31 @@ function IncidentForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="mb-6 p-4 rounded bg-black/30 border border-gray-700 space-y-3">
-      <h3 className="text-white font-medium">{isEdit ? 'Edit Incident' : 'New Incident'}</h3>
+    <form onSubmit={handleSubmit} className="mb-6 p-4 rounded bg-zinc-100/90 dark:bg-black/30 border border-zinc-300 dark:border-gray-700 space-y-3">
+      <h3 className="text-zinc-900 dark:text-white font-medium">{isEdit ? 'Edit Incident' : 'New Incident'}</h3>
       <div>
-        <label className="block text-xs text-gray-400 mb-1">Title *</label>
-        <input name="title" required defaultValue={incident?.title ?? ''} className="w-full rounded bg-gray-900 border border-gray-700 px-3 py-2 text-white text-sm" />
+        <label className="block text-xs text-zinc-500 dark:text-gray-400 mb-1">Title *</label>
+        <input name="title" required defaultValue={incident?.title ?? ''} className="w-full rounded bg-zinc-200 dark:bg-gray-900 border border-zinc-300 dark:border-gray-700 px-3 py-2 text-zinc-900 dark:text-white text-sm" />
       </div>
       <div>
-        <label className="block text-xs text-gray-400 mb-1">Description</label>
-        <textarea name="description" rows={2} defaultValue={incident?.description ?? ''} className="w-full rounded bg-gray-900 border border-gray-700 px-3 py-2 text-white text-sm" />
+        <label className="block text-xs text-zinc-500 dark:text-gray-400 mb-1">Description</label>
+        <textarea name="description" rows={2} defaultValue={incident?.description ?? ''} className="w-full rounded bg-zinc-200 dark:bg-gray-900 border border-zinc-300 dark:border-gray-700 px-3 py-2 text-zinc-900 dark:text-white text-sm" />
       </div>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
         <div>
-          <label className="block text-xs text-gray-400 mb-1">Severity</label>
-          <select name="severity" required defaultValue={incident?.severity ?? 'medium'} className="w-full rounded bg-gray-900 border border-gray-700 px-3 py-2 text-white text-sm">
+          <label className="block text-xs text-zinc-500 dark:text-gray-400 mb-1">Severity</label>
+          <select name="severity" required defaultValue={incident?.severity ?? 'medium'} className="w-full rounded bg-zinc-200 dark:bg-gray-900 border border-zinc-300 dark:border-gray-700 px-3 py-2 text-zinc-900 dark:text-white text-sm">
             {Object.entries(INCIDENT_SEVERITIES).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
           </select>
         </div>
         <div>
-          <label className="block text-xs text-gray-400 mb-1">Impact Scope</label>
-          <input name="impact_scope" defaultValue={incident?.impact_scope ?? ''} className="w-full rounded bg-gray-900 border border-gray-700 px-3 py-2 text-white text-sm" placeholder="e.g. All users" />
+          <label className="block text-xs text-zinc-500 dark:text-gray-400 mb-1">Impact Scope</label>
+          <input name="impact_scope" defaultValue={incident?.impact_scope ?? ''} className="w-full rounded bg-zinc-200 dark:bg-gray-900 border border-zinc-300 dark:border-gray-700 px-3 py-2 text-zinc-900 dark:text-white text-sm" placeholder="e.g. All users" />
         </div>
         {isEdit && (
           <div>
-            <label className="block text-xs text-gray-400 mb-1">Status</label>
-            <select name="status" defaultValue={incident?.status ?? 'open'} className="w-full rounded bg-gray-900 border border-gray-700 px-3 py-2 text-white text-sm">
+            <label className="block text-xs text-zinc-500 dark:text-gray-400 mb-1">Status</label>
+            <select name="status" defaultValue={incident?.status ?? 'open'} className="w-full rounded bg-zinc-200 dark:bg-gray-900 border border-zinc-300 dark:border-gray-700 px-3 py-2 text-zinc-900 dark:text-white text-sm">
               {Object.entries(INCIDENT_STATUSES).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
             </select>
           </div>
@@ -775,16 +775,16 @@ function IncidentForm({
       {isEdit && (
         <>
           <div>
-            <label className="block text-xs text-gray-400 mb-1">Root Cause</label>
-            <textarea name="root_cause" rows={2} defaultValue={incident?.root_cause ?? ''} className="w-full rounded bg-gray-900 border border-gray-700 px-3 py-2 text-white text-sm" />
+            <label className="block text-xs text-zinc-500 dark:text-gray-400 mb-1">Root Cause</label>
+            <textarea name="root_cause" rows={2} defaultValue={incident?.root_cause ?? ''} className="w-full rounded bg-zinc-200 dark:bg-gray-900 border border-zinc-300 dark:border-gray-700 px-3 py-2 text-zinc-900 dark:text-white text-sm" />
           </div>
           <div>
-            <label className="block text-xs text-gray-400 mb-1">Resolution Notes</label>
-            <textarea name="resolution_notes" rows={2} defaultValue={incident?.resolution_notes ?? ''} className="w-full rounded bg-gray-900 border border-gray-700 px-3 py-2 text-white text-sm" />
+            <label className="block text-xs text-zinc-500 dark:text-gray-400 mb-1">Resolution Notes</label>
+            <textarea name="resolution_notes" rows={2} defaultValue={incident?.resolution_notes ?? ''} className="w-full rounded bg-zinc-200 dark:bg-gray-900 border border-zinc-300 dark:border-gray-700 px-3 py-2 text-zinc-900 dark:text-white text-sm" />
           </div>
           <div>
-            <label className="block text-xs text-gray-400 mb-1">Post-Mortem</label>
-            <textarea name="post_mortem" rows={3} defaultValue={incident?.post_mortem ?? ''} className="w-full rounded bg-gray-900 border border-gray-700 px-3 py-2 text-white text-sm" />
+            <label className="block text-xs text-zinc-500 dark:text-gray-400 mb-1">Post-Mortem</label>
+            <textarea name="post_mortem" rows={3} defaultValue={incident?.post_mortem ?? ''} className="w-full rounded bg-zinc-200 dark:bg-gray-900 border border-zinc-300 dark:border-gray-700 px-3 py-2 text-zinc-900 dark:text-white text-sm" />
           </div>
         </>
       )}
@@ -793,7 +793,7 @@ function IncidentForm({
         <button type="submit" disabled={loading} className="px-3 py-1.5 rounded bg-[#C27E00] text-white text-sm disabled:opacity-50">
           {loading ? <Loader2 className="w-4 h-4 animate-spin inline" /> : (isEdit ? 'Save' : 'Create')}
         </button>
-        <button type="button" onClick={onClose} className="px-3 py-1.5 rounded bg-white/10 text-gray-400 text-sm">Cancel</button>
+        <button type="button" onClick={onClose} className="px-3 py-1.5 rounded bg-zinc-200 dark:bg-white/10 text-zinc-500 dark:text-gray-400 text-sm">Cancel</button>
       </div>
     </form>
   )
@@ -836,26 +836,26 @@ function ChangeForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="mb-6 p-4 rounded bg-black/30 border border-gray-700 space-y-3">
-      <h3 className="text-white font-medium">{isEdit ? 'Edit Change' : 'New Change'}</h3>
+    <form onSubmit={handleSubmit} className="mb-6 p-4 rounded bg-zinc-100/90 dark:bg-black/30 border border-zinc-300 dark:border-gray-700 space-y-3">
+      <h3 className="text-zinc-900 dark:text-white font-medium">{isEdit ? 'Edit Change' : 'New Change'}</h3>
       <div>
-        <label className="block text-xs text-gray-400 mb-1">Title *</label>
-        <input name="title" required defaultValue={change?.title ?? ''} className="w-full rounded bg-gray-900 border border-gray-700 px-3 py-2 text-white text-sm" />
+        <label className="block text-xs text-zinc-500 dark:text-gray-400 mb-1">Title *</label>
+        <input name="title" required defaultValue={change?.title ?? ''} className="w-full rounded bg-zinc-200 dark:bg-gray-900 border border-zinc-300 dark:border-gray-700 px-3 py-2 text-zinc-900 dark:text-white text-sm" />
       </div>
       <div>
-        <label className="block text-xs text-gray-400 mb-1">Description</label>
-        <textarea name="description" rows={2} defaultValue={change?.description ?? ''} className="w-full rounded bg-gray-900 border border-gray-700 px-3 py-2 text-white text-sm" />
+        <label className="block text-xs text-zinc-500 dark:text-gray-400 mb-1">Description</label>
+        <textarea name="description" rows={2} defaultValue={change?.description ?? ''} className="w-full rounded bg-zinc-200 dark:bg-gray-900 border border-zinc-300 dark:border-gray-700 px-3 py-2 text-zinc-900 dark:text-white text-sm" />
       </div>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
         <div>
-          <label className="block text-xs text-gray-400 mb-1">Change Type</label>
-          <select name="change_type" required defaultValue={change?.change_type ?? ''} className="w-full rounded bg-gray-900 border border-gray-700 px-3 py-2 text-white text-sm">
+          <label className="block text-xs text-zinc-500 dark:text-gray-400 mb-1">Change Type</label>
+          <select name="change_type" required defaultValue={change?.change_type ?? ''} className="w-full rounded bg-zinc-200 dark:bg-gray-900 border border-zinc-300 dark:border-gray-700 px-3 py-2 text-zinc-900 dark:text-white text-sm">
             {Object.entries(CHANGE_TYPES).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
           </select>
         </div>
         <div>
-          <label className="block text-xs text-gray-400 mb-1">Risk Level</label>
-          <select name="risk_level" defaultValue={change?.risk_level ?? 'medium'} className="w-full rounded bg-gray-900 border border-gray-700 px-3 py-2 text-white text-sm">
+          <label className="block text-xs text-zinc-500 dark:text-gray-400 mb-1">Risk Level</label>
+          <select name="risk_level" defaultValue={change?.risk_level ?? 'medium'} className="w-full rounded bg-zinc-200 dark:bg-gray-900 border border-zinc-300 dark:border-gray-700 px-3 py-2 text-zinc-900 dark:text-white text-sm">
             <option value="low">Low</option>
             <option value="medium">Medium</option>
             <option value="high">High</option>
@@ -863,27 +863,27 @@ function ChangeForm({
         </div>
         {isEdit && (
           <div>
-            <label className="block text-xs text-gray-400 mb-1">Status</label>
-            <select name="status" defaultValue={change?.status ?? 'draft'} className="w-full rounded bg-gray-900 border border-gray-700 px-3 py-2 text-white text-sm">
+            <label className="block text-xs text-zinc-500 dark:text-gray-400 mb-1">Status</label>
+            <select name="status" defaultValue={change?.status ?? 'draft'} className="w-full rounded bg-zinc-200 dark:bg-gray-900 border border-zinc-300 dark:border-gray-700 px-3 py-2 text-zinc-900 dark:text-white text-sm">
               {Object.entries(CHANGE_STATUSES).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
             </select>
           </div>
         )}
       </div>
       <div>
-        <label className="block text-xs text-gray-400 mb-1">Scheduled At</label>
-        <input name="scheduled_at" type="datetime-local" defaultValue={change?.scheduled_at ? new Date(change.scheduled_at).toISOString().slice(0, 16) : ''} className="w-full rounded bg-gray-900 border border-gray-700 px-3 py-2 text-white text-sm" />
+        <label className="block text-xs text-zinc-500 dark:text-gray-400 mb-1">Scheduled At</label>
+        <input name="scheduled_at" type="datetime-local" defaultValue={change?.scheduled_at ? new Date(change.scheduled_at).toISOString().slice(0, 16) : ''} className="w-full rounded bg-zinc-200 dark:bg-gray-900 border border-zinc-300 dark:border-gray-700 px-3 py-2 text-zinc-900 dark:text-white text-sm" />
       </div>
       <div>
-        <label className="block text-xs text-gray-400 mb-1">Rollback Plan</label>
-        <textarea name="rollback_plan" rows={2} defaultValue={change?.rollback_plan ?? ''} className="w-full rounded bg-gray-900 border border-gray-700 px-3 py-2 text-white text-sm" />
+        <label className="block text-xs text-zinc-500 dark:text-gray-400 mb-1">Rollback Plan</label>
+        <textarea name="rollback_plan" rows={2} defaultValue={change?.rollback_plan ?? ''} className="w-full rounded bg-zinc-200 dark:bg-gray-900 border border-zinc-300 dark:border-gray-700 px-3 py-2 text-zinc-900 dark:text-white text-sm" />
       </div>
       {error && <p className="text-red-400 text-sm">{error}</p>}
       <div className="flex gap-2">
         <button type="submit" disabled={loading} className="px-3 py-1.5 rounded bg-[#C27E00] text-white text-sm disabled:opacity-50">
           {loading ? <Loader2 className="w-4 h-4 animate-spin inline" /> : (isEdit ? 'Save' : 'Create')}
         </button>
-        <button type="button" onClick={onClose} className="px-3 py-1.5 rounded bg-white/10 text-gray-400 text-sm">Cancel</button>
+        <button type="button" onClick={onClose} className="px-3 py-1.5 rounded bg-zinc-200 dark:bg-white/10 text-zinc-500 dark:text-gray-400 text-sm">Cancel</button>
       </div>
     </form>
   )
@@ -924,33 +924,33 @@ function ReleaseForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="mb-6 p-4 rounded bg-black/30 border border-gray-700 space-y-3">
-      <h3 className="text-white font-medium">{isEdit ? 'Edit Release' : 'New Release'}</h3>
+    <form onSubmit={handleSubmit} className="mb-6 p-4 rounded bg-zinc-100/90 dark:bg-black/30 border border-zinc-300 dark:border-gray-700 space-y-3">
+      <h3 className="text-zinc-900 dark:text-white font-medium">{isEdit ? 'Edit Release' : 'New Release'}</h3>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         <div>
-          <label className="block text-xs text-gray-400 mb-1">Version *</label>
-          <input name="version" required defaultValue={release?.version ?? ''} className="w-full rounded bg-gray-900 border border-gray-700 px-3 py-2 text-white text-sm" placeholder="e.g. 1.2.0" />
+          <label className="block text-xs text-zinc-500 dark:text-gray-400 mb-1">Version *</label>
+          <input name="version" required defaultValue={release?.version ?? ''} className="w-full rounded bg-zinc-200 dark:bg-gray-900 border border-zinc-300 dark:border-gray-700 px-3 py-2 text-zinc-900 dark:text-white text-sm" placeholder="e.g. 1.2.0" />
         </div>
         <div>
-          <label className="block text-xs text-gray-400 mb-1">Build Number</label>
-          <input name="build_number" defaultValue={release?.build_number ?? ''} className="w-full rounded bg-gray-900 border border-gray-700 px-3 py-2 text-white text-sm" placeholder="e.g. 20240306" />
+          <label className="block text-xs text-zinc-500 dark:text-gray-400 mb-1">Build Number</label>
+          <input name="build_number" defaultValue={release?.build_number ?? ''} className="w-full rounded bg-zinc-200 dark:bg-gray-900 border border-zinc-300 dark:border-gray-700 px-3 py-2 text-zinc-900 dark:text-white text-sm" placeholder="e.g. 20240306" />
         </div>
       </div>
       <div>
-        <label className="block text-xs text-gray-400 mb-1">Release Notes</label>
-        <textarea name="release_notes" rows={3} defaultValue={release?.release_notes ?? ''} className="w-full rounded bg-gray-900 border border-gray-700 px-3 py-2 text-white text-sm" />
+        <label className="block text-xs text-zinc-500 dark:text-gray-400 mb-1">Release Notes</label>
+        <textarea name="release_notes" rows={3} defaultValue={release?.release_notes ?? ''} className="w-full rounded bg-zinc-200 dark:bg-gray-900 border border-zinc-300 dark:border-gray-700 px-3 py-2 text-zinc-900 dark:text-white text-sm" />
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         <div>
-          <label className="block text-xs text-gray-400 mb-1">Environment</label>
-          <select name="environment" required defaultValue={release?.environment ?? 'staging'} className="w-full rounded bg-gray-900 border border-gray-700 px-3 py-2 text-white text-sm">
+          <label className="block text-xs text-zinc-500 dark:text-gray-400 mb-1">Environment</label>
+          <select name="environment" required defaultValue={release?.environment ?? 'staging'} className="w-full rounded bg-zinc-200 dark:bg-gray-900 border border-zinc-300 dark:border-gray-700 px-3 py-2 text-zinc-900 dark:text-white text-sm">
             {Object.entries(RELEASE_ENVS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
           </select>
         </div>
         {isEdit && (
           <div>
-            <label className="block text-xs text-gray-400 mb-1">Status</label>
-            <select name="status" defaultValue={release?.status ?? 'planned'} className="w-full rounded bg-gray-900 border border-gray-700 px-3 py-2 text-white text-sm">
+            <label className="block text-xs text-zinc-500 dark:text-gray-400 mb-1">Status</label>
+            <select name="status" defaultValue={release?.status ?? 'planned'} className="w-full rounded bg-zinc-200 dark:bg-gray-900 border border-zinc-300 dark:border-gray-700 px-3 py-2 text-zinc-900 dark:text-white text-sm">
               {Object.entries(RELEASE_STATUSES).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
             </select>
           </div>
@@ -961,7 +961,7 @@ function ReleaseForm({
         <button type="submit" disabled={loading} className="px-3 py-1.5 rounded bg-[#C27E00] text-white text-sm disabled:opacity-50">
           {loading ? <Loader2 className="w-4 h-4 animate-spin inline" /> : (isEdit ? 'Save' : 'Create')}
         </button>
-        <button type="button" onClick={onClose} className="px-3 py-1.5 rounded bg-white/10 text-gray-400 text-sm">Cancel</button>
+        <button type="button" onClick={onClose} className="px-3 py-1.5 rounded bg-zinc-200 dark:bg-white/10 text-zinc-500 dark:text-gray-400 text-sm">Cancel</button>
       </div>
     </form>
   )
@@ -999,29 +999,29 @@ function KnowledgeForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="mb-6 p-4 rounded bg-black/30 border border-gray-700 space-y-3">
-      <h3 className="text-white font-medium">{article ? 'Edit Article' : 'New Article'}</h3>
+    <form onSubmit={handleSubmit} className="mb-6 p-4 rounded bg-zinc-100/90 dark:bg-black/30 border border-zinc-300 dark:border-gray-700 space-y-3">
+      <h3 className="text-zinc-900 dark:text-white font-medium">{article ? 'Edit Article' : 'New Article'}</h3>
       <div>
-        <label className="block text-xs text-gray-400 mb-1">Title *</label>
-        <input name="title" required defaultValue={article?.title ?? ''} className="w-full rounded bg-gray-900 border border-gray-700 px-3 py-2 text-white text-sm" />
+        <label className="block text-xs text-zinc-500 dark:text-gray-400 mb-1">Title *</label>
+        <input name="title" required defaultValue={article?.title ?? ''} className="w-full rounded bg-zinc-200 dark:bg-gray-900 border border-zinc-300 dark:border-gray-700 px-3 py-2 text-zinc-900 dark:text-white text-sm" />
       </div>
       <div>
-        <label className="block text-xs text-gray-400 mb-1">Category</label>
-        <select name="category" defaultValue={article?.category ?? ''} className="w-full rounded bg-gray-900 border border-gray-700 px-3 py-2 text-white text-sm">
+        <label className="block text-xs text-zinc-500 dark:text-gray-400 mb-1">Category</label>
+        <select name="category" defaultValue={article?.category ?? ''} className="w-full rounded bg-zinc-200 dark:bg-gray-900 border border-zinc-300 dark:border-gray-700 px-3 py-2 text-zinc-900 dark:text-white text-sm">
           <option value="">—</option>
           {Object.entries(KB_CATEGORIES).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
         </select>
       </div>
       <div>
-        <label className="block text-xs text-gray-400 mb-1">Content</label>
-        <textarea name="content" rows={6} defaultValue={article?.content ?? ''} className="w-full rounded bg-gray-900 border border-gray-700 px-3 py-2 text-white text-sm" />
+        <label className="block text-xs text-zinc-500 dark:text-gray-400 mb-1">Content</label>
+        <textarea name="content" rows={6} defaultValue={article?.content ?? ''} className="w-full rounded bg-zinc-200 dark:bg-gray-900 border border-zinc-300 dark:border-gray-700 px-3 py-2 text-zinc-900 dark:text-white text-sm" />
       </div>
       {error && <p className="text-red-400 text-sm">{error}</p>}
       <div className="flex gap-2">
         <button type="submit" disabled={loading} className="px-3 py-1.5 rounded bg-[#C27E00] text-white text-sm disabled:opacity-50">
           {loading ? <Loader2 className="w-4 h-4 animate-spin inline" /> : (article ? 'Save' : 'Create')}
         </button>
-        <button type="button" onClick={onClose} className="px-3 py-1.5 rounded bg-white/10 text-gray-400 text-sm">Cancel</button>
+        <button type="button" onClick={onClose} className="px-3 py-1.5 rounded bg-zinc-200 dark:bg-white/10 text-zinc-500 dark:text-gray-400 text-sm">Cancel</button>
       </div>
     </form>
   )

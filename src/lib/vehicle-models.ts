@@ -29,7 +29,7 @@ export const VEHICLE_MODELS_BY_MAKE_CA: VehicleModelsMap = {
   Infiniti: ['Q50', 'Q60', 'QX50', 'QX55', 'QX60', 'QX80'],
   Jaguar: ['XE', 'XF', 'F-Type', 'E-PACE', 'F-PACE', 'I-PACE'],
   Jeep: ['Renegade', 'Compass', 'Cherokee', 'Grand Cherokee', 'Wagoneer', 'Grand Wagoneer', 'Wrangler', 'Gladiator'],
-  Kia: ['Rio', 'Forte', 'K5', 'Stinger', 'Seltos', 'Sportage', 'Sorento', 'Telluride', 'EV6', 'EV9', 'Carnival', 'Niro'],
+  Kia: ['Rio', 'Forte', 'K4', 'K5', 'Stinger', 'Seltos', 'Sportage', 'Sorento', 'Telluride', 'EV4', 'EV5', 'EV6', 'EV9', 'Carnival', 'Niro'],
   'Land Rover': ['Defender', 'Discovery', 'Discovery Sport', 'Range Rover', 'Range Rover Sport', 'Range Rover Velar', 'Range Rover Evoque'],
   Lexus: ['IS', 'ES', 'GS', 'LS', 'RC', 'LC', 'UX', 'NX', 'RX', 'GX', 'LX', 'RZ'],
   Lincoln: ['Corsair', 'Nautilus', 'Aviator', 'Navigator', 'MKZ', 'Continental'],

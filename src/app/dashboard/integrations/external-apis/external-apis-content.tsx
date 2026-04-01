@@ -207,8 +207,8 @@ export function ExternalAPIsContent() {
   return (
     <div className="space-y-8">
       <div>
-        <h3 className="text-lg font-semibold text-white mb-2">External APIs</h3>
-        <p className="text-sm text-gray-400 mb-6">Configure third-party API integrations. Existing connections are preserved. You can add multiple entries for the same source (e.g. different Drive folders).</p>
+        <h3 className="text-lg font-semibold text-zinc-900 dark:text-white mb-2">External APIs</h3>
+        <p className="text-sm text-zinc-500 dark:text-gray-400 mb-6">Configure third-party API integrations. Existing connections are preserved. You can add multiple entries for the same source (e.g. different Drive folders).</p>
       </div>
 
       {message && (
@@ -220,11 +220,11 @@ export function ExternalAPIsContent() {
       )}
 
       {/* Twilio - Legacy */}
-      <div className="bg-white/5 rounded-lg border border-gray-800 p-6">
+      <div className="bg-zinc-200/50 dark:bg-white/5 rounded-lg border border-zinc-200 dark:border-gray-800 p-6">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h4 className="text-md font-semibold text-white mb-1">Twilio SMS API</h4>
-            <p className="text-sm text-gray-400">For SMS notifications (existing connection)</p>
+            <h4 className="text-md font-semibold text-zinc-900 dark:text-white mb-1">Twilio SMS API</h4>
+            <p className="text-sm text-zinc-500 dark:text-gray-400">For SMS notifications (existing connection)</p>
           </div>
           <label className="flex items-center cursor-pointer">
             <input type="checkbox" checked={legacy.twilio.enabled} onChange={(e) => setLegacy((s) => ({ ...s, twilio: { ...s.twilio, enabled: e.target.checked } }))} className="sr-only" />
@@ -235,27 +235,27 @@ export function ExternalAPIsContent() {
         </div>
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">Account SID</label>
-            <input type="text" value={legacy.twilio.accountSid} onChange={(e) => setLegacy((s) => ({ ...s, twilio: { ...s.twilio, accountSid: e.target.value } }))} className="block w-full rounded-md border border-gray-700 bg-white/5 px-3 py-2 text-white placeholder-gray-500 focus:border-[#C27E00] focus:outline-none focus:ring-1 focus:ring-[#C27E00] sm:text-sm" placeholder="ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" />
+            <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300 mb-1">Account SID</label>
+            <input type="text" value={legacy.twilio.accountSid} onChange={(e) => setLegacy((s) => ({ ...s, twilio: { ...s.twilio, accountSid: e.target.value } }))} className="block w-full rounded-md border border-zinc-300 dark:border-gray-700 bg-zinc-200/50 dark:bg-white/5 px-3 py-2 text-zinc-900 dark:text-white placeholder-zinc-500 dark:placeholder-gray-500 focus:border-[#C27E00] focus:outline-none focus:ring-1 focus:ring-[#C27E00] sm:text-sm" placeholder="ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">Auth Token</label>
-            <input type="password" value={legacy.twilio.authToken} onChange={(e) => setLegacy((s) => ({ ...s, twilio: { ...s.twilio, authToken: e.target.value } }))} className="block w-full rounded-md border border-gray-700 bg-white/5 px-3 py-2 text-white placeholder-gray-500 focus:border-[#C27E00] focus:outline-none focus:ring-1 focus:ring-[#C27E00] sm:text-sm" placeholder="Your auth token" />
+            <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300 mb-1">Auth Token</label>
+            <input type="password" value={legacy.twilio.authToken} onChange={(e) => setLegacy((s) => ({ ...s, twilio: { ...s.twilio, authToken: e.target.value } }))} className="block w-full rounded-md border border-zinc-300 dark:border-gray-700 bg-zinc-200/50 dark:bg-white/5 px-3 py-2 text-zinc-900 dark:text-white placeholder-zinc-500 dark:placeholder-gray-500 focus:border-[#C27E00] focus:outline-none focus:ring-1 focus:ring-[#C27E00] sm:text-sm" placeholder="Your auth token" />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">Phone Number</label>
-            <input type="text" value={legacy.twilio.phoneNumber} onChange={(e) => setLegacy((s) => ({ ...s, twilio: { ...s.twilio, phoneNumber: e.target.value } }))} className="block w-full rounded-md border border-gray-700 bg-white/5 px-3 py-2 text-white placeholder-gray-500 focus:border-[#C27E00] focus:outline-none focus:ring-1 focus:ring-[#C27E00] sm:text-sm" placeholder="+1234567890" />
+            <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300 mb-1">Phone Number</label>
+            <input type="text" value={legacy.twilio.phoneNumber} onChange={(e) => setLegacy((s) => ({ ...s, twilio: { ...s.twilio, phoneNumber: e.target.value } }))} className="block w-full rounded-md border border-zinc-300 dark:border-gray-700 bg-zinc-200/50 dark:bg-white/5 px-3 py-2 text-zinc-900 dark:text-white placeholder-zinc-500 dark:placeholder-gray-500 focus:border-[#C27E00] focus:outline-none focus:ring-1 focus:ring-[#C27E00] sm:text-sm" placeholder="+1234567890" />
           </div>
           <button onClick={() => save('twilio_settings', legacy.twilio)} disabled={loading} className="bg-[#C27E00] hover:bg-[#a06900] text-white px-4 py-2 rounded-md font-medium transition-colors disabled:opacity-50">{loading ? 'Saving...' : 'Save'}</button>
         </div>
       </div>
 
       {/* WhatsApp - Legacy */}
-      <div className="bg-white/5 rounded-lg border border-gray-800 p-6">
+      <div className="bg-zinc-200/50 dark:bg-white/5 rounded-lg border border-zinc-200 dark:border-gray-800 p-6">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h4 className="text-md font-semibold text-white mb-1">WhatsApp Business API</h4>
-            <p className="text-sm text-gray-400">For messaging (existing connection)</p>
+            <h4 className="text-md font-semibold text-zinc-900 dark:text-white mb-1">WhatsApp Business API</h4>
+            <p className="text-sm text-zinc-500 dark:text-gray-400">For messaging (existing connection)</p>
           </div>
           <label className="flex items-center cursor-pointer">
             <input type="checkbox" checked={legacy.whatsapp.enabled} onChange={(e) => setLegacy((s) => ({ ...s, whatsapp: { ...s.whatsapp, enabled: e.target.checked } }))} className="sr-only" />
@@ -266,27 +266,27 @@ export function ExternalAPIsContent() {
         </div>
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">API Key</label>
-            <input type="password" value={legacy.whatsapp.apiKey} onChange={(e) => setLegacy((s) => ({ ...s, whatsapp: { ...s.whatsapp, apiKey: e.target.value } }))} className="block w-full rounded-md border border-gray-700 bg-white/5 px-3 py-2 text-white placeholder-gray-500 focus:border-[#C27E00] focus:outline-none focus:ring-1 focus:ring-[#C27E00] sm:text-sm" placeholder="Your WhatsApp API key" />
+            <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300 mb-1">API Key</label>
+            <input type="password" value={legacy.whatsapp.apiKey} onChange={(e) => setLegacy((s) => ({ ...s, whatsapp: { ...s.whatsapp, apiKey: e.target.value } }))} className="block w-full rounded-md border border-zinc-300 dark:border-gray-700 bg-zinc-200/50 dark:bg-white/5 px-3 py-2 text-zinc-900 dark:text-white placeholder-zinc-500 dark:placeholder-gray-500 focus:border-[#C27E00] focus:outline-none focus:ring-1 focus:ring-[#C27E00] sm:text-sm" placeholder="Your WhatsApp API key" />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">Phone Number ID</label>
-            <input type="text" value={legacy.whatsapp.phoneNumberId} onChange={(e) => setLegacy((s) => ({ ...s, whatsapp: { ...s.whatsapp, phoneNumberId: e.target.value } }))} className="block w-full rounded-md border border-gray-700 bg-white/5 px-3 py-2 text-white placeholder-gray-500 focus:border-[#C27E00] focus:outline-none focus:ring-1 focus:ring-[#C27E00] sm:text-sm" />
+            <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300 mb-1">Phone Number ID</label>
+            <input type="text" value={legacy.whatsapp.phoneNumberId} onChange={(e) => setLegacy((s) => ({ ...s, whatsapp: { ...s.whatsapp, phoneNumberId: e.target.value } }))} className="block w-full rounded-md border border-zinc-300 dark:border-gray-700 bg-zinc-200/50 dark:bg-white/5 px-3 py-2 text-zinc-900 dark:text-white placeholder-zinc-500 dark:placeholder-gray-500 focus:border-[#C27E00] focus:outline-none focus:ring-1 focus:ring-[#C27E00] sm:text-sm" />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">Business Account ID</label>
-            <input type="text" value={legacy.whatsapp.businessAccountId} onChange={(e) => setLegacy((s) => ({ ...s, whatsapp: { ...s.whatsapp, businessAccountId: e.target.value } }))} className="block w-full rounded-md border border-gray-700 bg-white/5 px-3 py-2 text-white placeholder-gray-500 focus:border-[#C27E00] focus:outline-none focus:ring-1 focus:ring-[#C27E00] sm:text-sm" />
+            <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300 mb-1">Business Account ID</label>
+            <input type="text" value={legacy.whatsapp.businessAccountId} onChange={(e) => setLegacy((s) => ({ ...s, whatsapp: { ...s.whatsapp, businessAccountId: e.target.value } }))} className="block w-full rounded-md border border-zinc-300 dark:border-gray-700 bg-zinc-200/50 dark:bg-white/5 px-3 py-2 text-zinc-900 dark:text-white placeholder-zinc-500 dark:placeholder-gray-500 focus:border-[#C27E00] focus:outline-none focus:ring-1 focus:ring-[#C27E00] sm:text-sm" />
           </div>
           <button onClick={() => save('whatsapp_settings', legacy.whatsapp)} disabled={loading} className="bg-[#C27E00] hover:bg-[#a06900] text-white px-4 py-2 rounded-md font-medium transition-colors disabled:opacity-50">{loading ? 'Saving...' : 'Save'}</button>
         </div>
       </div>
 
       {/* Google Drive - Legacy (Primary) */}
-      <div className="bg-white/5 rounded-lg border border-gray-800 p-6">
+      <div className="bg-zinc-200/50 dark:bg-white/5 rounded-lg border border-zinc-200 dark:border-gray-800 p-6">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h4 className="text-md font-semibold text-white mb-1">Google Drive (Default)</h4>
-            <p className="text-sm text-gray-400">Primary Drive connection for invoices and uploads. See docs/GOOGLE_DRIVE_SETUP.md</p>
+            <h4 className="text-md font-semibold text-zinc-900 dark:text-white mb-1">Google Drive (Default)</h4>
+            <p className="text-sm text-zinc-500 dark:text-gray-400">Primary Drive connection for invoices and uploads. See docs/GOOGLE_DRIVE_SETUP.md</p>
           </div>
           <label className="flex items-center cursor-pointer">
             <input type="checkbox" checked={legacy.googleDrive.enabled} onChange={(e) => setLegacy((s) => ({ ...s, googleDrive: { ...s.googleDrive, enabled: e.target.checked } }))} className="sr-only" />
@@ -300,15 +300,15 @@ export function ExternalAPIsContent() {
             <h5 className="text-sm font-semibold text-[#C27E00] mb-2">OAuth 2.0</h5>
             <div className="grid gap-3 sm:grid-cols-2">
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">OAuth Client ID</label>
-                <input type="text" value={legacy.googleDrive.clientId} onChange={(e) => setLegacy((s) => ({ ...s, googleDrive: { ...s.googleDrive, clientId: e.target.value } }))} className="block w-full rounded-md border border-gray-700 bg-white/5 px-3 py-2 text-white placeholder-gray-500 focus:border-[#C27E00] focus:outline-none focus:ring-1 focus:ring-[#C27E00] sm:text-sm" placeholder="xxx.apps.googleusercontent.com" />
+                <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300 mb-1">OAuth Client ID</label>
+                <input type="text" value={legacy.googleDrive.clientId} onChange={(e) => setLegacy((s) => ({ ...s, googleDrive: { ...s.googleDrive, clientId: e.target.value } }))} className="block w-full rounded-md border border-zinc-300 dark:border-gray-700 bg-zinc-200/50 dark:bg-white/5 px-3 py-2 text-zinc-900 dark:text-white placeholder-zinc-500 dark:placeholder-gray-500 focus:border-[#C27E00] focus:outline-none focus:ring-1 focus:ring-[#C27E00] sm:text-sm" placeholder="xxx.apps.googleusercontent.com" />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">OAuth Client Secret</label>
-                <input type="password" value={legacy.googleDrive.clientSecret} onChange={(e) => setLegacy((s) => ({ ...s, googleDrive: { ...s.googleDrive, clientSecret: e.target.value } }))} className="block w-full rounded-md border border-gray-700 bg-white/5 px-3 py-2 text-white placeholder-gray-500 focus:border-[#C27E00] focus:outline-none focus:ring-1 focus:ring-[#C27E00] sm:text-sm" placeholder="GOCSPX-xxx" />
+                <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300 mb-1">OAuth Client Secret</label>
+                <input type="password" value={legacy.googleDrive.clientSecret} onChange={(e) => setLegacy((s) => ({ ...s, googleDrive: { ...s.googleDrive, clientSecret: e.target.value } }))} className="block w-full rounded-md border border-zinc-300 dark:border-gray-700 bg-zinc-200/50 dark:bg-white/5 px-3 py-2 text-zinc-900 dark:text-white placeholder-zinc-500 dark:placeholder-gray-500 focus:border-[#C27E00] focus:outline-none focus:ring-1 focus:ring-[#C27E00] sm:text-sm" placeholder="GOCSPX-xxx" />
               </div>
             </div>
-            <p className="text-xs text-gray-500 mt-1">Redirect URI: /api/drive-oauth/callback</p>
+            <p className="text-xs text-zinc-500 dark:text-gray-500 mt-1">Redirect URI: /api/drive-oauth/callback</p>
             <div className="mt-3 flex items-center gap-3">
               <button type="button" onClick={connectDriveOAuth} disabled={loading} className="inline-flex items-center gap-2 px-4 py-2 rounded-md font-medium transition-colors text-sm bg-[#C27E00] hover:bg-[#a06900] text-white disabled:opacity-50">
                 {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : null}{loading ? 'Saving...' : 'Connect to Google'}
@@ -317,29 +317,29 @@ export function ExternalAPIsContent() {
             </div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">Root Folder ID</label>
-            <input type="text" value={legacy.googleDrive.defaultFolderId} onChange={(e) => setLegacy((s) => ({ ...s, googleDrive: { ...s.googleDrive, defaultFolderId: e.target.value } }))} className="block w-full rounded-md border border-gray-700 bg-white/5 px-3 py-2 text-white placeholder-gray-500 focus:border-[#C27E00] focus:outline-none focus:ring-1 focus:ring-[#C27E00] sm:text-sm" placeholder="Drive folder ID" />
+            <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300 mb-1">Root Folder ID</label>
+            <input type="text" value={legacy.googleDrive.defaultFolderId} onChange={(e) => setLegacy((s) => ({ ...s, googleDrive: { ...s.googleDrive, defaultFolderId: e.target.value } }))} className="block w-full rounded-md border border-zinc-300 dark:border-gray-700 bg-zinc-200/50 dark:bg-white/5 px-3 py-2 text-zinc-900 dark:text-white placeholder-zinc-500 dark:placeholder-gray-500 focus:border-[#C27E00] focus:outline-none focus:ring-1 focus:ring-[#C27E00] sm:text-sm" placeholder="Drive folder ID" />
           </div>
-          <hr className="border-gray-700 my-4" />
-          <p className="text-xs text-gray-500">Service Account (optional):</p>
+          <hr className="border-zinc-300 dark:border-gray-700 my-4" />
+          <p className="text-xs text-zinc-500 dark:text-gray-500">Service Account (optional):</p>
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">Service Account Email</label>
-            <input type="text" value={legacy.googleDrive.serviceAccountEmail} onChange={(e) => setLegacy((s) => ({ ...s, googleDrive: { ...s.googleDrive, serviceAccountEmail: e.target.value } }))} className="block w-full rounded-md border border-gray-700 bg-white/5 px-3 py-2 text-white sm:text-sm" />
+            <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300 mb-1">Service Account Email</label>
+            <input type="text" value={legacy.googleDrive.serviceAccountEmail} onChange={(e) => setLegacy((s) => ({ ...s, googleDrive: { ...s.googleDrive, serviceAccountEmail: e.target.value } }))} className="block w-full rounded-md border border-zinc-300 dark:border-gray-700 bg-zinc-200/50 dark:bg-white/5 px-3 py-2 text-zinc-900 dark:text-white sm:text-sm" />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">Service Account Private Key</label>
-            <textarea value={legacy.googleDrive.serviceAccountPrivateKey} onChange={(e) => setLegacy((s) => ({ ...s, googleDrive: { ...s.googleDrive, serviceAccountPrivateKey: e.target.value } }))} rows={3} className="block w-full rounded-md border border-gray-700 bg-white/5 px-3 py-2 text-white font-mono text-sm" placeholder="-----BEGIN PRIVATE KEY-----" />
+            <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300 mb-1">Service Account Private Key</label>
+            <textarea value={legacy.googleDrive.serviceAccountPrivateKey} onChange={(e) => setLegacy((s) => ({ ...s, googleDrive: { ...s.googleDrive, serviceAccountPrivateKey: e.target.value } }))} rows={3} className="block w-full rounded-md border border-zinc-300 dark:border-gray-700 bg-zinc-200/50 dark:bg-white/5 px-3 py-2 text-zinc-900 dark:text-white font-mono text-sm" placeholder="-----BEGIN PRIVATE KEY-----" />
           </div>
           <button onClick={() => save('google_drive_settings', legacy.googleDrive)} disabled={loading} className="bg-[#C27E00] hover:bg-[#a06900] text-white px-4 py-2 rounded-md font-medium transition-colors disabled:opacity-50">{loading ? 'Saving...' : 'Save'}</button>
         </div>
       </div>
 
       {/* Additional Drive folders */}
-      <div className="bg-white/5 rounded-lg border border-gray-800 p-6">
+      <div className="bg-zinc-200/50 dark:bg-white/5 rounded-lg border border-zinc-200 dark:border-gray-800 p-6">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h4 className="text-md font-semibold text-white mb-1">Additional Google Drive Folders</h4>
-            <p className="text-sm text-gray-400">Additional Drive connections for different folders (uses the same OAuth app)</p>
+            <h4 className="text-md font-semibold text-zinc-900 dark:text-white mb-1">Additional Google Drive Folders</h4>
+            <p className="text-sm text-zinc-500 dark:text-gray-400">Additional Drive connections for different folders (uses the same OAuth app)</p>
           </div>
           <button
             type="button"
@@ -351,21 +351,21 @@ export function ExternalAPIsContent() {
         </div>
 
         {showAddDrive && (
-          <div className="mb-4 p-4 rounded-lg border border-gray-700 bg-black/30 space-y-3">
-            <h5 className="text-sm font-medium text-white">Yeni Drive Bağlantısı</h5>
+          <div className="mb-4 p-4 rounded-lg border border-zinc-300 dark:border-gray-700 bg-zinc-100/90 dark:bg-black/30 space-y-3">
+            <h5 className="text-sm font-medium text-zinc-900 dark:text-white">Yeni Drive Bağlantısı</h5>
             <div>
-              <label className="block text-sm text-gray-400 mb-1">Label (örn. Statements, Reports)</label>
-              <input type="text" value={newDriveLabel} onChange={(e) => setNewDriveLabel(e.target.value)} placeholder="Statements Folder" className="block w-full rounded border border-gray-700 bg-black/30 px-3 py-2 text-white text-sm" />
+              <label className="block text-sm text-zinc-500 dark:text-gray-400 mb-1">Label (örn. Statements, Reports)</label>
+              <input type="text" value={newDriveLabel} onChange={(e) => setNewDriveLabel(e.target.value)} placeholder="Statements Folder" className="block w-full rounded border border-zinc-300 dark:border-gray-700 bg-zinc-100/90 dark:bg-black/30 px-3 py-2 text-zinc-900 dark:text-white text-sm" />
             </div>
             <div>
-              <label className="block text-sm text-gray-400 mb-1">Folder ID (optional – can be updated after Connect)</label>
-              <input type="text" value={newDriveFolderId} onChange={(e) => setNewDriveFolderId(e.target.value)} placeholder="Drive folder ID" className="block w-full rounded border border-gray-700 bg-black/30 px-3 py-2 text-white text-sm" />
+              <label className="block text-sm text-zinc-500 dark:text-gray-400 mb-1">Folder ID (optional – can be updated after Connect)</label>
+              <input type="text" value={newDriveFolderId} onChange={(e) => setNewDriveFolderId(e.target.value)} placeholder="Drive folder ID" className="block w-full rounded border border-zinc-300 dark:border-gray-700 bg-zinc-100/90 dark:bg-black/30 px-3 py-2 text-zinc-900 dark:text-white text-sm" />
             </div>
             <div className="flex gap-2">
               <button onClick={addDriveConnection} disabled={loading} className="inline-flex items-center gap-2 px-3 py-1.5 rounded text-sm bg-[#C27E00] text-white disabled:opacity-50">
                 {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : null} Add & Connect
               </button>
-              <button onClick={() => { setShowAddDrive(false); setNewDriveLabel(''); setNewDriveFolderId('') }} className="text-gray-400 hover:text-white text-sm">Cancel</button>
+              <button onClick={() => { setShowAddDrive(false); setNewDriveLabel(''); setNewDriveFolderId('') }} className="text-zinc-500 dark:text-gray-400 hover:text-zinc-900 dark:text-white text-sm">Cancel</button>
             </div>
           </div>
         )}
@@ -374,23 +374,23 @@ export function ExternalAPIsContent() {
           {driveConnections.map((c) => {
             const isConnected = !!(c.config as { refreshToken?: string })?.refreshToken
             return (
-              <li key={c.id} className="flex items-center justify-between rounded border border-gray-700 bg-black/20 px-4 py-3">
+              <li key={c.id} className="flex items-center justify-between rounded border border-zinc-300 dark:border-gray-700 bg-zinc-50 dark:bg-black/20 px-4 py-3">
                 <div>
-                  <span className="font-medium text-white">{c.label}</span>
-                  <span className="ml-2 text-xs text-gray-500">Drive • {isConnected ? '✓ Connected' : 'Not connected'}</span>
+                  <span className="font-medium text-zinc-900 dark:text-white">{c.label}</span>
+                  <span className="ml-2 text-xs text-zinc-500 dark:text-gray-500">Drive • {isConnected ? '✓ Connected' : 'Not connected'}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   {!isConnected && (
                     <a href={`/api/drive-oauth/authorize?connection_id=${c.id}`} className="text-xs text-[#C27E00] hover:underline">Connect</a>
                   )}
-                  <button onClick={() => deleteConnection(c.id)} className="p-1.5 text-gray-500 hover:text-red-400" title="Remove">
+                  <button onClick={() => deleteConnection(c.id)} className="p-1.5 text-zinc-500 dark:text-gray-500 hover:text-red-400" title="Remove">
                     <Trash2 className="h-4 w-4" />
                   </button>
                 </div>
               </li>
             )
           })}
-          {driveConnections.length === 0 && !showAddDrive && <li className="text-sm text-gray-500 py-2">No additional Drive connections yet.</li>}
+          {driveConnections.length === 0 && !showAddDrive && <li className="text-sm text-zinc-500 dark:text-gray-500 py-2">No additional Drive connections yet.</li>}
         </ul>
       </div>
     </div>

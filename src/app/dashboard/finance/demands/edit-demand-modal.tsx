@@ -144,19 +144,19 @@ export function EditDemandModal({ demand, isOpen, onClose }: EditDemandModalProp
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-gray-900 border border-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 bg-white dark:bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-zinc-200 dark:bg-gray-900 border border-zinc-200 dark:border-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         <div className="p-6">
           <div className="flex justify-between items-center mb-6">
             <div>
-              <h2 className="text-2xl font-semibold text-white">Edit Demand</h2>
+              <h2 className="text-2xl font-semibold text-zinc-900 dark:text-white">Edit Demand</h2>
               {demand.demand_number != null && (
-                <p className="text-sm text-gray-500 mt-1">Demand ID: <span className="font-medium text-[#C27E00]">#{demand.demand_number}</span></p>
+                <p className="text-sm text-zinc-500 dark:text-gray-500 mt-1">Demand ID: <span className="font-medium text-[#C27E00]">#{demand.demand_number}</span></p>
               )}
             </div>
             <button
               onClick={onClose}
-              className="text-gray-400 hover:text-white transition-colors"
+              className="text-zinc-500 dark:text-gray-400 hover:text-zinc-900 dark:text-white transition-colors"
             >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -173,52 +173,52 @@ export function EditDemandModal({ demand, isOpen, onClose }: EditDemandModalProp
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">First Name *</label>
+                <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300 mb-1">First Name *</label>
                 <input
                   type="text"
                   value={formData.customer_firstname}
                   onChange={(e) => setFormData({ ...formData, customer_firstname: e.target.value.toUpperCase() })}
                   style={{ textTransform: 'uppercase' }}
                   required
-                  className="w-full border border-gray-700 bg-black/50 py-2 px-3 rounded text-white focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]"
+                  className="w-full border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 py-2 px-3 rounded text-white focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">Last Name *</label>
+                <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300 mb-1">Last Name *</label>
                 <input
                   type="text"
                   value={formData.customer_lastname}
                   onChange={(e) => setFormData({ ...formData, customer_lastname: e.target.value.toUpperCase() })}
                   style={{ textTransform: 'uppercase' }}
                   required
-                  className="w-full border border-gray-700 bg-black/50 py-2 px-3 rounded text-white focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]"
+                  className="w-full border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 py-2 px-3 rounded text-white focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">Phone *</label>
+                <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300 mb-1">Phone *</label>
                 <CanadianPhoneInput
                   value={formData.customer_phone}
                   onChange={(v) => setFormData({ ...formData, customer_phone: v })}
                   required
                   placeholder="416 - 123 - 4567"
-                  className="w-full border border-gray-700 bg-black/50 py-2 px-3 rounded text-white focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]"
+                  className="w-full border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 py-2 px-3 rounded text-white focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">Address</label>
+                <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300 mb-1">Address</label>
                 <input
                   type="text"
                   value={formData.customer_address}
                   onChange={(e) => setFormData({ ...formData, customer_address: e.target.value })}
-                  className="w-full border border-gray-700 bg-black/50 py-2 px-3 rounded text-white focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]"
+                  className="w-full border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 py-2 px-3 rounded text-white focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">Vehicle Make *</label>
+                <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300 mb-1">Vehicle Make *</label>
                 <select
                   value={formData.vehicle_make}
                   onChange={(e) => {
@@ -232,14 +232,14 @@ export function EditDemandModal({ demand, isOpen, onClose }: EditDemandModalProp
                     })
                   }}
                   required
-                  className="w-full border border-gray-700 bg-black/50 py-2 px-3 rounded text-white focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]"
+                  className="w-full border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 py-2 px-3 rounded text-white focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]"
                 >
                   <option value="">-- Select make --</option>
                   {[
                     ...(formData.vehicle_make && !VEHICLE_MAKES_CA.includes(formData.vehicle_make) ? [formData.vehicle_make] : []),
                     ...VEHICLE_MAKES_CA,
                   ].map((make) => (
-                    <option key={make} value={make} className="bg-black text-white">
+                    <option key={make} value={make} className="bg-zinc-50 dark:bg-black text-zinc-900 dark:text-white">
                       {make}
                     </option>
                   ))}
@@ -247,7 +247,7 @@ export function EditDemandModal({ demand, isOpen, onClose }: EditDemandModalProp
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">Vehicle Model *</label>
+                <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300 mb-1">Vehicle Model *</label>
                 {formData.vehicle_make ? (
                   <div className="space-y-2">
                     {(() => {
@@ -266,7 +266,7 @@ export function EditDemandModal({ demand, isOpen, onClose }: EditDemandModalProp
                               })
                             }}
                             required={!formData.vehicle_model || isBaseInList}
-                            className="w-full border border-gray-700 bg-black/50 py-2 px-3 rounded text-white focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]"
+                            className="w-full border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 py-2 px-3 rounded text-white focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]"
                           >
                             <option value="">-- Select model --</option>
                             {[
@@ -275,11 +275,11 @@ export function EditDemandModal({ demand, isOpen, onClose }: EditDemandModalProp
                             ]
                               .filter((m, i, arr) => arr.indexOf(m) === i)
                               .map((model) => (
-                                <option key={model} value={model} className="bg-black text-white">
+                                <option key={model} value={model} className="bg-zinc-50 dark:bg-black text-zinc-900 dark:text-white">
                                   {model}
                                 </option>
                               ))}
-                            <option value="__custom__" className="bg-black text-white">Other</option>
+                            <option value="__custom__" className="bg-zinc-50 dark:bg-black text-zinc-900 dark:text-white">Other</option>
                           </select>
                           {isBaseInList && getTrimsForModel(formData.vehicle_make, baseModel).length > 0 && (
                             <select
@@ -288,11 +288,11 @@ export function EditDemandModal({ demand, isOpen, onClose }: EditDemandModalProp
                                 ...formData,
                                 vehicle_model: e.target.value ? `${baseModel} (${e.target.value})` : baseModel,
                               })}
-                              className="w-full border border-gray-700 bg-black/50 py-2 px-3 rounded text-white focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]"
+                              className="w-full border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 py-2 px-3 rounded text-white focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]"
                             >
                               <option value="">-- Select trim (optional) --</option>
                               {getTrimsForModel(formData.vehicle_make, baseModel).map((trim) => (
-                                <option key={trim} value={trim} className="bg-black text-white">
+                                <option key={trim} value={trim} className="bg-zinc-50 dark:bg-black text-zinc-900 dark:text-white">
                                   {trim}
                                 </option>
                               ))}
@@ -305,7 +305,7 @@ export function EditDemandModal({ demand, isOpen, onClose }: EditDemandModalProp
                               onChange={(e) => setFormData({ ...formData, vehicle_model: e.target.value })}
                               placeholder="Enter model name"
                               required
-                              className="w-full border border-gray-700 bg-black/50 py-2 px-3 rounded text-white focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]"
+                              className="w-full border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 py-2 px-3 rounded text-white focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]"
                             />
                           )}
                         </>
@@ -318,13 +318,13 @@ export function EditDemandModal({ demand, isOpen, onClose }: EditDemandModalProp
                     value=""
                     readOnly
                     placeholder="Select make first"
-                    className="w-full border border-gray-700 bg-black/50 py-2 px-3 rounded text-gray-500 cursor-not-allowed"
+                    className="w-full border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 py-2 px-3 rounded text-zinc-500 dark:text-gray-500 cursor-not-allowed"
                   />
                 )}
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">Vehicle Year *</label>
+                <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300 mb-1">Vehicle Year *</label>
                 <input
                   type="number"
                   min="1900"
@@ -332,53 +332,53 @@ export function EditDemandModal({ demand, isOpen, onClose }: EditDemandModalProp
                   value={formData.vehicle_year}
                   onChange={(e) => setFormData({ ...formData, vehicle_year: parseInt(e.target.value) || 0 })}
                   required
-                  className="w-full border border-gray-700 bg-black/50 py-2 px-3 rounded text-white focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]"
+                  className="w-full border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 py-2 px-3 rounded text-white focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">Stock Number</label>
+                <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300 mb-1">Stock Number</label>
                 <input
                   type="text"
                   value={formData.stock_number}
                   onChange={(e) => setFormData({ ...formData, stock_number: e.target.value.toUpperCase() })}
-                  className="w-full border border-gray-700 bg-black/50 py-2 px-3 rounded text-white focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]"
+                  className="w-full border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 py-2 px-3 rounded text-white focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]"
                   style={{ textTransform: 'uppercase' }}
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">Camera Model *</label>
+                <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300 mb-1">Camera Model *</label>
                 <input
                   type="text"
                   value={formData.camera_model}
                   onChange={(e) => setFormData({ ...formData, camera_model: e.target.value })}
                   required
-                  className="w-full border border-gray-700 bg-black/50 py-2 px-3 rounded text-white focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]"
+                  className="w-full border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 py-2 px-3 rounded text-white focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]"
                 />
               </div>
 
               <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-300 mb-1">Appointment (Day & Slot) *</label>
+                <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300 mb-1">Appointment (Day & Slot) *</label>
                 <div className="space-y-3">
                   {!demand.dealer_id ? (
                     <p className="text-sm text-amber-500">Dealer not set; cannot show slots.</p>
                   ) : (
                     <>
                   <div>
-                    <span className="text-xs text-gray-500 block mb-1">Date</span>
+                    <span className="text-xs text-zinc-500 dark:text-gray-500 block mb-1">Date</span>
                     <input
                       type="date"
                       value={selectedDate}
                       onChange={(e) => setSelectedDate(e.target.value)}
                       min={formatInTimeZone(new Date(), SYSTEM_DEFAULT_TIMEZONE, 'yyyy-MM-dd')}
-                      className="w-full max-w-xs border border-gray-700 bg-black/50 py-2 px-3 rounded text-white focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00] [color-scheme:dark]"
+                      className="w-full max-w-xs border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 py-2 px-3 rounded text-white focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00] [color-scheme:dark]"
                     />
                   </div>
                   <div>
-                    <span className="text-xs text-gray-500 block mb-1">Time slot</span>
+                    <span className="text-xs text-zinc-500 dark:text-gray-500 block mb-1">Time slot</span>
                     {slotsLoading ? (
-                      <p className="text-sm text-gray-500">Loading slots…</p>
+                      <p className="text-sm text-zinc-500 dark:text-gray-500">Loading slots…</p>
                     ) : availableSlots.length === 0 ? (
                       <p className="text-sm text-amber-500">No available slots for this date.</p>
                     ) : (
@@ -393,7 +393,7 @@ export function EditDemandModal({ demand, isOpen, onClose }: EditDemandModalProp
                               className={`px-3 py-2 rounded text-sm font-medium transition-colors ${
                                 selectedSlot === slot
                                   ? 'bg-[#C27E00] text-white border border-[#C27E00]'
-                                  : 'bg-black/50 text-gray-300 border border-gray-700 hover:bg-white/10'
+                                  : 'bg-white dark:bg-black/50 text-zinc-600 dark:text-gray-300 border border-zinc-300 dark:border-gray-700 hover:bg-zinc-200 dark:bg-white/10'
                               }`}
                             >
                               {label}
@@ -409,12 +409,12 @@ export function EditDemandModal({ demand, isOpen, onClose }: EditDemandModalProp
               </div>
             </div>
 
-            <div className="flex justify-between items-center pt-4 border-t border-gray-800">
+            <div className="flex justify-between items-center pt-4 border-t border-zinc-200 dark:border-gray-800">
               <button
                 type="button"
                 onClick={handleRevertToPending}
                 disabled={loading || reverting}
-                className="px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white rounded disabled:opacity-50 transition-colors text-sm"
+                className="px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-zinc-900 dark:text-white rounded disabled:opacity-50 transition-colors text-sm"
               >
                 {reverting ? 'Reverting...' : 'Revert to Pending'}
               </button>
@@ -422,7 +422,7 @@ export function EditDemandModal({ demand, isOpen, onClose }: EditDemandModalProp
                 <button
                   type="button"
                   onClick={onClose}
-                  className="px-4 py-2 text-gray-300 hover:text-white transition-colors"
+                  className="px-4 py-2 text-zinc-600 dark:text-gray-300 hover:text-zinc-900 dark:text-white transition-colors"
                 >
                   Cancel
                 </button>

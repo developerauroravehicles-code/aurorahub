@@ -4,6 +4,7 @@ import { useActionState } from 'react'
 import { createEmployee } from './actions'
 import { useRouter } from 'next/navigation'
 import { useEffect } from 'react'
+import { EmailInput } from '@/components/email-input'
 
 interface CreateEmployeeFormProps {
   dealers: Array<{ id: string; name: string }>
@@ -22,8 +23,8 @@ export function CreateEmployeeForm({ dealers, currentUserRole, defaultDealerId }
   }, [state?.success, router])
 
   return (
-    <div className="bg-white/5 p-6 rounded-lg border border-gray-800 shadow max-w-2xl">
-      <h2 className="text-lg font-medium mb-4 text-white">Add New Employee</h2>
+    <div className="bg-zinc-200/50 dark:bg-white/5 p-6 rounded-lg border border-zinc-200 dark:border-gray-800 shadow max-w-2xl">
+      <h2 className="text-lg font-medium mb-4 text-zinc-900 dark:text-white">Add New Employee</h2>
       <form action={formAction} className="space-y-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
         {state?.error && (
           <div className="col-span-2 bg-red-900/50 border border-red-800 text-red-200 p-3 rounded-md text-sm">
@@ -36,35 +37,35 @@ export function CreateEmployeeForm({ dealers, currentUserRole, defaultDealerId }
           </div>
         )}
         <div className="col-span-2 sm:col-span-1">
-          <label className="block text-sm font-medium text-gray-300">Full Name</label>
-          <input name="fullName" required className="border border-gray-700 bg-white/5 p-2 w-full rounded text-white focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]" />
+          <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300">Full Name</label>
+          <input name="fullName" required className="border border-zinc-300 dark:border-gray-700 bg-zinc-200/50 dark:bg-white/5 p-2 w-full rounded text-zinc-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]" />
         </div>
         <div className="col-span-2 sm:col-span-1">
-          <label className="block text-sm font-medium text-gray-300">Phone</label>
-          <input name="phone" className="border border-gray-700 bg-white/5 p-2 w-full rounded text-white focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]" />
+          <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300">Phone</label>
+          <input name="phone" className="border border-zinc-300 dark:border-gray-700 bg-zinc-200/50 dark:bg-white/5 p-2 w-full rounded text-zinc-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]" />
         </div>
         
         <div className="col-span-2 sm:col-span-1">
-          <label className="block text-sm font-medium text-gray-300">Email</label>
-          <input name="email" type="email" required className="border border-gray-700 bg-white/5 p-2 w-full rounded text-white focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]" />
+          <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300">Email</label>
+          <EmailInput name="email" required className="border border-zinc-300 dark:border-gray-700 bg-zinc-200/50 dark:bg-white/5 p-2 w-full rounded text-zinc-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]" />
         </div>
         <div className="col-span-2 sm:col-span-1">
-          <label className="block text-sm font-medium text-gray-300">Password</label>
-          <input name="password" type="password" required className="border border-gray-700 bg-white/5 p-2 w-full rounded text-white focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]" />
+          <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300">Password</label>
+          <input name="password" type="password" required className="border border-zinc-300 dark:border-gray-700 bg-zinc-200/50 dark:bg-white/5 p-2 w-full rounded text-zinc-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]" />
         </div>
 
         <div className="col-span-2 sm:col-span-1">
-          <label className="block text-sm font-medium text-gray-300">Role</label>
-          <select name="role" required className="border border-gray-700 bg-white/5 p-2 w-full rounded text-white focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]">
-            <option value="sales" className="bg-black text-white">Sales</option>
-            <option value="finance" className="bg-black text-white">Finance</option>
+          <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300">Role</label>
+          <select name="role" required className="border border-zinc-300 dark:border-gray-700 bg-zinc-200/50 dark:bg-white/5 p-2 w-full rounded text-zinc-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]">
+            <option value="sales" className="bg-zinc-50 dark:bg-black text-zinc-900 dark:text-white">Sales</option>
+            <option value="finance" className="bg-zinc-50 dark:bg-black text-zinc-900 dark:text-white">Finance</option>
             {currentUserRole !== 'general_manager' && (
               <>
-                <option value="specialist" className="bg-black text-white">Technical Support</option>
-                <option value="aurora_manager" className="bg-black text-white">Aurora Manager</option>
-                <option value="general_manager" className="bg-black text-white">General Manager</option>
-                <option value="hr" className="bg-black text-white">HR</option>
-                <option value="it" className="bg-black text-white">IT</option>
+                <option value="specialist" className="bg-zinc-50 dark:bg-black text-zinc-900 dark:text-white">Technical Support</option>
+                <option value="aurora_manager" className="bg-zinc-50 dark:bg-black text-zinc-900 dark:text-white">Aurora Manager</option>
+                <option value="general_manager" className="bg-zinc-50 dark:bg-black text-zinc-900 dark:text-white">General Manager</option>
+                <option value="hr" className="bg-zinc-50 dark:bg-black text-zinc-900 dark:text-white">HR</option>
+                <option value="it" className="bg-zinc-50 dark:bg-black text-zinc-900 dark:text-white">IT</option>
               </>
             )}
           </select>
@@ -73,17 +74,17 @@ export function CreateEmployeeForm({ dealers, currentUserRole, defaultDealerId }
         <div className="col-span-2 sm:col-span-1">
           {currentUserRole === 'general_manager' && defaultDealerId ? (
             <>
-              <label className="block text-sm font-medium text-gray-300">Dealer</label>
-              <p className="text-white py-2">{dealers?.find(d => d.id === defaultDealerId)?.name ?? 'Your dealer'}</p>
+              <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300">Dealer</label>
+              <p className="text-zinc-900 dark:text-white py-2">{dealers?.find(d => d.id === defaultDealerId)?.name ?? 'Your dealer'}</p>
               <input type="hidden" name="dealerId" value={defaultDealerId} />
             </>
           ) : (
             <>
-              <label className="block text-sm font-medium text-gray-300">Dealer</label>
-              <select name="dealerId" className="border border-gray-700 bg-white/5 p-2 w-full rounded text-white focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]">
-                <option value="" className="bg-black text-white">Platform (Aurora)</option>
+              <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300">Dealer</label>
+              <select name="dealerId" className="border border-zinc-300 dark:border-gray-700 bg-zinc-200/50 dark:bg-white/5 p-2 w-full rounded text-zinc-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]">
+                <option value="" className="bg-zinc-50 dark:bg-black text-zinc-900 dark:text-white">Platform (Aurora)</option>
                 {dealers?.map(d => (
-                  <option key={d.id} value={d.id} className="bg-black text-white">{d.name}</option>
+                  <option key={d.id} value={d.id} className="bg-zinc-50 dark:bg-black text-zinc-900 dark:text-white">{d.name}</option>
                 ))}
               </select>
             </>

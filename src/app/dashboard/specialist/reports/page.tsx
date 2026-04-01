@@ -144,14 +144,14 @@ export default function SpecialistReportsPage() {
     <div className="space-y-8">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold text-white mb-2">Technical Support Reports</h1>
-          <p className="text-gray-400">View detailed reports of your assigned work and appointments</p>
+          <h1 className="text-2xl font-semibold text-zinc-900 dark:text-white mb-2">Technical Support Reports</h1>
+          <p className="text-zinc-500 dark:text-gray-400">View detailed reports of your assigned work and appointments</p>
         </div>
         <div className="flex gap-2">
           <button
             onClick={handleOpenPreview}
             disabled={loading}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 border border-gray-600 text-white rounded-md font-medium text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-zinc-200 dark:bg-white/10 hover:bg-white/20 border border-zinc-300 dark:border-gray-600 text-zinc-900 dark:text-white rounded-md font-medium text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Eye className="w-4 h-4" />
             View Sample
@@ -167,7 +167,7 @@ export default function SpecialistReportsPage() {
           <button
             onClick={handleOpenEmailModal}
             disabled={loading}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 border border-gray-600 text-white rounded-md font-medium text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-zinc-200 dark:bg-white/10 hover:bg-white/20 border border-zinc-300 dark:border-gray-600 text-zinc-900 dark:text-white rounded-md font-medium text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Mail className="w-4 h-4" />
             Send E-mail
@@ -182,43 +182,43 @@ export default function SpecialistReportsPage() {
       />
 
       {/* Date Filter */}
-      <div className="bg-white/5 border border-gray-800 p-6 rounded-lg">
-        <h2 className="text-lg font-semibold text-white mb-4">Date Range Filter</h2>
+      <div className="bg-zinc-200/50 dark:bg-white/5 border border-zinc-200 dark:border-gray-800 p-6 rounded-lg">
+        <h2 className="text-lg font-semibold text-zinc-900 dark:text-white mb-4">Date Range Filter</h2>
         <div className="flex flex-wrap gap-4 items-end">
           <div className="flex-1 min-w-[200px]">
-            <label className="block text-sm font-medium text-gray-300 mb-2">Start Date</label>
+            <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300 mb-2">Start Date</label>
             <input
               type="date"
               value={startDate}
               onChange={(e) => setStartDate(e.target.value)}
-              className="w-full border border-gray-700 bg-white/5 p-2 rounded text-white focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]"
+              className="w-full border border-zinc-300 dark:border-gray-700 bg-zinc-200/50 dark:bg-white/5 p-2 rounded text-white focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]"
             />
           </div>
           <div className="flex-1 min-w-[200px]">
-            <label className="block text-sm font-medium text-gray-300 mb-2">End Date</label>
+            <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300 mb-2">End Date</label>
             <input
               type="date"
               value={endDate}
               onChange={(e) => setEndDate(e.target.value)}
-              className="w-full border border-gray-700 bg-white/5 p-2 rounded text-white focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]"
+              className="w-full border border-zinc-300 dark:border-gray-700 bg-zinc-200/50 dark:bg-white/5 p-2 rounded text-white focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]"
             />
           </div>
           <div className="flex gap-2">
             <button
               onClick={() => setDateRange(1)}
-              className="px-4 py-2 bg-white/5 border border-gray-700 text-white rounded hover:bg-white/10 transition-colors text-sm"
+              className="px-4 py-2 bg-zinc-200/50 dark:bg-white/5 border border-zinc-300 dark:border-gray-700 text-zinc-900 dark:text-white rounded hover:bg-zinc-200 dark:bg-white/10 transition-colors text-sm"
             >
               Last Month
             </button>
             <button
               onClick={() => setDateRange(3)}
-              className="px-4 py-2 bg-white/5 border border-gray-700 text-white rounded hover:bg-white/10 transition-colors text-sm"
+              className="px-4 py-2 bg-zinc-200/50 dark:bg-white/5 border border-zinc-300 dark:border-gray-700 text-zinc-900 dark:text-white rounded hover:bg-zinc-200 dark:bg-white/10 transition-colors text-sm"
             >
               Last 3 Months
             </button>
             <button
               onClick={() => setDateRange(6)}
-              className="px-4 py-2 bg-white/5 border border-gray-700 text-white rounded hover:bg-white/10 transition-colors text-sm"
+              className="px-4 py-2 bg-zinc-200/50 dark:bg-white/5 border border-zinc-300 dark:border-gray-700 text-zinc-900 dark:text-white rounded hover:bg-zinc-200 dark:bg-white/10 transition-colors text-sm"
             >
               Last 6 Months
             </button>
@@ -228,49 +228,49 @@ export default function SpecialistReportsPage() {
 
       {loading ? (
         <div className="text-center py-12">
-          <p className="text-gray-400">Loading reports...</p>
+          <p className="text-zinc-500 dark:text-gray-400">Loading reports...</p>
         </div>
       ) : (
         <>
           {/* Summary Statistics */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="bg-white/5 border border-gray-800 p-6 rounded-lg">
-              <h3 className="text-sm font-medium text-gray-400 mb-2">Total Assigned Work</h3>
-              <p className="text-3xl font-bold text-white">{totalDemands}</p>
+            <div className="bg-zinc-200/50 dark:bg-white/5 border border-zinc-200 dark:border-gray-800 p-6 rounded-lg">
+              <h3 className="text-sm font-medium text-zinc-500 dark:text-gray-400 mb-2">Total Assigned Work</h3>
+              <p className="text-3xl font-bold text-zinc-900 dark:text-white">{totalDemands}</p>
             </div>
-            <div className="bg-white/5 border border-gray-800 p-6 rounded-lg">
-              <h3 className="text-sm font-medium text-gray-400 mb-2">Total Appointments</h3>
-              <p className="text-3xl font-bold text-white">{totalAppointments}</p>
+            <div className="bg-zinc-200/50 dark:bg-white/5 border border-zinc-200 dark:border-gray-800 p-6 rounded-lg">
+              <h3 className="text-sm font-medium text-zinc-500 dark:text-gray-400 mb-2">Total Appointments</h3>
+              <p className="text-3xl font-bold text-zinc-900 dark:text-white">{totalAppointments}</p>
             </div>
-            <div className="bg-white/5 border border-gray-800 p-6 rounded-lg">
-              <h3 className="text-sm font-medium text-gray-400 mb-2">Date Range</h3>
-              <p className="text-sm text-white">
+            <div className="bg-zinc-200/50 dark:bg-white/5 border border-zinc-200 dark:border-gray-800 p-6 rounded-lg">
+              <h3 className="text-sm font-medium text-zinc-500 dark:text-gray-400 mb-2">Date Range</h3>
+              <p className="text-sm text-zinc-900 dark:text-white">
                 {format(new Date(startDate), 'MMM d, yyyy')} - {format(new Date(endDate), 'MMM d, yyyy')}
               </p>
             </div>
           </div>
 
           {/* Camera Model Report */}
-          <div className="bg-white/5 border border-gray-800 p-6 rounded-lg">
-            <h2 className="text-lg font-semibold text-white mb-4">Camera Models</h2>
+          <div className="bg-zinc-200/50 dark:bg-white/5 border border-zinc-200 dark:border-gray-800 p-6 rounded-lg">
+            <h2 className="text-lg font-semibold text-zinc-900 dark:text-white mb-4">Camera Models</h2>
             {Object.keys(cameraCounts).length === 0 ? (
-              <p className="text-gray-400">No camera data available for this period.</p>
+              <p className="text-zinc-500 dark:text-gray-400">No camera data available for this period.</p>
             ) : (
               <div className="space-y-3">
                 {Object.entries(cameraCounts)
                   .sort(([, a], [, b]) => b - a)
                   .map(([camera, count]) => (
-                    <div key={camera} className="flex items-center justify-between p-3 bg-white/5 rounded border border-gray-800">
-                      <span className="text-white font-medium">{camera}</span>
+                    <div key={camera} className="flex items-center justify-between p-3 bg-zinc-200/50 dark:bg-white/5 rounded border border-zinc-200 dark:border-gray-800">
+                      <span className="text-zinc-900 dark:text-white font-medium">{camera}</span>
                       <div className="flex items-center gap-4">
-                        <span className="text-gray-400">{count} job{count !== 1 ? 's' : ''}</span>
+                        <span className="text-zinc-500 dark:text-gray-400">{count} job{count !== 1 ? 's' : ''}</span>
                         <div className="w-32 bg-gray-800 rounded-full h-2">
                           <div
                             className="bg-[#C27E00] h-2 rounded-full"
                             style={{ width: `${(count / totalDemands) * 100}%` }}
                           />
                         </div>
-                        <span className="text-sm text-gray-400 w-12 text-right">
+                        <span className="text-sm text-zinc-500 dark:text-gray-400 w-12 text-right">
                           {totalDemands > 0 ? Math.round((count / totalDemands) * 100) : 0}%
                         </span>
                       </div>
@@ -281,10 +281,10 @@ export default function SpecialistReportsPage() {
           </div>
 
           {/* Status Report */}
-          <div className="bg-white/5 border border-gray-800 p-6 rounded-lg">
-            <h2 className="text-lg font-semibold text-white mb-4">Status Breakdown</h2>
+          <div className="bg-zinc-200/50 dark:bg-white/5 border border-zinc-200 dark:border-gray-800 p-6 rounded-lg">
+            <h2 className="text-lg font-semibold text-zinc-900 dark:text-white mb-4">Status Breakdown</h2>
             {Object.keys(statusCounts).length === 0 ? (
-              <p className="text-gray-400">No status data available for this period.</p>
+              <p className="text-zinc-500 dark:text-gray-400">No status data available for this period.</p>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 {Object.entries(statusCounts).map(([status, count]) => {
@@ -297,7 +297,7 @@ export default function SpecialistReportsPage() {
                   return (
                     <div
                       key={status}
-                      className={`p-4 rounded-lg border ${statusColors[status as keyof typeof statusColors] || 'bg-gray-900/50 text-gray-300 border-gray-800'}`}
+                      className={`p-4 rounded-lg border ${statusColors[status as keyof typeof statusColors] || 'bg-zinc-200/80 dark:bg-gray-900/50 text-zinc-600 dark:text-gray-300 border-zinc-200 dark:border-gray-800'}`}
                     >
                       <p className="text-sm font-medium mb-1">
                         {status.replace('_', ' ').toUpperCase()}
@@ -314,26 +314,26 @@ export default function SpecialistReportsPage() {
           </div>
 
           {/* Vehicle Make Report */}
-          <div className="bg-white/5 border border-gray-800 p-6 rounded-lg">
-            <h2 className="text-lg font-semibold text-white mb-4">Vehicle Makes</h2>
+          <div className="bg-zinc-200/50 dark:bg-white/5 border border-zinc-200 dark:border-gray-800 p-6 rounded-lg">
+            <h2 className="text-lg font-semibold text-zinc-900 dark:text-white mb-4">Vehicle Makes</h2>
             {Object.keys(vehicleMakeCounts).length === 0 ? (
-              <p className="text-gray-400">No vehicle data available for this period.</p>
+              <p className="text-zinc-500 dark:text-gray-400">No vehicle data available for this period.</p>
             ) : (
               <div className="space-y-3">
                 {Object.entries(vehicleMakeCounts)
                   .sort(([, a], [, b]) => b - a)
                   .map(([make, count]) => (
-                    <div key={make} className="flex items-center justify-between p-3 bg-white/5 rounded border border-gray-800">
-                      <span className="text-white font-medium">{make}</span>
+                    <div key={make} className="flex items-center justify-between p-3 bg-zinc-200/50 dark:bg-white/5 rounded border border-zinc-200 dark:border-gray-800">
+                      <span className="text-zinc-900 dark:text-white font-medium">{make}</span>
                       <div className="flex items-center gap-4">
-                        <span className="text-gray-400">{count} vehicle{count !== 1 ? 's' : ''}</span>
+                        <span className="text-zinc-500 dark:text-gray-400">{count} vehicle{count !== 1 ? 's' : ''}</span>
                         <div className="w-32 bg-gray-800 rounded-full h-2">
                           <div
                             className="bg-[#C27E00] h-2 rounded-full"
                             style={{ width: `${(count / totalDemands) * 100}%` }}
                           />
                         </div>
-                        <span className="text-sm text-gray-400 w-12 text-right">
+                        <span className="text-sm text-zinc-500 dark:text-gray-400 w-12 text-right">
                           {totalDemands > 0 ? Math.round((count / totalDemands) * 100) : 0}%
                         </span>
                       </div>
@@ -344,25 +344,25 @@ export default function SpecialistReportsPage() {
           </div>
 
           {/* Detailed List */}
-          <div className="bg-white/5 border border-gray-800 p-6 rounded-lg">
-            <h2 className="text-lg font-semibold text-white mb-4">Detailed Work List</h2>
+          <div className="bg-zinc-200/50 dark:bg-white/5 border border-zinc-200 dark:border-gray-800 p-6 rounded-lg">
+            <h2 className="text-lg font-semibold text-zinc-900 dark:text-white mb-4">Detailed Work List</h2>
             {demands.length === 0 ? (
-              <p className="text-gray-400 text-center py-8">No assigned work found for the selected date range.</p>
+              <p className="text-zinc-500 dark:text-gray-400 text-center py-8">No assigned work found for the selected date range.</p>
             ) : (
               <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-800">
-                  <thead className="bg-white/5">
+                <table className="min-w-full divide-y divide-zinc-200 dark:divide-gray-800">
+                  <thead className="bg-zinc-200/50 dark:bg-white/5">
                     <tr>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Demand ID</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Customer</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Vehicle</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Camera</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Appointment</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Status</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Created</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500 dark:text-gray-400 uppercase tracking-wider">Demand ID</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500 dark:text-gray-400 uppercase tracking-wider">Customer</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500 dark:text-gray-400 uppercase tracking-wider">Vehicle</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500 dark:text-gray-400 uppercase tracking-wider">Camera</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500 dark:text-gray-400 uppercase tracking-wider">Appointment</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500 dark:text-gray-400 uppercase tracking-wider">Created</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-800">
+                  <tbody className="divide-y divide-zinc-200 dark:divide-gray-800">
                     {demands.map((demand) => {
                       const statusColors = {
                         pending_finance: 'bg-yellow-900/50 text-yellow-300 border-yellow-800',
@@ -371,28 +371,28 @@ export default function SpecialistReportsPage() {
                         cancelled: 'bg-red-900/50 text-red-300 border-red-800'
                       }
                       return (
-                        <tr key={demand.id} className="hover:bg-white/5 transition-colors">
-                          <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-400">
+                        <tr key={demand.id} className="hover:bg-zinc-200/50 dark:bg-white/5 transition-colors">
+                          <td className="px-4 py-3 whitespace-nowrap text-sm text-zinc-500 dark:text-gray-400">
                             {demand.demand_number != null ? `#${demand.demand_number}` : '-'}
                           </td>
-                          <td className="px-4 py-3 whitespace-nowrap text-sm text-white">
+                          <td className="px-4 py-3 whitespace-nowrap text-sm text-zinc-900 dark:text-white">
                             {demand.customer_firstname} {demand.customer_lastname}
                           </td>
-                          <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-300">
+                          <td className="px-4 py-3 whitespace-nowrap text-sm text-zinc-600 dark:text-gray-300">
                             {demand.vehicle_year} {demand.vehicle_make} {demand.vehicle_model}
                           </td>
-                          <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-300">
+                          <td className="px-4 py-3 whitespace-nowrap text-sm text-zinc-600 dark:text-gray-300">
                             {demand.camera_model}
                           </td>
-                          <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-300">
+                          <td className="px-4 py-3 whitespace-nowrap text-sm text-zinc-600 dark:text-gray-300">
                             {format(new Date(demand.appointment_date), 'MMM d, yyyy h:mm a')}
                           </td>
                           <td className="px-4 py-3 whitespace-nowrap">
-                            <span className={`px-2 py-1 rounded text-xs font-medium border ${statusColors[demand.status as keyof typeof statusColors] || 'bg-gray-900/50 text-gray-300 border-gray-800'}`}>
+                            <span className={`px-2 py-1 rounded text-xs font-medium border ${statusColors[demand.status as keyof typeof statusColors] || 'bg-zinc-200/80 dark:bg-gray-900/50 text-zinc-600 dark:text-gray-300 border-zinc-200 dark:border-gray-800'}`}>
                               {demand.status.replace('_', ' ').toUpperCase()}
                             </span>
                           </td>
-                          <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-400">
+                          <td className="px-4 py-3 whitespace-nowrap text-sm text-zinc-500 dark:text-gray-400">
                             {format(new Date(demand.created_at), 'MMM d, yyyy')}
                           </td>
                         </tr>

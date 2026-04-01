@@ -2,6 +2,7 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
+import { normalizeEmail } from '@/lib/email-normalize'
 
 type UserRole = 'sales' | 'finance' | 'specialist' | 'aurora_manager' | 'general_manager' | 'hr' | 'it'
 
@@ -28,7 +29,7 @@ export async function createEmployee(prevState: ActionState, formData: FormData)
       return { error: 'User profile not found' }
     }
 
-    const email = formData.get('email') as string
+    const email = normalizeEmail(formData.get('email') as string)
     const password = formData.get('password') as string
     const role = formData.get('role') as string
     const fullName = formData.get('fullName') as string

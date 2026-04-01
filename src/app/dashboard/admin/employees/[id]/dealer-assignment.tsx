@@ -74,8 +74,8 @@ export function DealerAssignment({
   }
 
   return (
-    <div className="bg-white/5 border border-gray-800 rounded-lg p-6">
-      <h3 className="text-lg font-semibold text-white mb-4">Dealer Assignments</h3>
+    <div className="bg-zinc-200/50 dark:bg-white/5 border border-zinc-200 dark:border-gray-800 rounded-lg p-6">
+      <h3 className="text-lg font-semibold text-zinc-900 dark:text-white mb-4">Dealer Assignments</h3>
       
       {error && (
         <div className="mb-4 p-3 bg-red-900/50 border border-red-800 rounded text-red-300 text-sm">
@@ -85,9 +85,9 @@ export function DealerAssignment({
 
       {/* Assigned Dealers */}
       <div className="mb-6">
-        <h4 className="text-sm font-medium text-gray-400 mb-3">Assigned Dealers ({assignedDealers.length})</h4>
+        <h4 className="text-sm font-medium text-zinc-500 dark:text-gray-400 mb-3">Assigned Dealers ({assignedDealers.length})</h4>
         {assignedDealers.length === 0 ? (
-          <p className="text-sm text-gray-500">No dealers assigned yet.</p>
+          <p className="text-sm text-zinc-500 dark:text-gray-500">No dealers assigned yet.</p>
         ) : (
           <div className="flex flex-wrap gap-2">
             {assignedDealers.map((assignment) => (
@@ -95,7 +95,7 @@ export function DealerAssignment({
                 key={assignment.id}
                 className="flex items-center gap-2 px-3 py-2 bg-[#C27E00]/20 border border-[#C27E00]/50 rounded-md"
               >
-                <span className="text-sm text-white">{assignment.dealers.name}</span>
+                <span className="text-sm text-zinc-900 dark:text-white">{assignment.dealers.name}</span>
                 <button
                   onClick={() => handleRemove(assignment.dealer_id)}
                   disabled={isRemoving === assignment.dealer_id}
@@ -113,16 +113,16 @@ export function DealerAssignment({
       {/* Add New Dealer */}
       {unassignedDealers.length > 0 && (
         <div>
-          <h4 className="text-sm font-medium text-gray-400 mb-3">Assign New Dealer</h4>
+          <h4 className="text-sm font-medium text-zinc-500 dark:text-gray-400 mb-3">Assign New Dealer</h4>
           <div className="flex gap-2">
             <select
               value={selectedDealerId}
               onChange={(e) => setSelectedDealerId(e.target.value)}
-              className="flex-1 border border-gray-700 bg-black/50 text-white rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]"
+              className="flex-1 border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 text-zinc-900 dark:text-white rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]"
             >
-              <option value="" className="bg-black">Select a dealer...</option>
+              <option value="" className="bg-zinc-50 dark:bg-black">Select a dealer...</option>
               {unassignedDealers.map((dealer) => (
-                <option key={dealer.id} value={dealer.id} className="bg-black">
+                <option key={dealer.id} value={dealer.id} className="bg-zinc-50 dark:bg-black">
                   {dealer.name}
                 </option>
               ))}
@@ -140,7 +140,7 @@ export function DealerAssignment({
       )}
 
       {unassignedDealers.length === 0 && assignedDealers.length > 0 && (
-        <p className="text-sm text-gray-500 mt-4">All available dealers are already assigned.</p>
+        <p className="text-sm text-zinc-500 dark:text-gray-500 mt-4">All available dealers are already assigned.</p>
       )}
     </div>
   )

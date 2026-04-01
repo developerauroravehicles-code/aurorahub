@@ -10,7 +10,7 @@ export default async function MailSettingsPage() {
       <div>
         <SystemManagementTitle />
         <SystemManagementTabs activeTab="mail" />
-        <div className="bg-white/5 rounded-lg border border-gray-800 p-6 mt-6">
+        <div className="bg-zinc-200/50 dark:bg-white/5 rounded-lg border border-zinc-200 dark:border-gray-800 p-6 mt-6">
           <MailSettingsContent />
         </div>
       </div>

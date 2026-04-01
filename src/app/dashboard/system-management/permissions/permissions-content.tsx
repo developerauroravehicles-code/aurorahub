@@ -57,10 +57,10 @@ export function PermissionsContent({
   }
 
   return (
-    <div className="bg-white/5 rounded-lg border border-gray-800 p-6">
+    <div className="bg-zinc-200/50 dark:bg-white/5 rounded-lg border border-zinc-200 dark:border-gray-800 p-6">
       <div className="mb-4">
-        <h2 className="text-lg font-semibold text-white">Permission Assignment</h2>
-        <p className="text-sm text-gray-400 mt-1">
+        <h2 className="text-lg font-semibold text-zinc-900 dark:text-white">Permission Assignment</h2>
+        <p className="text-sm text-zinc-500 dark:text-gray-400 mt-1">
           Define who can view and manage what across the system on a role basis.
         </p>
       </div>
@@ -70,36 +70,36 @@ export function PermissionsContent({
         </div>
       )}
       <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-800 text-sm">
+        <table className="min-w-full divide-y divide-zinc-200 dark:divide-gray-800 text-sm">
           <thead>
             <tr>
-              <th className="px-4 py-3 text-left text-gray-400 font-medium">Permission / Role</th>
+              <th className="px-4 py-3 text-left text-zinc-500 dark:text-gray-400 font-medium">Permission / Role</th>
               {ROLES.map((r) => (
-                <th key={r} className="px-3 py-3 text-center text-gray-400 font-medium min-w-[100px]">
+                <th key={r} className="px-3 py-3 text-center text-zinc-500 dark:text-gray-400 font-medium min-w-[100px]">
                   {ROLE_LABELS[r] ?? r}
                 </th>
               ))}
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-800">
+          <tbody className="divide-y divide-zinc-200 dark:divide-gray-800">
             {CATEGORY_ORDER.filter((c) => byCategory[c]).map((category) => (
               <React.Fragment key={category}>
-                <tr className="bg-gray-900/50">
-                  <td colSpan={ROLES.length + 1} className="px-4 py-2 text-gray-300 font-medium">
+                <tr className="bg-zinc-200/80 dark:bg-gray-900/50">
+                  <td colSpan={ROLES.length + 1} className="px-4 py-2 text-zinc-600 dark:text-gray-300 font-medium">
                     {category}
-                    <span className="ml-2 text-xs text-gray-500">
+                    <span className="ml-2 text-xs text-zinc-500 dark:text-gray-500">
                       ({byCategory[category].length} yetki)
                     </span>
                   </td>
                 </tr>
                 {byCategory[category].map((p) => (
-                  <tr key={p.code} className="hover:bg-white/5">
+                  <tr key={p.code} className="hover:bg-zinc-200/50 dark:bg-white/5">
                     <td className="px-4 py-2">
-                      <div className="text-white">{p.name}</div>
+                      <div className="text-zinc-900 dark:text-white">{p.name}</div>
                       {p.description && (
-                        <div className="text-xs text-gray-500 mt-0.5">{p.description}</div>
+                        <div className="text-xs text-zinc-500 dark:text-gray-500 mt-0.5">{p.description}</div>
                       )}
-                      <code className="text-xs text-gray-600">{p.code}</code>
+                      <code className="text-xs text-zinc-600 dark:text-gray-600">{p.code}</code>
                     </td>
                     {ROLES.map((role) => {
                       const has = rolePermissions[role]?.has(p.code) ?? false
@@ -118,7 +118,7 @@ export function PermissionsContent({
                               disabled={!!loading}
                               className={`
                                 inline-flex items-center justify-center w-8 h-8 rounded transition-colors
-                                ${has ? 'bg-[#C27E00]/30 text-[#C27E00] hover:bg-[#C27E00]/50' : 'bg-gray-800 text-gray-500 hover:bg-gray-700'}
+                                ${has ? 'bg-[#C27E00]/30 text-[#C27E00] hover:bg-[#C27E00]/50' : 'bg-gray-800 text-zinc-500 dark:text-gray-500 hover:bg-gray-700'}
                                 disabled:opacity-50
                               `}
                               title={has ? 'Kaldır' : 'Ver'}
@@ -131,8 +131,8 @@ export function PermissionsContent({
                     })}
                   </tr>
                 ))}
-                <tr className="bg-black/20">
-                  <td className="px-4 py-2 text-gray-400 text-xs">
+                <tr className="bg-zinc-50 dark:bg-black/20">
+                  <td className="px-4 py-2 text-zinc-500 dark:text-gray-400 text-xs">
                     Kategori toplu işlem
                   </td>
                   {ROLES.map((role) => {
@@ -144,12 +144,12 @@ export function PermissionsContent({
                     return (
                       <td key={role} className="px-3 py-2 text-center">
                         {isAuroraManager ? (
-                          <span className="text-gray-500">—</span>
+                          <span className="text-zinc-500 dark:text-gray-500">—</span>
                         ) : (
                           <button
                             onClick={() => toggleCategory(role, category, !allGranted)}
                             disabled={!!loading}
-                            className="text-xs px-2 py-1 rounded bg-white/5 hover:bg-white/10 text-gray-400 disabled:opacity-50"
+                            className="text-xs px-2 py-1 rounded bg-zinc-200/50 dark:bg-white/5 hover:bg-zinc-200 dark:bg-white/10 text-zinc-500 dark:text-gray-400 disabled:opacity-50"
                           >
                             {isLoading ? <Loader2 className="w-3 h-3 animate-spin inline" /> : allGranted ? 'Tümünü kaldır' : 'Tümünü ver'}
                           </button>

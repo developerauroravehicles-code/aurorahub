@@ -93,21 +93,21 @@ export function InvoiceDateFilter({ selectedMonth, startDate, endDate }: Invoice
   return (
     <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
       <div className="flex items-center gap-4">
-        <label className="text-sm font-medium text-gray-400">Period:</label>
+        <label className="text-sm font-medium text-zinc-500 dark:text-gray-400">Period:</label>
         <select
           value={selectedMonth}
           onChange={handleMonthChange}
-          className="border border-gray-700 bg-white/5 px-3 py-2 rounded text-white text-sm focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00] min-w-[140px]"
+          className="border border-zinc-300 dark:border-gray-700 bg-zinc-200/50 dark:bg-white/5 px-3 py-2 rounded text-zinc-900 dark:text-white text-sm focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00] min-w-[140px]"
         >
           {options.map((o) => (
-            <option key={o.value || 'all'} value={o.value} className="bg-black text-white">
+            <option key={o.value || 'all'} value={o.value} className="bg-zinc-50 dark:bg-black text-zinc-900 dark:text-white">
               {o.label}
             </option>
           ))}
         </select>
       </div>
       <div className="flex flex-col gap-1 min-w-[220px] max-w-xl flex-1">
-        <label htmlFor="invoice-manual-period" className="text-xs font-medium text-gray-500">
+        <label htmlFor="invoice-manual-period" className="text-xs font-medium text-zinc-500 dark:text-gray-500">
           Custom range (English dates)
         </label>
         <div className="flex flex-wrap items-center gap-2">
@@ -127,7 +127,7 @@ export function InvoiceDateFilter({ selectedMonth, startDate, endDate }: Invoice
             }}
             disabled={monthLocked}
             placeholder="e.g. 3 March – 20 March"
-            className="flex-1 min-w-[200px] border border-gray-700 bg-white/5 px-3 py-2 rounded text-white text-sm placeholder:text-gray-600 focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00] disabled:opacity-45 disabled:cursor-not-allowed"
+            className="flex-1 min-w-[200px] border border-zinc-300 dark:border-gray-700 bg-zinc-200/50 dark:bg-white/5 px-3 py-2 rounded text-zinc-900 dark:text-white text-sm placeholder:text-zinc-600 dark:text-gray-600 focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00] disabled:opacity-45 disabled:cursor-not-allowed"
             title={monthLocked ? 'Choose “All time” or a month above to enter a custom range' : undefined}
           />
           <button
@@ -141,7 +141,7 @@ export function InvoiceDateFilter({ selectedMonth, startDate, endDate }: Invoice
         </div>
         {manualError && <p className="text-xs text-red-400">{manualError}</p>}
         {monthLocked && (
-          <p className="text-xs text-gray-500">Clear the month preset (All time) to use a custom range.</p>
+          <p className="text-xs text-zinc-500 dark:text-gray-500">Clear the month preset (All time) to use a custom range.</p>
         )}
       </div>
     </div>

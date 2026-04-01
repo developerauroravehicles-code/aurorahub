@@ -245,20 +245,20 @@ export function DemandsList({ demands, dealers, specialists, selectedDealerId, c
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-4">
           {hideDealerFilter ? (
-            <span className="text-sm text-gray-400">
+            <span className="text-sm text-zinc-500 dark:text-gray-400">
               Dealer: {dealers.find(d => d.id === selectedDealerId)?.name ?? selectedDealerId}
             </span>
           ) : (
             <>
-              <label className="text-sm font-medium text-gray-400">Dealer:</label>
+              <label className="text-sm font-medium text-zinc-500 dark:text-gray-400">Dealer:</label>
               <select
                 value={selectedDealerId}
                 onChange={(e) => handleDealerChange(e.target.value)}
-                className="border border-gray-700 bg-white/5 px-3 py-2 rounded text-white text-sm focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00] min-w-[200px]"
+                className="border border-zinc-300 dark:border-gray-700 bg-zinc-200/50 dark:bg-white/5 px-3 py-2 rounded text-zinc-900 dark:text-white text-sm focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00] min-w-[200px]"
               >
-                <option value="all" className="bg-black">All Dealers</option>
+                <option value="all" className="bg-zinc-50 dark:bg-black">All Dealers</option>
                 {dealers.map((d) => (
-                  <option key={d.id} value={d.id} className="bg-black">{d.name}</option>
+                  <option key={d.id} value={d.id} className="bg-zinc-50 dark:bg-black">{d.name}</option>
                 ))}
               </select>
             </>
@@ -278,8 +278,8 @@ export function DemandsList({ demands, dealers, specialists, selectedDealerId, c
 
       {/* Create External Demand Modal */}
       {createModalOpen && canCreateExternal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70">
-          <div className="bg-gray-900 border border-gray-800 rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-900/50 dark:bg-black/70">
+          <div className="bg-zinc-200 dark:bg-gray-900 border border-zinc-200 dark:border-gray-800 rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
             <div className="p-6">
               <CreateExternalDemandForm
                 dealers={dealers}
@@ -293,11 +293,11 @@ export function DemandsList({ demands, dealers, specialists, selectedDealerId, c
       )}
 
       {/* Filters */}
-      <div className="bg-white/5 rounded-lg border border-gray-800 p-4">
+      <div className="bg-zinc-200/50 dark:bg-white/5 rounded-lg border border-zinc-200 dark:border-gray-800 p-4">
         <div className="flex items-center justify-between mb-4">
           <button
             onClick={() => setShowFilters(!showFilters)}
-            className="flex items-center gap-2 text-sm text-gray-300 hover:text-white transition-colors"
+            className="flex items-center gap-2 text-sm text-zinc-600 dark:text-gray-300 hover:text-zinc-900 dark:text-white transition-colors"
           >
             <Filter className="w-4 h-4" />
             Filters
@@ -310,7 +310,7 @@ export function DemandsList({ demands, dealers, specialists, selectedDealerId, c
           {hasActiveFilters && (
             <button
               onClick={clearFilters}
-              className="flex items-center gap-1 text-xs text-gray-400 hover:text-white transition-colors"
+              className="flex items-center gap-1 text-xs text-zinc-500 dark:text-gray-400 hover:text-zinc-900 dark:text-white transition-colors"
             >
               <X className="w-3 h-3" />
               Clear
@@ -323,20 +323,20 @@ export function DemandsList({ demands, dealers, specialists, selectedDealerId, c
             {/* Search - by customer, demand ID, VIN, or stock number */}
             <div className="md:col-span-2 flex gap-2">
               <div className="flex-1 min-w-0">
-                <label className="block text-xs font-medium text-gray-400 mb-1">Search by</label>
+                <label className="block text-xs font-medium text-zinc-500 dark:text-gray-400 mb-1">Search by</label>
                 <select
                   value={searchType}
                   onChange={(e) => setSearchType(e.target.value as 'customer' | 'demand_id' | 'vin' | 'stock_number')}
-                  className="w-full border border-gray-700 bg-white/5 p-2 rounded text-white text-sm focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]"
+                  className="w-full border border-zinc-300 dark:border-gray-700 bg-zinc-200/50 dark:bg-white/5 p-2 rounded text-zinc-900 dark:text-white text-sm focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]"
                 >
-                  <option value="customer" className="bg-black">Customer name</option>
-                  <option value="demand_id" className="bg-black">Demand ID</option>
-                  <option value="vin" className="bg-black">VIN No</option>
-                  <option value="stock_number" className="bg-black">Stock Number</option>
+                  <option value="customer" className="bg-zinc-50 dark:bg-black">Customer name</option>
+                  <option value="demand_id" className="bg-zinc-50 dark:bg-black">Demand ID</option>
+                  <option value="vin" className="bg-zinc-50 dark:bg-black">VIN No</option>
+                  <option value="stock_number" className="bg-zinc-50 dark:bg-black">Stock Number</option>
                 </select>
               </div>
               <div className="flex-1 min-w-0">
-                <label className="block text-xs font-medium text-gray-400 mb-1">
+                <label className="block text-xs font-medium text-zinc-500 dark:text-gray-400 mb-1">
                   {searchType === 'customer' ? 'Name' : searchType === 'demand_id' ? 'Demand ID' : searchType === 'vin' ? 'VIN No' : 'Stock Number'}
                 </label>
                 <input
@@ -349,39 +349,39 @@ export function DemandsList({ demands, dealers, specialists, selectedDealerId, c
                     searchType === 'vin' ? 'Last 6 digits or full VIN' :
                     'Stock number'
                   }
-                  className="w-full border border-gray-700 bg-white/5 p-2 rounded text-white text-sm focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]"
+                  className="w-full border border-zinc-300 dark:border-gray-700 bg-zinc-200/50 dark:bg-white/5 p-2 rounded text-zinc-900 dark:text-white text-sm focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]"
                 />
               </div>
             </div>
 
             {/* Status Filter */}
             <div>
-              <label className="block text-xs font-medium text-gray-400 mb-1">Status</label>
+              <label className="block text-xs font-medium text-zinc-500 dark:text-gray-400 mb-1">Status</label>
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="w-full border border-gray-700 bg-white/5 p-2 rounded text-white text-sm focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]"
+                className="w-full border border-zinc-300 dark:border-gray-700 bg-zinc-200/50 dark:bg-white/5 p-2 rounded text-zinc-900 dark:text-white text-sm focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]"
               >
-                <option value="all" className="bg-black">All Status</option>
-                <option value="pending_finance" className="bg-black">Pending Finance</option>
-                <option value="approved" className="bg-black">Approved</option>
-                <option value="completed" className="bg-black">Completed</option>
-                <option value="cancelled" className="bg-black">Cancelled</option>
+                <option value="all" className="bg-zinc-50 dark:bg-black">All Status</option>
+                <option value="pending_finance" className="bg-zinc-50 dark:bg-black">Pending Finance</option>
+                <option value="approved" className="bg-zinc-50 dark:bg-black">Approved</option>
+                <option value="completed" className="bg-zinc-50 dark:bg-black">Completed</option>
+                <option value="cancelled" className="bg-zinc-50 dark:bg-black">Cancelled</option>
               </select>
             </div>
 
             {/* Date Filter */}
             <div>
-              <label className="block text-xs font-medium text-gray-400 mb-1">Date Range</label>
+              <label className="block text-xs font-medium text-zinc-500 dark:text-gray-400 mb-1">Date Range</label>
               <select
                 value={dateFilter}
                 onChange={(e) => setDateFilter(e.target.value)}
-                className="w-full border border-gray-700 bg-white/5 p-2 rounded text-white text-sm focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]"
+                className="w-full border border-zinc-300 dark:border-gray-700 bg-zinc-200/50 dark:bg-white/5 p-2 rounded text-zinc-900 dark:text-white text-sm focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]"
               >
-                <option value="all" className="bg-black">All Time</option>
-                <option value="today" className="bg-black">Today</option>
-                <option value="this_week" className="bg-black">This Week</option>
-                <option value="this_month" className="bg-black">This Month</option>
+                <option value="all" className="bg-zinc-50 dark:bg-black">All Time</option>
+                <option value="today" className="bg-zinc-50 dark:bg-black">Today</option>
+                <option value="this_week" className="bg-zinc-50 dark:bg-black">This Week</option>
+                <option value="this_month" className="bg-zinc-50 dark:bg-black">This Month</option>
               </select>
             </div>
           </div>
@@ -389,18 +389,18 @@ export function DemandsList({ demands, dealers, specialists, selectedDealerId, c
       </div>
 
       {/* Results Count */}
-      <div className="text-sm text-gray-400">
+      <div className="text-sm text-zinc-500 dark:text-gray-400">
         Showing {filteredDemands.length} of {demands.length} demands
       </div>
 
       {/* Demands List */}
-      <div className="bg-white/5 rounded-lg border border-gray-800 shadow overflow-hidden">
+      <div className="bg-zinc-200/50 dark:bg-white/5 rounded-lg border border-zinc-200 dark:border-gray-800 shadow overflow-hidden">
         {filteredDemands.length === 0 ? (
-          <p className="p-4 text-gray-400 text-center">
+          <p className="p-4 text-zinc-500 dark:text-gray-400 text-center">
             {hasActiveFilters ? 'No demands match your filters.' : 'No demands found.'}
           </p>
         ) : (
-          <ul className="divide-y divide-gray-800">
+          <ul className="divide-y divide-zinc-200 dark:divide-gray-800">
             {filteredDemands.map(demand => {
               const statusColors = {
                 pending_finance: 'bg-yellow-500/20 text-yellow-400',
@@ -414,7 +414,7 @@ export function DemandsList({ demands, dealers, specialists, selectedDealerId, c
                   : `/dashboard/admin/demands/${demand.id}`
 
               return (
-                <li key={demand.id} className="p-4 hover:bg-white/5 transition-colors">
+                <li key={demand.id} className="p-4 hover:bg-zinc-200/50 dark:bg-white/5 transition-colors">
                   <Link href={detailHref} className="block">
                     <div className="flex justify-between items-start">
                       <div className="flex-1">
@@ -423,21 +423,21 @@ export function DemandsList({ demands, dealers, specialists, selectedDealerId, c
                             {demand.customer_firstname} {demand.customer_lastname}
                           </p>
                           {demand.demand_number != null && (
-                            <span className="text-xs font-medium text-gray-500">#{demand.demand_number}</span>
+                            <span className="text-xs font-medium text-zinc-500 dark:text-gray-500">#{demand.demand_number}</span>
                           )}
                           {demand.stock_number && duplicateStockNumbers.includes((demand.stock_number as string).trim().toUpperCase()) && (
                             <span className="text-xs text-amber-400">(Duplicate Stock No)</span>
                           )}
                         </div>
-                        <p className="text-sm text-gray-400">
+                        <p className="text-sm text-zinc-500 dark:text-gray-400">
                           {demand.vehicle_year} {demand.vehicle_make} {demand.vehicle_model}
                         </p>
-                        <p className="text-sm text-gray-500">
+                        <p className="text-sm text-zinc-500 dark:text-gray-500">
                           Appointment: {demand.is_external
                             ? formatInTimeZone(new Date(demand.appointment_date), SYSTEM_DEFAULT_TIMEZONE, 'PPP') + ' (External)'
                             : formatInTimeZone(new Date(demand.appointment_date), SYSTEM_DEFAULT_TIMEZONE, 'PPP h:mm a')}
                         </p>
-                        <p className="text-xs text-gray-600 mt-1">
+                        <p className="text-xs text-zinc-600 dark:text-gray-600 mt-1">
                           Dealer: {(demand.dealers as any)?.name || 'Unknown'} | Created by: {(demand.profiles as any)?.full_name || 'Unknown'}
                           {demand.vin_last6
                             ? ` | VIN: ${demand.vin_last6.toUpperCase()}`
@@ -450,7 +450,7 @@ export function DemandsList({ demands, dealers, specialists, selectedDealerId, c
                       </div>
                       <div>
                         <span className={`px-2 py-1 text-xs font-semibold rounded-full capitalize ${
-                          statusColors[demand.status as keyof typeof statusColors] || 'bg-gray-500/20 text-gray-400'
+                          statusColors[demand.status as keyof typeof statusColors] || 'bg-gray-500/20 text-zinc-500 dark:text-gray-400'
                         }`}>
                           {demand.status.replace('_', ' ')}
                         </span>

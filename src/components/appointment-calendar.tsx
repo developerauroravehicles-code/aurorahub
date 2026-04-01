@@ -139,30 +139,30 @@ export function AppointmentCalendar({
   }
 
   return (
-    <div className="bg-white/5 border border-gray-800 rounded-lg p-4">
+    <div className="bg-zinc-200/50 dark:bg-white/5 border border-zinc-200 dark:border-gray-800 rounded-lg p-4 sm:p-5 text-base">
       {/* Calendar Header */}
       <div className="flex items-center justify-between mb-4">
         <button
           type="button"
           onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}
           disabled={!allowPastDates && isPastMonth(subMonths(currentMonth, 1))}
-          className={`p-2 rounded transition-colors ${(!allowPastDates && isPastMonth(subMonths(currentMonth, 1))) ? 'cursor-not-allowed opacity-40' : 'hover:bg-white/10'}`}
+          className={`p-2 rounded transition-colors ${(!allowPastDates && isPastMonth(subMonths(currentMonth, 1))) ? 'cursor-not-allowed opacity-40' : 'hover:bg-zinc-200 dark:bg-white/10'}`}
         >
-          <ChevronLeft className="w-5 h-5 text-white" />
+          <ChevronLeft className="w-5 h-5 text-zinc-900 dark:text-white" />
         </button>
-        <h3 className="text-lg font-semibold text-white">{formatMonthYear()}</h3>
+        <h3 className="text-xl font-semibold text-zinc-900 dark:text-white">{formatMonthYear()}</h3>
         <button
           onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}
-          className="p-2 hover:bg-white/10 rounded transition-colors"
+          className="p-2 hover:bg-zinc-200 dark:bg-white/10 rounded transition-colors"
         >
-          <ChevronRight className="w-5 h-5 text-white" />
+          <ChevronRight className="w-5 h-5 text-zinc-900 dark:text-white" />
         </button>
       </div>
 
       {/* Day Names */}
       <div className="grid grid-cols-7 gap-1 mb-2">
         {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(day => (
-          <div key={day} className="text-center text-xs font-medium text-gray-400 py-2">
+          <div key={day} className="text-center text-sm font-medium text-zinc-500 dark:text-gray-400 py-2">
             {day}
           </div>
         ))}
@@ -185,20 +185,20 @@ export function AppointmentCalendar({
               onClick={() => handleDateClick(day)}
               disabled={!isCurrentMonth || dayIsLoading || (!allowPastDates && dayIsPast)}
               className={`
-                aspect-square p-2 rounded text-sm font-medium transition-colors relative
+                aspect-square p-2 rounded text-base font-medium transition-colors relative min-h-[40px] sm:min-h-0
                 ${!isCurrentMonth 
-                  ? 'text-gray-600 cursor-not-allowed' 
+                  ? 'text-zinc-600 dark:text-gray-600 cursor-not-allowed' 
                   : dayIsPast && !allowPastDates
-                  ? 'text-gray-500 bg-gray-900/50 cursor-not-allowed opacity-60 border border-gray-800'
+                  ? 'text-zinc-500 dark:text-gray-500 bg-zinc-200/80 dark:bg-gray-900/50 cursor-not-allowed opacity-60 border border-zinc-200 dark:border-gray-800'
                   : dayIsPast && allowPastDates
-                  ? 'text-gray-400 bg-gray-800/50 hover:bg-white/10 border border-gray-700'
+                  ? 'text-zinc-500 dark:text-gray-400 bg-gray-800/50 hover:bg-zinc-200 dark:bg-white/10 border border-zinc-300 dark:border-gray-700'
                   : dayIsSelected
                   ? 'bg-[#C27E00] text-white'
                   : dayIsToday
                   ? 'bg-blue-900/30 text-blue-200 border border-blue-800'
                   : dayIsTaken
                   ? 'bg-red-900/30 text-red-200 border border-red-800'
-                  : 'bg-white/5 text-gray-300 hover:bg-white/10'
+                  : 'bg-zinc-200/50 dark:bg-white/5 text-zinc-600 dark:text-gray-300 hover:bg-zinc-200 dark:bg-white/10'
                 }
                 ${dayIsLoading ? 'opacity-50 cursor-wait' : ''}
               `}
@@ -214,7 +214,7 @@ export function AppointmentCalendar({
             >
               {formatDateForDisplay(day)}
               {dayIsPast && isCurrentMonth && !allowPastDates && (
-                <Lock className="w-2.5 h-2.5 text-gray-500 absolute top-1 right-1" />
+                <Lock className="w-2.5 h-2.5 text-zinc-500 dark:text-gray-500 absolute top-1 right-1" />
               )}
               {dayIsTaken && !dayIsPast && (
                 <div className="w-1 h-1 bg-red-400 rounded-full mx-auto mt-1" />
@@ -225,7 +225,7 @@ export function AppointmentCalendar({
       </div>
 
       {/* Legend */}
-      <div className="mt-4 flex flex-wrap items-center justify-center gap-4 text-xs text-gray-400">
+      <div className="mt-4 flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-sm text-zinc-500 dark:text-gray-400">
         <div className="flex items-center gap-1">
           <div className="w-3 h-3 bg-[#C27E00] rounded" />
           <span>Selected</span>
@@ -235,8 +235,8 @@ export function AppointmentCalendar({
           <span>Today</span>
         </div>
         <div className="flex items-center gap-1">
-          <div className="w-3 h-3 bg-gray-900/50 border border-gray-800 rounded flex items-center justify-center">
-            <Lock className="w-2 h-2 text-gray-500" />
+          <div className="w-3 h-3 bg-zinc-200/80 dark:bg-gray-900/50 border border-zinc-200 dark:border-gray-800 rounded flex items-center justify-center">
+            <Lock className="w-2 h-2 text-zinc-500 dark:text-gray-500" />
           </div>
           <span>Closed (past)</span>
         </div>

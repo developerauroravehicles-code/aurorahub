@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { updateStockNumber } from './actions'
 
-const inputClass = 'w-full border border-gray-700 bg-white/5 p-2 rounded text-white text-sm focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]'
+const inputClass = 'w-full border border-zinc-300 dark:border-gray-700 bg-zinc-200/50 dark:bg-white/5 p-2 rounded text-zinc-900 dark:text-white text-sm focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]'
 
 interface EditStockNumberFormProps {
   demandId: string
@@ -41,7 +41,7 @@ export function EditStockNumberForm({
 
   if (!isAuroraManager) {
     return (
-      <p className="text-white">{stockNumber || '—'}</p>
+      <p className="text-zinc-900 dark:text-white">{stockNumber || '—'}</p>
     )
   }
 

@@ -101,12 +101,12 @@ export function SendReportEmailModal({
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-gray-900 border border-gray-800 rounded-lg shadow-xl max-w-lg w-full max-h-[90vh] overflow-hidden flex flex-col">
+    <div className="fixed inset-0 bg-white dark:bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-zinc-200 dark:bg-gray-900 border border-zinc-200 dark:border-gray-800 rounded-lg shadow-xl max-w-lg w-full max-h-[90vh] overflow-hidden flex flex-col">
         <div className="p-6 flex-shrink-0">
           <div className="flex items-center gap-2 mb-4">
             <Mail className="w-6 h-6 text-[#C27E00]" />
-            <h2 className="text-xl font-semibold text-white">Send Report by E-mail</h2>
+            <h2 className="text-xl font-semibold text-zinc-900 dark:text-white">Send Report by E-mail</h2>
           </div>
 
           {error && (
@@ -122,12 +122,12 @@ export function SendReportEmailModal({
           )}
 
           {loadingRecipients ? (
-            <p className="text-gray-400 py-4">Loading recipients...</p>
+            <p className="text-zinc-500 dark:text-gray-400 py-4">Loading recipients...</p>
           ) : (
             <div className="space-y-4">
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <label className="text-sm font-medium text-gray-300">Recipients (same dealer)</label>
+                  <label className="text-sm font-medium text-zinc-600 dark:text-gray-300">Recipients (same dealer)</label>
                   {recipients.length > 0 && (
                     <button
                       type="button"
@@ -138,23 +138,23 @@ export function SendReportEmailModal({
                     </button>
                   )}
                 </div>
-                <div className="max-h-40 overflow-y-auto border border-gray-700 rounded-md bg-black/30 p-2 space-y-2">
+                <div className="max-h-40 overflow-y-auto border border-zinc-300 dark:border-gray-700 rounded-md bg-zinc-100/90 dark:bg-black/30 p-2 space-y-2">
                   {recipients.length === 0 ? (
-                    <p className="text-gray-500 text-sm py-2">No other users in your dealer(s).</p>
+                    <p className="text-zinc-500 dark:text-gray-500 text-sm py-2">No other users in your dealer(s).</p>
                   ) : (
                     recipients.map((r) => (
                       <label
                         key={r.id}
-                        className="flex items-center gap-3 p-2 rounded hover:bg-white/5 cursor-pointer"
+                        className="flex items-center gap-3 p-2 rounded hover:bg-zinc-200/50 dark:bg-white/5 cursor-pointer"
                       >
                         <input
                           type="checkbox"
                           checked={selectedIds.has(r.id)}
                           onChange={() => handleToggle(r.id)}
-                          className="w-4 h-4 rounded border-gray-600 bg-black/50 text-[#C27E00] focus:ring-[#C27E00]"
+                          className="w-4 h-4 rounded border-zinc-300 dark:border-gray-600 bg-white dark:bg-black/50 text-[#C27E00] focus:ring-[#C27E00]"
                         />
-                        <span className="text-white text-sm">
-                          {r.full_name || 'Unknown'} <span className="text-gray-400">({r.role.replace('_', ' ')})</span>
+                        <span className="text-zinc-900 dark:text-white text-sm">
+                          {r.full_name || 'Unknown'} <span className="text-zinc-500 dark:text-gray-400">({r.role.replace('_', ' ')})</span>
                         </span>
                       </label>
                     ))
@@ -168,33 +168,33 @@ export function SendReportEmailModal({
                   id="includeAuroraManager"
                   checked={includeAuroraManager}
                   onChange={(e) => setIncludeAuroraManager(e.target.checked)}
-                  className="mt-1 w-4 h-4 rounded border-gray-700 bg-black/50 text-[#C27E00] focus:ring-[#C27E00]"
+                  className="mt-1 w-4 h-4 rounded border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 text-[#C27E00] focus:ring-[#C27E00]"
                 />
-                <label htmlFor="includeAuroraManager" className="text-white text-sm cursor-pointer">
+                <label htmlFor="includeAuroraManager" className="text-zinc-900 dark:text-white text-sm cursor-pointer">
                   Include Aurora Manager(s)
                 </label>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">Message (optional)</label>
+                <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300 mb-2">Message (optional)</label>
                 <textarea
                   value={optionalMessage}
                   onChange={(e) => setOptionalMessage(e.target.value)}
                   placeholder="Add a message to include in the email..."
                   rows={3}
-                  className="w-full border border-gray-700 bg-black/30 rounded-md p-3 text-white text-sm placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00] resize-none"
+                  className="w-full border border-zinc-300 dark:border-gray-700 bg-zinc-100/90 dark:bg-black/30 rounded-md p-3 text-zinc-900 dark:text-white text-sm placeholder-zinc-500 dark:placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00] resize-none"
                 />
               </div>
             </div>
           )}
         </div>
 
-        <div className="flex justify-end gap-3 p-6 pt-0 border-t border-gray-800 flex-shrink-0">
+        <div className="flex justify-end gap-3 p-6 pt-0 border-t border-zinc-200 dark:border-gray-800 flex-shrink-0">
           <button
             type="button"
             onClick={onClose}
             disabled={loading}
-            className="px-4 py-2 text-gray-300 hover:text-white transition-colors disabled:opacity-50"
+            className="px-4 py-2 text-zinc-600 dark:text-gray-300 hover:text-zinc-900 dark:text-white transition-colors disabled:opacity-50"
           >
             Cancel
           </button>

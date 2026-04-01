@@ -177,7 +177,7 @@ export function AutomationContent() {
 
   if (loading) {
     return (
-      <div className="text-gray-400 py-8 text-center">
+      <div className="text-zinc-500 dark:text-gray-400 py-8 text-center">
         Loading automations...
       </div>
     )
@@ -186,8 +186,8 @@ export function AutomationContent() {
   return (
     <div className="space-y-8">
       <div>
-        <h3 className="text-lg font-semibold text-white mb-2">Automation</h3>
-        <p className="text-sm text-gray-400 mb-4">
+        <h3 className="text-lg font-semibold text-zinc-900 dark:text-white mb-2">Automation</h3>
+        <p className="text-sm text-zinc-500 dark:text-gray-400 mb-4">
           View, edit, and add automated tasks. Scheduled tasks run on a cron (e.g. hourly).
           Event-triggered tasks run when you perform an action (e.g. approve demand).
         </p>
@@ -226,7 +226,7 @@ export function AutomationContent() {
           const catInfo = AUTOMATION_CATEGORIES[category]
           return (
             <div key={category} className="space-y-3">
-              <div className="flex items-center gap-2 text-gray-300">
+              <div className="flex items-center gap-2 text-zinc-600 dark:text-gray-300">
                 <CatIcon className="w-5 h-5 text-[#C27E00]" />
                 <h4 className="font-semibold">{catInfo.name}</h4>
               </div>
@@ -238,7 +238,7 @@ export function AutomationContent() {
                   return (
           <div
             key={item.id}
-            className="bg-black/30 rounded-lg border border-gray-800 p-4 flex items-start justify-between gap-4"
+            className="bg-zinc-100/90 dark:bg-black/30 rounded-lg border border-zinc-200 dark:border-gray-800 p-4 flex items-start justify-between gap-4"
           >
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-3 mb-1">
@@ -247,25 +247,25 @@ export function AutomationContent() {
                 ) : (
                   <MousePointerClick className="w-5 h-5 text-blue-400 shrink-0" />
                 )}
-                <span className="font-medium text-white">{displayName}</span>
+                <span className="font-medium text-zinc-900 dark:text-white">{displayName}</span>
                 <span
                   className={`text-xs px-2 py-0.5 rounded ${
-                    item.enabled ? 'bg-green-900/50 text-green-300' : 'bg-gray-700 text-gray-400'
+                    item.enabled ? 'bg-green-900/50 text-green-300' : 'bg-gray-700 text-zinc-500 dark:text-gray-400'
                   }`}
                 >
                   {item.enabled ? 'Enabled' : 'Disabled'}
                 </span>
               </div>
               {displayDescription && (
-                <p className="text-sm text-gray-400 ml-8">{displayDescription}</p>
+                <p className="text-sm text-zinc-500 dark:text-gray-400 ml-8">{displayDescription}</p>
               )}
               {item.templateId === 'camera_low_stock_alert' && (
-                <p className="text-sm text-gray-500 ml-8 mt-1">
+                <p className="text-sm text-zinc-500 dark:text-gray-500 ml-8 mt-1">
                   Threshold: {String(item.params?.threshold ?? 5)} items • Dealer and camera model configurable
                 </p>
               )}
               {isReportingTemplate(item.templateId) && (
-                <p className="text-sm text-gray-500 ml-8 mt-1">
+                <p className="text-sm text-zinc-500 dark:text-gray-500 ml-8 mt-1">
                   Time: {String(item.params?.scheduleTime ?? '09:00')} • Recipient: {String(item.params?.recipientType ?? 'aurora_manager')}
                 </p>
               )}
@@ -276,7 +276,7 @@ export function AutomationContent() {
                   type="button"
                   onClick={() => handleReportPreview(item)}
                   disabled={reportPreviewLoading}
-                  className="p-2 text-gray-400 hover:text-[#C27E00] hover:bg-white/5 rounded transition-colors disabled:opacity-50"
+                  className="p-2 text-zinc-500 dark:text-gray-400 hover:text-[#C27E00] hover:bg-zinc-200/50 dark:bg-white/5 rounded transition-colors disabled:opacity-50"
                   title="Report preview"
                 >
                   <Eye className="w-4 h-4" />
@@ -285,7 +285,7 @@ export function AutomationContent() {
               <button
                 type="button"
                 onClick={() => openEdit(item)}
-                className="p-2 text-gray-400 hover:text-white hover:bg-white/5 rounded transition-colors"
+                className="p-2 text-zinc-500 dark:text-gray-400 hover:text-zinc-900 dark:text-white hover:bg-zinc-200/50 dark:bg-white/5 rounded transition-colors"
                 title="Edit"
               >
                 <Pencil className="w-4 h-4" />
@@ -295,7 +295,7 @@ export function AutomationContent() {
                   type="button"
                   onClick={() => handleRemove(item.id)}
                   disabled={removingId === item.id}
-                  className="p-2 text-gray-400 hover:text-red-400 hover:bg-red-900/20 rounded transition-colors disabled:opacity-50"
+                  className="p-2 text-zinc-500 dark:text-gray-400 hover:text-red-400 hover:bg-red-900/20 rounded transition-colors disabled:opacity-50"
                   title="Remove"
                 >
                   <Trash2 className="w-4 h-4" />
@@ -313,9 +313,9 @@ export function AutomationContent() {
 
       {/* Edit modal */}
       {editingId && editForm && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4 overflow-y-auto">
-          <div className="bg-gray-900 border border-gray-700 rounded-lg max-w-lg w-full p-6 shadow-xl my-8">
-            <h4 className="text-lg font-semibold text-white mb-4">Edit Automation</h4>
+        <div className="fixed inset-0 bg-zinc-900/50 dark:bg-black/70 flex items-center justify-center z-50 p-4 overflow-y-auto">
+          <div className="bg-zinc-200 dark:bg-gray-900 border border-zinc-300 dark:border-gray-700 rounded-lg max-w-lg w-full p-6 shadow-xl my-8">
+            <h4 className="text-lg font-semibold text-zinc-900 dark:text-white mb-4">Edit Automation</h4>
             {editingItem && (
               <>
                 <div className="space-y-4">
@@ -326,15 +326,15 @@ export function AutomationContent() {
                       onChange={(e) =>
                         setEditForm((f) => f && { ...f, enabled: e.target.checked })
                       }
-                      className="rounded border-gray-600 bg-black/50 text-[#C27E00] focus:ring-[#C27E00]"
+                      className="rounded border-zinc-300 dark:border-gray-600 bg-white dark:bg-black/50 text-[#C27E00] focus:ring-[#C27E00]"
                     />
-                    <span className="text-sm text-gray-300">Enabled</span>
+                    <span className="text-sm text-zinc-600 dark:text-gray-300">Enabled</span>
                   </label>
 
                   {isReportingTemplate(editingItem.templateId) && (
                     <div className="space-y-4">
                       <div>
-                        <label className="block text-sm font-medium text-gray-300 mb-1">Send time (HH:mm)</label>
+                        <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300 mb-1">Send time (HH:mm)</label>
                         <input
                           type="text"
                           value={String(editForm.params?.scheduleTime ?? '09:00')}
@@ -344,11 +344,11 @@ export function AutomationContent() {
                             )
                           }
                           placeholder="09:00"
-                          className="w-full border border-gray-700 bg-black/50 text-white rounded px-3 py-2 text-sm"
+                          className="w-full border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 text-zinc-900 dark:text-white rounded px-3 py-2 text-sm"
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-300 mb-1">Recipient type</label>
+                        <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300 mb-1">Recipient type</label>
                         <select
                           value={String(editForm.params?.recipientType ?? 'aurora_manager')}
                           onChange={(e) =>
@@ -356,7 +356,7 @@ export function AutomationContent() {
                               f ? { ...f, params: { ...f.params, recipientType: e.target.value } } : null
                             )
                           }
-                          className="w-full border border-gray-700 bg-black/50 text-white rounded px-3 py-2 text-sm"
+                          className="w-full border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 text-zinc-900 dark:text-white rounded px-3 py-2 text-sm"
                         >
                           <option value="aurora_manager">Aurora Manager</option>
                           <option value="role_based">Role based (dealer/sales/finance)</option>
@@ -364,17 +364,17 @@ export function AutomationContent() {
                         </select>
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-300 mb-1">Custom email addresses (comma-separated)</label>
+                        <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300 mb-1">Custom email addresses (comma-separated)</label>
                         <input
                           type="text"
                           value={String(editForm.params?.customEmails ?? '')}
                           onChange={(e) =>
                             setEditForm((f) =>
-                              f ? { ...f, params: { ...f.params, customEmails: e.target.value } } : null
+                              f ? { ...f, params: { ...f.params, customEmails: e.target.value.toLowerCase() } } : null
                             )
                           }
                           placeholder="a@x.com, b@y.com"
-                          className="w-full border border-gray-700 bg-black/50 text-white rounded px-3 py-2 text-sm"
+                          className="w-full border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 text-zinc-900 dark:text-white rounded px-3 py-2 text-sm"
                         />
                       </div>
                       <label className="flex items-center gap-2 cursor-pointer">
@@ -386,13 +386,13 @@ export function AutomationContent() {
                               f ? { ...f, params: { ...f.params, includePdfAttachment: e.target.checked } } : null
                             )
                           }
-                          className="rounded border-gray-600 bg-black/50 text-[#C27E00] focus:ring-[#C27E00]"
+                          className="rounded border-zinc-300 dark:border-gray-600 bg-white dark:bg-black/50 text-[#C27E00] focus:ring-[#C27E00]"
                         />
-                        <span className="text-sm text-gray-300">Send with PDF attachment</span>
+                        <span className="text-sm text-zinc-600 dark:text-gray-300">Send with PDF attachment</span>
                       </label>
                       {isAdminReportingTemplate(editingItem.templateId) && (
                         <div>
-                          <label className="block text-sm font-medium text-gray-300 mb-1">Dealer (all if empty)</label>
+                          <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300 mb-1">Dealer (all if empty)</label>
                           <select
                             value={String(editForm.params?.dealerId ?? '')}
                             onChange={(e) =>
@@ -400,7 +400,7 @@ export function AutomationContent() {
                                 f ? { ...f, params: { ...f.params, dealerId: e.target.value } } : null
                               )
                             }
-                            className="w-full border border-gray-700 bg-black/50 text-white rounded px-3 py-2 text-sm"
+                            className="w-full border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 text-zinc-900 dark:text-white rounded px-3 py-2 text-sm"
                           >
                             <option value="">-- All dealers --</option>
                             {dealers.map((d) => (
@@ -427,7 +427,7 @@ export function AutomationContent() {
                           }
                         }}
                         disabled={reportPreviewLoading}
-                        className="inline-flex items-center gap-2 px-3 py-2 text-sm bg-white/5 border border-gray-600 text-gray-300 hover:text-white hover:bg-white/10 rounded transition-colors disabled:opacity-50"
+                        className="inline-flex items-center gap-2 px-3 py-2 text-sm bg-zinc-200/50 dark:bg-white/5 border border-zinc-300 dark:border-gray-600 text-zinc-600 dark:text-gray-300 hover:text-zinc-900 dark:text-white hover:bg-zinc-200 dark:bg-white/10 rounded transition-colors disabled:opacity-50"
                       >
                         <Eye className="w-4 h-4" />
                         {reportPreviewLoading ? 'Loading...' : 'Preview'}
@@ -438,7 +438,7 @@ export function AutomationContent() {
                   {editingItem.templateId === 'camera_low_stock_alert' && (
                     <div className="space-y-4">
                       <div>
-                        <label className="block text-sm font-medium text-gray-300 mb-1">Dealer</label>
+                        <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300 mb-1">Dealer</label>
                         <select
                           value={String(editForm.params?.dealerId ?? '')}
                           onChange={(e) =>
@@ -448,7 +448,7 @@ export function AutomationContent() {
                                 : null
                             )
                           }
-                          className="w-full border border-gray-700 bg-black/50 text-white rounded px-3 py-2 text-sm"
+                          className="w-full border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 text-zinc-900 dark:text-white rounded px-3 py-2 text-sm"
                         >
                           <option value="">-- Select dealer --</option>
                           {dealers.map((d) => (
@@ -459,7 +459,7 @@ export function AutomationContent() {
                         </select>
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-300 mb-1">Camera model</label>
+                        <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300 mb-1">Camera model</label>
                         <select
                           value={String(editForm.params?.cameraModelId ?? '')}
                           onChange={(e) =>
@@ -469,7 +469,7 @@ export function AutomationContent() {
                                 : null
                             )
                           }
-                          className="w-full border border-gray-700 bg-black/50 text-white rounded px-3 py-2 text-sm"
+                          className="w-full border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 text-zinc-900 dark:text-white rounded px-3 py-2 text-sm"
                         >
                           <option value="">-- Select camera model --</option>
                           {cameras.map((c) => (
@@ -480,7 +480,7 @@ export function AutomationContent() {
                         </select>
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-300 mb-1">Threshold (stock count)</label>
+                        <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300 mb-1">Threshold (stock count)</label>
                         <input
                           type="number"
                           min={0}
@@ -492,9 +492,9 @@ export function AutomationContent() {
                                 : null
                             )
                           }
-                          className="w-full border border-gray-700 bg-black/50 text-white rounded px-3 py-2 text-sm"
+                          className="w-full border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 text-zinc-900 dark:text-white rounded px-3 py-2 text-sm"
                         />
-                        <p className="text-xs text-gray-500 mt-1">
+                        <p className="text-xs text-zinc-500 dark:text-gray-500 mt-1">
                           Alert is sent when stock falls below this number
                         </p>
                       </div>
@@ -505,7 +505,7 @@ export function AutomationContent() {
                   <button
                     type="button"
                     onClick={closeEdit}
-                    className="px-4 py-2 text-gray-300 hover:text-white border border-gray-600 rounded transition-colors"
+                    className="px-4 py-2 text-zinc-600 dark:text-gray-300 hover:text-zinc-900 dark:text-white border border-zinc-300 dark:border-gray-600 rounded transition-colors"
                   >
                     Cancel
                   </button>
@@ -526,12 +526,12 @@ export function AutomationContent() {
 
       {/* Add modal */}
       {showAddModal && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-          <div className="bg-gray-900 border border-gray-700 rounded-lg max-w-md w-full p-6 shadow-xl">
-            <h4 className="text-lg font-semibold text-white mb-4">Add Automation</h4>
+        <div className="fixed inset-0 bg-zinc-900/50 dark:bg-black/70 flex items-center justify-center z-50 p-4">
+          <div className="bg-zinc-200 dark:bg-gray-900 border border-zinc-300 dark:border-gray-700 rounded-lg max-w-md w-full p-6 shadow-xl">
+            <h4 className="text-lg font-semibold text-zinc-900 dark:text-white mb-4">Add Automation</h4>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">
+                <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300 mb-1">
                   Template
                 </label>
                 <select
@@ -547,7 +547,7 @@ export function AutomationContent() {
                       if (res.cameras) setAddCameras(res.cameras)
                     }
                   }}
-                  className="w-full border border-gray-700 bg-black/50 text-white rounded px-3 py-2 text-sm"
+                  className="w-full border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 text-zinc-900 dark:text-white rounded px-3 py-2 text-sm"
                 >
                   <option value="">-- Select template --</option>
                   {categoriesOrder.map((cat) => {
@@ -571,21 +571,21 @@ export function AutomationContent() {
                   {isReportingTemplate(addTemplateId) && (
                     <div className="space-y-4">
                       <div>
-                        <label className="block text-sm font-medium text-gray-300 mb-1">Send time (HH:mm)</label>
+                        <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300 mb-1">Send time (HH:mm)</label>
                         <input
                           type="text"
                           value={String(addParams.scheduleTime ?? '09:00')}
                           onChange={(e) => setAddParams((p) => ({ ...p, scheduleTime: e.target.value }))}
                           placeholder="09:00"
-                          className="w-full border border-gray-700 bg-black/50 text-white rounded px-3 py-2 text-sm"
+                          className="w-full border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 text-zinc-900 dark:text-white rounded px-3 py-2 text-sm"
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-300 mb-1">Recipient type</label>
+                        <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300 mb-1">Recipient type</label>
                         <select
                           value={String(addParams.recipientType ?? 'aurora_manager')}
                           onChange={(e) => setAddParams((p) => ({ ...p, recipientType: e.target.value }))}
-                          className="w-full border border-gray-700 bg-black/50 text-white rounded px-3 py-2 text-sm"
+                          className="w-full border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 text-zinc-900 dark:text-white rounded px-3 py-2 text-sm"
                         >
                           <option value="aurora_manager">Aurora Manager</option>
                           <option value="role_based">Role based</option>
@@ -593,13 +593,13 @@ export function AutomationContent() {
                         </select>
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-300 mb-1">Custom email addresses (comma-separated)</label>
+                        <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300 mb-1">Custom email addresses (comma-separated)</label>
                         <input
                           type="text"
                           value={String(addParams.customEmails ?? '')}
-                          onChange={(e) => setAddParams((p) => ({ ...p, customEmails: e.target.value }))}
+                          onChange={(e) => setAddParams((p) => ({ ...p, customEmails: e.target.value.toLowerCase() }))}
                           placeholder="a@x.com, b@y.com"
-                          className="w-full border border-gray-700 bg-black/50 text-white rounded px-3 py-2 text-sm"
+                          className="w-full border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 text-zinc-900 dark:text-white rounded px-3 py-2 text-sm"
                         />
                       </div>
                       <label className="flex items-center gap-2 cursor-pointer">
@@ -607,17 +607,17 @@ export function AutomationContent() {
                           type="checkbox"
                           checked={Boolean(addParams.includePdfAttachment ?? true)}
                           onChange={(e) => setAddParams((p) => ({ ...p, includePdfAttachment: e.target.checked }))}
-                          className="rounded border-gray-600 bg-black/50 text-[#C27E00] focus:ring-[#C27E00]"
+                          className="rounded border-zinc-300 dark:border-gray-600 bg-white dark:bg-black/50 text-[#C27E00] focus:ring-[#C27E00]"
                         />
-                        <span className="text-sm text-gray-300">Send with PDF attachment</span>
+                        <span className="text-sm text-zinc-600 dark:text-gray-300">Send with PDF attachment</span>
                       </label>
                       {addTemplateId && isAdminReportingTemplate(addTemplateId) && (
                         <div>
-                          <label className="block text-sm font-medium text-gray-300 mb-1">Dealer (all if empty)</label>
+                          <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300 mb-1">Dealer (all if empty)</label>
                           <select
                             value={String(addParams.dealerId ?? '')}
                             onChange={(e) => setAddParams((p) => ({ ...p, dealerId: e.target.value }))}
-                            className="w-full border border-gray-700 bg-black/50 text-white rounded px-3 py-2 text-sm"
+                            className="w-full border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 text-zinc-900 dark:text-white rounded px-3 py-2 text-sm"
                           >
                             <option value="">-- All dealers --</option>
                             {addDealers.map((d) => (
@@ -631,11 +631,11 @@ export function AutomationContent() {
                   {addTemplateId === 'camera_low_stock_alert' && (
                     <div className="space-y-4">
                       <div>
-                        <label className="block text-sm font-medium text-gray-300 mb-1">Dealer</label>
+                        <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300 mb-1">Dealer</label>
                         <select
                           value={String(addParams.dealerId ?? '')}
                           onChange={(e) => setAddParams((p) => ({ ...p, dealerId: e.target.value }))}
-                          className="w-full border border-gray-700 bg-black/50 text-white rounded px-3 py-2 text-sm"
+                          className="w-full border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 text-zinc-900 dark:text-white rounded px-3 py-2 text-sm"
                         >
                           <option value="">-- Select dealer --</option>
                           {addDealers.map((d) => (
@@ -644,11 +644,11 @@ export function AutomationContent() {
                         </select>
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-300 mb-1">Camera model</label>
+                        <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300 mb-1">Camera model</label>
                         <select
                           value={String(addParams.cameraModelId ?? '')}
                           onChange={(e) => setAddParams((p) => ({ ...p, cameraModelId: e.target.value }))}
-                          className="w-full border border-gray-700 bg-black/50 text-white rounded px-3 py-2 text-sm"
+                          className="w-full border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 text-zinc-900 dark:text-white rounded px-3 py-2 text-sm"
                         >
                           <option value="">-- Select camera model --</option>
                           {addCameras.map((c) => (
@@ -657,13 +657,13 @@ export function AutomationContent() {
                         </select>
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-300 mb-1">Threshold (stock count)</label>
+                        <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300 mb-1">Threshold (stock count)</label>
                         <input
                           type="number"
                           min={0}
                           value={Number(addParams.threshold ?? 5)}
                           onChange={(e) => setAddParams((p) => ({ ...p, threshold: Number(e.target.value) || 0 }))}
-                          className="w-full border border-gray-700 bg-black/50 text-white rounded px-3 py-2 text-sm"
+                          className="w-full border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 text-zinc-900 dark:text-white rounded px-3 py-2 text-sm"
                         />
                       </div>
                     </div>
@@ -679,7 +679,7 @@ export function AutomationContent() {
                   setAddTemplateId('')
                   setAddParams({})
                 }}
-                className="px-4 py-2 text-gray-300 hover:text-white border border-gray-600 rounded transition-colors"
+                className="px-4 py-2 text-zinc-600 dark:text-gray-300 hover:text-zinc-900 dark:text-white border border-zinc-300 dark:border-gray-600 rounded transition-colors"
               >
                 Cancel
               </button>

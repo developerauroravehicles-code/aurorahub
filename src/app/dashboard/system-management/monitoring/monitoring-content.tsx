@@ -29,97 +29,97 @@ export function MonitoringContent({
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Link
           href="/dashboard/identity/users"
-          className="rounded-lg border border-gray-800 bg-black/30 p-4 hover:bg-white/5 hover:border-gray-700 transition-colors"
+          className="rounded-lg border border-zinc-200 dark:border-gray-800 bg-zinc-100/90 dark:bg-black/30 p-4 hover:bg-zinc-200/50 dark:bg-white/5 hover:border-zinc-300 dark:border-gray-700 transition-colors"
         >
-          <div className="flex items-center gap-2 text-gray-400 mb-2">
+          <div className="flex items-center gap-2 text-zinc-500 dark:text-gray-400 mb-2">
             <Users className="h-4 w-4" />
             <span className="text-sm">Users</span>
           </div>
-          <div className="text-2xl font-semibold text-white">{profilesCount}</div>
-          <p className="text-xs text-gray-500 mt-1">Platform user accounts</p>
+          <div className="text-2xl font-semibold text-zinc-900 dark:text-white">{profilesCount}</div>
+          <p className="text-xs text-zinc-500 dark:text-gray-500 mt-1">Platform user accounts</p>
         </Link>
         <Link
           href="/dashboard/admin/demands"
-          className="rounded-lg border border-gray-800 bg-black/30 p-4 hover:bg-white/5 hover:border-gray-700 transition-colors"
+          className="rounded-lg border border-zinc-200 dark:border-gray-800 bg-zinc-100/90 dark:bg-black/30 p-4 hover:bg-zinc-200/50 dark:bg-white/5 hover:border-zinc-300 dark:border-gray-700 transition-colors"
         >
-          <div className="flex items-center gap-2 text-gray-400 mb-2">
+          <div className="flex items-center gap-2 text-zinc-500 dark:text-gray-400 mb-2">
             <FileText className="h-4 w-4" />
             <span className="text-sm">Demands</span>
           </div>
-          <div className="text-2xl font-semibold text-white">{demandsCount}</div>
-          <p className="text-xs text-gray-500 mt-1">Total appointment demands</p>
+          <div className="text-2xl font-semibold text-zinc-900 dark:text-white">{demandsCount}</div>
+          <p className="text-xs text-zinc-500 dark:text-gray-500 mt-1">Total appointment demands</p>
         </Link>
         <Link
           href="/dashboard/configuration/dealers"
-          className="rounded-lg border border-gray-800 bg-black/30 p-4 hover:bg-white/5 hover:border-gray-700 transition-colors"
+          className="rounded-lg border border-zinc-200 dark:border-gray-800 bg-zinc-100/90 dark:bg-black/30 p-4 hover:bg-zinc-200/50 dark:bg-white/5 hover:border-zinc-300 dark:border-gray-700 transition-colors"
         >
-          <div className="flex items-center gap-2 text-gray-400 mb-2">
+          <div className="flex items-center gap-2 text-zinc-500 dark:text-gray-400 mb-2">
             <Building2 className="h-4 w-4" />
             <span className="text-sm">Dealers</span>
           </div>
-          <div className="text-2xl font-semibold text-white">{dealersCount}</div>
-          <p className="text-xs text-gray-500 mt-1">Active dealers</p>
+          <div className="text-2xl font-semibold text-zinc-900 dark:text-white">{dealersCount}</div>
+          <p className="text-xs text-zinc-500 dark:text-gray-500 mt-1">Active dealers</p>
         </Link>
-        <div className="rounded-lg border border-gray-800 bg-black/30 p-4">
-          <div className="flex items-center gap-2 text-gray-400 mb-2">
+        <div className="rounded-lg border border-zinc-200 dark:border-gray-800 bg-zinc-100/90 dark:bg-black/30 p-4">
+          <div className="flex items-center gap-2 text-zinc-500 dark:text-gray-400 mb-2">
             <Database className="h-4 w-4" />
             <span className="text-sm">Database</span>
           </div>
           <div className={`text-2xl font-semibold ${dbOk ? 'text-green-400' : 'text-red-400'}`}>
             {dbOk ? 'Active' : 'Error'}
           </div>
-          <p className="text-xs text-gray-500 mt-1">Supabase connection</p>
+          <p className="text-xs text-zinc-500 dark:text-gray-500 mt-1">Supabase connection</p>
         </div>
       </div>
 
       <div>
-        <h4 className="text-sm font-medium text-gray-400 mb-3">Demand status breakdown</h4>
+        <h4 className="text-sm font-medium text-zinc-500 dark:text-gray-400 mb-3">Demand status breakdown</h4>
         <div className="grid gap-3 sm:grid-cols-3">
-          <div className="flex items-center gap-3 rounded-lg border border-gray-800 bg-black/30 p-3">
+          <div className="flex items-center gap-3 rounded-lg border border-zinc-200 dark:border-gray-800 bg-zinc-100/90 dark:bg-black/30 p-3">
             <Clock className="h-5 w-5 text-amber-400" />
             <div>
-              <div className="font-medium text-white">{pending}</div>
-              <div className="text-xs text-gray-500">Pending / Approved</div>
+              <div className="font-medium text-zinc-900 dark:text-white">{pending}</div>
+              <div className="text-xs text-zinc-500 dark:text-gray-500">Pending / Approved</div>
             </div>
           </div>
-          <div className="flex items-center gap-3 rounded-lg border border-gray-800 bg-black/30 p-3">
+          <div className="flex items-center gap-3 rounded-lg border border-zinc-200 dark:border-gray-800 bg-zinc-100/90 dark:bg-black/30 p-3">
             <CheckCircle className="h-5 w-5 text-green-400" />
             <div>
-              <div className="font-medium text-white">{completed}</div>
-              <div className="text-xs text-gray-500">Completed</div>
+              <div className="font-medium text-zinc-900 dark:text-white">{completed}</div>
+              <div className="text-xs text-zinc-500 dark:text-gray-500">Completed</div>
             </div>
           </div>
-          <div className="flex items-center gap-3 rounded-lg border border-gray-800 bg-black/30 p-3">
-            <XCircle className="h-5 w-5 text-gray-500" />
+          <div className="flex items-center gap-3 rounded-lg border border-zinc-200 dark:border-gray-800 bg-zinc-100/90 dark:bg-black/30 p-3">
+            <XCircle className="h-5 w-5 text-zinc-500 dark:text-gray-500" />
             <div>
-              <div className="font-medium text-white">{cancelled}</div>
-              <div className="text-xs text-gray-500">Cancelled</div>
+              <div className="font-medium text-zinc-900 dark:text-white">{cancelled}</div>
+              <div className="text-xs text-zinc-500 dark:text-gray-500">Cancelled</div>
             </div>
           </div>
         </div>
       </div>
 
       <div>
-        <h4 className="text-sm font-medium text-gray-400 mb-3">Message activity (last 30 days)</h4>
+        <h4 className="text-sm font-medium text-zinc-500 dark:text-gray-400 mb-3">Message activity (last 30 days)</h4>
         <div className="grid gap-3 sm:grid-cols-2">
           <Link
             href="/dashboard/observability/logs?type=sms"
-            className="flex items-center gap-3 rounded-lg border border-gray-800 bg-black/30 p-3 hover:bg-white/5 hover:border-gray-700 transition-colors"
+            className="flex items-center gap-3 rounded-lg border border-zinc-200 dark:border-gray-800 bg-zinc-100/90 dark:bg-black/30 p-3 hover:bg-zinc-200/50 dark:bg-white/5 hover:border-zinc-300 dark:border-gray-700 transition-colors"
           >
             <MessageSquare className="h-5 w-5 text-blue-400" />
             <div>
-              <div className="font-medium text-white">{smsLogsCount}</div>
-              <div className="text-xs text-gray-500">SMS sent</div>
+              <div className="font-medium text-zinc-900 dark:text-white">{smsLogsCount}</div>
+              <div className="text-xs text-zinc-500 dark:text-gray-500">SMS sent</div>
             </div>
           </Link>
           <Link
             href="/dashboard/observability/logs?type=mail"
-            className="flex items-center gap-3 rounded-lg border border-gray-800 bg-black/30 p-3 hover:bg-white/5 hover:border-gray-700 transition-colors"
+            className="flex items-center gap-3 rounded-lg border border-zinc-200 dark:border-gray-800 bg-zinc-100/90 dark:bg-black/30 p-3 hover:bg-zinc-200/50 dark:bg-white/5 hover:border-zinc-300 dark:border-gray-700 transition-colors"
           >
             <Mail className="h-5 w-5 text-amber-400" />
             <div>
-              <div className="font-medium text-white">{mailLogsCount}</div>
-              <div className="text-xs text-gray-500">Emails sent</div>
+              <div className="font-medium text-zinc-900 dark:text-white">{mailLogsCount}</div>
+              <div className="text-xs text-zinc-500 dark:text-gray-500">Emails sent</div>
             </div>
           </Link>
         </div>
@@ -130,7 +130,7 @@ export function MonitoringContent({
         <span className="text-sm text-green-300">System status: Healthy</span>
       </div>
 
-      <p className="text-sm text-gray-500">
+      <p className="text-sm text-zinc-500 dark:text-gray-500">
         Advanced monitoring (CPU, RAM, API latency, error rate) will be added in a future release.
       </p>
     </div>

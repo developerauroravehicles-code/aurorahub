@@ -10,7 +10,7 @@ export function SystemManagementPageTitle() {
   const categoryName = getCategoryNameFromPath(pathname ?? '', search)
 
   return (
-    <h1 className="text-2xl font-semibold mb-6 text-white">
+    <h1 className="text-2xl font-semibold mb-6 text-zinc-900 dark:text-white">
       {categoryName}
     </h1>
   )

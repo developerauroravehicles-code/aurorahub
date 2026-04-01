@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { createPersonnel } from './actions'
+import { EmailInput } from '@/components/email-input'
 import { useRouter } from 'next/navigation'
 
 const WORKER_TYPES = [
@@ -95,15 +96,15 @@ export function PersonnelForm({
     else router.push('/dashboard/hr/personnel')
   }
 
-  const inputClass = 'w-full rounded-md bg-white/5 border border-gray-700 text-white px-3 py-2 text-sm focus:ring-1 focus:ring-[#C27E00]'
-  const selectClass = 'w-full rounded-md bg-gray-900 border border-gray-700 text-white px-3 py-2 text-sm focus:ring-1 focus:ring-[#C27E00] focus:outline-none [&>option]:bg-gray-900 [&>option]:text-white'
-  const labelClass = 'block text-sm text-gray-400 mb-1'
+  const inputClass = 'w-full rounded-md bg-zinc-200/50 dark:bg-white/5 border border-zinc-300 dark:border-gray-700 text-white px-3 py-2 text-sm focus:ring-1 focus:ring-[#C27E00]'
+  const selectClass = 'w-full rounded-md bg-zinc-200 dark:bg-gray-900 border border-zinc-300 dark:border-gray-700 text-white px-3 py-2 text-sm focus:ring-1 focus:ring-[#C27E00] focus:outline-none [&>option]:bg-zinc-200 dark:bg-gray-900 [&>option]:text-white'
+  const labelClass = 'block text-sm text-zinc-500 dark:text-gray-400 mb-1'
 
   return (
     <form onSubmit={handleSubmit} className="space-y-8">
       {/* Basic Info */}
-      <div className="bg-white/5 rounded-lg border border-gray-800 p-6">
-        <h2 className="text-lg font-semibold text-white mb-4">Basic Information</h2>
+      <div className="bg-zinc-200/50 dark:bg-white/5 rounded-lg border border-zinc-200 dark:border-gray-800 p-6">
+        <h2 className="text-lg font-semibold text-zinc-900 dark:text-white mb-4">Basic Information</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="md:col-span-2">
             <label className={labelClass}>Full Name *</label>
@@ -131,7 +132,7 @@ export function PersonnelForm({
           </div>
           <div>
             <label className={labelClass}>Email</label>
-            <input name="email" type="email" className={inputClass} />
+            <EmailInput name="email" className={inputClass} />
           </div>
           <div className="md:col-span-2">
             <label className={labelClass}>Address</label>
@@ -149,8 +150,8 @@ export function PersonnelForm({
       </div>
 
       {/* Identity & Verification (Canada) */}
-      <div className="bg-white/5 rounded-lg border border-gray-800 p-6">
-        <h2 className="text-lg font-semibold text-white mb-4">Identity & Verification (Canada)</h2>
+      <div className="bg-zinc-200/50 dark:bg-white/5 rounded-lg border border-zinc-200 dark:border-gray-800 p-6">
+        <h2 className="text-lg font-semibold text-zinc-900 dark:text-white mb-4">Identity & Verification (Canada)</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className={labelClass}>Government ID</label>
@@ -199,8 +200,8 @@ export function PersonnelForm({
       </div>
 
       {/* Professional Info */}
-      <div className="bg-white/5 rounded-lg border border-gray-800 p-6">
-        <h2 className="text-lg font-semibold text-white mb-4">Professional Information</h2>
+      <div className="bg-zinc-200/50 dark:bg-white/5 rounded-lg border border-zinc-200 dark:border-gray-800 p-6">
+        <h2 className="text-lg font-semibold text-zinc-900 dark:text-white mb-4">Professional Information</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className={labelClass}>Position</label>
@@ -261,8 +262,8 @@ export function PersonnelForm({
       </div>
 
       {/* Salary / Compensation */}
-      <div className="bg-white/5 rounded-lg border border-gray-800 p-6">
-        <h2 className="text-lg font-semibold text-white mb-4">Salary & Compensation</h2>
+      <div className="bg-zinc-200/50 dark:bg-white/5 rounded-lg border border-zinc-200 dark:border-gray-800 p-6">
+        <h2 className="text-lg font-semibold text-zinc-900 dark:text-white mb-4">Salary & Compensation</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
             <label className={labelClass}>Amount</label>

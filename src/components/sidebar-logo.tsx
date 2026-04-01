@@ -24,21 +24,21 @@ export function SidebarLogo() {
 
   if (logoUrl) {
     return (
-      <div className="flex flex-col items-center justify-center h-24 px-4 py-4 border-b border-gray-800 bg-white/5">
+      <div className="flex flex-col items-center justify-center h-24 px-4 py-4 border-b border-zinc-200 dark:border-gray-800 bg-zinc-200/50 dark:bg-white/5">
         <img
           src={logoUrl}
           alt="Aurora Vehicles"
           className="max-h-16 max-w-full object-contain mb-2"
         />
-        <p className="text-xs font-semibold text-gray-300 tracking-wider">AURORA VEHICLES</p>
+        <p className="text-xs font-semibold text-zinc-600 dark:text-gray-300 tracking-wider">AURORA VEHICLES</p>
       </div>
     )
   }
 
   return (
-    <div className="flex flex-col h-24 items-center justify-center px-4 py-4 border-b border-gray-800 bg-white/5">
+    <div className="flex flex-col h-24 items-center justify-center px-4 py-4 border-b border-zinc-200 dark:border-gray-800 bg-zinc-200/50 dark:bg-white/5">
       <div className="text-2xl font-bold tracking-wider text-[#C27E00] mb-1">A</div>
-      <p className="text-xs font-semibold text-gray-300 tracking-wider">AURORA VEHICLES</p>
+      <p className="text-xs font-semibold text-zinc-600 dark:text-gray-300 tracking-wider">AURORA VEHICLES</p>
     </div>
   )
 }

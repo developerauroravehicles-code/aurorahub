@@ -49,7 +49,7 @@ export default async function AdminDemandsPage({
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-semibold mb-4 text-white">All Demands</h1>
+        <h1 className="text-2xl font-semibold mb-4 text-zinc-900 dark:text-white">All Demands</h1>
         <DemandsList
           demands={demands || []}
           dealers={dealers || []}

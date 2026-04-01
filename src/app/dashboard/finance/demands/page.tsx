@@ -88,8 +88,8 @@ export default async function FinanceDemandsPage() {
     <div className="space-y-8">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold text-white mb-2">Demand Management</h1>
-          <p className="text-gray-400">Create new demands, assign demands from the pool, or manage your assigned demands.</p>
+          <h1 className="text-2xl font-semibold text-zinc-900 dark:text-white mb-2">Demand Management</h1>
+          <p className="text-zinc-500 dark:text-gray-400">Create new demands, assign demands from the pool, or manage your assigned demands.</p>
         </div>
         <Link
           href="/dashboard/finance/demands/new"

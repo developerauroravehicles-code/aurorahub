@@ -31,15 +31,15 @@ export function OnboardingTaskForm({
   }
 
   return (
-    <div className="bg-white/5 rounded-lg border border-gray-800 p-6">
-      <h2 className="text-lg font-semibold text-white mb-4">Add Onboarding Task</h2>
+    <div className="bg-zinc-200/50 dark:bg-white/5 rounded-lg border border-zinc-200 dark:border-gray-800 p-6">
+      <h2 className="text-lg font-semibold text-zinc-900 dark:text-white mb-4">Add Onboarding Task</h2>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label className="block text-sm text-gray-400 mb-1">Employee</label>
+          <label className="block text-sm text-zinc-500 dark:text-gray-400 mb-1">Employee</label>
           <select
             name="profile_id"
             required
-            className="w-full rounded-md bg-gray-900 border border-gray-700 text-white px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#C27E00] [&>option]:bg-gray-900 [&>option]:text-white"
+            className="w-full rounded-md bg-zinc-200 dark:bg-gray-900 border border-zinc-300 dark:border-gray-700 text-white px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#C27E00] [&>option]:bg-zinc-200 dark:bg-gray-900 [&>option]:text-white"
             style={{ colorScheme: 'light' }}
           >
             <option value="">Select employee</option>
@@ -51,29 +51,29 @@ export function OnboardingTaskForm({
           </select>
         </div>
         <div>
-          <label className="block text-sm text-gray-400 mb-1">Task Title</label>
+          <label className="block text-sm text-zinc-500 dark:text-gray-400 mb-1">Task Title</label>
           <input
             type="text"
             name="title"
             required
             placeholder="e.g. Complete safety training"
-            className="w-full rounded-md bg-white/5 border border-gray-700 text-white px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#C27E00]"
+            className="w-full rounded-md bg-zinc-200/50 dark:bg-white/5 border border-zinc-300 dark:border-gray-700 text-white px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#C27E00]"
           />
         </div>
         <div>
-          <label className="block text-sm text-gray-400 mb-1">Description (optional)</label>
+          <label className="block text-sm text-zinc-500 dark:text-gray-400 mb-1">Description (optional)</label>
           <textarea
             name="description"
             rows={2}
-            className="w-full rounded-md bg-white/5 border border-gray-700 text-white px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#C27E00]"
+            className="w-full rounded-md bg-zinc-200/50 dark:bg-white/5 border border-zinc-300 dark:border-gray-700 text-white px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#C27E00]"
           />
         </div>
         <div>
-          <label className="block text-sm text-gray-400 mb-1">Due Date (optional)</label>
+          <label className="block text-sm text-zinc-500 dark:text-gray-400 mb-1">Due Date (optional)</label>
           <input
             type="date"
             name="due_date"
-            className="w-full rounded-md bg-white/5 border border-gray-700 text-white px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#C27E00]"
+            className="w-full rounded-md bg-zinc-200/50 dark:bg-white/5 border border-zinc-300 dark:border-gray-700 text-white px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#C27E00]"
           />
         </div>
         {error && <p className="text-sm text-red-400">{error}</p>}

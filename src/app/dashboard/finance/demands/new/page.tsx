@@ -56,7 +56,7 @@ export default async function FinanceNewDemandPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-semibold text-white mb-6">Create New Demand</h1>
+      <h1 className="text-3xl font-semibold text-zinc-900 dark:text-white mb-6 tracking-tight">Create New Demand</h1>
       <DemandForm
         cameraModels={cameraModels}
         defaultAddress={dealerName}

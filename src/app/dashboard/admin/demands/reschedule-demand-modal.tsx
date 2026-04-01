@@ -172,22 +172,22 @@ export function RescheduleDemandModal({ demand, isOpen, onClose }: RescheduleDem
 
   if (!isOpen) return null
 
-  const inputClass = 'w-full border border-gray-700 bg-black/50 py-2 px-3 rounded text-white focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]'
+  const inputClass = 'w-full border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 py-2 px-3 rounded text-white focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]'
   const today = formatInTimeZone(new Date(), SYSTEM_DEFAULT_TIMEZONE, 'yyyy-MM-dd')
 
   return (
     <>
-      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-        <div className="bg-gray-900 border border-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+      <div className="fixed inset-0 bg-white dark:bg-black/50 flex items-center justify-center z-50 p-4">
+        <div className="bg-zinc-200 dark:bg-gray-900 border border-zinc-200 dark:border-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
           <div className="p-6">
             <div className="flex justify-between items-center mb-6">
               <div>
-                <h2 className="text-2xl font-semibold text-white">Reschedule / Edit Demand</h2>
+                <h2 className="text-2xl font-semibold text-zinc-900 dark:text-white">Reschedule / Edit Demand</h2>
                 {demand.demand_number != null && (
-                  <p className="text-sm text-gray-500 mt-1">Demand ID: <span className="font-medium text-[#C27E00]">#{demand.demand_number}</span></p>
+                  <p className="text-sm text-zinc-500 dark:text-gray-500 mt-1">Demand ID: <span className="font-medium text-[#C27E00]">#{demand.demand_number}</span></p>
                 )}
               </div>
-              <button onClick={onClose} className="text-gray-400 hover:text-white">
+              <button onClick={onClose} className="text-zinc-500 dark:text-gray-400 hover:text-zinc-900 dark:text-white">
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
               </button>
             </div>
@@ -199,15 +199,15 @@ export function RescheduleDemandModal({ demand, isOpen, onClose }: RescheduleDem
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-1">First Name *</label>
+                  <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300 mb-1">First Name *</label>
                   <input type="text" value={formData.customer_firstname} onChange={(e) => setFormData({ ...formData, customer_firstname: e.target.value.toUpperCase() })} style={{ textTransform: 'uppercase' }} required className={inputClass} />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-1">Last Name *</label>
+                  <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300 mb-1">Last Name *</label>
                   <input type="text" value={formData.customer_lastname} onChange={(e) => setFormData({ ...formData, customer_lastname: e.target.value.toUpperCase() })} style={{ textTransform: 'uppercase' }} required className={inputClass} />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-1">Phone *</label>
+                  <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300 mb-1">Phone *</label>
                   <CanadianPhoneInput
                     value={formData.customer_phone}
                     onChange={(v) => setFormData({ ...formData, customer_phone: v })}
@@ -217,35 +217,35 @@ export function RescheduleDemandModal({ demand, isOpen, onClose }: RescheduleDem
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-1">Address</label>
+                  <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300 mb-1">Address</label>
                   <input type="text" value={formData.customer_address} onChange={(e) => setFormData({ ...formData, customer_address: e.target.value })} className={inputClass} />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-1">Vehicle Make *</label>
+                  <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300 mb-1">Vehicle Make *</label>
                   <select value={formData.vehicle_make} onChange={(e) => setFormData({ ...formData, vehicle_make: e.target.value, vehicle_model: '' })} required className={inputClass}>
                     <option value="">-- Select --</option>
-                    {VEHICLE_MAKES_CA.map((m) => <option key={m} value={m} className="bg-black">{m}</option>)}
+                    {VEHICLE_MAKES_CA.map((m) => <option key={m} value={m} className="bg-zinc-50 dark:bg-black">{m}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-1">Vehicle Model *</label>
+                  <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300 mb-1">Vehicle Model *</label>
                   <input type="text" value={formData.vehicle_model} onChange={(e) => setFormData({ ...formData, vehicle_model: e.target.value })} required className={inputClass} />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-1">Vehicle Year *</label>
+                  <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300 mb-1">Vehicle Year *</label>
                   <input type="number" min={1900} max={2100} value={formData.vehicle_year} onChange={(e) => setFormData({ ...formData, vehicle_year: parseInt(e.target.value) || 0 })} required className={inputClass} />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-1">Stock Number</label>
+                  <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300 mb-1">Stock Number</label>
                   <input type="text" value={formData.stock_number} onChange={(e) => setFormData({ ...formData, stock_number: e.target.value.toUpperCase() })} className={inputClass} style={{ textTransform: 'uppercase' }} />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-1">Camera Model *</label>
+                  <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300 mb-1">Camera Model *</label>
                   <input type="text" value={formData.camera_model} onChange={(e) => setFormData({ ...formData, camera_model: e.target.value })} required className={inputClass} />
                 </div>
 
                 <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-300 mb-1">Appointment *</label>
+                  <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300 mb-1">Appointment *</label>
                   {isExternal ? (
                     <input type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} min={today} className={`${inputClass} max-w-xs [color-scheme:dark]`} />
                   ) : !demand.dealer_id ? (
@@ -253,11 +253,11 @@ export function RescheduleDemandModal({ demand, isOpen, onClose }: RescheduleDem
                   ) : (
                     <div className="space-y-3">
                       <input type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} min={today} className={`${inputClass} max-w-xs [color-scheme:dark]`} />
-                      {slotsLoading ? <p className="text-sm text-gray-500">Loading slots…</p> : availableSlots.length === 0 ? <p className="text-sm text-amber-500">No available slots.</p> : (
+                      {slotsLoading ? <p className="text-sm text-zinc-500 dark:text-gray-500">Loading slots…</p> : availableSlots.length === 0 ? <p className="text-sm text-amber-500">No available slots.</p> : (
                         <div className="flex flex-wrap gap-2">
                           {availableSlots.map((slot) => (
                             <button key={slot} type="button" onClick={() => setSelectedSlot(slot)}
-                              className={`px-3 py-2 rounded text-sm ${selectedSlot === slot ? 'bg-[#C27E00] text-white' : 'bg-black/50 text-gray-300 border border-gray-700 hover:bg-white/10'}`}>
+                              className={`px-3 py-2 rounded text-sm ${selectedSlot === slot ? 'bg-[#C27E00] text-white' : 'bg-white dark:bg-black/50 text-zinc-600 dark:text-gray-300 border border-zinc-300 dark:border-gray-700 hover:bg-zinc-200 dark:bg-white/10'}`}>
                               {formatInTimeZone(new Date(slot), slotsTimezone ?? SYSTEM_DEFAULT_TIMEZONE, 'h:mm a')}
                             </button>
                           ))}
@@ -268,8 +268,8 @@ export function RescheduleDemandModal({ demand, isOpen, onClose }: RescheduleDem
                 </div>
               </div>
 
-              <div className="flex justify-end gap-3 pt-4 border-t border-gray-800">
-                <button type="button" onClick={onClose} className="px-4 py-2 text-gray-300 hover:text-white">Cancel</button>
+              <div className="flex justify-end gap-3 pt-4 border-t border-zinc-200 dark:border-gray-800">
+                <button type="button" onClick={onClose} className="px-4 py-2 text-zinc-600 dark:text-gray-300 hover:text-zinc-900 dark:text-white">Cancel</button>
                 <button type="submit" disabled={loading || (!isExternal && !!demand.dealer_id && availableSlots.length > 0 && !availableSlots.includes(selectedSlot))}
                   className="px-4 py-2 bg-[#C27E00] hover:bg-[#a06900] text-white rounded disabled:opacity-50">
                   {loading ? 'Saving...' : 'Save Changes'}
@@ -282,22 +282,22 @@ export function RescheduleDemandModal({ demand, isOpen, onClose }: RescheduleDem
 
       {/* SMS confirmation pop-up */}
       {showSmsConfirm && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[60] p-4">
-          <div className="bg-gray-900 border border-gray-700 rounded-lg shadow-xl max-w-md w-full p-6">
-            <h3 className="text-lg font-semibold text-white mb-2">Send notification?</h3>
-            <p className="text-sm text-gray-400 mb-4">The appointment has been rescheduled. Would you like to send an SMS notification to:</p>
+        <div className="fixed inset-0 bg-zinc-50 dark:bg-black/60 flex items-center justify-center z-[60] p-4">
+          <div className="bg-zinc-200 dark:bg-gray-900 border border-zinc-300 dark:border-gray-700 rounded-lg shadow-xl max-w-md w-full p-6">
+            <h3 className="text-lg font-semibold text-zinc-900 dark:text-white mb-2">Send notification?</h3>
+            <p className="text-sm text-zinc-500 dark:text-gray-400 mb-4">The appointment has been rescheduled. Would you like to send an SMS notification to:</p>
             <div className="space-y-3 mb-6">
               <label className="flex items-center gap-2 cursor-pointer">
                 <input type="checkbox" checked={sendToCustomer} onChange={(e) => setSendToCustomer(e.target.checked)} className="rounded text-[#C27E00]" />
-                <span className="text-white">Customer</span>
+                <span className="text-zinc-900 dark:text-white">Customer</span>
               </label>
               <label className="flex items-center gap-2 cursor-pointer">
                 <input type="checkbox" checked={sendToSpecialist} onChange={(e) => setSendToSpecialist(e.target.checked)} className="rounded text-[#C27E00]" />
-                <span className="text-white">Specialist</span>
+                <span className="text-zinc-900 dark:text-white">Specialist</span>
               </label>
             </div>
             <div className="flex justify-end gap-3">
-              <button type="button" onClick={handleSmsCancel} className="px-4 py-2 text-gray-300 hover:text-white">Cancel</button>
+              <button type="button" onClick={handleSmsCancel} className="px-4 py-2 text-zinc-600 dark:text-gray-300 hover:text-zinc-900 dark:text-white">Cancel</button>
               <button type="button" onClick={handleSmsConfirm} disabled={loading} className="px-4 py-2 bg-[#C27E00] hover:bg-[#a06900] text-white rounded disabled:opacity-50">
                 {loading ? 'Saving...' : 'Update & Send'}
               </button>

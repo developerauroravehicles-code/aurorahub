@@ -4,6 +4,8 @@ import { format } from 'date-fns'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { updatePersonnel, createCertification, updateCertificationStatus, updateInstallerProfile } from '../actions'
+import { EmailInput } from '@/components/email-input'
+import { normalizeEmail } from '@/lib/email-normalize'
 
 const PLATFORM_ROLE_LABELS: Record<string, string> = {
   specialist: 'Technical Support',
@@ -127,9 +129,9 @@ export function PersonnelDetail({
   const [editingInstaller, setEditingInstaller] = useState(false)
   const [installerLoading, setInstallerLoading] = useState(false)
 
-  const inputClass = 'w-full rounded-md bg-white/5 border border-gray-700 text-white px-3 py-2 text-sm focus:ring-1 focus:ring-[#C27E00]'
-  const selectClass = 'w-full rounded-md bg-gray-900 border border-gray-700 text-white px-3 py-2 text-sm focus:ring-1 focus:ring-[#C27E00] focus:outline-none [&>option]:bg-gray-900 [&>option]:text-white'
-  const labelClass = 'block text-sm text-gray-400 mb-1'
+  const inputClass = 'w-full rounded-md bg-zinc-200/50 dark:bg-white/5 border border-zinc-300 dark:border-gray-700 text-white px-3 py-2 text-sm focus:ring-1 focus:ring-[#C27E00]'
+  const selectClass = 'w-full rounded-md bg-zinc-200 dark:bg-gray-900 border border-zinc-300 dark:border-gray-700 text-white px-3 py-2 text-sm focus:ring-1 focus:ring-[#C27E00] focus:outline-none [&>option]:bg-zinc-200 dark:bg-gray-900 [&>option]:text-white'
+  const labelClass = 'block text-sm text-zinc-500 dark:text-gray-400 mb-1'
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -148,8 +150,8 @@ export function PersonnelDetail({
   }
 
   const section = (title: string, children: React.ReactNode) => (
-    <div className="bg-white/5 rounded-lg border border-gray-800 p-6">
-      <h3 className="text-lg font-semibold text-white mb-4">{title}</h3>
+    <div className="bg-zinc-200/50 dark:bg-white/5 rounded-lg border border-zinc-200 dark:border-gray-800 p-6">
+      <h3 className="text-lg font-semibold text-zinc-900 dark:text-white mb-4">{title}</h3>
       {children}
     </div>
   )
@@ -158,12 +160,12 @@ export function PersonnelDetail({
     return (
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="flex justify-between items-center">
-          <h1 className="text-2xl font-semibold text-white">Edit Personnel</h1>
+          <h1 className="text-2xl font-semibold text-zinc-900 dark:text-white">Edit Personnel</h1>
           <div className="flex gap-2">
             <button
               type="button"
               onClick={() => setEditing(false)}
-              className="px-4 py-2 rounded-md bg-white/5 text-white border border-gray-600 hover:bg-white/10"
+              className="px-4 py-2 rounded-md bg-zinc-200/50 dark:bg-white/5 text-zinc-900 dark:text-white border border-zinc-300 dark:border-gray-600 hover:bg-zinc-200 dark:bg-white/10"
             >
               Cancel
             </button>
@@ -186,7 +188,7 @@ export function PersonnelDetail({
               </div>
               <div>
                 <label className={labelClass}>Email</label>
-                <input name="email" type="email" className={inputClass} defaultValue={String(person.email ?? '')} />
+                <EmailInput name="email" className={inputClass} defaultValue={normalizeEmail(String(person.email ?? ''))} />
               </div>
               <div className="md:col-span-2">
                 <label className={labelClass}>Address</label>
@@ -374,7 +376,7 @@ export function PersonnelDetail({
                     router.refresh()
                   }
                 }}
-                className="space-y-3 p-4 rounded-lg bg-white/5 border border-gray-700"
+                className="space-y-3 p-4 rounded-lg bg-zinc-200/50 dark:bg-white/5 border border-zinc-300 dark:border-gray-700"
               >
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div>
@@ -404,7 +406,7 @@ export function PersonnelDetail({
                   <button type="submit" disabled={certLoading} className="px-3 py-1.5 rounded bg-[#C27E00] text-white text-sm disabled:opacity-50">
                     {certLoading ? 'Saving...' : 'Add'}
                   </button>
-                  <button type="button" onClick={() => setShowCertForm(false)} className="px-3 py-1.5 rounded bg-white/5 text-gray-400 text-sm hover:bg-white/10">
+                  <button type="button" onClick={() => setShowCertForm(false)} className="px-3 py-1.5 rounded bg-zinc-200/50 dark:bg-white/5 text-zinc-500 dark:text-gray-400 text-sm hover:bg-zinc-200 dark:bg-white/10">
                     Cancel
                   </button>
                   {certError && <span className="text-red-400 text-sm">{certError}</span>}
@@ -415,11 +417,11 @@ export function PersonnelDetail({
               <ul className="space-y-2 mt-4">
                 {certifications.map((c) => (
                   <li key={c.id as string} className="text-sm flex flex-wrap items-center gap-2">
-                    <span className="text-white">{(c.institution as string) || (c.certification_type as string) || '—'}</span>
-                    <span className="text-gray-500">•</span>
-                    <span className="text-gray-400">{c.issue_date ? format(new Date(c.issue_date as string), 'PPP') : '—'}</span>
-                    <span className="text-gray-500">•</span>
-                    <span className="text-gray-300">{(c.name as string) || '—'}</span>
+                    <span className="text-zinc-900 dark:text-white">{(c.institution as string) || (c.certification_type as string) || '—'}</span>
+                    <span className="text-zinc-500 dark:text-gray-500">•</span>
+                    <span className="text-zinc-500 dark:text-gray-400">{c.issue_date ? format(new Date(c.issue_date as string), 'PPP') : '—'}</span>
+                    <span className="text-zinc-500 dark:text-gray-500">•</span>
+                    <span className="text-zinc-600 dark:text-gray-300">{(c.name as string) || '—'}</span>
                     <select
                       value={String(c.status || 'awaiting')}
                       onChange={async (e) => {
@@ -427,7 +429,7 @@ export function PersonnelDetail({
                         await updateCertificationStatus(c.id as string, newStatus, person.id as string)
                         router.refresh()
                       }}
-                      className="ml-2 text-xs rounded px-2 py-0.5 bg-gray-800 text-gray-300 border border-gray-600 focus:ring-1 focus:ring-[#C27E00] [&>option]:bg-gray-900"
+                      className="ml-2 text-xs rounded px-2 py-0.5 bg-gray-800 text-zinc-600 dark:text-gray-300 border border-zinc-300 dark:border-gray-600 focus:ring-1 focus:ring-[#C27E00] [&>option]:bg-zinc-200 dark:bg-gray-900"
                       style={{ colorScheme: 'light' }}
                     >
                       {CERTIFICATION_STATUSES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
@@ -437,7 +439,7 @@ export function PersonnelDetail({
               </ul>
             )}
             {certifications.length === 0 && !showCertForm && (
-              <p className="text-gray-500 text-sm mt-2">No certifications yet.</p>
+              <p className="text-zinc-500 dark:text-gray-500 text-sm mt-2">No certifications yet.</p>
             )}
           </div>
         ))}
@@ -447,13 +449,13 @@ export function PersonnelDetail({
             <div className="space-y-4">
               {!editingInstaller ? (
                 <div className="space-y-2 text-sm">
-                  <p><span className="text-gray-500">Experience:</span> {String(installerProfile.experience_level ?? '—')}</p>
-                  <p><span className="text-gray-500">Customer Rating:</span> {installerProfile.customer_rating != null ? Number(installerProfile.customer_rating).toFixed(1) : '—'}</p>
-                  <p><span className="text-gray-500">Quality Score:</span> {installerProfile.quality_score != null ? Number(installerProfile.quality_score).toFixed(1) : '—'}</p>
-                  <p><span className="text-gray-500">Completion Rate:</span> {installerProfile.completion_rate != null ? `${Number(installerProfile.completion_rate)}%` : '—'}<span className="text-gray-500 text-xs ml-1">(from assigned demands)</span></p>
-                  <p><span className="text-gray-500">Status:</span> <span className={`px-2 py-0.5 rounded text-xs ${installerProfile.installer_status === 'active' ? 'bg-green-900/50 text-green-300' : 'bg-gray-800 text-gray-300'}`}>{String(installerProfile.installer_status ?? '—')}</span></p>
-                  <p><span className="text-gray-500">Skills:</span> {Array.isArray(installerProfile.installation_skills) ? (installerProfile.installation_skills as string[]).join(', ') || '—' : '—'}</p>
-                  <p><span className="text-gray-500">Device Compatibility:</span> {Array.isArray(installerProfile.device_compatibility) ? (installerProfile.device_compatibility as string[]).join(', ') || '—' : '—'}</p>
+                  <p><span className="text-zinc-500 dark:text-gray-500">Experience:</span> {String(installerProfile.experience_level ?? '—')}</p>
+                  <p><span className="text-zinc-500 dark:text-gray-500">Customer Rating:</span> {installerProfile.customer_rating != null ? Number(installerProfile.customer_rating).toFixed(1) : '—'}</p>
+                  <p><span className="text-zinc-500 dark:text-gray-500">Quality Score:</span> {installerProfile.quality_score != null ? Number(installerProfile.quality_score).toFixed(1) : '—'}</p>
+                  <p><span className="text-zinc-500 dark:text-gray-500">Completion Rate:</span> {installerProfile.completion_rate != null ? `${Number(installerProfile.completion_rate)}%` : '—'}<span className="text-zinc-500 dark:text-gray-500 text-xs ml-1">(from assigned demands)</span></p>
+                  <p><span className="text-zinc-500 dark:text-gray-500">Status:</span> <span className={`px-2 py-0.5 rounded text-xs ${installerProfile.installer_status === 'active' ? 'bg-green-900/50 text-green-300' : 'bg-gray-800 text-zinc-600 dark:text-gray-300'}`}>{String(installerProfile.installer_status ?? '—')}</span></p>
+                  <p><span className="text-zinc-500 dark:text-gray-500">Skills:</span> {Array.isArray(installerProfile.installation_skills) ? (installerProfile.installation_skills as string[]).join(', ') || '—' : '—'}</p>
+                  <p><span className="text-zinc-500 dark:text-gray-500">Device Compatibility:</span> {Array.isArray(installerProfile.device_compatibility) ? (installerProfile.device_compatibility as string[]).join(', ') || '—' : '—'}</p>
                   <button type="button" onClick={() => setEditingInstaller(true)} className="text-sm text-[#C27E00] hover:text-[#a06900] mt-2">Edit</button>
                 </div>
               ) : (
@@ -506,8 +508,8 @@ export function PersonnelDetail({
                       <input name="quality_score" type="number" step="0.1" min="0" max="5" className={inputClass} defaultValue={installerProfile.quality_score != null ? String(installerProfile.quality_score) : ''} />
                     </div>
                     <div className="md:col-span-2">
-                      <p className="text-sm text-gray-400">Completion Rate is auto-calculated from assigned demands (completed / total).</p>
-                      <p className="text-white font-medium mt-1">{installerProfile.completion_rate != null ? `${Number(installerProfile.completion_rate)}%` : '—'}</p>
+                      <p className="text-sm text-zinc-500 dark:text-gray-400">Completion Rate is auto-calculated from assigned demands (completed / total).</p>
+                      <p className="text-zinc-900 dark:text-white font-medium mt-1">{installerProfile.completion_rate != null ? `${Number(installerProfile.completion_rate)}%` : '—'}</p>
                     </div>
                     <div className="md:col-span-2">
                       <label className={labelClass}>Installation Skills (comma separated)</label>
@@ -520,7 +522,7 @@ export function PersonnelDetail({
                   </div>
                   <div className="flex gap-2">
                     <button type="submit" disabled={installerLoading} className="px-3 py-1.5 rounded bg-[#C27E00] text-white text-sm disabled:opacity-50">{installerLoading ? 'Saving...' : 'Save'}</button>
-                    <button type="button" onClick={() => setEditingInstaller(false)} className="px-3 py-1.5 rounded bg-white/5 text-gray-400 text-sm">Cancel</button>
+                    <button type="button" onClick={() => setEditingInstaller(false)} className="px-3 py-1.5 rounded bg-zinc-200/50 dark:bg-white/5 text-zinc-500 dark:text-gray-400 text-sm">Cancel</button>
                   </div>
                 </form>
               )}
@@ -530,14 +532,14 @@ export function PersonnelDetail({
 
         {section('Timeline', (
           timeline.length === 0 ? (
-            <p className="text-gray-500 text-sm">No events yet.</p>
+            <p className="text-zinc-500 dark:text-gray-500 text-sm">No events yet.</p>
           ) : (
             <ul className="space-y-2">
               {timeline.map((t) => (
                 <li key={t.id as string} className="text-sm flex gap-3">
-                  <span className="text-gray-500">{t.created_at ? format(new Date(t.created_at as string), 'MMM d, yyyy') : ''}</span>
-                  <span className="text-white">{(t.event_type as string)}</span>
-                  {t.title ? <span className="text-gray-400">— {String(t.title)}</span> : null}
+                  <span className="text-zinc-500 dark:text-gray-500">{t.created_at ? format(new Date(t.created_at as string), 'MMM d, yyyy') : ''}</span>
+                  <span className="text-zinc-900 dark:text-white">{(t.event_type as string)}</span>
+                  {t.title ? <span className="text-zinc-500 dark:text-gray-400">— {String(t.title)}</span> : null}
                 </li>
               ))}
             </ul>
@@ -558,17 +560,17 @@ export function PersonnelDetail({
           {person.avatar_url ? (
             <img src={person.avatar_url as string} alt="" className="w-24 h-24 rounded-full object-cover" />
           ) : (
-            <div className="w-24 h-24 rounded-full bg-white/10 flex items-center justify-center text-3xl text-gray-500">
+            <div className="w-24 h-24 rounded-full bg-zinc-200 dark:bg-white/10 flex items-center justify-center text-3xl text-zinc-500 dark:text-gray-500">
               {(person.full_name as string)?.charAt(0) ?? '?'}
             </div>
           )}
           <div>
-            <h1 className="text-2xl font-semibold text-white">{person.full_name as string}</h1>
-            <p className="text-gray-400">{person.worker_id as string} • {WORKER_TYPE_LABELS[person.worker_type as string] ?? person.worker_type}</p>
+            <h1 className="text-2xl font-semibold text-zinc-900 dark:text-white">{person.full_name as string}</h1>
+            <p className="text-zinc-500 dark:text-gray-400">{person.worker_id as string} • {WORKER_TYPE_LABELS[person.worker_type as string] ?? person.worker_type}</p>
             <span className={`inline-block mt-2 px-2 py-1 rounded text-xs ${
               person.status === 'active' ? 'bg-green-900/50 text-green-300' :
               person.status === 'onboarding' ? 'bg-yellow-900/50 text-yellow-300' :
-              'bg-gray-800 text-gray-300'
+              'bg-gray-800 text-zinc-600 dark:text-gray-300'
             }`}>
               {person.status as string}
             </span>
@@ -585,32 +587,32 @@ export function PersonnelDetail({
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {section('Contact & Address', (
           <div className="space-y-2 text-sm">
-            <p><span className="text-gray-500">Phone:</span> {String(person.phone ?? '—')}</p>
-            <p><span className="text-gray-500">Email:</span> {String(person.email ?? '—')}</p>
-            <p><span className="text-gray-500">Address:</span> {String(person.address ?? '—')}</p>
-            <p><span className="text-gray-500">Emergency:</span> {String(person.emergency_contact_name ?? '—')} {String(person.emergency_contact_phone ?? '')}</p>
+            <p><span className="text-zinc-500 dark:text-gray-500">Phone:</span> {String(person.phone ?? '—')}</p>
+            <p><span className="text-zinc-500 dark:text-gray-500">Email:</span> {String(person.email ?? '—')}</p>
+            <p><span className="text-zinc-500 dark:text-gray-500">Address:</span> {String(person.address ?? '—')}</p>
+            <p><span className="text-zinc-500 dark:text-gray-500">Emergency:</span> {String(person.emergency_contact_name ?? '—')} {String(person.emergency_contact_phone ?? '')}</p>
           </div>
         ))}
 
         {section('Professional', (
           <div className="space-y-2 text-sm">
-            <p><span className="text-gray-500">Position:</span> {String(person.position ?? '—')}</p>
-            <p><span className="text-gray-500">Role:</span> {String(PLATFORM_ROLE_LABELS[person.platform_role as string] ?? person.platform_role ?? '—')}</p>
-            <p><span className="text-gray-500">Region:</span> {String((person.hr_regions as { name?: string })?.name ?? '—')}</p>
-            <p><span className="text-gray-500">Dealer:</span> {String((person.dealers as { name?: string })?.name ?? 'Platform')}</p>
-            <p><span className="text-gray-500">Manager:</span> {String((person as { _managerName?: string })._managerName ?? '—')}</p>
-            <p><span className="text-gray-500">Start Date:</span> {person.start_date ? format(new Date(person.start_date as string), 'PPP') : '—'}</p>
-            <p><span className="text-gray-500">Work Arrangement:</span> {String(WORK_ARRANGEMENTS.find((w) => w.value === person.work_arrangement)?.label ?? person.work_arrangement ?? '—')}</p>
-            <p><span className="text-gray-500">Salary:</span> {salaryDisplay}</p>
+            <p><span className="text-zinc-500 dark:text-gray-500">Position:</span> {String(person.position ?? '—')}</p>
+            <p><span className="text-zinc-500 dark:text-gray-500">Role:</span> {String(PLATFORM_ROLE_LABELS[person.platform_role as string] ?? person.platform_role ?? '—')}</p>
+            <p><span className="text-zinc-500 dark:text-gray-500">Region:</span> {String((person.hr_regions as { name?: string })?.name ?? '—')}</p>
+            <p><span className="text-zinc-500 dark:text-gray-500">Dealer:</span> {String((person.dealers as { name?: string })?.name ?? 'Platform')}</p>
+            <p><span className="text-zinc-500 dark:text-gray-500">Manager:</span> {String((person as { _managerName?: string })._managerName ?? '—')}</p>
+            <p><span className="text-zinc-500 dark:text-gray-500">Start Date:</span> {person.start_date ? format(new Date(person.start_date as string), 'PPP') : '—'}</p>
+            <p><span className="text-zinc-500 dark:text-gray-500">Work Arrangement:</span> {String(WORK_ARRANGEMENTS.find((w) => w.value === person.work_arrangement)?.label ?? person.work_arrangement ?? '—')}</p>
+            <p><span className="text-zinc-500 dark:text-gray-500">Salary:</span> {salaryDisplay}</p>
           </div>
         ))}
 
         {section('Identity & Verification (Canada)', (
           <div className="space-y-2 text-sm">
-            <p><span className="text-gray-500">SIN Verified:</span> {person.sin_verified ? 'Yes' : 'No'}</p>
-            <p><span className="text-gray-500">Work Permit:</span> {String(person.work_permit_status ?? '—')}</p>
-            <p><span className="text-gray-500">Driver License:</span> {String(person.driver_license ?? '—')}</p>
-            <p><span className="text-gray-500">Background Check:</span> {String(person.background_check_status ?? '—')}</p>
+            <p><span className="text-zinc-500 dark:text-gray-500">SIN Verified:</span> {person.sin_verified ? 'Yes' : 'No'}</p>
+            <p><span className="text-zinc-500 dark:text-gray-500">Work Permit:</span> {String(person.work_permit_status ?? '—')}</p>
+            <p><span className="text-zinc-500 dark:text-gray-500">Driver License:</span> {String(person.driver_license ?? '—')}</p>
+            <p><span className="text-zinc-500 dark:text-gray-500">Background Check:</span> {String(person.background_check_status ?? '—')}</p>
           </div>
         ))}
 
@@ -648,7 +650,7 @@ export function PersonnelDetail({
                     router.refresh()
                   }
                 }}
-                className="space-y-3 p-4 rounded-lg bg-white/5 border border-gray-700"
+                className="space-y-3 p-4 rounded-lg bg-zinc-200/50 dark:bg-white/5 border border-zinc-300 dark:border-gray-700"
               >
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div>
@@ -678,7 +680,7 @@ export function PersonnelDetail({
                   <button type="submit" disabled={certLoading} className="px-3 py-1.5 rounded bg-[#C27E00] text-white text-sm disabled:opacity-50">
                     {certLoading ? 'Saving...' : 'Add'}
                   </button>
-                  <button type="button" onClick={() => setShowCertForm(false)} className="px-3 py-1.5 rounded bg-white/5 text-gray-400 text-sm hover:bg-white/10">
+                  <button type="button" onClick={() => setShowCertForm(false)} className="px-3 py-1.5 rounded bg-zinc-200/50 dark:bg-white/5 text-zinc-500 dark:text-gray-400 text-sm hover:bg-zinc-200 dark:bg-white/10">
                     Cancel
                   </button>
                   {certError && <span className="text-red-400 text-sm">{certError}</span>}
@@ -689,11 +691,11 @@ export function PersonnelDetail({
               <ul className="space-y-2 mt-4">
                 {certifications.map((c) => (
                   <li key={c.id as string} className="text-sm flex flex-wrap items-center gap-2">
-                    <span className="text-white">{(c.institution as string) || (c.certification_type as string) || '—'}</span>
-                    <span className="text-gray-500">•</span>
-                    <span className="text-gray-400">{c.issue_date ? format(new Date(c.issue_date as string), 'PPP') : '—'}</span>
-                    <span className="text-gray-500">•</span>
-                    <span className="text-gray-300">{(c.name as string) || '—'}</span>
+                    <span className="text-zinc-900 dark:text-white">{(c.institution as string) || (c.certification_type as string) || '—'}</span>
+                    <span className="text-zinc-500 dark:text-gray-500">•</span>
+                    <span className="text-zinc-500 dark:text-gray-400">{c.issue_date ? format(new Date(c.issue_date as string), 'PPP') : '—'}</span>
+                    <span className="text-zinc-500 dark:text-gray-500">•</span>
+                    <span className="text-zinc-600 dark:text-gray-300">{(c.name as string) || '—'}</span>
                     <select
                       value={String(c.status || 'awaiting')}
                       onChange={async (e) => {
@@ -701,7 +703,7 @@ export function PersonnelDetail({
                         await updateCertificationStatus(c.id as string, newStatus, person.id as string)
                         router.refresh()
                       }}
-                      className="ml-2 text-xs rounded px-2 py-0.5 bg-gray-800 text-gray-300 border border-gray-600 focus:ring-1 focus:ring-[#C27E00] [&>option]:bg-gray-900"
+                      className="ml-2 text-xs rounded px-2 py-0.5 bg-gray-800 text-zinc-600 dark:text-gray-300 border border-zinc-300 dark:border-gray-600 focus:ring-1 focus:ring-[#C27E00] [&>option]:bg-zinc-200 dark:bg-gray-900"
                       style={{ colorScheme: 'light' }}
                     >
                       {CERTIFICATION_STATUSES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
@@ -711,7 +713,7 @@ export function PersonnelDetail({
               </ul>
             )}
             {certifications.length === 0 && !showCertForm && (
-              <p className="text-gray-500 text-sm mt-2">No certifications yet.</p>
+              <p className="text-zinc-500 dark:text-gray-500 text-sm mt-2">No certifications yet.</p>
             )}
           </div>
         ))}
@@ -721,13 +723,13 @@ export function PersonnelDetail({
             <div className="space-y-4">
               {!editingInstaller ? (
                 <div className="space-y-2 text-sm">
-                  <p><span className="text-gray-500">Experience:</span> {String(installerProfile.experience_level ?? '—')}</p>
-                  <p><span className="text-gray-500">Customer Rating:</span> {installerProfile.customer_rating != null ? Number(installerProfile.customer_rating).toFixed(1) : '—'}</p>
-                  <p><span className="text-gray-500">Quality Score:</span> {installerProfile.quality_score != null ? Number(installerProfile.quality_score).toFixed(1) : '—'}</p>
-                  <p><span className="text-gray-500">Completion Rate:</span> {installerProfile.completion_rate != null ? `${Number(installerProfile.completion_rate)}%` : '—'}<span className="text-gray-500 text-xs ml-1">(from assigned demands)</span></p>
-                  <p><span className="text-gray-500">Status:</span> <span className={`px-2 py-0.5 rounded text-xs ${installerProfile.installer_status === 'active' ? 'bg-green-900/50 text-green-300' : 'bg-gray-800 text-gray-300'}`}>{String(installerProfile.installer_status ?? '—')}</span></p>
-                  <p><span className="text-gray-500">Skills:</span> {Array.isArray(installerProfile.installation_skills) ? (installerProfile.installation_skills as string[]).join(', ') || '—' : '—'}</p>
-                  <p><span className="text-gray-500">Device Compatibility:</span> {Array.isArray(installerProfile.device_compatibility) ? (installerProfile.device_compatibility as string[]).join(', ') || '—' : '—'}</p>
+                  <p><span className="text-zinc-500 dark:text-gray-500">Experience:</span> {String(installerProfile.experience_level ?? '—')}</p>
+                  <p><span className="text-zinc-500 dark:text-gray-500">Customer Rating:</span> {installerProfile.customer_rating != null ? Number(installerProfile.customer_rating).toFixed(1) : '—'}</p>
+                  <p><span className="text-zinc-500 dark:text-gray-500">Quality Score:</span> {installerProfile.quality_score != null ? Number(installerProfile.quality_score).toFixed(1) : '—'}</p>
+                  <p><span className="text-zinc-500 dark:text-gray-500">Completion Rate:</span> {installerProfile.completion_rate != null ? `${Number(installerProfile.completion_rate)}%` : '—'}<span className="text-zinc-500 dark:text-gray-500 text-xs ml-1">(from assigned demands)</span></p>
+                  <p><span className="text-zinc-500 dark:text-gray-500">Status:</span> <span className={`px-2 py-0.5 rounded text-xs ${installerProfile.installer_status === 'active' ? 'bg-green-900/50 text-green-300' : 'bg-gray-800 text-zinc-600 dark:text-gray-300'}`}>{String(installerProfile.installer_status ?? '—')}</span></p>
+                  <p><span className="text-zinc-500 dark:text-gray-500">Skills:</span> {Array.isArray(installerProfile.installation_skills) ? (installerProfile.installation_skills as string[]).join(', ') || '—' : '—'}</p>
+                  <p><span className="text-zinc-500 dark:text-gray-500">Device Compatibility:</span> {Array.isArray(installerProfile.device_compatibility) ? (installerProfile.device_compatibility as string[]).join(', ') || '—' : '—'}</p>
                   <button onClick={() => setEditingInstaller(true)} className="text-sm text-[#C27E00] hover:text-[#a06900] mt-2">Edit</button>
                 </div>
               ) : (
@@ -780,8 +782,8 @@ export function PersonnelDetail({
                       <input name="quality_score" type="number" step="0.1" min="0" max="5" className={inputClass} defaultValue={installerProfile.quality_score != null ? String(installerProfile.quality_score) : ''} />
                     </div>
                     <div className="md:col-span-2">
-                      <p className="text-sm text-gray-400">Completion Rate is auto-calculated from assigned demands (completed / total).</p>
-                      <p className="text-white font-medium mt-1">{installerProfile.completion_rate != null ? `${Number(installerProfile.completion_rate)}%` : '—'}</p>
+                      <p className="text-sm text-zinc-500 dark:text-gray-400">Completion Rate is auto-calculated from assigned demands (completed / total).</p>
+                      <p className="text-zinc-900 dark:text-white font-medium mt-1">{installerProfile.completion_rate != null ? `${Number(installerProfile.completion_rate)}%` : '—'}</p>
                     </div>
                     <div className="md:col-span-2">
                       <label className={labelClass}>Installation Skills (comma separated)</label>
@@ -794,7 +796,7 @@ export function PersonnelDetail({
                   </div>
                   <div className="flex gap-2">
                     <button type="submit" disabled={installerLoading} className="px-3 py-1.5 rounded bg-[#C27E00] text-white text-sm disabled:opacity-50">{installerLoading ? 'Saving...' : 'Save'}</button>
-                    <button type="button" onClick={() => setEditingInstaller(false)} className="px-3 py-1.5 rounded bg-white/5 text-gray-400 text-sm">Cancel</button>
+                    <button type="button" onClick={() => setEditingInstaller(false)} className="px-3 py-1.5 rounded bg-zinc-200/50 dark:bg-white/5 text-zinc-500 dark:text-gray-400 text-sm">Cancel</button>
                   </div>
                 </form>
               )}
@@ -805,14 +807,14 @@ export function PersonnelDetail({
 
       {section('Timeline', (
         timeline.length === 0 ? (
-          <p className="text-gray-500 text-sm">No events yet.</p>
+          <p className="text-zinc-500 dark:text-gray-500 text-sm">No events yet.</p>
         ) : (
           <ul className="space-y-2">
             {timeline.map((t) => (
               <li key={t.id as string} className="text-sm flex gap-3">
-                <span className="text-gray-500">{t.created_at ? format(new Date(t.created_at as string), 'MMM d, yyyy') : ''}</span>
-                <span className="text-white">{(t.event_type as string)}</span>
-                {t.title ? <span className="text-gray-400">— {String(t.title)}</span> : null}
+                <span className="text-zinc-500 dark:text-gray-500">{t.created_at ? format(new Date(t.created_at as string), 'MMM d, yyyy') : ''}</span>
+                <span className="text-zinc-900 dark:text-white">{(t.event_type as string)}</span>
+                {t.title ? <span className="text-zinc-500 dark:text-gray-400">— {String(t.title)}</span> : null}
               </li>
             ))}
           </ul>

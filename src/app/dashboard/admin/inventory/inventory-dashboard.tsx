@@ -842,7 +842,7 @@ export function InventoryDashboard({
       <button
         type="button"
         onClick={() => toggleSort(key)}
-        className={`inline-flex items-center gap-1 font-medium uppercase tracking-wider hover:text-white ${
+        className={`inline-flex items-center gap-1 font-medium uppercase tracking-wider hover:text-zinc-900 dark:text-white ${
           active ? 'text-[#C27E00]' : ''
         }`}
       >
@@ -1026,7 +1026,7 @@ export function InventoryDashboard({
       <button
         type="button"
         onClick={() => toggleRegionSort(key)}
-        className={`inline-flex items-center gap-1 font-medium uppercase tracking-wider hover:text-white ${
+        className={`inline-flex items-center gap-1 font-medium uppercase tracking-wider hover:text-zinc-900 dark:text-white ${
           active ? 'text-[#C27E00]' : ''
         }`}
       >
@@ -1157,7 +1157,7 @@ export function InventoryDashboard({
         </div>
       )}
 
-      <div className="flex flex-wrap gap-2 border-b border-gray-800 pb-3">
+      <div className="flex flex-wrap gap-2 border-b border-zinc-200 dark:border-gray-800 pb-3">
         {tabs.map((t) => {
           const Icon = t.icon
           return (
@@ -1168,7 +1168,7 @@ export function InventoryDashboard({
               className={`inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
                 tab === t.id
                   ? 'bg-[#C27E00]/20 text-[#C27E00] border border-[#C27E00]/40'
-                  : 'text-gray-400 border border-transparent hover:bg-white/5'
+                  : 'text-zinc-500 dark:text-gray-400 border border-transparent hover:bg-zinc-200/50 dark:bg-white/5'
               }`}
             >
               <Icon className="w-4 h-4" />
@@ -1180,9 +1180,9 @@ export function InventoryDashboard({
 
       {tab === 'overview' && (
         <div className="space-y-8">
-          <p className="text-sm text-gray-400">
-            <strong className="text-gray-300 font-medium">HQ total</strong> is catalog reference only;{' '}
-            <strong className="text-gray-300 font-medium">all dealers on hand</strong> comes from movements. Negative
+          <p className="text-sm text-zinc-500 dark:text-gray-400">
+            <strong className="text-zinc-600 dark:text-gray-300 font-medium">HQ total</strong> is catalog reference only;{' '}
+            <strong className="text-zinc-600 dark:text-gray-300 font-medium">all dealers on hand</strong> comes from movements. Negative
             field totals mean installs exceeded recorded stock-in — not that HQ auto-shipped units.
           </p>
 
@@ -1203,14 +1203,14 @@ export function InventoryDashboard({
             <button
               type="button"
               onClick={() => setTab('manual')}
-              className="rounded-lg border border-gray-600 px-3 py-1.5 text-xs text-gray-300 hover:bg-white/5"
+              className="rounded-lg border border-zinc-300 dark:border-gray-600 px-3 py-1.5 text-xs text-zinc-600 dark:text-gray-300 hover:bg-zinc-200/50 dark:bg-white/5"
             >
               Receipt / adjust
             </button>
             <button
               type="button"
               onClick={downloadOverviewCsv}
-              className="inline-flex items-center gap-2 rounded-lg border border-gray-600 px-3 py-1.5 text-xs text-gray-300 hover:bg-white/5"
+              className="inline-flex items-center gap-2 rounded-lg border border-zinc-300 dark:border-gray-600 px-3 py-1.5 text-xs text-zinc-600 dark:text-gray-300 hover:bg-zinc-200/50 dark:bg-white/5"
             >
               <Download className="w-3.5 h-3.5" />
               Export HQ table CSV
@@ -1218,54 +1218,54 @@ export function InventoryDashboard({
           </div>
 
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
-            <div className="rounded-lg border border-gray-800 bg-white/5 px-3 py-2">
-              <p className="text-xs text-gray-500 uppercase tracking-wider">Catalog models</p>
-              <p className="text-lg font-semibold text-white tabular-nums">{overviewHqAnalytics.modelRows.length}</p>
+            <div className="rounded-lg border border-zinc-200 dark:border-gray-800 bg-zinc-200/50 dark:bg-white/5 px-3 py-2">
+              <p className="text-xs text-zinc-500 dark:text-gray-500 uppercase tracking-wider">Catalog models</p>
+              <p className="text-lg font-semibold text-zinc-900 dark:text-white tabular-nums">{overviewHqAnalytics.modelRows.length}</p>
             </div>
-            <div className="rounded-lg border border-gray-800 bg-white/5 px-3 py-2">
-              <p className="text-xs text-gray-500 uppercase tracking-wider">HQ units (sum)</p>
+            <div className="rounded-lg border border-zinc-200 dark:border-gray-800 bg-zinc-200/50 dark:bg-white/5 px-3 py-2">
+              <p className="text-xs text-zinc-500 dark:text-gray-500 uppercase tracking-wider">HQ units (sum)</p>
               <p className="text-lg font-semibold text-[#C27E00] tabular-nums">{overviewHqAnalytics.totalHq}</p>
             </div>
-            <div className="rounded-lg border border-gray-800 bg-white/5 px-3 py-2">
-              <p className="text-xs text-gray-500 uppercase tracking-wider">Dealers on hand (sum)</p>
+            <div className="rounded-lg border border-zinc-200 dark:border-gray-800 bg-zinc-200/50 dark:bg-white/5 px-3 py-2">
+              <p className="text-xs text-zinc-500 dark:text-gray-500 uppercase tracking-wider">Dealers on hand (sum)</p>
               <p
-                className={`text-lg font-semibold tabular-nums ${overviewHqAnalytics.totalDealers < 0 ? 'text-red-400' : 'text-gray-200'}`}
+                className={`text-lg font-semibold tabular-nums ${overviewHqAnalytics.totalDealers < 0 ? 'text-red-400' : 'text-zinc-800 dark:text-gray-200'}`}
               >
                 {overviewHqAnalytics.totalDealers}
               </p>
             </div>
-            <div className="rounded-lg border border-gray-800 bg-white/5 px-3 py-2">
-              <p className="text-xs text-gray-500 uppercase tracking-wider">Notional HQ + field</p>
-              <p className="text-lg font-semibold text-white tabular-nums">{overviewHqAnalytics.notionalTotal}</p>
+            <div className="rounded-lg border border-zinc-200 dark:border-gray-800 bg-zinc-200/50 dark:bg-white/5 px-3 py-2">
+              <p className="text-xs text-zinc-500 dark:text-gray-500 uppercase tracking-wider">Notional HQ + field</p>
+              <p className="text-lg font-semibold text-zinc-900 dark:text-white tabular-nums">{overviewHqAnalytics.notionalTotal}</p>
             </div>
-            <div className="rounded-lg border border-gray-800 bg-white/5 px-3 py-2">
-              <p className="text-xs text-gray-500 uppercase tracking-wider">Models w/ neg. field</p>
+            <div className="rounded-lg border border-zinc-200 dark:border-gray-800 bg-zinc-200/50 dark:bg-white/5 px-3 py-2">
+              <p className="text-xs text-zinc-500 dark:text-gray-500 uppercase tracking-wider">Models w/ neg. field</p>
               <p
-                className={`text-lg font-semibold tabular-nums ${overviewHqAnalytics.negModels > 0 ? 'text-red-300' : 'text-white'}`}
+                className={`text-lg font-semibold tabular-nums ${overviewHqAnalytics.negModels > 0 ? 'text-red-300' : 'text-zinc-900 dark:text-white'}`}
               >
                 {overviewHqAnalytics.negModels}
               </p>
             </div>
-            <div className="rounded-lg border border-gray-800 bg-white/5 px-3 py-2">
-              <p className="text-xs text-gray-500 uppercase tracking-wider">Short SKU lines</p>
+            <div className="rounded-lg border border-zinc-200 dark:border-gray-800 bg-zinc-200/50 dark:bg-white/5 px-3 py-2">
+              <p className="text-xs text-zinc-500 dark:text-gray-500 uppercase tracking-wider">Short SKU lines</p>
               <p
-                className={`text-lg font-semibold tabular-nums ${overviewHqAnalytics.shortSkuCount > 0 ? 'text-red-400' : 'text-white'}`}
+                className={`text-lg font-semibold tabular-nums ${overviewHqAnalytics.shortSkuCount > 0 ? 'text-red-400' : 'text-zinc-900 dark:text-white'}`}
               >
                 {overviewHqAnalytics.shortSkuCount}
               </p>
             </div>
           </div>
 
-          <section className="rounded-lg border border-gray-800 bg-white/[0.03] p-4 space-y-3">
-            <h3 className="flex items-center gap-2 text-sm font-semibold text-white">
+          <section className="rounded-lg border border-zinc-200 dark:border-gray-800 bg-white/[0.03] p-4 space-y-3">
+            <h3 className="flex items-center gap-2 text-sm font-semibold text-zinc-900 dark:text-white">
               <Warehouse className="w-4 h-4 text-[#C27E00]" />
               Analysis & charts
             </h3>
             <div className="grid gap-6 xl:grid-cols-2">
               <div className="space-y-2">
-                <p className="text-xs font-medium text-gray-400">HQ total vs dealer aggregate (per model)</p>
+                <p className="text-xs font-medium text-zinc-500 dark:text-gray-400">HQ total vs dealer aggregate (per model)</p>
                 {overviewHqAnalytics.modelRows.length === 0 ? (
-                  <p className="text-gray-500 text-sm py-10">No models.</p>
+                  <p className="text-zinc-500 dark:text-gray-500 text-sm py-10">No models.</p>
                 ) : (
                   <ResponsiveContainer width="100%" height={280}>
                     <BarChart
@@ -1288,7 +1288,7 @@ export function InventoryDashboard({
                       />
                       <Legend
                         wrapperStyle={{ fontSize: '11px' }}
-                        formatter={(v) => <span className="text-gray-300">{v}</span>}
+                        formatter={(v) => <span className="text-zinc-600 dark:text-gray-300">{v}</span>}
                       />
                       <Bar dataKey="hq" name="HQ total" fill="#C27E00" radius={[4, 4, 0, 0]} />
                       <Bar dataKey="dealers" name="Dealers on hand" fill="#60a5fa" radius={[4, 4, 0, 0]} />
@@ -1297,9 +1297,9 @@ export function InventoryDashboard({
                 )}
               </div>
               <div className="space-y-2">
-                <p className="text-xs font-medium text-gray-400">Positive field inventory by model (share)</p>
+                <p className="text-xs font-medium text-zinc-500 dark:text-gray-400">Positive field inventory by model (share)</p>
                 {overviewHqAnalytics.pieData.length === 0 ? (
-                  <p className="text-gray-500 text-sm py-10">
+                  <p className="text-zinc-500 dark:text-gray-500 text-sm py-10">
                     No positive dealer rollups — field totals are zero or negative for every model. Use receipts to
                     rebuild on-hand.
                   </p>
@@ -1334,7 +1334,7 @@ export function InventoryDashboard({
                       />
                       <Legend
                         wrapperStyle={{ fontSize: '10px' }}
-                        formatter={(v) => <span className="text-gray-300">{v}</span>}
+                        formatter={(v) => <span className="text-zinc-600 dark:text-gray-300">{v}</span>}
                       />
                     </PieChart>
                   </ResponsiveContainer>
@@ -1343,8 +1343,8 @@ export function InventoryDashboard({
             </div>
           </section>
 
-          <section className="rounded-lg border border-gray-800 bg-white/5 p-4 space-y-3">
-            <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+          <section className="rounded-lg border border-zinc-200 dark:border-gray-800 bg-zinc-200/50 dark:bg-white/5 p-4 space-y-3">
+            <h2 className="text-lg font-semibold text-zinc-900 dark:text-white flex items-center gap-2">
               <Package className="w-5 h-5 text-[#C27E00]" />
               Insights &amp; suggestions
             </h2>
@@ -1355,11 +1355,11 @@ export function InventoryDashboard({
                   className={`rounded-lg border px-4 py-3 text-sm ${
                     s.level === 'warning'
                       ? 'border-amber-800/60 bg-amber-950/30 text-amber-100'
-                      : 'border-gray-700 bg-white/5 text-gray-200'
+                      : 'border-zinc-300 dark:border-gray-700 bg-zinc-200/50 dark:bg-white/5 text-zinc-800 dark:text-gray-200'
                   }`}
                 >
-                  <p className="font-medium text-white">{s.title}</p>
-                  <p className="text-gray-400 mt-1">{s.detail}</p>
+                  <p className="font-medium text-zinc-900 dark:text-white">{s.title}</p>
+                  <p className="text-zinc-500 dark:text-gray-400 mt-1">{s.detail}</p>
                 </div>
               ))}
               {suggestions.map((s, i) => (
@@ -1368,15 +1368,15 @@ export function InventoryDashboard({
                   className={`rounded-lg border px-4 py-3 text-sm ${
                     s.level === 'warning'
                       ? 'border-amber-800/60 bg-amber-950/30 text-amber-100'
-                      : 'border-gray-700 bg-white/5 text-gray-200'
+                      : 'border-zinc-300 dark:border-gray-700 bg-zinc-200/50 dark:bg-white/5 text-zinc-800 dark:text-gray-200'
                   }`}
                 >
-                  <p className="font-medium text-white">{s.title}</p>
-                  <p className="text-gray-400 mt-1">{s.detail}</p>
+                  <p className="font-medium text-zinc-900 dark:text-white">{s.title}</p>
+                  <p className="text-zinc-500 dark:text-gray-400 mt-1">{s.detail}</p>
                 </div>
               ))}
               {suggestions.length === 0 && (
-                <p className="text-gray-500 text-sm border-t border-gray-800 pt-3">
+                <p className="text-zinc-500 dark:text-gray-500 text-sm border-t border-zinc-200 dark:border-gray-800 pt-3">
                   No threshold-based alerts from the server. Add minimums under Receipt / adjust for automated low-stock
                   messages in this list.
                 </p>
@@ -1384,39 +1384,40 @@ export function InventoryDashboard({
             </div>
           </section>
 
-          <section className="rounded-lg border border-gray-800 bg-white/5 p-4 space-y-3">
-            <h2 className="text-lg font-semibold text-white">Add new camera model</h2>
-            <p className="text-sm text-gray-500">
+          <section className="rounded-lg border border-zinc-200 dark:border-gray-800 bg-zinc-200/50 dark:bg-white/5 p-4 space-y-3">
+            <h2 className="text-lg font-semibold text-zinc-900 dark:text-white">Add new camera model</h2>
+            <p className="text-sm text-zinc-500 dark:text-gray-500">
               Creates a catalog entry (same as Platform Management → Cameras). Assign to dealers there if needed.
             </p>
             <form id="inv-new-camera-form" action={createCamAction} className="space-y-3 max-w-2xl">
               <div>
-                <label className="block text-xs font-medium text-gray-400 mb-1">Model name *</label>
+                <label className="block text-xs font-medium text-zinc-500 dark:text-gray-400 mb-1">Model name *</label>
                 <input
                   name="name"
                   required
-                  className="w-full rounded-md border border-gray-700 bg-gray-900 px-3 py-2 text-white text-sm focus:border-[#C27E00] focus:outline-none focus:ring-1 focus:ring-[#C27E00]"
+                  className="w-full rounded-md border border-zinc-300 dark:border-gray-700 bg-zinc-200 dark:bg-gray-900 px-3 py-2 text-zinc-900 dark:text-white text-sm placeholder-zinc-500 dark:placeholder-gray-500 focus:border-[#C27E00] focus:outline-none focus:ring-1 focus:ring-[#C27E00]"
                   placeholder="e.g. 2-Channel"
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-400 mb-1">Description (optional)</label>
+                <label className="block text-xs font-medium text-zinc-500 dark:text-gray-400 mb-1">Description (optional)</label>
                 <textarea
                   name="description"
                   rows={2}
-                  className="w-full rounded-md border border-gray-700 bg-gray-900 px-3 py-2 text-white text-sm focus:border-[#C27E00] focus:outline-none focus:ring-1 focus:ring-[#C27E00]"
+                  className="w-full rounded-md border border-zinc-300 dark:border-gray-700 bg-zinc-200 dark:bg-gray-900 px-3 py-2 text-zinc-900 dark:text-white text-sm placeholder-zinc-500 dark:placeholder-gray-500 focus:border-[#C27E00] focus:outline-none focus:ring-1 focus:ring-[#C27E00]"
+                  placeholder="Optional notes…"
                 />
               </div>
               <div className="flex flex-wrap items-end gap-3">
                 <div>
-                  <label className="block text-xs font-medium text-gray-400 mb-1">Initial HQ total quantity *</label>
+                  <label className="block text-xs font-medium text-zinc-500 dark:text-gray-400 mb-1">Initial HQ total quantity *</label>
                   <input
                     name="stockQuantity"
                     type="number"
                     min={0}
                     required
                     defaultValue={0}
-                    className="w-40 rounded-md border border-gray-700 bg-gray-900 px-3 py-2 text-white text-sm focus:border-[#C27E00] focus:outline-none focus:ring-1 focus:ring-[#C27E00]"
+                    className="w-40 rounded-md border border-zinc-300 dark:border-gray-700 bg-zinc-200 dark:bg-gray-900 px-3 py-2 text-zinc-900 dark:text-white text-sm tabular-nums focus:border-[#C27E00] focus:outline-none focus:ring-1 focus:ring-[#C27E00]"
                   />
                 </div>
                 <button
@@ -1432,14 +1433,14 @@ export function InventoryDashboard({
 
           <section>
             <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
-              <h2 className="text-lg font-semibold text-white">HQ catalog (reference)</h2>
+              <h2 className="text-lg font-semibold text-zinc-900 dark:text-white">HQ catalog (reference)</h2>
             </div>
-            <p className="text-sm text-gray-500 mb-2">
-              HQ total per model (<code className="text-gray-400">stock_quantity</code>) — not reduced by dealer inventory movements. Edit below or in Configuration → Cameras.
+            <p className="text-sm text-zinc-500 dark:text-gray-500 mb-2">
+              HQ total per model (<code className="text-zinc-500 dark:text-gray-400">stock_quantity</code>) — not reduced by dealer inventory movements. Edit below or in Configuration → Cameras.
             </p>
-            <div className="overflow-x-auto rounded-lg border border-gray-800">
+            <div className="overflow-x-auto rounded-lg border border-zinc-200 dark:border-gray-800">
               <table className="min-w-full text-sm">
-                <thead className="bg-white/5 text-gray-400 text-left">
+                <thead className="bg-zinc-200/50 dark:bg-white/5 text-zinc-500 dark:text-gray-400 text-left">
                   <tr>
                     <th className="px-3 py-2">Model</th>
                     <th className="px-3 py-2 text-right">HQ total (editable)</th>
@@ -1448,7 +1449,7 @@ export function InventoryDashboard({
                     <th className="px-3 py-2 text-right w-[1%] whitespace-nowrap">Drill down</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-800 text-gray-200">
+                <tbody className="divide-y divide-zinc-200 dark:divide-gray-800 text-zinc-800 dark:text-gray-200">
                   {cameras.map((c) => {
                     const row = overviewHqAnalytics.modelRows.find((r) => r.id === c.id)
                     const dealersQty = overallByModel[c.id] ?? 0
@@ -1465,7 +1466,7 @@ export function InventoryDashboard({
                               type="number"
                               min={0}
                               defaultValue={c.stock_quantity ?? 0}
-                              className="w-24 rounded border border-gray-700 bg-gray-900 px-2 py-1.5 text-white text-sm text-right tabular-nums focus:border-[#C27E00] focus:outline-none focus:ring-1 focus:ring-[#C27E00]"
+                              className="w-24 rounded border border-zinc-300 dark:border-gray-700 bg-zinc-200 dark:bg-gray-900 px-2 py-1.5 text-zinc-900 dark:text-white text-sm text-right tabular-nums focus:border-[#C27E00] focus:outline-none focus:ring-1 focus:ring-[#C27E00]"
                             />
                             <button
                               type="button"
@@ -1482,7 +1483,7 @@ export function InventoryDashboard({
                         >
                           {dealersQty}
                         </td>
-                        <td className="px-3 py-2 text-right tabular-nums text-gray-400">{notional}</td>
+                        <td className="px-3 py-2 text-right tabular-nums text-zinc-500 dark:text-gray-400">{notional}</td>
                         <td className="px-3 py-2 text-right">
                           <button
                             type="button"
@@ -1493,7 +1494,7 @@ export function InventoryDashboard({
                               setIssuesOnly(false)
                               setTab('dealers')
                             }}
-                            className="rounded border border-gray-600 px-2 py-1 text-[10px] text-gray-300 hover:bg-white/5"
+                            className="rounded border border-zinc-300 dark:border-gray-600 px-2 py-1 text-[10px] text-zinc-600 dark:text-gray-300 hover:bg-zinc-200/50 dark:bg-white/5"
                           >
                             By dealer
                           </button>
@@ -1510,8 +1511,8 @@ export function InventoryDashboard({
 
       {tab === 'dealers' && (
         <div className="space-y-4">
-          <p className="text-sm text-gray-400">
-            Negative on hand means demand was recorded without enough receipts — use <strong className="text-gray-300 font-medium">Receipt / adjust</strong> or row actions below.
+          <p className="text-sm text-zinc-500 dark:text-gray-400">
+            Negative on hand means demand was recorded without enough receipts — use <strong className="text-zinc-600 dark:text-gray-300 font-medium">Receipt / adjust</strong> or row actions below.
           </p>
 
           {suggestions.length > 0 && (
@@ -1520,11 +1521,11 @@ export function InventoryDashboard({
                 <AlertTriangle className="w-4 h-4 shrink-0" />
                 Suggestions (also on Overview)
               </div>
-              <ul className="space-y-2 text-sm text-gray-300">
+              <ul className="space-y-2 text-sm text-zinc-600 dark:text-gray-300">
                 {suggestions.slice(0, 5).map((s, i) => (
                   <li key={i} className="border-l-2 border-amber-700/60 pl-3">
-                    <span className="text-white font-medium">{s.title}</span>
-                    <span className="text-gray-500"> — </span>
+                    <span className="text-zinc-900 dark:text-white font-medium">{s.title}</span>
+                    <span className="text-zinc-500 dark:text-gray-500"> — </span>
                     {s.detail}
                   </li>
                 ))}
@@ -1533,43 +1534,43 @@ export function InventoryDashboard({
           )}
 
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <div className="rounded-lg border border-gray-800 bg-white/5 px-3 py-2">
-              <p className="text-xs text-gray-500 uppercase tracking-wider">Rows (filtered)</p>
-              <p className="text-lg font-semibold text-white tabular-nums">{dealerKpis.rows}</p>
+            <div className="rounded-lg border border-zinc-200 dark:border-gray-800 bg-zinc-200/50 dark:bg-white/5 px-3 py-2">
+              <p className="text-xs text-zinc-500 dark:text-gray-500 uppercase tracking-wider">Rows (filtered)</p>
+              <p className="text-lg font-semibold text-zinc-900 dark:text-white tabular-nums">{dealerKpis.rows}</p>
             </div>
-            <div className="rounded-lg border border-gray-800 bg-white/5 px-3 py-2">
-              <p className="text-xs text-gray-500 uppercase tracking-wider">Short (on hand &lt; 0)</p>
+            <div className="rounded-lg border border-zinc-200 dark:border-gray-800 bg-zinc-200/50 dark:bg-white/5 px-3 py-2">
+              <p className="text-xs text-zinc-500 dark:text-gray-500 uppercase tracking-wider">Short (on hand &lt; 0)</p>
               <p
-                className={`text-lg font-semibold tabular-nums ${dealerKpis.neg > 0 ? 'text-red-400' : 'text-white'}`}
+                className={`text-lg font-semibold tabular-nums ${dealerKpis.neg > 0 ? 'text-red-400' : 'text-zinc-900 dark:text-white'}`}
               >
                 {dealerKpis.neg}
               </p>
             </div>
-            <div className="rounded-lg border border-gray-800 bg-white/5 px-3 py-2">
-              <p className="text-xs text-gray-500 uppercase tracking-wider">Below min</p>
+            <div className="rounded-lg border border-zinc-200 dark:border-gray-800 bg-zinc-200/50 dark:bg-white/5 px-3 py-2">
+              <p className="text-xs text-zinc-500 dark:text-gray-500 uppercase tracking-wider">Below min</p>
               <p
-                className={`text-lg font-semibold tabular-nums ${dealerKpis.below > 0 ? 'text-amber-300' : 'text-white'}`}
+                className={`text-lg font-semibold tabular-nums ${dealerKpis.below > 0 ? 'text-amber-300' : 'text-zinc-900 dark:text-white'}`}
               >
                 {dealerKpis.below}
               </p>
             </div>
-            <div className="rounded-lg border border-gray-800 bg-white/5 px-3 py-2">
-              <p className="text-xs text-gray-500 uppercase tracking-wider">30d installs (filtered)</p>
-              <p className="text-lg font-semibold text-white tabular-nums">{dealerKpis.installs}</p>
+            <div className="rounded-lg border border-zinc-200 dark:border-gray-800 bg-zinc-200/50 dark:bg-white/5 px-3 py-2">
+              <p className="text-xs text-zinc-500 dark:text-gray-500 uppercase tracking-wider">30d installs (filtered)</p>
+              <p className="text-lg font-semibold text-zinc-900 dark:text-white tabular-nums">{dealerKpis.installs}</p>
             </div>
           </div>
 
-          <div className="flex flex-wrap items-end gap-3 rounded-lg border border-gray-800 bg-white/[0.03] p-3">
-            <div className="flex items-center gap-1.5 text-gray-400 text-xs shrink-0">
+          <div className="flex flex-wrap items-end gap-3 rounded-lg border border-zinc-200 dark:border-gray-800 bg-white/[0.03] p-3">
+            <div className="flex items-center gap-1.5 text-zinc-500 dark:text-gray-400 text-xs shrink-0">
               <Filter className="w-4 h-4" />
               <span className="uppercase tracking-wider">Filters</span>
             </div>
             <div className="min-w-[160px] flex-1">
-              <label className="block text-[10px] text-gray-500 uppercase mb-1">Dealer</label>
+              <label className="block text-[10px] text-zinc-500 dark:text-gray-500 uppercase mb-1">Dealer</label>
               <select
                 value={dealerFilterId}
                 onChange={(e) => setDealerFilterId(e.target.value)}
-                className="w-full rounded-md border border-gray-700 bg-gray-900 px-2 py-1.5 text-sm text-white"
+                className="w-full rounded-md border border-zinc-300 dark:border-gray-700 bg-zinc-200 dark:bg-gray-900 px-2 py-1.5 text-sm text-zinc-900 dark:text-white"
               >
                 <option value="">All</option>
                 {dealers.map((d) => (
@@ -1580,11 +1581,11 @@ export function InventoryDashboard({
               </select>
             </div>
             <div className="min-w-[100px]">
-              <label className="block text-[10px] text-gray-500 uppercase mb-1">Region</label>
+              <label className="block text-[10px] text-zinc-500 dark:text-gray-500 uppercase mb-1">Region</label>
               <select
                 value={regionFilterCode}
                 onChange={(e) => setRegionFilterCode(e.target.value)}
-                className="w-full rounded-md border border-gray-700 bg-gray-900 px-2 py-1.5 text-sm text-white"
+                className="w-full rounded-md border border-zinc-300 dark:border-gray-700 bg-zinc-200 dark:bg-gray-900 px-2 py-1.5 text-sm text-zinc-900 dark:text-white"
               >
                 <option value="">All</option>
                 {regionsList.map((code) => (
@@ -1595,11 +1596,11 @@ export function InventoryDashboard({
               </select>
             </div>
             <div className="min-w-[180px] flex-1">
-              <label className="block text-[10px] text-gray-500 uppercase mb-1">Camera</label>
+              <label className="block text-[10px] text-zinc-500 dark:text-gray-500 uppercase mb-1">Camera</label>
               <select
                 value={cameraFilterId}
                 onChange={(e) => setCameraFilterId(e.target.value)}
-                className="w-full rounded-md border border-gray-700 bg-gray-900 px-2 py-1.5 text-sm text-white"
+                className="w-full rounded-md border border-zinc-300 dark:border-gray-700 bg-zinc-200 dark:bg-gray-900 px-2 py-1.5 text-sm text-zinc-900 dark:text-white"
               >
                 <option value="">All</option>
                 {cameras.map((c) => (
@@ -1609,12 +1610,12 @@ export function InventoryDashboard({
                 ))}
               </select>
             </div>
-            <label className="inline-flex items-center gap-2 cursor-pointer text-sm text-gray-300 pt-5 sm:pt-0">
+            <label className="inline-flex items-center gap-2 cursor-pointer text-sm text-zinc-600 dark:text-gray-300 pt-5 sm:pt-0">
               <input
                 type="checkbox"
                 checked={issuesOnly}
                 onChange={(e) => setIssuesOnly(e.target.checked)}
-                className="rounded border-gray-600 bg-gray-900"
+                className="rounded border-zinc-300 dark:border-gray-600 bg-zinc-200 dark:bg-gray-900"
               />
               Issues only
             </label>
@@ -1626,7 +1627,7 @@ export function InventoryDashboard({
                 setCameraFilterId('')
                 setIssuesOnly(false)
               }}
-              className="rounded-md border border-gray-600 px-3 py-1.5 text-xs text-gray-300 hover:bg-white/5"
+              className="rounded-md border border-zinc-300 dark:border-gray-600 px-3 py-1.5 text-xs text-zinc-600 dark:text-gray-300 hover:bg-zinc-200/50 dark:bg-white/5"
             >
               Reset
             </button>
@@ -1640,9 +1641,9 @@ export function InventoryDashboard({
             </button>
           </div>
 
-          <div className="overflow-x-auto rounded-lg border border-gray-800">
+          <div className="overflow-x-auto rounded-lg border border-zinc-200 dark:border-gray-800">
             <table className="min-w-full text-sm">
-              <thead className="bg-white/5 text-gray-400 text-left">
+              <thead className="bg-zinc-200/50 dark:bg-white/5 text-zinc-500 dark:text-gray-400 text-left">
                 <tr>
                   <th className="px-3 py-2">{sortHeader('Dealer', 'dealer')}</th>
                   <th className="px-3 py-2">{sortHeader('Region', 'region')}</th>
@@ -1654,10 +1655,10 @@ export function InventoryDashboard({
                   <th className="px-3 py-2 text-right w-[1%] whitespace-nowrap">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-800 text-gray-200">
+              <tbody className="divide-y divide-zinc-200 dark:divide-gray-800 text-zinc-800 dark:text-gray-200">
                 {sortedDealerRows.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="px-3 py-8 text-center text-gray-500">
+                    <td colSpan={8} className="px-3 py-8 text-center text-zinc-500 dark:text-gray-500">
                       No rows match filters.
                     </td>
                   </tr>
@@ -1673,21 +1674,21 @@ export function InventoryDashboard({
                       ? 'text-red-300 font-medium'
                       : r.belowMin
                         ? 'text-amber-200'
-                        : 'text-gray-200'
+                        : 'text-zinc-800 dark:text-gray-200'
                     const statusCls =
                       r.status === 'negative'
                         ? 'text-red-300'
                         : r.status === 'below_min'
                           ? 'text-amber-300'
-                          : 'text-gray-500'
+                          : 'text-zinc-500 dark:text-gray-500'
                     return (
                       <tr key={r.k} className={rowBg}>
                         <td className="px-3 py-2">{r.d?.name ?? r.dealer_id}</td>
-                        <td className="px-3 py-2 text-gray-400">{r.d?.region_codes?.code ?? '—'}</td>
+                        <td className="px-3 py-2 text-zinc-500 dark:text-gray-400">{r.d?.region_codes?.code ?? '—'}</td>
                         <td className="px-3 py-2">{r.c?.name ?? r.camera_model_id}</td>
                         <td className={`px-3 py-2 text-right tabular-nums ${qtyCls}`}>{r.quantity}</td>
                         <td className="px-3 py-2 text-right tabular-nums">{r.cons}</td>
-                        <td className="px-3 py-2 text-right tabular-nums text-gray-500">
+                        <td className="px-3 py-2 text-right tabular-nums text-zinc-500 dark:text-gray-500">
                           {r.t?.min_qty ?? '—'}
                         </td>
                         <td className={`px-3 py-2 text-xs font-medium ${statusCls}`}>
@@ -1715,7 +1716,7 @@ export function InventoryDashboard({
                                 })
                                 setTab('manual')
                               }}
-                              className="rounded border border-gray-600 px-2 py-1 text-[10px] text-gray-300 hover:bg-white/5"
+                              className="rounded border border-zinc-300 dark:border-gray-600 px-2 py-1 text-[10px] text-zinc-600 dark:text-gray-300 hover:bg-zinc-200/50 dark:bg-white/5"
                             >
                               Set min
                             </button>
@@ -1733,11 +1734,11 @@ export function InventoryDashboard({
 
       {tab === 'regions' && (
         <div className="space-y-4">
-          <div className="space-y-2 text-sm text-gray-400">
+          <div className="space-y-2 text-sm text-zinc-500 dark:text-gray-400">
             <p>
-              <strong className="text-gray-300 font-medium">Units on hand</strong> is the sum of all dealer / camera
+              <strong className="text-zinc-600 dark:text-gray-300 font-medium">Units on hand</strong> is the sum of all dealer / camera
               balances in the region. It can be negative when installs outpaced receipts.{' '}
-              <strong className="text-gray-300 font-medium">Short SKUs</strong> counts rows where on hand is below zero;
+              <strong className="text-zinc-600 dark:text-gray-300 font-medium">Short SKUs</strong> counts rows where on hand is below zero;
               the region can still look &quot;less bad&quot; in total if other lines offset — check{' '}
               <button
                 type="button"
@@ -1751,16 +1752,16 @@ export function InventoryDashboard({
           </div>
 
           {suggestions.length > 0 && (
-            <section className="rounded-lg border border-gray-700/80 bg-white/[0.03] p-4 space-y-2">
-              <div className="flex items-center gap-2 text-gray-200 text-sm font-medium">
+            <section className="rounded-lg border border-zinc-300 dark:border-gray-700/80 bg-white/[0.03] p-4 space-y-2">
+              <div className="flex items-center gap-2 text-zinc-800 dark:text-gray-200 text-sm font-medium">
                 <AlertTriangle className="w-4 h-4 shrink-0 text-amber-400" />
                 Cross-region alerts (from Overview suggestions)
               </div>
-              <ul className="space-y-1.5 text-sm text-gray-400">
+              <ul className="space-y-1.5 text-sm text-zinc-500 dark:text-gray-400">
                 {suggestions.slice(0, 4).map((s, i) => (
                   <li key={i}>
-                    <span className="text-gray-200">{s.title}</span>
-                    <span className="text-gray-600"> — </span>
+                    <span className="text-zinc-800 dark:text-gray-200">{s.title}</span>
+                    <span className="text-zinc-600 dark:text-gray-600"> — </span>
                     {s.detail}
                   </li>
                 ))}
@@ -1769,57 +1770,57 @@ export function InventoryDashboard({
           )}
 
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <div className="rounded-lg border border-gray-800 bg-white/5 px-3 py-2">
-              <p className="text-xs text-gray-500 uppercase tracking-wider">Regions (filtered)</p>
-              <p className="text-lg font-semibold text-white tabular-nums">{regionKpis.rows}</p>
+            <div className="rounded-lg border border-zinc-200 dark:border-gray-800 bg-zinc-200/50 dark:bg-white/5 px-3 py-2">
+              <p className="text-xs text-zinc-500 dark:text-gray-500 uppercase tracking-wider">Regions (filtered)</p>
+              <p className="text-lg font-semibold text-zinc-900 dark:text-white tabular-nums">{regionKpis.rows}</p>
             </div>
-            <div className="rounded-lg border border-gray-800 bg-white/5 px-3 py-2">
-              <p className="text-xs text-gray-500 uppercase tracking-wider">Need action</p>
+            <div className="rounded-lg border border-zinc-200 dark:border-gray-800 bg-zinc-200/50 dark:bg-white/5 px-3 py-2">
+              <p className="text-xs text-zinc-500 dark:text-gray-500 uppercase tracking-wider">Need action</p>
               <p
-                className={`text-lg font-semibold tabular-nums ${regionKpis.critical > 0 ? 'text-red-400' : 'text-white'}`}
+                className={`text-lg font-semibold tabular-nums ${regionKpis.critical > 0 ? 'text-red-400' : 'text-zinc-900 dark:text-white'}`}
               >
                 {regionKpis.critical}
               </p>
             </div>
-            <div className="rounded-lg border border-gray-800 bg-white/5 px-3 py-2">
-              <p className="text-xs text-gray-500 uppercase tracking-wider">Below min (region)</p>
+            <div className="rounded-lg border border-zinc-200 dark:border-gray-800 bg-zinc-200/50 dark:bg-white/5 px-3 py-2">
+              <p className="text-xs text-zinc-500 dark:text-gray-500 uppercase tracking-wider">Below min (region)</p>
               <p
-                className={`text-lg font-semibold tabular-nums ${regionKpis.below > 0 ? 'text-amber-300' : 'text-white'}`}
+                className={`text-lg font-semibold tabular-nums ${regionKpis.below > 0 ? 'text-amber-300' : 'text-zinc-900 dark:text-white'}`}
               >
                 {regionKpis.below}
               </p>
             </div>
-            <div className="rounded-lg border border-gray-800 bg-white/5 px-3 py-2">
-              <p className="text-xs text-gray-500 uppercase tracking-wider">Short SKUs (filtered)</p>
+            <div className="rounded-lg border border-zinc-200 dark:border-gray-800 bg-zinc-200/50 dark:bg-white/5 px-3 py-2">
+              <p className="text-xs text-zinc-500 dark:text-gray-500 uppercase tracking-wider">Short SKUs (filtered)</p>
               <p
-                className={`text-lg font-semibold tabular-nums ${regionKpis.shortSkus > 0 ? 'text-red-300' : 'text-white'}`}
+                className={`text-lg font-semibold tabular-nums ${regionKpis.shortSkus > 0 ? 'text-red-300' : 'text-zinc-900 dark:text-white'}`}
               >
                 {regionKpis.shortSkus}
               </p>
             </div>
           </div>
 
-          <div className="flex flex-wrap items-end gap-3 rounded-lg border border-gray-800 bg-white/[0.03] p-3">
-            <div className="flex items-center gap-1.5 text-gray-400 text-xs shrink-0">
+          <div className="flex flex-wrap items-end gap-3 rounded-lg border border-zinc-200 dark:border-gray-800 bg-white/[0.03] p-3">
+            <div className="flex items-center gap-1.5 text-zinc-500 dark:text-gray-400 text-xs shrink-0">
               <Filter className="w-4 h-4" />
               <span className="uppercase tracking-wider">Filters</span>
             </div>
             <div className="min-w-[200px] flex-1">
-              <label className="block text-[10px] text-gray-500 uppercase mb-1">Search code or name</label>
+              <label className="block text-[10px] text-zinc-500 dark:text-gray-500 uppercase mb-1">Search code or name</label>
               <input
                 type="search"
                 value={regionSearch}
                 onChange={(e) => setRegionSearch(e.target.value)}
                 placeholder="e.g. SRY, Richmond"
-                className="w-full rounded-md border border-gray-700 bg-gray-900 px-2 py-1.5 text-sm text-white placeholder:text-gray-600"
+                className="w-full rounded-md border border-zinc-300 dark:border-gray-700 bg-zinc-200 dark:bg-gray-900 px-2 py-1.5 text-sm text-zinc-900 dark:text-white placeholder:text-zinc-600 dark:text-gray-600"
               />
             </div>
-            <label className="inline-flex items-center gap-2 cursor-pointer text-sm text-gray-300">
+            <label className="inline-flex items-center gap-2 cursor-pointer text-sm text-zinc-600 dark:text-gray-300">
               <input
                 type="checkbox"
                 checked={regionIssuesOnly}
                 onChange={(e) => setRegionIssuesOnly(e.target.checked)}
-                className="rounded border-gray-600 bg-gray-900"
+                className="rounded border-zinc-300 dark:border-gray-600 bg-zinc-200 dark:bg-gray-900"
               />
               Issues only
             </label>
@@ -1829,7 +1830,7 @@ export function InventoryDashboard({
                 setRegionSearch('')
                 setRegionIssuesOnly(false)
               }}
-              className="rounded-md border border-gray-600 px-3 py-1.5 text-xs text-gray-300 hover:bg-white/5"
+              className="rounded-md border border-zinc-300 dark:border-gray-600 px-3 py-1.5 text-xs text-zinc-600 dark:text-gray-300 hover:bg-zinc-200/50 dark:bg-white/5"
             >
               Reset
             </button>
@@ -1843,9 +1844,9 @@ export function InventoryDashboard({
             </button>
           </div>
 
-          <div className="overflow-x-auto rounded-lg border border-gray-800">
+          <div className="overflow-x-auto rounded-lg border border-zinc-200 dark:border-gray-800">
             <table className="min-w-full text-sm">
-              <thead className="bg-white/5 text-gray-400 text-left">
+              <thead className="bg-zinc-200/50 dark:bg-white/5 text-zinc-500 dark:text-gray-400 text-left">
                 <tr>
                   <th className="px-3 py-2">{regionSortHeader('Code', 'code')}</th>
                   <th className="px-3 py-2">{regionSortHeader('Region', 'name')}</th>
@@ -1859,10 +1860,10 @@ export function InventoryDashboard({
                   <th className="px-3 py-2 text-right w-[1%] whitespace-nowrap">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-800 text-gray-200">
+              <tbody className="divide-y divide-zinc-200 dark:divide-gray-800 text-zinc-800 dark:text-gray-200">
                 {sortedRegionRows.length === 0 ? (
                   <tr>
-                    <td colSpan={10} className="px-3 py-8 text-center text-gray-500">
+                    <td colSpan={10} className="px-3 py-8 text-center text-zinc-500 dark:text-gray-500">
                       No regions match filters.
                     </td>
                   </tr>
@@ -1877,13 +1878,13 @@ export function InventoryDashboard({
                           : undefined
                     const unitsCls =
                       r.units < 0 ? 'text-red-300 font-medium' : st === 'below_min' ? 'text-amber-100' : ''
-                    const shortCls = r.shortSkus > 0 ? 'text-red-300 font-medium' : 'text-gray-500'
+                    const shortCls = r.shortSkus > 0 ? 'text-red-300 font-medium' : 'text-zinc-500 dark:text-gray-500'
                     const statusCls =
                       st === 'critical'
                         ? 'text-red-300'
                         : st === 'below_min'
                           ? 'text-amber-300'
-                          : 'text-gray-500'
+                          : 'text-zinc-500 dark:text-gray-500'
                     const hint =
                       r.shortSkus > 0 && r.units < 0
                         ? `${r.shortSkus} SKU(s) short; net negative`
@@ -1894,15 +1895,15 @@ export function InventoryDashboard({
                             : undefined
                     return (
                       <tr key={r.code} className={rowBg} title={hint}>
-                        <td className="px-3 py-2 font-medium text-white">{r.code}</td>
+                        <td className="px-3 py-2 font-medium text-zinc-900 dark:text-white">{r.code}</td>
                         <td className="px-3 py-2">{r.name}</td>
                         <td className="px-3 py-2 text-right tabular-nums">{r.dealers.size}</td>
-                        <td className="px-3 py-2 text-right tabular-nums text-gray-400">{r.stockRowCount}</td>
+                        <td className="px-3 py-2 text-right tabular-nums text-zinc-500 dark:text-gray-400">{r.stockRowCount}</td>
                         <td className={`px-3 py-2 text-right tabular-nums ${unitsCls}`}>{r.units}</td>
                         <td className="px-3 py-2 text-right tabular-nums">{r.consumption30}</td>
                         <td className={`px-3 py-2 text-right tabular-nums ${shortCls}`}>{r.shortSkus}</td>
                         <td
-                          className={`px-3 py-2 text-right tabular-nums ${r.belowMinSkus > 0 ? 'text-amber-200' : 'text-gray-500'}`}
+                          className={`px-3 py-2 text-right tabular-nums ${r.belowMinSkus > 0 ? 'text-amber-200' : 'text-zinc-500 dark:text-gray-500'}`}
                         >
                           {r.belowMinSkus}
                         </td>
@@ -1933,7 +1934,7 @@ export function InventoryDashboard({
                                 setCameraFilterId('')
                                 setTab('dealers')
                               }}
-                              className="rounded border border-gray-600 px-2 py-1 text-[10px] text-gray-300 hover:bg-white/5"
+                              className="rounded border border-zinc-300 dark:border-gray-600 px-2 py-1 text-[10px] text-zinc-600 dark:text-gray-300 hover:bg-zinc-200/50 dark:bg-white/5"
                             >
                               Issues in region
                             </button>
@@ -1951,18 +1952,18 @@ export function InventoryDashboard({
 
       {tab === 'movements' && (
         <div className="space-y-4">
-          <p className="text-xs text-gray-500">
+          <p className="text-xs text-zinc-500 dark:text-gray-500">
             Timestamps in {SYSTEM_DEFAULT_TIMEZONE.replace('_', ' ')} (PT) — same base timezone as appointments and
             calendar. Charts and KPIs reflect the filtered list below (not the full history if the server caps rows).
           </p>
 
-          <div className="flex flex-wrap items-end gap-3 rounded-lg border border-gray-800 bg-white/[0.03] p-3">
+          <div className="flex flex-wrap items-end gap-3 rounded-lg border border-zinc-200 dark:border-gray-800 bg-white/[0.03] p-3">
             <div className="min-w-[120px]">
-              <label className="block text-[10px] text-gray-500 uppercase mb-1">Window</label>
+              <label className="block text-[10px] text-zinc-500 dark:text-gray-500 uppercase mb-1">Window</label>
               <select
                 value={movDaysPreset}
                 onChange={(e) => setMovDaysPreset(e.target.value as '7' | '30' | '90' | 'all')}
-                className="w-full rounded-md border border-gray-700 bg-gray-900 px-2 py-1.5 text-sm text-white"
+                className="w-full rounded-md border border-zinc-300 dark:border-gray-700 bg-zinc-200 dark:bg-gray-900 px-2 py-1.5 text-sm text-zinc-900 dark:text-white"
               >
                 <option value="7">Last 7 days</option>
                 <option value="30">Last 30 days</option>
@@ -1971,11 +1972,11 @@ export function InventoryDashboard({
               </select>
             </div>
             <div className="min-w-[180px] flex-1">
-              <label className="block text-[10px] text-gray-500 uppercase mb-1">Dealer</label>
+              <label className="block text-[10px] text-zinc-500 dark:text-gray-500 uppercase mb-1">Dealer</label>
               <select
                 value={movFilterDealer}
                 onChange={(e) => setMovFilterDealer(e.target.value)}
-                className="w-full rounded-md border border-gray-700 bg-gray-900 px-2 py-1.5 text-sm text-white"
+                className="w-full rounded-md border border-zinc-300 dark:border-gray-700 bg-zinc-200 dark:bg-gray-900 px-2 py-1.5 text-sm text-zinc-900 dark:text-white"
               >
                 <option value="">All</option>
                 {dealers.map((d) => (
@@ -1986,11 +1987,11 @@ export function InventoryDashboard({
               </select>
             </div>
             <div className="min-w-[160px]">
-              <label className="block text-[10px] text-gray-500 uppercase mb-1">Type</label>
+              <label className="block text-[10px] text-zinc-500 dark:text-gray-500 uppercase mb-1">Type</label>
               <select
                 value={movFilterType}
                 onChange={(e) => setMovFilterType(e.target.value)}
-                className="w-full rounded-md border border-gray-700 bg-gray-900 px-2 py-1.5 text-sm text-white"
+                className="w-full rounded-md border border-zinc-300 dark:border-gray-700 bg-zinc-200 dark:bg-gray-900 px-2 py-1.5 text-sm text-zinc-900 dark:text-white"
               >
                 <option value="">All</option>
                 {movementTypes.map((t) => (
@@ -2007,7 +2008,7 @@ export function InventoryDashboard({
                 setMovFilterType('')
                 setMovDaysPreset('30')
               }}
-              className="rounded-md border border-gray-600 px-3 py-1.5 text-xs text-gray-300 hover:bg-white/5"
+              className="rounded-md border border-zinc-300 dark:border-gray-600 px-3 py-1.5 text-xs text-zinc-600 dark:text-gray-300 hover:bg-zinc-200/50 dark:bg-white/5"
             >
               Reset filters
             </button>
@@ -2019,36 +2020,36 @@ export function InventoryDashboard({
               <Download className="w-3.5 h-3.5" />
               Export CSV
             </button>
-            <p className="text-xs text-gray-500 ml-auto self-center">
+            <p className="text-xs text-zinc-500 dark:text-gray-500 ml-auto self-center">
               Showing {filteredMovements.length} of {movements.length} loaded
             </p>
           </div>
 
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-            <div className="rounded-lg border border-gray-800 bg-white/5 px-3 py-2">
-              <p className="text-xs text-gray-500 uppercase tracking-wider">Events (filtered)</p>
-              <p className="text-lg font-semibold text-white tabular-nums">{movementAnalytics.eventCount}</p>
+            <div className="rounded-lg border border-zinc-200 dark:border-gray-800 bg-zinc-200/50 dark:bg-white/5 px-3 py-2">
+              <p className="text-xs text-zinc-500 dark:text-gray-500 uppercase tracking-wider">Events (filtered)</p>
+              <p className="text-lg font-semibold text-zinc-900 dark:text-white tabular-nums">{movementAnalytics.eventCount}</p>
             </div>
-            <div className="rounded-lg border border-gray-800 bg-white/5 px-3 py-2">
-              <p className="text-xs text-gray-500 uppercase tracking-wider">Net Δ qty</p>
+            <div className="rounded-lg border border-zinc-200 dark:border-gray-800 bg-zinc-200/50 dark:bg-white/5 px-3 py-2">
+              <p className="text-xs text-zinc-500 dark:text-gray-500 uppercase tracking-wider">Net Δ qty</p>
               <p
-                className={`text-lg font-semibold tabular-nums ${movementAnalytics.netDeltaSum < 0 ? 'text-red-300' : movementAnalytics.netDeltaSum > 0 ? 'text-green-300' : 'text-white'}`}
+                className={`text-lg font-semibold tabular-nums ${movementAnalytics.netDeltaSum < 0 ? 'text-red-300' : movementAnalytics.netDeltaSum > 0 ? 'text-green-300' : 'text-zinc-900 dark:text-white'}`}
               >
                 {movementAnalytics.netDeltaSum > 0 ? '+' : ''}
                 {movementAnalytics.netDeltaSum}
               </p>
             </div>
-            <div className="rounded-lg border border-gray-800 bg-white/5 px-3 py-2">
-              <p className="text-xs text-gray-500 uppercase tracking-wider">Consumptions</p>
-              <p className="text-lg font-semibold text-white tabular-nums">{movementAnalytics.consumptionCount}</p>
+            <div className="rounded-lg border border-zinc-200 dark:border-gray-800 bg-zinc-200/50 dark:bg-white/5 px-3 py-2">
+              <p className="text-xs text-zinc-500 dark:text-gray-500 uppercase tracking-wider">Consumptions</p>
+              <p className="text-lg font-semibold text-zinc-900 dark:text-white tabular-nums">{movementAnalytics.consumptionCount}</p>
             </div>
-            <div className="rounded-lg border border-gray-800 bg-white/5 px-3 py-2">
-              <p className="text-xs text-gray-500 uppercase tracking-wider">Receipt rows</p>
-              <p className="text-lg font-semibold text-white tabular-nums">{movementAnalytics.receiptCount}</p>
+            <div className="rounded-lg border border-zinc-200 dark:border-gray-800 bg-zinc-200/50 dark:bg-white/5 px-3 py-2">
+              <p className="text-xs text-zinc-500 dark:text-gray-500 uppercase tracking-wider">Receipt rows</p>
+              <p className="text-lg font-semibold text-zinc-900 dark:text-white tabular-nums">{movementAnalytics.receiptCount}</p>
             </div>
-            <div className="rounded-lg border border-gray-800 bg-white/5 px-3 py-2 sm:col-span-2 lg:col-span-1">
-              <p className="text-xs text-gray-500 uppercase tracking-wider">Date span (PT)</p>
-              <p className="text-sm font-medium text-gray-200 tabular-nums">
+            <div className="rounded-lg border border-zinc-200 dark:border-gray-800 bg-zinc-200/50 dark:bg-white/5 px-3 py-2 sm:col-span-2 lg:col-span-1">
+              <p className="text-xs text-zinc-500 dark:text-gray-500 uppercase tracking-wider">Date span (PT)</p>
+              <p className="text-sm font-medium text-zinc-800 dark:text-gray-200 tabular-nums">
                 {movementAnalytics.dateMin && movementAnalytics.dateMax
                   ? `${movementAnalytics.dateMin} → ${movementAnalytics.dateMax}`
                   : '—'}
@@ -2059,8 +2060,8 @@ export function InventoryDashboard({
           {(movementInsights.length > 0 || suggestions.length > 0) && (
             <div className="grid gap-4 md:grid-cols-2">
               {movementInsights.length > 0 && (
-                <section className="rounded-lg border border-gray-700/80 bg-white/[0.03] p-4 space-y-2">
-                  <div className="flex items-center gap-2 text-sm font-medium text-white">
+                <section className="rounded-lg border border-zinc-300 dark:border-gray-700/80 bg-white/[0.03] p-4 space-y-2">
+                  <div className="flex items-center gap-2 text-sm font-medium text-zinc-900 dark:text-white">
                     <BarChart3 className="w-4 h-4 text-[#C27E00]" />
                     Movement insights (this filter)
                   </div>
@@ -2071,11 +2072,11 @@ export function InventoryDashboard({
                         className={`rounded-md border px-3 py-2 text-sm ${
                           s.level === 'warning'
                             ? 'border-amber-800/50 bg-amber-950/25 text-amber-100'
-                            : 'border-gray-700/60 bg-white/[0.02] text-gray-300'
+                            : 'border-zinc-300 dark:border-gray-700/60 bg-white/[0.02] text-zinc-600 dark:text-gray-300'
                         }`}
                       >
-                        <p className="font-medium text-white">{s.title}</p>
-                        <p className="text-gray-400 mt-0.5">{s.detail}</p>
+                        <p className="font-medium text-zinc-900 dark:text-white">{s.title}</p>
+                        <p className="text-zinc-500 dark:text-gray-400 mt-0.5">{s.detail}</p>
                       </li>
                     ))}
                   </ul>
@@ -2087,11 +2088,11 @@ export function InventoryDashboard({
                     <AlertTriangle className="w-4 h-4 shrink-0" />
                     Inventory suggestions (Overview)
                   </div>
-                  <ul className="space-y-2 text-sm text-gray-300">
+                  <ul className="space-y-2 text-sm text-zinc-600 dark:text-gray-300">
                     {suggestions.slice(0, 5).map((s, i) => (
                       <li key={i}>
-                        <span className="text-white font-medium">{s.title}</span>
-                        <span className="text-gray-600"> — </span>
+                        <span className="text-zinc-900 dark:text-white font-medium">{s.title}</span>
+                        <span className="text-zinc-600 dark:text-gray-600"> — </span>
                         {s.detail}
                       </li>
                     ))}
@@ -2101,13 +2102,13 @@ export function InventoryDashboard({
             </div>
           )}
 
-          <section className="rounded-lg border border-gray-800 bg-white/[0.03] p-4 space-y-4">
-            <h3 className="text-sm font-semibold text-white">Charts</h3>
+          <section className="rounded-lg border border-zinc-200 dark:border-gray-800 bg-white/[0.03] p-4 space-y-4">
+            <h3 className="text-sm font-semibold text-zinc-900 dark:text-white">Charts</h3>
             <div className="grid gap-6 xl:grid-cols-3">
               <div className="xl:col-span-2 space-y-2">
-                <p className="text-xs font-medium text-gray-400">Activity by day (event counts, stacked by type)</p>
+                <p className="text-xs font-medium text-zinc-500 dark:text-gray-400">Activity by day (event counts, stacked by type)</p>
                 {movementAnalytics.daily.length === 0 ? (
-                  <p className="text-gray-500 text-sm py-10">No rows to chart.</p>
+                  <p className="text-zinc-500 dark:text-gray-500 text-sm py-10">No rows to chart.</p>
                 ) : (
                   <ResponsiveContainer width="100%" height={260}>
                     <BarChart data={movementAnalytics.daily} margin={{ top: 8, right: 8, left: 0, bottom: 4 }}>
@@ -2124,7 +2125,7 @@ export function InventoryDashboard({
                       />
                       <Legend
                         wrapperStyle={{ fontSize: '11px' }}
-                        formatter={(v) => <span className="text-gray-300">{v}</span>}
+                        formatter={(v) => <span className="text-zinc-600 dark:text-gray-300">{v}</span>}
                       />
                       <Bar dataKey="consumption" stackId="t" name="Consumption" fill="#f87171" radius={[0, 0, 0, 0]} />
                       <Bar dataKey="receipt" stackId="t" name="Receipt" fill="#4ade80" />
@@ -2136,9 +2137,9 @@ export function InventoryDashboard({
                 )}
               </div>
               <div className="space-y-2">
-                <p className="text-xs font-medium text-gray-400">Mix (filtered)</p>
+                <p className="text-xs font-medium text-zinc-500 dark:text-gray-400">Mix (filtered)</p>
                 {movementAnalytics.byType.length === 0 ? (
-                  <p className="text-gray-500 text-sm py-10">No rows.</p>
+                  <p className="text-zinc-500 dark:text-gray-500 text-sm py-10">No rows.</p>
                 ) : (
                   <ResponsiveContainer width="100%" height={260}>
                     <PieChart>
@@ -2170,7 +2171,7 @@ export function InventoryDashboard({
                       />
                       <Legend
                         wrapperStyle={{ fontSize: '10px' }}
-                        formatter={(v) => <span className="text-gray-300">{v}</span>}
+                        formatter={(v) => <span className="text-zinc-600 dark:text-gray-300">{v}</span>}
                       />
                     </PieChart>
                   </ResponsiveContainer>
@@ -2179,9 +2180,9 @@ export function InventoryDashboard({
             </div>
 
             <div className="space-y-2">
-              <p className="text-xs font-medium text-gray-400">Consumption vs receipt events (daily)</p>
+              <p className="text-xs font-medium text-zinc-500 dark:text-gray-400">Consumption vs receipt events (daily)</p>
               {movementAnalytics.daily.length === 0 ? (
-                <p className="text-gray-500 text-sm py-6">No rows.</p>
+                <p className="text-zinc-500 dark:text-gray-500 text-sm py-6">No rows.</p>
               ) : (
                 <ResponsiveContainer width="100%" height={220}>
                   <LineChart data={movementAnalytics.daily} margin={{ top: 8, right: 8, left: 0, bottom: 4 }}>
@@ -2198,7 +2199,7 @@ export function InventoryDashboard({
                     />
                     <Legend
                       wrapperStyle={{ fontSize: '11px' }}
-                      formatter={(v) => <span className="text-gray-300">{v}</span>}
+                      formatter={(v) => <span className="text-zinc-600 dark:text-gray-300">{v}</span>}
                     />
                     <Line
                       type="monotone"
@@ -2223,9 +2224,9 @@ export function InventoryDashboard({
 
             <div className="grid gap-6 lg:grid-cols-2">
               <div className="space-y-2">
-                <p className="text-xs font-medium text-gray-400">Top dealers by movement count</p>
+                <p className="text-xs font-medium text-zinc-500 dark:text-gray-400">Top dealers by movement count</p>
                 {movementAnalytics.dealerBars.length === 0 ? (
-                  <p className="text-gray-500 text-sm py-8">No data.</p>
+                  <p className="text-zinc-500 dark:text-gray-500 text-sm py-8">No data.</p>
                 ) : (
                   <ResponsiveContainer width="100%" height={280}>
                     <BarChart
@@ -2258,9 +2259,9 @@ export function InventoryDashboard({
                 )}
               </div>
               <div className="space-y-2">
-                <p className="text-xs font-medium text-gray-400">Top models by consumption events</p>
+                <p className="text-xs font-medium text-zinc-500 dark:text-gray-400">Top models by consumption events</p>
                 {movementAnalytics.cameraBars.length === 0 ? (
-                  <p className="text-gray-500 text-sm py-8">No data.</p>
+                  <p className="text-zinc-500 dark:text-gray-500 text-sm py-8">No data.</p>
                 ) : (
                   <ResponsiveContainer width="100%" height={280}>
                     <BarChart
@@ -2295,9 +2296,9 @@ export function InventoryDashboard({
             </div>
           </section>
 
-          <div className="overflow-x-auto rounded-lg border border-gray-800 max-h-[70vh] overflow-y-auto">
+          <div className="overflow-x-auto rounded-lg border border-zinc-200 dark:border-gray-800 max-h-[70vh] overflow-y-auto">
             <table className="min-w-full text-sm">
-              <thead className="bg-white/5 text-gray-400 text-left sticky top-0 z-10">
+              <thead className="bg-zinc-200/50 dark:bg-white/5 text-zinc-500 dark:text-gray-400 text-left sticky top-0 z-10">
                 <tr>
                   <th className="px-3 py-2">When</th>
                   <th className="px-3 py-2">Dealer</th>
@@ -2308,27 +2309,27 @@ export function InventoryDashboard({
                   <th className="px-3 py-2">Demand</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-800 text-gray-200">
+              <tbody className="divide-y divide-zinc-200 dark:divide-gray-800 text-zinc-800 dark:text-gray-200">
                 {filteredMovements.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="px-3 py-8 text-center text-gray-500">
+                    <td colSpan={7} className="px-3 py-8 text-center text-zinc-500 dark:text-gray-500">
                       No movements match filters.
                     </td>
                   </tr>
                 ) : (
                   filteredMovements.map((m) => (
                     <tr key={m.id}>
-                      <td className="px-3 py-2 whitespace-nowrap text-gray-400">
+                      <td className="px-3 py-2 whitespace-nowrap text-zinc-500 dark:text-gray-400">
                         {formatInPT(m.created_at, 'dd.MM.yyyy HH:mm:ss')}
                       </td>
                       <td className="px-3 py-2">{m.dealers?.name ?? '—'}</td>
                       <td className="px-3 py-2">{m.camera_models?.name ?? '—'}</td>
-                      <td className="px-3 py-2 uppercase text-xs text-gray-500">{m.movement_type}</td>
+                      <td className="px-3 py-2 uppercase text-xs text-zinc-500 dark:text-gray-500">{m.movement_type}</td>
                       <td className="px-3 py-2 text-right tabular-nums">{m.quantity_delta}</td>
-                      <td className="px-3 py-2 max-w-[200px] truncate text-gray-400" title={m.note ?? ''}>
+                      <td className="px-3 py-2 max-w-[200px] truncate text-zinc-500 dark:text-gray-400" title={m.note ?? ''}>
                         {m.note ?? '—'}
                       </td>
-                      <td className="px-3 py-2 text-xs font-mono text-gray-500">
+                      <td className="px-3 py-2 text-xs font-mono text-zinc-500 dark:text-gray-500">
                         {m.reference_demand_id ? m.reference_demand_id.slice(0, 8) + '…' : '—'}
                       </td>
                     </tr>
@@ -2342,7 +2343,7 @@ export function InventoryDashboard({
 
       {tab === 'manual' && (
         <div className="space-y-6">
-          <p className="text-sm text-gray-400">
+          <p className="text-sm text-zinc-500 dark:text-gray-400">
             Log receipts, returns, and adjustments here. Thresholds drive low-stock messages on Overview. Use the analysis
             below to see where to focus first.
           </p>
@@ -2369,54 +2370,54 @@ export function InventoryDashboard({
                 setMovFilterType('')
                 setTab('movements')
               }}
-              className="rounded-lg border border-gray-600 px-3 py-1.5 text-xs text-gray-300 hover:bg-white/5"
+              className="rounded-lg border border-zinc-300 dark:border-gray-600 px-3 py-1.5 text-xs text-zinc-600 dark:text-gray-300 hover:bg-zinc-200/50 dark:bg-white/5"
             >
               Movements (30d)
             </button>
           </div>
 
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
-            <div className="rounded-lg border border-gray-800 bg-white/5 px-3 py-2">
-              <p className="text-xs text-gray-500 uppercase tracking-wider">Stock rows</p>
-              <p className="text-lg font-semibold text-white tabular-nums">{manualWorkspaceAnalytics.balanceRowsCount}</p>
+            <div className="rounded-lg border border-zinc-200 dark:border-gray-800 bg-zinc-200/50 dark:bg-white/5 px-3 py-2">
+              <p className="text-xs text-zinc-500 dark:text-gray-500 uppercase tracking-wider">Stock rows</p>
+              <p className="text-lg font-semibold text-zinc-900 dark:text-white tabular-nums">{manualWorkspaceAnalytics.balanceRowsCount}</p>
             </div>
-            <div className="rounded-lg border border-gray-800 bg-white/5 px-3 py-2">
-              <p className="text-xs text-gray-500 uppercase tracking-wider">Short (on hand &lt; 0)</p>
+            <div className="rounded-lg border border-zinc-200 dark:border-gray-800 bg-zinc-200/50 dark:bg-white/5 px-3 py-2">
+              <p className="text-xs text-zinc-500 dark:text-gray-500 uppercase tracking-wider">Short (on hand &lt; 0)</p>
               <p
-                className={`text-lg font-semibold tabular-nums ${manualWorkspaceAnalytics.shortCount > 0 ? 'text-red-400' : 'text-white'}`}
+                className={`text-lg font-semibold tabular-nums ${manualWorkspaceAnalytics.shortCount > 0 ? 'text-red-400' : 'text-zinc-900 dark:text-white'}`}
               >
                 {manualWorkspaceAnalytics.shortCount}
               </p>
             </div>
-            <div className="rounded-lg border border-gray-800 bg-white/5 px-3 py-2">
-              <p className="text-xs text-gray-500 uppercase tracking-wider">Below min</p>
+            <div className="rounded-lg border border-zinc-200 dark:border-gray-800 bg-zinc-200/50 dark:bg-white/5 px-3 py-2">
+              <p className="text-xs text-zinc-500 dark:text-gray-500 uppercase tracking-wider">Below min</p>
               <p
-                className={`text-lg font-semibold tabular-nums ${manualWorkspaceAnalytics.belowMinCount > 0 ? 'text-amber-300' : 'text-white'}`}
+                className={`text-lg font-semibold tabular-nums ${manualWorkspaceAnalytics.belowMinCount > 0 ? 'text-amber-300' : 'text-zinc-900 dark:text-white'}`}
               >
                 {manualWorkspaceAnalytics.belowMinCount}
               </p>
             </div>
-            <div className="rounded-lg border border-gray-800 bg-white/5 px-3 py-2">
-              <p className="text-xs text-gray-500 uppercase tracking-wider">Threshold coverage</p>
+            <div className="rounded-lg border border-zinc-200 dark:border-gray-800 bg-zinc-200/50 dark:bg-white/5 px-3 py-2">
+              <p className="text-xs text-zinc-500 dark:text-gray-500 uppercase tracking-wider">Threshold coverage</p>
               <p className="text-lg font-semibold text-[#C27E00] tabular-nums">
                 {manualWorkspaceAnalytics.coveragePct}%
               </p>
-              <p className="text-[10px] text-gray-600 mt-0.5">{manualWorkspaceAnalytics.withThr} with min set</p>
+              <p className="text-[10px] text-zinc-600 dark:text-gray-600 mt-0.5">{manualWorkspaceAnalytics.withThr} with min set</p>
             </div>
-            <div className="rounded-lg border border-gray-800 bg-white/5 px-3 py-2">
-              <p className="text-xs text-gray-500 uppercase tracking-wider">Receipts (30d)</p>
+            <div className="rounded-lg border border-zinc-200 dark:border-gray-800 bg-zinc-200/50 dark:bg-white/5 px-3 py-2">
+              <p className="text-xs text-zinc-500 dark:text-gray-500 uppercase tracking-wider">Receipts (30d)</p>
               <p className="text-lg font-semibold text-green-300 tabular-nums">
                 {manualWorkspaceAnalytics.receipts30}
               </p>
             </div>
-            <div className="rounded-lg border border-gray-800 bg-white/5 px-3 py-2">
-              <p className="text-xs text-gray-500 uppercase tracking-wider">Adj / ret HQ (30d)</p>
-              <p className="text-sm font-semibold text-gray-200 tabular-nums mt-1">
+            <div className="rounded-lg border border-zinc-200 dark:border-gray-800 bg-zinc-200/50 dark:bg-white/5 px-3 py-2">
+              <p className="text-xs text-zinc-500 dark:text-gray-500 uppercase tracking-wider">Adj / ret HQ (30d)</p>
+              <p className="text-sm font-semibold text-zinc-800 dark:text-gray-200 tabular-nums mt-1">
                 {manualWorkspaceAnalytics.adjustments30}{' '}
-                <span className="text-gray-600 font-normal">adj</span>
-                <span className="text-gray-600 mx-1">·</span>
+                <span className="text-zinc-600 dark:text-gray-600 font-normal">adj</span>
+                <span className="text-zinc-600 dark:text-gray-600 mx-1">·</span>
                 {manualWorkspaceAnalytics.returns30}{' '}
-                <span className="text-gray-600 font-normal">ret</span>
+                <span className="text-zinc-600 dark:text-gray-600 font-normal">ret</span>
               </p>
             </div>
           </div>
@@ -2424,8 +2425,8 @@ export function InventoryDashboard({
           {(manualInsights.length > 0 || suggestions.length > 0) && (
             <div className="grid gap-4 md:grid-cols-2">
               {manualInsights.length > 0 && (
-                <section className="rounded-lg border border-gray-700/80 bg-white/[0.03] p-4 space-y-2">
-                  <div className="flex items-center gap-2 text-sm font-medium text-white">
+                <section className="rounded-lg border border-zinc-300 dark:border-gray-700/80 bg-white/[0.03] p-4 space-y-2">
+                  <div className="flex items-center gap-2 text-sm font-medium text-zinc-900 dark:text-white">
                     <ClipboardList className="w-4 h-4 text-[#C27E00]" />
                     Receipt / threshold insights
                   </div>
@@ -2436,11 +2437,11 @@ export function InventoryDashboard({
                         className={`rounded-md border px-3 py-2 text-sm ${
                           s.level === 'warning'
                             ? 'border-amber-800/50 bg-amber-950/25 text-amber-100'
-                            : 'border-gray-700/60 bg-white/[0.02] text-gray-300'
+                            : 'border-zinc-300 dark:border-gray-700/60 bg-white/[0.02] text-zinc-600 dark:text-gray-300'
                         }`}
                       >
-                        <p className="font-medium text-white">{s.title}</p>
-                        <p className="text-gray-400 mt-0.5">{s.detail}</p>
+                        <p className="font-medium text-zinc-900 dark:text-white">{s.title}</p>
+                        <p className="text-zinc-500 dark:text-gray-400 mt-0.5">{s.detail}</p>
                       </li>
                     ))}
                   </ul>
@@ -2452,11 +2453,11 @@ export function InventoryDashboard({
                     <AlertTriangle className="w-4 h-4 shrink-0" />
                     Inventory suggestions (Overview)
                   </div>
-                  <ul className="space-y-2 text-sm text-gray-300">
+                  <ul className="space-y-2 text-sm text-zinc-600 dark:text-gray-300">
                     {suggestions.slice(0, 5).map((s, i) => (
                       <li key={i}>
-                        <span className="text-white font-medium">{s.title}</span>
-                        <span className="text-gray-600"> — </span>
+                        <span className="text-zinc-900 dark:text-white font-medium">{s.title}</span>
+                        <span className="text-zinc-600 dark:text-gray-600"> — </span>
                         {s.detail}
                       </li>
                     ))}
@@ -2466,16 +2467,16 @@ export function InventoryDashboard({
             </div>
           )}
 
-          <section className="rounded-lg border border-gray-800 bg-white/[0.03] p-4 space-y-4">
-            <h3 className="flex items-center gap-2 text-sm font-semibold text-white">
+          <section className="rounded-lg border border-zinc-200 dark:border-gray-800 bg-white/[0.03] p-4 space-y-4">
+            <h3 className="flex items-center gap-2 text-sm font-semibold text-zinc-900 dark:text-white">
               <BarChart3 className="w-4 h-4 text-[#C27E00]" />
               Workspace charts
             </h3>
             <div className="grid gap-6 xl:grid-cols-2">
               <div className="space-y-2">
-                <p className="text-xs font-medium text-gray-400">Worst on-hand (short SKUs)</p>
+                <p className="text-xs font-medium text-zinc-500 dark:text-gray-400">Worst on-hand (short SKUs)</p>
                 {manualWorkspaceAnalytics.shortBar.length === 0 ? (
-                  <p className="text-gray-500 text-sm py-10">No negative lines — stock is at or above zero everywhere.</p>
+                  <p className="text-zinc-500 dark:text-gray-500 text-sm py-10">No negative lines — stock is at or above zero everywhere.</p>
                 ) : (
                   <ResponsiveContainer width="100%" height={280}>
                     <BarChart
@@ -2505,9 +2506,9 @@ export function InventoryDashboard({
                 )}
               </div>
               <div className="space-y-2">
-                <p className="text-xs font-medium text-gray-400">Manual movements by day (14d, PT) — event counts</p>
+                <p className="text-xs font-medium text-zinc-500 dark:text-gray-400">Manual movements by day (14d, PT) — event counts</p>
                 {manualWorkspaceAnalytics.manualDaily.length === 0 ? (
-                  <p className="text-gray-500 text-sm py-10">No receipt / adjustment / return rows in the last 14 days.</p>
+                  <p className="text-zinc-500 dark:text-gray-500 text-sm py-10">No receipt / adjustment / return rows in the last 14 days.</p>
                 ) : (
                   <ResponsiveContainer width="100%" height={280}>
                     <BarChart data={manualWorkspaceAnalytics.manualDaily} margin={{ top: 4, right: 8, left: 0, bottom: 4 }}>
@@ -2523,7 +2524,7 @@ export function InventoryDashboard({
                       />
                       <Legend
                         wrapperStyle={{ fontSize: '11px' }}
-                        formatter={(v) => <span className="text-gray-300">{v}</span>}
+                        formatter={(v) => <span className="text-zinc-600 dark:text-gray-300">{v}</span>}
                       />
                       <Bar dataKey="receipt" stackId="m" name="Receipt" fill="#4ade80" />
                       <Bar dataKey="adjustment" stackId="m" name="Adjustment" fill="#fbbf24" />
@@ -2535,9 +2536,9 @@ export function InventoryDashboard({
             </div>
             <div className="grid gap-6 xl:grid-cols-2">
               <div className="space-y-2">
-                <p className="text-xs font-medium text-gray-400">Threshold coverage (stock rows)</p>
+                <p className="text-xs font-medium text-zinc-500 dark:text-gray-400">Threshold coverage (stock rows)</p>
                 {manualWorkspaceAnalytics.thresholdPie.length === 0 ? (
-                  <p className="text-gray-500 text-sm py-10">No stock rows to chart.</p>
+                  <p className="text-zinc-500 dark:text-gray-500 text-sm py-10">No stock rows to chart.</p>
                 ) : (
                   <ResponsiveContainer width="100%" height={240}>
                     <PieChart>
@@ -2569,16 +2570,16 @@ export function InventoryDashboard({
                       />
                       <Legend
                         wrapperStyle={{ fontSize: '11px' }}
-                        formatter={(v) => <span className="text-gray-300">{v}</span>}
+                        formatter={(v) => <span className="text-zinc-600 dark:text-gray-300">{v}</span>}
                       />
                     </PieChart>
                   </ResponsiveContainer>
                 )}
               </div>
               <div className="space-y-2">
-                <p className="text-xs font-medium text-gray-400">Net manual Δ by dealer (30d, units)</p>
+                <p className="text-xs font-medium text-zinc-500 dark:text-gray-400">Net manual Δ by dealer (30d, units)</p>
                 {manualWorkspaceAnalytics.dealerNetBars.length === 0 ? (
-                  <p className="text-gray-500 text-sm py-10">No manual movements in the last 30 days.</p>
+                  <p className="text-zinc-500 dark:text-gray-500 text-sm py-10">No manual movements in the last 30 days.</p>
                 ) : (
                   <ResponsiveContainer width="100%" height={240}>
                     <BarChart
@@ -2606,17 +2607,17 @@ export function InventoryDashboard({
           </section>
 
           <div className="grid gap-8 md:grid-cols-2">
-            <div className="rounded-lg border border-gray-800 bg-white/5 p-4 space-y-3">
-              <h3 className="text-white font-medium">Record movement</h3>
+            <div className="rounded-lg border border-zinc-200 dark:border-gray-800 bg-zinc-200/50 dark:bg-white/5 p-4 space-y-3">
+              <h3 className="text-zinc-900 dark:text-white font-medium">Record movement</h3>
               <form id="mov-form" action={onMovement} className="space-y-3">
                 <div>
-                  <label className="block text-xs text-gray-500 mb-1">Dealer</label>
+                  <label className="block text-xs text-zinc-500 dark:text-gray-500 mb-1">Dealer</label>
                   <select
                     name="dealer_id"
                     required
                     value={movDealerId}
                     onChange={(e) => setMovDealerId(e.target.value)}
-                    className="w-full rounded bg-gray-900 border border-gray-700 px-3 py-2 text-white text-sm"
+                    className="w-full rounded bg-zinc-200 dark:bg-gray-900 border border-zinc-300 dark:border-gray-700 px-3 py-2 text-zinc-900 dark:text-white text-sm"
                   >
                     <option value="">Select…</option>
                     {dealers.map((d) => (
@@ -2627,13 +2628,13 @@ export function InventoryDashboard({
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs text-gray-500 mb-1">Camera model</label>
+                  <label className="block text-xs text-zinc-500 dark:text-gray-500 mb-1">Camera model</label>
                   <select
                     name="camera_model_id"
                     required
                     value={movCameraId}
                     onChange={(e) => setMovCameraId(e.target.value)}
-                    className="w-full rounded bg-gray-900 border border-gray-700 px-3 py-2 text-white text-sm"
+                    className="w-full rounded bg-zinc-200 dark:bg-gray-900 border border-zinc-300 dark:border-gray-700 px-3 py-2 text-zinc-900 dark:text-white text-sm"
                   >
                     <option value="">Select…</option>
                     {cameras.map((c) => (
@@ -2644,13 +2645,13 @@ export function InventoryDashboard({
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs text-gray-500 mb-1">Type</label>
+                  <label className="block text-xs text-zinc-500 dark:text-gray-500 mb-1">Type</label>
                   <select
                     name="movement_type"
                     required
                     value={movMovementType}
                     onChange={(e) => setMovMovementType(e.target.value)}
-                    className="w-full rounded bg-gray-900 border border-gray-700 px-3 py-2 text-white text-sm"
+                    className="w-full rounded bg-zinc-200 dark:bg-gray-900 border border-zinc-300 dark:border-gray-700 px-3 py-2 text-zinc-900 dark:text-white text-sm"
                   >
                     <option value="receipt">Receipt (stock in)</option>
                     <option value="return_to_hq">Return to HQ (stock out)</option>
@@ -2658,25 +2659,25 @@ export function InventoryDashboard({
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs text-gray-500 mb-1">Quantity</label>
+                  <label className="block text-xs text-zinc-500 dark:text-gray-500 mb-1">Quantity</label>
                   <input
                     name="quantity"
                     type="number"
                     required
                     value={movQty}
                     onChange={(e) => setMovQty(e.target.value)}
-                    className="w-full rounded bg-gray-900 border border-gray-700 px-3 py-2 text-white text-sm"
+                    className="w-full rounded bg-zinc-200 dark:bg-gray-900 border border-zinc-300 dark:border-gray-700 px-3 py-2 text-zinc-900 dark:text-white text-sm"
                     placeholder="Positive for receipt/return magnitude; signed for adjustment"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs text-gray-500 mb-1">Note (optional)</label>
+                  <label className="block text-xs text-zinc-500 dark:text-gray-500 mb-1">Note (optional)</label>
                   <input
                     name="note"
                     type="text"
                     value={movNote}
                     onChange={(e) => setMovNote(e.target.value)}
-                    className="w-full rounded bg-gray-900 border border-gray-700 px-3 py-2 text-white text-sm"
+                    className="w-full rounded bg-zinc-200 dark:bg-gray-900 border border-zinc-300 dark:border-gray-700 px-3 py-2 text-zinc-900 dark:text-white text-sm"
                   />
                 </div>
                 <button
@@ -2688,18 +2689,18 @@ export function InventoryDashboard({
               </form>
             </div>
 
-            <div className="rounded-lg border border-gray-800 bg-white/5 p-4 space-y-3">
-              <h3 className="text-white font-medium">Low-stock threshold</h3>
-              <p className="text-xs text-gray-500">When on hand drops below this, a warning appears in Suggestions.</p>
+            <div className="rounded-lg border border-zinc-200 dark:border-gray-800 bg-zinc-200/50 dark:bg-white/5 p-4 space-y-3">
+              <h3 className="text-zinc-900 dark:text-white font-medium">Low-stock threshold</h3>
+              <p className="text-xs text-zinc-500 dark:text-gray-500">When on hand drops below this, a warning appears in Suggestions.</p>
               <form id="thr-form" action={onThreshold} className="space-y-3">
                 <div>
-                  <label className="block text-xs text-gray-500 mb-1">Dealer</label>
+                  <label className="block text-xs text-zinc-500 dark:text-gray-500 mb-1">Dealer</label>
                   <select
                     name="dealer_id"
                     required
                     value={thrDealerId}
                     onChange={(e) => setThrDealerId(e.target.value)}
-                    className="w-full rounded bg-gray-900 border border-gray-700 px-3 py-2 text-white text-sm"
+                    className="w-full rounded bg-zinc-200 dark:bg-gray-900 border border-zinc-300 dark:border-gray-700 px-3 py-2 text-zinc-900 dark:text-white text-sm"
                   >
                     <option value="">Select…</option>
                     {dealers.map((d) => (
@@ -2710,13 +2711,13 @@ export function InventoryDashboard({
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs text-gray-500 mb-1">Camera model</label>
+                  <label className="block text-xs text-zinc-500 dark:text-gray-500 mb-1">Camera model</label>
                   <select
                     name="camera_model_id"
                     required
                     value={thrCameraId}
                     onChange={(e) => setThrCameraId(e.target.value)}
-                    className="w-full rounded bg-gray-900 border border-gray-700 px-3 py-2 text-white text-sm"
+                    className="w-full rounded bg-zinc-200 dark:bg-gray-900 border border-zinc-300 dark:border-gray-700 px-3 py-2 text-zinc-900 dark:text-white text-sm"
                   >
                     <option value="">Select…</option>
                     {cameras.map((c) => (
@@ -2727,7 +2728,7 @@ export function InventoryDashboard({
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs text-gray-500 mb-1">Minimum on hand</label>
+                  <label className="block text-xs text-zinc-500 dark:text-gray-500 mb-1">Minimum on hand</label>
                   <input
                     name="min_qty"
                     type="number"
@@ -2735,7 +2736,7 @@ export function InventoryDashboard({
                     required
                     value={thrMinQty}
                     onChange={(e) => setThrMinQty(e.target.value)}
-                    className="w-full rounded bg-gray-900 border border-gray-700 px-3 py-2 text-white text-sm"
+                    className="w-full rounded bg-zinc-200 dark:bg-gray-900 border border-zinc-300 dark:border-gray-700 px-3 py-2 text-zinc-900 dark:text-white text-sm"
                   />
                 </div>
                 <button

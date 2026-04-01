@@ -60,47 +60,47 @@ export default async function LeavePage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-semibold text-white mb-2">Leave Management</h1>
-        <p className="text-gray-400">Manage platform employee leave requests.</p>
+        <h1 className="text-2xl font-semibold text-zinc-900 dark:text-white mb-2">Leave Management</h1>
+        <p className="text-zinc-500 dark:text-gray-400">Manage platform employee leave requests.</p>
       </div>
 
       {isHR && <LeaveRequestForm employees={employees || []} />}
 
       <div>
-        <h2 className="text-lg font-semibold text-white mb-4">Leave Requests</h2>
-        <div className="bg-white/5 rounded-lg border border-gray-800 shadow overflow-hidden">
+        <h2 className="text-lg font-semibold text-zinc-900 dark:text-white mb-4">Leave Requests</h2>
+        <div className="bg-zinc-200/50 dark:bg-white/5 rounded-lg border border-zinc-200 dark:border-gray-800 shadow overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-800">
+            <table className="min-w-full divide-y divide-zinc-200 dark:divide-gray-800">
               <thead>
                 <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Employee</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Type</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Period</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Status</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Notes</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Actions</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500 dark:text-gray-400 uppercase">Employee</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500 dark:text-gray-400 uppercase">Type</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500 dark:text-gray-400 uppercase">Period</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500 dark:text-gray-400 uppercase">Status</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500 dark:text-gray-400 uppercase">Notes</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500 dark:text-gray-400 uppercase">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-800">
+              <tbody className="divide-y divide-zinc-200 dark:divide-gray-800">
                 {leaveRequests?.map((lr) => (
-                  <tr key={lr.id} className="hover:bg-white/5 transition-colors">
+                  <tr key={lr.id} className="hover:bg-zinc-200/50 dark:bg-white/5 transition-colors">
                     <td className="px-4 py-3">
-                      <span className="text-white font-medium">
+                      <span className="text-zinc-900 dark:text-white font-medium">
                         {(lr.profiles as { full_name?: string } | null)?.full_name ?? '—'}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-gray-300">
+                    <td className="px-4 py-3 text-zinc-600 dark:text-gray-300">
                       {LEAVE_TYPE_LABELS[lr.leave_type] ?? lr.leave_type}
                     </td>
-                    <td className="px-4 py-3 text-gray-400">
+                    <td className="px-4 py-3 text-zinc-500 dark:text-gray-400">
                       {format(new Date(lr.start_date), 'MMM d, yyyy')} – {format(new Date(lr.end_date), 'MMM d, yyyy')}
                     </td>
                     <td className="px-4 py-3">
-                      <span className={`px-2 py-1 rounded text-xs font-medium border ${STATUS_COLORS[lr.status] ?? 'bg-gray-800 text-gray-300'}`}>
+                      <span className={`px-2 py-1 rounded text-xs font-medium border ${STATUS_COLORS[lr.status] ?? 'bg-gray-800 text-zinc-600 dark:text-gray-300'}`}>
                         {lr.status}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-gray-500 text-sm max-w-[200px] truncate">
+                    <td className="px-4 py-3 text-zinc-500 dark:text-gray-500 text-sm max-w-[200px] truncate">
                       {lr.notes || '—'}
                     </td>
                     <td className="px-4 py-3">
@@ -119,7 +119,7 @@ export default async function LeavePage() {
             </div>
           )}
           {!leaveError && (!leaveRequests || leaveRequests.length === 0) && (
-            <div className="p-8 text-center text-gray-400">No leave requests yet.</div>
+            <div className="p-8 text-center text-zinc-500 dark:text-gray-400">No leave requests yet.</div>
           )}
         </div>
       </div>

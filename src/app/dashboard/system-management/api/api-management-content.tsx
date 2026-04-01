@@ -184,8 +184,8 @@ export function APIManagementContent() {
   return (
     <div className="space-y-8">
       <div>
-        <h3 className="text-lg font-semibold text-white mb-2">API Management</h3>
-        <p className="text-sm text-gray-400 mb-6">Configure and manage third-party API integrations</p>
+        <h3 className="text-lg font-semibold text-zinc-900 dark:text-white mb-2">API Management</h3>
+        <p className="text-sm text-zinc-500 dark:text-gray-400 mb-6">Configure and manage third-party API integrations</p>
       </div>
 
       {message && (
@@ -199,11 +199,11 @@ export function APIManagementContent() {
       )}
 
       {/* Twilio Settings */}
-      <div className="bg-white/5 rounded-lg border border-gray-800 p-6">
+      <div className="bg-zinc-200/50 dark:bg-white/5 rounded-lg border border-zinc-200 dark:border-gray-800 p-6">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h4 className="text-md font-semibold text-white mb-1">Twilio SMS API</h4>
-            <p className="text-sm text-gray-400">Configure Twilio for SMS notifications</p>
+            <h4 className="text-md font-semibold text-zinc-900 dark:text-white mb-1">Twilio SMS API</h4>
+            <p className="text-sm text-zinc-500 dark:text-gray-400">Configure Twilio for SMS notifications</p>
           </div>
           <label className="flex items-center cursor-pointer">
             <input
@@ -224,34 +224,34 @@ export function APIManagementContent() {
 
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">Account SID</label>
+            <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300 mb-1">Account SID</label>
             <input
               type="text"
               value={twilioSettings.accountSid}
               onChange={(e) => setTwilioSettings({ ...twilioSettings, accountSid: e.target.value })}
-              className="block w-full rounded-md border border-gray-700 bg-white/5 px-3 py-2 text-white placeholder-gray-500 focus:border-[#C27E00] focus:outline-none focus:ring-1 focus:ring-[#C27E00] sm:text-sm"
+              className="block w-full rounded-md border border-zinc-300 dark:border-gray-700 bg-zinc-200/50 dark:bg-white/5 px-3 py-2 text-zinc-900 dark:text-white placeholder-zinc-500 dark:placeholder-gray-500 focus:border-[#C27E00] focus:outline-none focus:ring-1 focus:ring-[#C27E00] sm:text-sm"
               placeholder="ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">Auth Token</label>
+            <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300 mb-1">Auth Token</label>
             <input
               type="password"
               value={twilioSettings.authToken}
               onChange={(e) => setTwilioSettings({ ...twilioSettings, authToken: e.target.value })}
-              className="block w-full rounded-md border border-gray-700 bg-white/5 px-3 py-2 text-white placeholder-gray-500 focus:border-[#C27E00] focus:outline-none focus:ring-1 focus:ring-[#C27E00] sm:text-sm"
+              className="block w-full rounded-md border border-zinc-300 dark:border-gray-700 bg-zinc-200/50 dark:bg-white/5 px-3 py-2 text-zinc-900 dark:text-white placeholder-zinc-500 dark:placeholder-gray-500 focus:border-[#C27E00] focus:outline-none focus:ring-1 focus:ring-[#C27E00] sm:text-sm"
               placeholder="Your auth token"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">Phone Number</label>
+            <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300 mb-1">Phone Number</label>
             <input
               type="text"
               value={twilioSettings.phoneNumber}
               onChange={(e) => setTwilioSettings({ ...twilioSettings, phoneNumber: e.target.value })}
-              className="block w-full rounded-md border border-gray-700 bg-white/5 px-3 py-2 text-white placeholder-gray-500 focus:border-[#C27E00] focus:outline-none focus:ring-1 focus:ring-[#C27E00] sm:text-sm"
+              className="block w-full rounded-md border border-zinc-300 dark:border-gray-700 bg-zinc-200/50 dark:bg-white/5 px-3 py-2 text-zinc-900 dark:text-white placeholder-zinc-500 dark:placeholder-gray-500 focus:border-[#C27E00] focus:outline-none focus:ring-1 focus:ring-[#C27E00] sm:text-sm"
               placeholder="+1234567890"
             />
           </div>
@@ -267,11 +267,11 @@ export function APIManagementContent() {
       </div>
 
       {/* WhatsApp Settings */}
-      <div className="bg-white/5 rounded-lg border border-gray-800 p-6">
+      <div className="bg-zinc-200/50 dark:bg-white/5 rounded-lg border border-zinc-200 dark:border-gray-800 p-6">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h4 className="text-md font-semibold text-white mb-1">WhatsApp Business API</h4>
-            <p className="text-sm text-gray-400">Configure WhatsApp for messaging</p>
+            <h4 className="text-md font-semibold text-zinc-900 dark:text-white mb-1">WhatsApp Business API</h4>
+            <p className="text-sm text-zinc-500 dark:text-gray-400">Configure WhatsApp for messaging</p>
           </div>
           <label className="flex items-center cursor-pointer">
             <input
@@ -292,34 +292,34 @@ export function APIManagementContent() {
 
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">API Key</label>
+            <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300 mb-1">API Key</label>
             <input
               type="password"
               value={whatsappSettings.apiKey}
               onChange={(e) => setWhatsappSettings({ ...whatsappSettings, apiKey: e.target.value })}
-              className="block w-full rounded-md border border-gray-700 bg-white/5 px-3 py-2 text-white placeholder-gray-500 focus:border-[#C27E00] focus:outline-none focus:ring-1 focus:ring-[#C27E00] sm:text-sm"
+              className="block w-full rounded-md border border-zinc-300 dark:border-gray-700 bg-zinc-200/50 dark:bg-white/5 px-3 py-2 text-zinc-900 dark:text-white placeholder-zinc-500 dark:placeholder-gray-500 focus:border-[#C27E00] focus:outline-none focus:ring-1 focus:ring-[#C27E00] sm:text-sm"
               placeholder="Your WhatsApp API key"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">Phone Number ID</label>
+            <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300 mb-1">Phone Number ID</label>
             <input
               type="text"
               value={whatsappSettings.phoneNumberId}
               onChange={(e) => setWhatsappSettings({ ...whatsappSettings, phoneNumberId: e.target.value })}
-              className="block w-full rounded-md border border-gray-700 bg-white/5 px-3 py-2 text-white placeholder-gray-500 focus:border-[#C27E00] focus:outline-none focus:ring-1 focus:ring-[#C27E00] sm:text-sm"
+              className="block w-full rounded-md border border-zinc-300 dark:border-gray-700 bg-zinc-200/50 dark:bg-white/5 px-3 py-2 text-zinc-900 dark:text-white placeholder-zinc-500 dark:placeholder-gray-500 focus:border-[#C27E00] focus:outline-none focus:ring-1 focus:ring-[#C27E00] sm:text-sm"
               placeholder="Phone number ID"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">Business Account ID</label>
+            <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300 mb-1">Business Account ID</label>
             <input
               type="text"
               value={whatsappSettings.businessAccountId}
               onChange={(e) => setWhatsappSettings({ ...whatsappSettings, businessAccountId: e.target.value })}
-              className="block w-full rounded-md border border-gray-700 bg-white/5 px-3 py-2 text-white placeholder-gray-500 focus:border-[#C27E00] focus:outline-none focus:ring-1 focus:ring-[#C27E00] sm:text-sm"
+              className="block w-full rounded-md border border-zinc-300 dark:border-gray-700 bg-zinc-200/50 dark:bg-white/5 px-3 py-2 text-zinc-900 dark:text-white placeholder-zinc-500 dark:placeholder-gray-500 focus:border-[#C27E00] focus:outline-none focus:ring-1 focus:ring-[#C27E00] sm:text-sm"
               placeholder="Business account ID"
             />
           </div>
@@ -335,11 +335,11 @@ export function APIManagementContent() {
       </div>
 
       {/* Google Drive Settings */}
-      <div className="bg-white/5 rounded-lg border border-gray-800 p-6">
+      <div className="bg-zinc-200/50 dark:bg-white/5 rounded-lg border border-zinc-200 dark:border-gray-800 p-6">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h4 className="text-md font-semibold text-white mb-1">Google Drive</h4>
-            <p className="text-sm text-gray-400">Upload invoices to Drive. Use <strong>OAuth</strong> (no Service Account key needed) or Service Account. See docs/GOOGLE_DRIVE_SETUP.md.</p>
+            <h4 className="text-md font-semibold text-zinc-900 dark:text-white mb-1">Google Drive</h4>
+            <p className="text-sm text-zinc-500 dark:text-gray-400">Upload invoices to Drive. Use <strong>OAuth</strong> (no Service Account key needed) or Service Account. See docs/GOOGLE_DRIVE_SETUP.md.</p>
           </div>
           <label className="flex items-center cursor-pointer">
             <input
@@ -362,31 +362,31 @@ export function APIManagementContent() {
           {/* OAuth - recommended when Service Account key is disabled */}
           <div className="p-4 rounded-lg bg-[#C27E00]/10 border border-[#C27E00]/30 mb-4">
             <h5 className="text-sm font-semibold text-[#C27E00] mb-2">OAuth 2.0 (recommended for work/organization accounts)</h5>
-            <p className="text-xs text-gray-400 mb-3">Use when Service Account key creation is disabled by your organization. No key file needed.</p>
+            <p className="text-xs text-zinc-500 dark:text-gray-400 mb-3">Use when Service Account key creation is disabled by your organization. No key file needed.</p>
             <div className="grid gap-3 sm:grid-cols-2">
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">OAuth Client ID</label>
+                <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300 mb-1">OAuth Client ID</label>
                 <input
                   type="text"
                   value={googleDriveSettings.clientId}
                   onChange={(e) => setGoogleDriveSettings({ ...googleDriveSettings, clientId: e.target.value })}
-                  className="block w-full rounded-md border border-gray-700 bg-white/5 px-3 py-2 text-white placeholder-gray-500 focus:border-[#C27E00] focus:outline-none focus:ring-1 focus:ring-[#C27E00] sm:text-sm"
+                  className="block w-full rounded-md border border-zinc-300 dark:border-gray-700 bg-zinc-200/50 dark:bg-white/5 px-3 py-2 text-zinc-900 dark:text-white placeholder-zinc-500 dark:placeholder-gray-500 focus:border-[#C27E00] focus:outline-none focus:ring-1 focus:ring-[#C27E00] sm:text-sm"
                   placeholder="xxx.apps.googleusercontent.com"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">OAuth Client Secret</label>
+                <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300 mb-1">OAuth Client Secret</label>
                 <input
                   type="password"
                   value={googleDriveSettings.clientSecret}
                   onChange={(e) => setGoogleDriveSettings({ ...googleDriveSettings, clientSecret: e.target.value })}
-                  className="block w-full rounded-md border border-gray-700 bg-white/5 px-3 py-2 text-white placeholder-gray-500 focus:border-[#C27E00] focus:outline-none focus:ring-1 focus:ring-[#C27E00] sm:text-sm"
+                  className="block w-full rounded-md border border-zinc-300 dark:border-gray-700 bg-zinc-200/50 dark:bg-white/5 px-3 py-2 text-zinc-900 dark:text-white placeholder-zinc-500 dark:placeholder-gray-500 focus:border-[#C27E00] focus:outline-none focus:ring-1 focus:ring-[#C27E00] sm:text-sm"
                   placeholder="GOCSPX-xxx"
                 />
               </div>
             </div>
-            <p className="text-xs text-gray-500 mt-1">Create OAuth 2.0 Client ID (Web application) in GCP. Add redirect URI: /api/drive-oauth/callback (e.g. https://yourdomain.com/api/drive-oauth/callback or http://localhost:3000/api/drive-oauth/callback)</p>
-            <p className="text-xs text-gray-500 mt-1">Enter Client ID, Secret and Root Folder ID. Click Connect to save and authorize.</p>
+            <p className="text-xs text-zinc-500 dark:text-gray-500 mt-1">Create OAuth 2.0 Client ID (Web application) in GCP. Add redirect URI: /api/drive-oauth/callback (e.g. https://yourdomain.com/api/drive-oauth/callback or http://localhost:3000/api/drive-oauth/callback)</p>
+            <p className="text-xs text-zinc-500 dark:text-gray-500 mt-1">Enter Client ID, Secret and Root Folder ID. Click Connect to save and authorize.</p>
             <div className="mt-3 flex items-center gap-3">
               <button
                 type="button"
@@ -424,41 +424,41 @@ export function APIManagementContent() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">Root Folder ID</label>
+            <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300 mb-1">Root Folder ID</label>
             <input
               type="text"
               value={googleDriveSettings.defaultFolderId}
               onChange={(e) => setGoogleDriveSettings({ ...googleDriveSettings, defaultFolderId: e.target.value })}
-              className="block w-full rounded-md border border-gray-700 bg-white/5 px-3 py-2 text-white placeholder-gray-500 focus:border-[#C27E00] focus:outline-none focus:ring-1 focus:ring-[#C27E00] sm:text-sm"
+              className="block w-full rounded-md border border-zinc-300 dark:border-gray-700 bg-zinc-200/50 dark:bg-white/5 px-3 py-2 text-zinc-900 dark:text-white placeholder-zinc-500 dark:placeholder-gray-500 focus:border-[#C27E00] focus:outline-none focus:ring-1 focus:ring-[#C27E00] sm:text-sm"
               placeholder="Drive folder ID (My Drive folder or Shared Drive)"
             />
-            <p className="mt-1 text-xs text-gray-500">OAuth: use any folder in your Drive. Service Account: use Shared Drive.</p>
+            <p className="mt-1 text-xs text-zinc-500 dark:text-gray-500">OAuth: use any folder in your Drive. Service Account: use Shared Drive.</p>
           </div>
 
-          <hr className="border-gray-700 my-4" />
-          <p className="text-xs text-gray-500">Or use Service Account (requires key file; not available when org policy blocks it):</p>
+          <hr className="border-zinc-300 dark:border-gray-700 my-4" />
+          <p className="text-xs text-zinc-500 dark:text-gray-500">Or use Service Account (requires key file; not available when org policy blocks it):</p>
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">Service Account Email</label>
+            <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300 mb-1">Service Account Email</label>
             <input
               type="text"
               value={googleDriveSettings.serviceAccountEmail}
               onChange={(e) => setGoogleDriveSettings({ ...googleDriveSettings, serviceAccountEmail: e.target.value })}
-              className="block w-full rounded-md border border-gray-700 bg-white/5 px-3 py-2 text-white placeholder-gray-500 focus:border-[#C27E00] focus:outline-none focus:ring-1 focus:ring-[#C27E00] sm:text-sm"
+              className="block w-full rounded-md border border-zinc-300 dark:border-gray-700 bg-zinc-200/50 dark:bg-white/5 px-3 py-2 text-zinc-900 dark:text-white placeholder-zinc-500 dark:placeholder-gray-500 focus:border-[#C27E00] focus:outline-none focus:ring-1 focus:ring-[#C27E00] sm:text-sm"
               placeholder="xxx@xxx.iam.gserviceaccount.com"
             />
-            <p className="mt-1 text-xs text-gray-500">From the JSON key file (client_email)</p>
+            <p className="mt-1 text-xs text-zinc-500 dark:text-gray-500">From the JSON key file (client_email)</p>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">Service Account Private Key</label>
+            <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300 mb-1">Service Account Private Key</label>
             <textarea
               value={googleDriveSettings.serviceAccountPrivateKey}
               onChange={(e) => setGoogleDriveSettings({ ...googleDriveSettings, serviceAccountPrivateKey: e.target.value })}
               rows={4}
-              className="block w-full rounded-md border border-gray-700 bg-white/5 px-3 py-2 text-white placeholder-gray-500 focus:border-[#C27E00] focus:outline-none focus:ring-1 focus:ring-[#C27E00] sm:text-sm font-mono text-sm"
+              className="block w-full rounded-md border border-zinc-300 dark:border-gray-700 bg-zinc-200/50 dark:bg-white/5 px-3 py-2 text-zinc-900 dark:text-white placeholder-zinc-500 dark:placeholder-gray-500 focus:border-[#C27E00] focus:outline-none focus:ring-1 focus:ring-[#C27E00] sm:text-sm font-mono text-sm"
               placeholder="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----"
             />
-            <p className="mt-1 text-xs text-gray-500">From the JSON key file (private_key), including BEGIN/END lines</p>
+            <p className="mt-1 text-xs text-zinc-500 dark:text-gray-500">From the JSON key file (private_key), including BEGIN/END lines</p>
           </div>
 
           <button

@@ -45,14 +45,14 @@ export function FinanceOverviewMonthSelector({ selectedMonth }: FinanceOverviewM
 
   return (
     <div className="flex items-center gap-2">
-      <label className="text-xs text-gray-500">Period:</label>
+      <label className="text-xs text-zinc-500 dark:text-zinc-500 dark:text-gray-500">Period:</label>
       <select
         value={selectedMonth}
         onChange={handleMonthChange}
-        className="border border-gray-700 bg-white/5 px-2 py-1.5 rounded text-white text-sm focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00] min-w-[120px]"
+        className="border border-zinc-300 dark:border-zinc-300 dark:border-gray-700 bg-zinc-200/50 dark:bg-zinc-200/50 dark:bg-white/5 px-2 py-1.5 rounded text-zinc-900 dark:text-white text-sm focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00] min-w-[120px]"
       >
         {options.map(o => (
-          <option key={o.value || 'all'} value={o.value} className="bg-black text-white">
+          <option key={o.value || 'all'} value={o.value} className="bg-zinc-50 dark:bg-black text-zinc-900 dark:text-zinc-900 dark:text-white">
             {o.label}
           </option>
         ))}

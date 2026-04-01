@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { updateVinLast6 } from './actions'
 
-const inputClass = 'w-full border border-gray-700 bg-white/5 p-2 rounded text-white text-sm focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]'
+const inputClass = 'w-full border border-zinc-300 dark:border-gray-700 bg-zinc-200/50 dark:bg-white/5 p-2 rounded text-zinc-900 dark:text-white text-sm focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]'
 
 interface EditVinFormProps {
   demandId: string
@@ -46,7 +46,7 @@ export function EditVinForm({
 
   if (!isAuroraManager) {
     return (
-      <p className="text-white">{vinLast6 ? vinLast6.toUpperCase() : '—'}</p>
+      <p className="text-zinc-900 dark:text-white">{vinLast6 ? vinLast6.toUpperCase() : '—'}</p>
     )
   }
 
@@ -70,7 +70,7 @@ export function EditVinForm({
         >
           {saving ? 'Saving...' : 'Save'}
         </button>
-        <span className="text-xs text-gray-500">Full VIN or last 6 digits</span>
+        <span className="text-xs text-zinc-500 dark:text-gray-500">Full VIN or last 6 digits</span>
       </div>
       {message && (
         <p

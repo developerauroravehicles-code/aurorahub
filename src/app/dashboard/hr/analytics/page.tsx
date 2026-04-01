@@ -165,8 +165,8 @@ export default async function AnalyticsPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-semibold text-white mb-2">HR Analytics & Insights</h1>
-        <p className="text-gray-400">Workforce metrics, compliance status, installer performance, and trends.</p>
+        <h1 className="text-2xl font-semibold text-zinc-900 dark:text-white mb-2">HR Analytics & Insights</h1>
+        <p className="text-zinc-500 dark:text-gray-400">Workforce metrics, compliance status, installer performance, and trends.</p>
       </div>
       <AnalyticsContent summary={summary} chartData={chartData} />
     </div>
