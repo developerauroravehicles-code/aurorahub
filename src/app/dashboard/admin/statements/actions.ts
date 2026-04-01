@@ -21,6 +21,7 @@ export interface StatementDemandRow {
   vehicle_make: string
   vehicle_model: string
   stock_number: string | null
+  vin_last6: string | null
   invoice_total_amount: number | null
   dealers: { name: string } | { name: string }[] | null
 }
@@ -83,6 +84,7 @@ export async function getStatementDataAction(
       vehicle_make,
       vehicle_model,
       stock_number,
+      vin_last6,
       invoice_total_amount,
       dealers(name)
     `)

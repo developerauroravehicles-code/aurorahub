@@ -7,6 +7,8 @@ export interface StatementRowData {
   date: string
   vehicleModel: string
   stockNumber: string
+  /** From demands.vin_last6 */
+  vinNo: string
   price: number
   tax: number
 }
@@ -110,12 +112,13 @@ export function buildStatementPdf(data: StatementPdfData): jsPDF {
   doc.line(margin, y, pageWidth - margin, y)
   y += 12
 
-  // Table: Invoice No | Date | Vehicle Model | Stock No | Price | Tax
+  // Table: Invoice No | Date | Vehicle Model | Stock No | VIN No | Price | Tax
   const tableData = data.rows.map((r) => [
     r.demand_number ?? '—',
     r.date,
     r.vehicleModel,
     r.stockNumber ?? '—',
+    r.vinNo || '—',
     fmtPrice(r.price),
     fmtPrice(r.tax)
   ])
@@ -126,25 +129,37 @@ export function buildStatementPdf(data: StatementPdfData): jsPDF {
 
   const tableBodyWithTotal = [
     ...tableData,
-    ['', '', '', 'Total', { content: fmtPrice(grandTotal), colSpan: 2 }],
+    [
+      '',
+      '',
+      '',
+      '',
+      '',
+      {
+        content: `Total  ${fmtPrice(grandTotal)}`,
+        colSpan: 2,
+        styles: { fontStyle: 'bold' as const, halign: 'right' as const }
+      },
+    ],
   ]
 
   const tableWidth = pageWidth - 2 * margin
   autoTable(doc, {
     startY: y,
-    head: [['Invoice No', 'Complete Date', 'Vehicle Model', 'Stock No', 'Price', 'Tax']],
+    head: [['Invoice No', 'Complete Date', 'Vehicle Model', 'Stock No', 'VIN No', 'Price', 'Tax']],
     body: tableBodyWithTotal,
     theme: 'grid',
     headStyles: { fillColor: [194, 126, 0], textColor: [255, 255, 255], fontStyle: 'bold' },
     margin: { left: margin, right: margin },
     tableWidth,
     columnStyles: {
-      0: { cellWidth: tableWidth * 0.155 },
-      1: { cellWidth: tableWidth * 0.135 },
-      2: { cellWidth: tableWidth * 0.24 },
-      3: { cellWidth: tableWidth * 0.125 },
-      4: { cellWidth: tableWidth * 0.17, halign: 'right' },
-      5: { cellWidth: tableWidth * 0.18, halign: 'right' }
+      0: { cellWidth: tableWidth * 0.13 },
+      1: { cellWidth: tableWidth * 0.12 },
+      2: { cellWidth: tableWidth * 0.2 },
+      3: { cellWidth: tableWidth * 0.1 },
+      4: { cellWidth: tableWidth * 0.12 },
+      5: { cellWidth: tableWidth * 0.155, halign: 'right' },
+      6: { cellWidth: tableWidth * 0.165, halign: 'right' }
     },
     tableLineColor: [60, 60, 60],
     tableLineWidth: 0.2,

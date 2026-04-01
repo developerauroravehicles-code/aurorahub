@@ -37,6 +37,8 @@ export interface InvoiceRowData {
   stockNumber: string
   customerAddress: string
   vehicleInfo: string
+  /** Vehicle identification (stored as `vin_last6` on demands). */
+  vinNo?: string | null
   productModel: string
   completeDate: string
   warrantyEnd: string
@@ -181,8 +183,11 @@ export function buildInvoicePdf(data: InvoiceRowData): jsPDF {
   doc.text('Invoice Details', margin, y)
   y += 8
 
+  const vinRaw = (data.vinNo ?? '').trim()
+  const vinDisplay = vinRaw ? vinRaw.toUpperCase() : '—'
   const tableData = [
     ['Vehicle & Stock', data.vehicleInfo],
+    ['VIN No', vinDisplay],
     ['Product Model', data.productModel],
     ['Warranty End', data.warrantyEnd]
   ]
@@ -310,7 +315,7 @@ export function buildInvoicePdf(data: InvoiceRowData): jsPDF {
   doc.setFont('helvetica', 'normal')
   doc.setFontSize(10)
   doc.setTextColor(0, 0, 0)
-  doc.text('Make all checks payable to ONATCA AUTO', pageWidth / 2, pageHeight - 22, { align: 'center' })
+  doc.text('Make all checks payable to AURORA VEHICLES INC.', pageWidth / 2, pageHeight - 22, { align: 'center' })
   doc.setFont('helvetica', 'bold')
   doc.text('THANK YOU FOR YOUR BUSINESS!', pageWidth / 2, pageHeight - 14, { align: 'center' })
 

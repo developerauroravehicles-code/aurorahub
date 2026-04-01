@@ -80,11 +80,13 @@ export function StatementContent({ dealers, logoDataUrl, hideDealerFilter, defau
       const vehicleModel = `${d.vehicle_year} ${d.vehicle_make} ${d.vehicle_model}`.trim() || '—'
       // Talebin gerçek tamamlanma tarihi (completed_at); yoksa updated_at fallback (eski veriler için)
       const dateValue = d.completed_at ?? d.updated_at
+      const vinRaw = (d.vin_last6 ?? '').trim()
       return {
         demand_number: d.demand_number,
         date: formatInTimeZone(new Date(dateValue), SYSTEM_DEFAULT_TIMEZONE, 'd MMMM yyyy'),
         vehicleModel,
         stockNumber: d.stock_number ?? '—',
+        vinNo: vinRaw ? vinRaw.toUpperCase() : '—',
         price,
         tax
       }
@@ -286,6 +288,7 @@ export function StatementContent({ dealers, logoDataUrl, hideDealerFilter, defau
                   <th className="px-3 py-2.5 text-left text-xs font-medium text-zinc-500 dark:text-gray-400 uppercase tracking-wider">Complete Date</th>
                   <th className="px-3 py-2.5 text-left text-xs font-medium text-zinc-500 dark:text-gray-400 uppercase tracking-wider">Vehicle Model</th>
                   <th className="px-3 py-2.5 text-left text-xs font-medium text-zinc-500 dark:text-gray-400 uppercase tracking-wider">Stock No</th>
+                  <th className="px-3 py-2.5 text-left text-xs font-medium text-zinc-500 dark:text-gray-400 uppercase tracking-wider">VIN No</th>
                   <th className="px-3 py-2.5 text-right text-xs font-medium text-zinc-500 dark:text-gray-400 uppercase tracking-wider">Price</th>
                   <th className="px-3 py-2.5 text-right text-xs font-medium text-zinc-500 dark:text-gray-400 uppercase tracking-wider">Tax</th>
                 </tr>
@@ -306,6 +309,9 @@ export function StatementContent({ dealers, logoDataUrl, hideDealerFilter, defau
                       </td>
                       <td className="px-3 py-2.5 text-sm text-zinc-900 dark:text-white">{vehicleModel || '—'}</td>
                       <td className="px-3 py-2.5 text-sm text-zinc-600 dark:text-gray-300">{row.stock_number ?? '—'}</td>
+                      <td className="px-3 py-2.5 text-sm text-zinc-600 dark:text-gray-300 font-mono">
+                        {(row.vin_last6 ?? '').trim() ? (row.vin_last6 ?? '').trim().toUpperCase() : '—'}
+                      </td>
                       <td className="px-3 py-2.5 text-sm text-zinc-600 dark:text-gray-300 text-right">
                         $ {(price).toFixed(2)}
                       </td>
@@ -316,7 +322,7 @@ export function StatementContent({ dealers, logoDataUrl, hideDealerFilter, defau
                   )
                 })}
                 <tr className="bg-zinc-200/50 dark:bg-white/5 font-semibold">
-                  <td colSpan={4} className="px-3 py-2.5 text-sm text-zinc-900 dark:text-white">
+                  <td colSpan={5} className="px-3 py-2.5 text-sm text-zinc-900 dark:text-white">
                     Total
                   </td>
                   <td colSpan={2} className="px-3 py-2.5 text-sm text-[#C27E00] text-right">

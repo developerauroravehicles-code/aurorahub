@@ -17,6 +17,7 @@ interface InvoiceRow {
   demand_number: string | null
   dealer_id: string | null
   stock_number: string | null
+  vin_last6: string | null
   customer_phone: string | null
   customer_firstname: string
   customer_lastname: string
@@ -166,6 +167,7 @@ export function InvoiceTable({ invoices, logoDataUrl, canEdit = true }: InvoiceT
         stockNumber: row.stock_number ?? '—',
         customerAddress: dealer?.address ?? '—',
         vehicleInfo: `${row.vehicle_year} ${row.vehicle_make} ${row.vehicle_model} - Stock ${row.stock_number ?? '—'}`,
+        vinNo: row.vin_last6?.trim() ? row.vin_last6.trim() : null,
         productModel: row.camera_model,
         completeDate: formatInTimeZone(completionDate, SYSTEM_DEFAULT_TIMEZONE, 'd MMMM yyyy'),
         warrantyEnd: formatInTimeZone(warrantyEnd, SYSTEM_DEFAULT_TIMEZONE, 'd MMMM yyyy'),
@@ -206,6 +208,7 @@ export function InvoiceTable({ invoices, logoDataUrl, canEdit = true }: InvoiceT
       stockNumber: previewRow.stock_number ?? '—',
       customerAddress: dealer?.address ?? '—',
       vehicleInfo: `${previewRow.vehicle_year} ${previewRow.vehicle_make} ${previewRow.vehicle_model} - Stock ${previewRow.stock_number ?? '—'}`,
+      vinNo: previewRow.vin_last6?.trim() ? previewRow.vin_last6.trim() : null,
       productModel: previewRow.camera_model,
       completeDate: formatInTimeZone(completionDate, SYSTEM_DEFAULT_TIMEZONE, 'd MMMM yyyy'),
       warrantyEnd: formatInTimeZone(warrantyEnd, SYSTEM_DEFAULT_TIMEZONE, 'd MMMM yyyy'),

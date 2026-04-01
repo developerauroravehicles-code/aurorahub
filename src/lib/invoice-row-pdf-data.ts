@@ -23,6 +23,7 @@ export function demandRecordToInvoiceRowData(
     completed_at: string | null
     updated_at: string
     stock_number: string | null
+    vin_last6: string | null
     customer_phone: string | null
     vehicle_year: number
     vehicle_make: string
@@ -87,6 +88,7 @@ export function demandRecordToInvoiceRowData(
     stockNumber: row.stock_number ?? '—',
     customerAddress: dealer?.address ?? '—',
     vehicleInfo: `${row.vehicle_year} ${row.vehicle_make} ${row.vehicle_model} - Stock ${row.stock_number ?? '—'}`,
+    vinNo: row.vin_last6?.trim() ? row.vin_last6.trim() : null,
     productModel: row.camera_model,
     completeDate: formatInTimeZone(completionDate, SYSTEM_DEFAULT_TIMEZONE, 'd MMMM yyyy'),
     warrantyEnd: formatInTimeZone(warrantyEnd, SYSTEM_DEFAULT_TIMEZONE, 'd MMMM yyyy'),

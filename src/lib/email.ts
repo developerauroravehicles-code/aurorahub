@@ -52,11 +52,16 @@ export function buildStatementInvoicesEmailHtml(rows: StatementRowData[]): strin
         r.demand_number != null && String(r.demand_number).trim() !== ''
           ? escapeHtmlForEmail(String(r.demand_number))
           : '—'
+      const vin =
+        r.vinNo && String(r.vinNo).trim() !== '' && r.vinNo !== '—'
+          ? escapeHtmlForEmail(String(r.vinNo))
+          : '—'
       return `<tr>
       <td style="padding:8px;border:1px solid #e5e5e5;">${inv}</td>
       <td style="padding:8px;border:1px solid #e5e5e5;white-space:nowrap;">${escapeHtmlForEmail(r.date)}</td>
       <td style="padding:8px;border:1px solid #e5e5e5;">${escapeHtmlForEmail(r.vehicleModel)}</td>
       <td style="padding:8px;border:1px solid #e5e5e5;">${escapeHtmlForEmail(r.stockNumber)}</td>
+      <td style="padding:8px;border:1px solid #e5e5e5;font-family:monospace;">${vin}</td>
       <td style="padding:8px;border:1px solid #e5e5e5;text-align:right;">$${fmt(r.price)}</td>
       <td style="padding:8px;border:1px solid #e5e5e5;text-align:right;">$${fmt(r.tax)}</td>
       <td style="padding:8px;border:1px solid #e5e5e5;text-align:right;font-weight:600;">$${fmt(lineTotal)}</td>
@@ -76,6 +81,7 @@ export function buildStatementInvoicesEmailHtml(rows: StatementRowData[]): strin
             <th style="padding:8px 10px;border:1px solid #a06900;text-align:left;">Complete date</th>
             <th style="padding:8px 10px;border:1px solid #a06900;text-align:left;">Vehicle</th>
             <th style="padding:8px 10px;border:1px solid #a06900;text-align:left;">Stock</th>
+            <th style="padding:8px 10px;border:1px solid #a06900;text-align:left;">VIN No</th>
             <th style="padding:8px 10px;border:1px solid #a06900;text-align:right;">Price (CAD)</th>
             <th style="padding:8px 10px;border:1px solid #a06900;text-align:right;">Tax (CAD)</th>
             <th style="padding:8px 10px;border:1px solid #a06900;text-align:right;">Total (CAD)</th>
@@ -84,7 +90,7 @@ export function buildStatementInvoicesEmailHtml(rows: StatementRowData[]): strin
         <tbody>
           ${bodyRows}
           <tr style="background:#f5f5f5;font-weight:bold;">
-            <td colspan="4" style="padding:8px 10px;border:1px solid #e5e5e5;">Totals</td>
+            <td colspan="5" style="padding:8px 10px;border:1px solid #e5e5e5;">Totals</td>
             <td style="padding:8px 10px;border:1px solid #e5e5e5;text-align:right;">$${fmt(subtotal)}</td>
             <td style="padding:8px 10px;border:1px solid #e5e5e5;text-align:right;">$${fmt(taxSum)}</td>
             <td style="padding:8px 10px;border:1px solid #e5e5e5;text-align:right;">$${fmt(grand)}</td>
