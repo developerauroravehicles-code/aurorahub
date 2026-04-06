@@ -34,11 +34,13 @@ export function calculateDeductions(gross: number, payPeriodsPerYear: number = 2
   const cpp = Math.min(taxableCpp * CPP_RATE, cppAnnualMax / payPeriodsPerYear)
   const ei = Math.min(gross * EI_RATE, EI_MAX_ANNUAL / payPeriodsPerYear)
   const federalBasicPersonal = 15000 / payPeriodsPerYear
-  const provincialBasicPersonal = 11265 / payPeriodsPerYear
+  /** BC basic personal amount (annual), representative 2024–2025 figure; per-period share. */
+  const provincialBasicPersonal = 12705 / payPeriodsPerYear
   const taxableFederal = Math.max(0, gross - federalBasicPersonal)
   const taxableProvincial = Math.max(0, gross - provincialBasicPersonal)
   const federalTax = taxableFederal * 0.15
-  const provincialTax = taxableProvincial * 0.0505
+  /** BC lowest provincial bracket rate (simplified estimator; mirrors prior ON single-rate approach). */
+  const provincialTax = taxableProvincial * 0.0506
   const totalDeductions = cpp + ei + federalTax + provincialTax
   const net = Math.max(0, gross - totalDeductions)
   return { cpp, ei, federalTax, provincialTax, totalDeductions, net }

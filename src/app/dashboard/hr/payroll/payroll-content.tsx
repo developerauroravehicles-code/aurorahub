@@ -19,7 +19,8 @@ import {
   calculatePayStubFromNet,
 } from './actions'
 import { calculatePerCompletedAmount, calculateGrossFromNet } from './payroll-utils'
-import { Pencil, Trash2, Plus, DollarSign, Calculator, FileText, Loader2, Receipt } from 'lucide-react'
+import { downloadPayStubPdf } from '@/lib/generate-paystub-pdf'
+import { Pencil, Trash2, Plus, DollarSign, Calculator, FileText, Loader2, Receipt, Download } from 'lucide-react'
 
 const PAYMENT_TYPE_LABELS: Record<string, string> = {
   salary: 'Salary',
@@ -364,9 +365,36 @@ export function PayrollContent({
                 {viewingStubPayment.completed_count != null && ` • ${viewingStubPayment.completed_count} completed`}
               </p>
               <PayStubDisplay meta={viewingStubPayment.deduction_metadata} />
-              <button type="button" onClick={() => setViewingStubPayment(null)} className="mt-4 text-zinc-500 dark:text-gray-400 hover:text-zinc-900 dark:text-white text-sm">
-                Close
-              </button>
+              <div className="mt-4 flex flex-wrap items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const m = viewingStubPayment.deduction_metadata!
+                    downloadPayStubPdf({
+                      employeeName: viewingStubPayment.personnel?.full_name?.trim() || 'Employee',
+                      periodLabel:
+                        viewingStubPayment.period_start && viewingStubPayment.period_end
+                          ? `${new Date(viewingStubPayment.period_start).toLocaleDateString()} – ${new Date(viewingStubPayment.period_end).toLocaleDateString()}`
+                          : null,
+                      paymentTypeLabel:
+                        PAYMENT_TYPE_LABELS[viewingStubPayment.payment_type ?? ''] ?? viewingStubPayment.payment_type ?? null,
+                      gross: m.gross ?? 0,
+                      cpp: m.cpp ?? 0,
+                      ei: m.ei ?? 0,
+                      federal_tax: m.federal_tax ?? 0,
+                      provincial_tax: m.provincial_tax ?? 0,
+                      net: m.net ?? 0,
+                      documentKind: 'record',
+                    })
+                  }}
+                  className="inline-flex items-center gap-2 px-3 py-1.5 rounded bg-[#C27E00] text-white text-sm hover:bg-[#a06900]"
+                >
+                  <Download className="w-4 h-4" /> Download PDF
+                </button>
+                <button type="button" onClick={() => setViewingStubPayment(null)} className="text-zinc-500 dark:text-gray-400 hover:text-zinc-900 dark:text-white text-sm">
+                  Close
+                </button>
+              </div>
             </div>
           )}
           <PayStubCalculator />
@@ -811,7 +839,7 @@ function PayStubDisplay({ meta }: { meta: Record<string, number> }) {
       <div className="flex justify-between"><dt className="text-zinc-500 dark:text-gray-400">CPP</dt><dd className="text-red-400">-{cpp.toLocaleString('en-CA')}</dd></div>
       <div className="flex justify-between"><dt className="text-zinc-500 dark:text-gray-400">EI</dt><dd className="text-red-400">-{ei.toLocaleString('en-CA')}</dd></div>
       <div className="flex justify-between"><dt className="text-zinc-500 dark:text-gray-400">Federal Tax</dt><dd className="text-red-400">-{federalTax.toLocaleString('en-CA')}</dd></div>
-      <div className="flex justify-between"><dt className="text-zinc-500 dark:text-gray-400">Provincial Tax (ON)</dt><dd className="text-red-400">-{provincialTax.toLocaleString('en-CA')}</dd></div>
+      <div className="flex justify-between"><dt className="text-zinc-500 dark:text-gray-400">Provincial Tax (BC)</dt><dd className="text-red-400">-{provincialTax.toLocaleString('en-CA')}</dd></div>
       <div className="flex justify-between border-t border-zinc-300 dark:border-gray-700 pt-2 mt-2"><dt className="text-zinc-600 dark:text-gray-300 font-medium">Net Pay</dt><dd className="text-green-400 font-medium">{net.toLocaleString('en-CA')} CAD</dd></div>
     </dl>
   )
@@ -835,7 +863,7 @@ function PayStubCalculator() {
   return (
     <div className="bg-zinc-200/50 dark:bg-white/5 rounded-lg border border-zinc-200 dark:border-gray-800 p-6">
       <h2 className="text-lg font-semibold text-zinc-900 dark:text-white mb-4">Canadian Pay Stub (Bodro) Calculator</h2>
-      <p className="text-zinc-500 dark:text-gray-400 text-sm mb-4">Enter Net or Gross — CPP, EI, federal/provincial tax (Ontario). Bi-weekly.</p>
+      <p className="text-zinc-500 dark:text-gray-400 text-sm mb-4">Enter Net or Gross — CPP, EI, federal tax, and simplified British Columbia provincial tax. Bi-weekly.</p>
       <div className="flex gap-4 items-end mb-6 flex-wrap">
         <div>
           <label className="block text-xs text-zinc-500 dark:text-gray-400 mb-1">
@@ -868,9 +896,29 @@ function PayStubCalculator() {
             <div className="flex justify-between"><dt className="text-zinc-500 dark:text-gray-400">CPP</dt><dd className="text-red-400">-{result.cpp.toLocaleString('en-CA')}</dd></div>
             <div className="flex justify-between"><dt className="text-zinc-500 dark:text-gray-400">EI</dt><dd className="text-red-400">-{result.ei.toLocaleString('en-CA')}</dd></div>
             <div className="flex justify-between"><dt className="text-zinc-500 dark:text-gray-400">Federal Tax</dt><dd className="text-red-400">-{result.federal_tax.toLocaleString('en-CA')}</dd></div>
-            <div className="flex justify-between"><dt className="text-zinc-500 dark:text-gray-400">Provincial Tax (ON)</dt><dd className="text-red-400">-{result.provincial_tax.toLocaleString('en-CA')}</dd></div>
+            <div className="flex justify-between"><dt className="text-zinc-500 dark:text-gray-400">Provincial Tax (BC)</dt><dd className="text-red-400">-{result.provincial_tax.toLocaleString('en-CA')}</dd></div>
             <div className="flex justify-between border-t border-zinc-300 dark:border-gray-700 pt-2 mt-2"><dt className="text-zinc-600 dark:text-gray-300 font-medium">Net Pay</dt><dd className="text-green-400 font-medium">{result.net.toLocaleString('en-CA')} CAD</dd></div>
           </dl>
+          <button
+            type="button"
+            onClick={() =>
+              downloadPayStubPdf({
+                employeeName: 'Calculator estimate',
+                periodLabel: 'Bi-weekly (estimate)',
+                paymentTypeLabel: null,
+                gross: result.gross,
+                cpp: result.cpp,
+                ei: result.ei,
+                federal_tax: result.federal_tax,
+                provincial_tax: result.provincial_tax,
+                net: result.net,
+                documentKind: 'estimate',
+              })
+            }
+            className="mt-4 inline-flex items-center gap-2 px-3 py-1.5 rounded bg-zinc-200 dark:bg-white/10 text-zinc-900 dark:text-white text-sm border border-zinc-300 dark:border-gray-600 hover:bg-zinc-300 dark:hover:bg-white/20"
+          >
+            <Download className="w-4 h-4" /> Download PDF
+          </button>
         </div>
       )}
     </div>

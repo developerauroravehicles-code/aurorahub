@@ -31,7 +31,9 @@ export default async function PayrollPage() {
     <div className="space-y-8">
       <div>
         <h1 className="text-2xl font-semibold text-zinc-900 dark:text-white mb-2">Payroll & Compensation</h1>
-        <p className="text-zinc-500 dark:text-gray-400">Salary, hourly, per-completed tiered pay, Canadian payroll (bodro) with CPP, EI, taxes.</p>
+        <p className="text-zinc-500 dark:text-gray-400">
+          Salary, hourly, per-completed tiered pay, Canadian payroll (bodro) with CPP, EI, federal tax, and simplified British Columbia provincial tax (bi-weekly estimates).
+        </p>
       </div>
       <PayrollContent
         structures={structures}
