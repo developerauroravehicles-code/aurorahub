@@ -27,17 +27,15 @@ export function formatInPT(date: Date | string, formatStr: string): string {
 }
 
 /**
- * Convert datetime-local value (YYYY-MM-DDTHH:mm) to ISO string, interpreting the value as Pacific Time.
- * Use when the user enters SLA Due etc. in the Service Desk (all platform times are PT).
+ * Convert datetime-local value (YYYY-MM-DDTHH:mm) to UTC ISO string, interpreting the value as
+ * Pacific wall time (America/Vancouver). Server-safe (does not depend on the host system timezone).
+ * Use for Service Desk SLA, manager note reminders, and other HQ-entered local times.
  */
 export function ptDatetimeLocalToISO(localStr: string): string {
   if (!localStr || !localStr.includes('T')) return localStr
-  const [datePart, timePart] = localStr.split('T')
-  const [y, mo, day] = datePart.split('-').map(Number)
-  const [hour, min] = timePart.split(':').map(Number)
-  const d = new Date(y, mo - 1, day, hour, min, 0)
-  const utcDate = fromZonedTime(d, SYSTEM_DEFAULT_TIMEZONE)
-  return utcDate.toISOString()
+  const trimmed = localStr.trim()
+  const withSeconds = /^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2})$/.test(trimmed) ? `${trimmed}:00` : trimmed
+  return fromZonedTime(withSeconds, SYSTEM_DEFAULT_TIMEZONE).toISOString()
 }
 
 /**

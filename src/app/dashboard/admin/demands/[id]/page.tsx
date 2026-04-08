@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { formatInTimeZone } from 'date-fns-tz'
 import { getEffectiveTimezone } from '@/lib/timezone-defaults'
+import { checkCurrentUserPermission } from '@/lib/permissions'
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 import { DeleteDemandButton } from '../delete-demand-button'
@@ -11,6 +12,7 @@ import { EditCustomerForm } from '../edit-customer-form'
 import { EditVinForm } from '../edit-vin-form'
 import { EditStockNumberForm } from '../edit-stock-number-form'
 import { RescheduleDemandButton } from '../reschedule-demand-button'
+import { DemandManualSmsPanel } from '../demand-manual-sms-panel'
 
 /** List filters (date, status, dealer) are passed on the detail URL so "Back" can restore them. */
 function demandsListHrefFromDetailSearch(
@@ -91,9 +93,11 @@ export default async function DemandDetailsPage({
   }
 
   let isAuroraManager = false
+  let canSendManualSms = false
   if (user) {
     const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
     isAuroraManager = profile?.role === 'aurora_manager'
+    canSendManualSms = await checkCurrentUserPermission('comm.sms.send')
   }
 
   // Fetch specialists and finance users for Aurora Manager (change assignment)
@@ -205,6 +209,14 @@ export default async function DemandDetailsPage({
             </div>
           </div>
         </div>
+
+        {canSendManualSms && (
+          <DemandManualSmsPanel
+            demandId={id}
+            assignedSpecialistId={demand.assigned_specialist_id}
+            customerPhone={demand.customer_phone}
+          />
+        )}
 
         {/* Creator Comment (if any) */}
         {demand.comment && (

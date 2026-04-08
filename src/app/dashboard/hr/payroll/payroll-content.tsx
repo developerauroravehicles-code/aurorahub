@@ -102,35 +102,39 @@ export function PayrollContent({
   const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0]
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap gap-2 border-b border-zinc-200 dark:border-gray-800 pb-2">
+    <div className="min-w-0 max-w-full space-y-6">
+      <div className="-mx-1 flex gap-2 overflow-x-auto overflow-y-hidden border-b border-zinc-200 px-1 pb-2 dark:border-gray-800">
         <button
+          type="button"
           onClick={() => setActiveTab('structures')}
-          className={`px-4 py-2 rounded-t text-sm font-medium transition-colors flex items-center gap-2 ${
+          className={`flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-t px-3 py-2 text-xs font-medium transition-colors sm:gap-2 sm:px-4 sm:text-sm ${
             activeTab === 'structures' ? 'bg-zinc-200 dark:bg-white/10 text-zinc-900 dark:text-white border border-b-0 border-zinc-200 dark:border-gray-800' : 'text-zinc-500 dark:text-gray-400 hover:text-zinc-900 dark:text-white hover:bg-zinc-200/50 dark:bg-white/5'
           }`}
         >
           <DollarSign className="w-4 h-4" /> Compensation
         </button>
         <button
+          type="button"
           onClick={() => setActiveTab('per_completed')}
-          className={`px-4 py-2 rounded-t text-sm font-medium transition-colors flex items-center gap-2 ${
+          className={`flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-t px-3 py-2 text-xs font-medium transition-colors sm:gap-2 sm:px-4 sm:text-sm ${
             activeTab === 'per_completed' ? 'bg-zinc-200 dark:bg-white/10 text-zinc-900 dark:text-white border border-b-0 border-zinc-200 dark:border-gray-800' : 'text-zinc-500 dark:text-gray-400 hover:text-zinc-900 dark:text-white hover:bg-zinc-200/50 dark:bg-white/5'
           }`}
         >
           <Calculator className="w-4 h-4" /> Per-Completed Tiers
         </button>
         <button
+          type="button"
           onClick={() => setActiveTab('payments')}
-          className={`px-4 py-2 rounded-t text-sm font-medium transition-colors flex items-center gap-2 ${
+          className={`flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-t px-3 py-2 text-xs font-medium transition-colors sm:gap-2 sm:px-4 sm:text-sm ${
             activeTab === 'payments' ? 'bg-zinc-200 dark:bg-white/10 text-zinc-900 dark:text-white border border-b-0 border-zinc-200 dark:border-gray-800' : 'text-zinc-500 dark:text-gray-400 hover:text-zinc-900 dark:text-white hover:bg-zinc-200/50 dark:bg-white/5'
           }`}
         >
           <Receipt className="w-4 h-4" /> Payments
         </button>
         <button
+          type="button"
           onClick={() => setActiveTab('paystub')}
-          className={`px-4 py-2 rounded-t text-sm font-medium transition-colors flex items-center gap-2 ${
+          className={`flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-t px-3 py-2 text-xs font-medium transition-colors sm:gap-2 sm:px-4 sm:text-sm ${
             activeTab === 'paystub' ? 'bg-zinc-200 dark:bg-white/10 text-zinc-900 dark:text-white border border-b-0 border-zinc-200 dark:border-gray-800' : 'text-zinc-500 dark:text-gray-400 hover:text-zinc-900 dark:text-white hover:bg-zinc-200/50 dark:bg-white/5'
           }`}
         >

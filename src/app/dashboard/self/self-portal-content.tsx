@@ -126,15 +126,16 @@ export function SelfPortalContent({
   const pendingChecklists = complianceChecklists.filter((c) => !c.completed)
 
   return (
-    <div className="space-y-6">
-      <div className="flex gap-2 border-b border-zinc-200 dark:border-gray-800 pb-2 flex-wrap">
+    <div className="min-w-0 max-w-full space-y-6">
+      <div className="-mx-1 flex gap-2 overflow-x-auto overflow-y-hidden border-b border-zinc-200 px-1 pb-2 dark:border-gray-800">
         {tabs.map((tab) => {
           const Icon = tab.icon
           return (
             <button
               key={tab.id}
+              type="button"
               onClick={() => setActiveTab(tab.id)}
-              className={`px-3 py-2 rounded-t text-sm font-medium transition-colors flex items-center gap-2 ${
+              className={`flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-t px-2.5 py-2 text-xs font-medium transition-colors sm:gap-2 sm:px-3 sm:text-sm ${
                 activeTab === tab.id
                   ? 'bg-zinc-200 dark:bg-white/10 text-zinc-900 dark:text-white border border-b-0 border-zinc-200 dark:border-gray-800'
                   : 'text-zinc-500 dark:text-gray-400 hover:text-zinc-900 dark:text-white hover:bg-zinc-200/50 dark:bg-white/5'

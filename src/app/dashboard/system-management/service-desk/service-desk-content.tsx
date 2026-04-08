@@ -241,15 +241,16 @@ export function ServiceDeskContent({
   ]
 
   return (
-    <div className="space-y-6">
-      <div className="flex gap-2 border-b border-zinc-200 dark:border-gray-800 pb-2">
+    <div className="min-w-0 max-w-full space-y-6">
+      <div className="-mx-1 flex gap-2 overflow-x-auto overflow-y-hidden border-b border-zinc-200 px-1 pb-2 dark:border-gray-800">
         {tabs.map((t) => {
           const Icon = t.icon
           return (
             <button
               key={t.id}
+              type="button"
               onClick={() => setActiveTab(t.id)}
-              className={`px-4 py-2 rounded-t text-sm font-medium transition-colors flex items-center gap-2 ${
+              className={`flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-t px-3 py-2 text-xs font-medium transition-colors sm:gap-2 sm:px-4 sm:text-sm ${
                 activeTab === t.id
                   ? 'bg-zinc-200 dark:bg-white/10 text-zinc-900 dark:text-white border border-b-0 border-zinc-200 dark:border-gray-800'
                   : 'text-zinc-500 dark:text-gray-400 hover:text-zinc-900 dark:text-white hover:bg-zinc-200/50 dark:bg-white/5'
@@ -262,12 +263,13 @@ export function ServiceDeskContent({
       </div>
 
       {activeTab === 'tickets' && (
-        <div className="bg-zinc-200/50 dark:bg-white/5 rounded-lg border border-zinc-200 dark:border-gray-800 p-6">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-lg font-semibold text-zinc-900 dark:text-white">Tickets</h2>
+        <div className="bg-zinc-200/50 dark:bg-white/5 rounded-lg border border-zinc-200 dark:border-gray-800 p-4 sm:p-6">
+          <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <h2 className="text-base font-semibold text-zinc-900 dark:text-white sm:text-lg">Tickets</h2>
             <button
+              type="button"
               onClick={() => { setEditingTicketId(null); setShowTicketForm(true) }}
-              className="flex items-center gap-2 px-3 py-1.5 rounded bg-[#C27E00] text-white text-sm hover:bg-[#a06900]"
+              className="inline-flex w-full shrink-0 items-center justify-center gap-2 rounded bg-[#C27E00] px-3 py-1.5 text-sm text-white hover:bg-[#a06900] sm:w-auto"
             >
               <Plus className="w-4 h-4" /> New Ticket
             </button>

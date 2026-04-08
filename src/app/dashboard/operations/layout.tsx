@@ -27,7 +27,7 @@ export default async function OperationsLayout({
   }
 
   return (
-    <div className="space-y-4">
+    <div className="min-w-0 max-w-full space-y-4">
       <SystemManagementTitle />
       <SystemManagementTabs activeTab="" userRole={profile?.role ?? undefined} />
       {children}

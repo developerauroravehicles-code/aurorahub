@@ -180,7 +180,7 @@ export function Sidebar({
   ]
 
   return (
-    <div className="flex w-64 flex-col bg-zinc-50 dark:bg-black text-zinc-900 dark:text-white border-r border-zinc-200 dark:border-gray-800">
+    <div className="flex h-full w-64 shrink-0 flex-col border-r border-zinc-200 bg-zinc-50 text-zinc-900 dark:border-gray-800 dark:bg-black dark:text-white">
       <div className="flex flex-1 flex-col overflow-y-auto">
         {/* Dealer Clock - Top of Sidebar */}
         {timezoneName && (

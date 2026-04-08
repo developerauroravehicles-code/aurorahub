@@ -2,7 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
-import { getTodayRangeInTimezone, getEffectiveTimezone, getMonthRangeInTimezone, SYSTEM_DEFAULT_TIMEZONE } from '@/lib/timezone-defaults'
+import { getTodayRangeInTimezone, getEffectiveTimezone, getMonthRangeInTimezone, SYSTEM_DEFAULT_TIMEZONE, ptDatetimeLocalToISO } from '@/lib/timezone-defaults'
 
 export type ManagerNote = {
   id: string
@@ -57,12 +57,17 @@ export async function createManagerNote(
     return { error: 'Unauthorized' }
   }
 
+  const reminderIso =
+    reminderAt?.trim()
+      ? ptDatetimeLocalToISO(reminderAt.trim())
+      : null
+
   const { error } = await supabase
     .from('manager_notes')
     .insert({
       created_by: user.id,
       content: content.trim(),
-      reminder_at: reminderAt?.trim() || null
+      reminder_at: reminderIso
     })
 
   if (error) return { error: error.message }
@@ -90,7 +95,9 @@ export async function updateManagerNote(
 
   const payload: Record<string, unknown> = { updated_at: new Date().toISOString() }
   if (updates.content !== undefined) payload.content = updates.content.trim()
-  if (updates.reminder_at !== undefined) payload.reminder_at = updates.reminder_at?.trim() || null
+  if (updates.reminder_at !== undefined) {
+    payload.reminder_at = updates.reminder_at?.trim() ? ptDatetimeLocalToISO(updates.reminder_at.trim()) : null
+  }
   if (updates.is_done !== undefined) payload.is_done = updates.is_done
 
   const { error } = await supabase

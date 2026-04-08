@@ -25,11 +25,11 @@ export function WelcomeBanner({ title, subtitle, userName, timezone }: WelcomeBa
   const greeting = userName ? `${getGreeting(hour)}, ${userName}` : getGreeting(hour)
 
   return (
-    <div className="relative overflow-hidden rounded-2xl border border-zinc-200 dark:border-gray-800/80 bg-gradient-to-br from-[#C27E00]/15 via-white/[0.04] to-transparent px-8 py-6">
+    <div className="relative min-w-0 max-w-full overflow-hidden rounded-2xl border border-zinc-200 dark:border-gray-800/80 bg-gradient-to-br from-[#C27E00]/15 via-white/[0.04] to-transparent px-4 py-5 sm:px-8 sm:py-6">
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(194,126,0,0.12),transparent)]" />
       <div className="relative">
         <p className="text-sm font-medium text-[#C27E00]/90">{greeting}</p>
-        <h1 className="mt-1 text-2xl font-bold tracking-tight text-zinc-900 dark:text-white md:text-3xl">{title}</h1>
+        <h1 className="mt-1 break-words text-xl font-bold tracking-tight text-zinc-900 dark:text-white sm:text-2xl md:text-3xl">{title}</h1>
         <p className="mt-2 text-sm text-zinc-500 dark:text-gray-400">
           {subtitle ? `${subtitle} · ${today}` : today}
         </p>

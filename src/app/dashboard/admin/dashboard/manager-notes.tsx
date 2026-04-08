@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { format } from 'date-fns'
+import { formatInTimeZone } from 'date-fns-tz'
+import { SYSTEM_DEFAULT_TIMEZONE } from '@/lib/timezone-defaults'
 import { Plus, Trash2, Check, Clock, Bell } from 'lucide-react'
 import {
   getManagerNotes,
@@ -86,22 +87,26 @@ export function ManagerNotesWidget() {
           className="w-full px-3 py-2 bg-zinc-100/90 dark:bg-black/30 border border-zinc-300 dark:border-gray-700 rounded-lg text-zinc-900 dark:text-white placeholder-zinc-500 dark:placeholder-gray-500 focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]"
           disabled={submitting}
         />
-        <div className="flex gap-2 items-center">
+        <div className="flex flex-col gap-1 sm:flex-row sm:gap-2 sm:items-center">
           <input
             type="datetime-local"
             value={newReminderAt}
             onChange={e => setNewReminderAt(e.target.value)}
             className="flex-1 px-3 py-2 bg-zinc-100/90 dark:bg-black/30 border border-zinc-300 dark:border-gray-700 rounded-lg text-zinc-900 dark:text-white text-sm focus:ring-1 focus:ring-[#C27E00]"
+            title="Entered time is saved as Pacific (America/Vancouver), same as appointments."
           />
           <button
             type="submit"
             disabled={!newContent.trim() || submitting}
-            className="inline-flex items-center gap-1.5 px-3 py-2 bg-[#C27E00] hover:bg-[#a06900] text-white rounded-lg text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+            className="inline-flex items-center gap-1.5 px-3 py-2 bg-[#C27E00] hover:bg-[#a06900] text-white rounded-lg text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
           >
             <Plus className="w-4 h-4" />
             Add
           </button>
         </div>
+        <p className="text-xs text-zinc-500 dark:text-gray-500">
+          Reminder time is interpreted as Pacific (PT) and stored in UTC — same as the rest of AuroraHub.
+        </p>
       </form>
 
       {loading ? (
@@ -129,7 +134,9 @@ export function ManagerNotesWidget() {
                   {note.reminder_at && (
                     <p className="text-xs text-zinc-500 dark:text-gray-500 mt-1 flex items-center gap-1">
                       <Clock className="w-3 h-3" />
-                      {format(new Date(note.reminder_at), 'd MMM yyyy, HH:mm')}
+                      {formatInTimeZone(new Date(note.reminder_at), SYSTEM_DEFAULT_TIMEZONE, 'd MMM yyyy, HH:mm')}
+                      {' '}
+                      <span className="text-zinc-500 dark:text-gray-600">PT</span>
                       {reminderDue(note) && !note.is_done && (
                         <span className="text-amber-400 flex items-center gap-1 ml-1">
                           <Bell className="w-3 h-3" />

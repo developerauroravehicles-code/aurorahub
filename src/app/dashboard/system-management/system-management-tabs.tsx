@@ -175,13 +175,13 @@ export function SystemManagementTabs({ activeTab, userRole }: { activeTab: strin
   )
 
   return (
-    <div className="space-y-4">
-      {/* Top-level: Platform | Dealers */}
-      <div className="flex flex-wrap gap-2 border-b border-zinc-200 dark:border-gray-800 pb-2">
+    <div className="min-w-0 max-w-full space-y-4">
+      {/* Top-level: Platform | Dealers — scroll horizontally on narrow screens */}
+      <div className="-mx-1 flex gap-2 overflow-x-auto overflow-y-hidden border-b border-zinc-200 px-1 pb-2 dark:border-gray-800">
         <Link
           href="/dashboard/identity"
           className={clsx(
-            'px-4 py-2 rounded-t-md text-sm font-medium transition-colors',
+            'shrink-0 whitespace-nowrap px-3 py-2 text-xs font-medium transition-colors sm:px-4 sm:text-sm',
             !isDealersSection
               ? 'bg-[#C27E00]/20 border border-b-0 border-[#C27E00]/50 text-[#C27E00] -mb-0.5'
               : 'text-zinc-500 dark:text-gray-500 hover:text-zinc-600 dark:text-gray-300 hover:bg-zinc-200/50 dark:bg-white/5'
@@ -192,7 +192,7 @@ export function SystemManagementTabs({ activeTab, userRole }: { activeTab: strin
         <Link
           href="/dashboard/configuration/dealers"
           className={clsx(
-            'px-4 py-2 rounded-t-md text-sm font-medium transition-colors',
+            'shrink-0 whitespace-nowrap px-3 py-2 text-xs font-medium transition-colors sm:px-4 sm:text-sm',
             isDealersSection
               ? 'bg-[#C27E00]/20 border border-b-0 border-[#C27E00]/50 text-[#C27E00] -mb-0.5'
               : 'text-zinc-500 dark:text-gray-500 hover:text-zinc-600 dark:text-gray-300 hover:bg-zinc-200/50 dark:bg-white/5'
@@ -202,8 +202,8 @@ export function SystemManagementTabs({ activeTab, userRole }: { activeTab: strin
         </Link>
       </div>
 
-      {/* Only tabs for the current category (e.g. Infrastructure: Database | Automation | Mail | SMS) */}
-      <div className="flex flex-wrap gap-2 border-b border-zinc-200 dark:border-gray-800 pb-4">
+      {/* Only tabs for the current category — horizontal scroll on phones */}
+      <div className="-mx-1 flex gap-2 overflow-x-auto overflow-y-hidden border-b border-zinc-200 px-1 pb-4 dark:border-gray-800">
         {tabs.map((tab) => {
           const Icon = tab.icon
           const resolvedTab = activeTab || tabId
@@ -219,7 +219,7 @@ export function SystemManagementTabs({ activeTab, userRole }: { activeTab: strin
               key={tab.id}
               href={tab.href}
               className={clsx(
-                'inline-flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors',
+                'inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md px-3 py-2 text-xs font-medium transition-colors sm:gap-2 sm:px-4 sm:text-sm',
                 isActive ? 'bg-[#C27E00] text-white' : 'text-zinc-500 dark:text-gray-500 hover:text-zinc-600 dark:text-gray-300 hover:bg-zinc-200/50 dark:bg-white/5'
               )}
             >

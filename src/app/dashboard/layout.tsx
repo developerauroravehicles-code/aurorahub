@@ -1,9 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { Sidebar } from './sidebar'
+import { DashboardShell } from './dashboard-shell'
 import { ErrorSignOut } from './error-signout'
-import { BackgroundLogo } from '@/components/background-logo'
-import { TimezoneProvider } from '@/contexts/timezone-context'
 import { SystemTimeProvider } from '@/contexts/system-time-context'
 import { SYSTEM_DEFAULT_TIMEZONE } from '@/lib/timezone-defaults'
 
@@ -53,19 +51,13 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   return (
     <SystemTimeProvider>
-      <div className="flex h-screen bg-zinc-50 dark:bg-black text-zinc-900 dark:text-white relative overflow-hidden">
-        <Sidebar 
-          profile={profile} 
-          timezoneName={systemTimezone}
-          timezoneDisplayName={systemTimezoneDisplayName}
-        />
-        <TimezoneProvider timezoneName={systemTimezone}>
-          <main className="flex-1 overflow-y-auto p-8 bg-zinc-50 dark:bg-black relative z-10">
-            {children}
-          </main>
-        </TimezoneProvider>
-        <BackgroundLogo />
-      </div>
+      <DashboardShell
+        profile={profile}
+        timezoneName={systemTimezone}
+        timezoneDisplayName={systemTimezoneDisplayName}
+      >
+        {children}
+      </DashboardShell>
     </SystemTimeProvider>
   )
 }
