@@ -18,7 +18,7 @@ export function InvoiceOverview({ summary }: { summary: InvoiceSummary }) {
   ].filter(d => d.value > 0)
 
   return (
-    <div className="bg-zinc-200/50 dark:bg-white/5 border border-zinc-200 dark:border-gray-800 rounded-lg p-6">
+    <div className="bg-zinc-200/50 dark:bg-zinc-950/80 border border-zinc-200 dark:border-gray-800 rounded-lg p-6">
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-lg font-semibold text-zinc-900 dark:text-white">Invoice Overview</h2>
         <Link
@@ -37,7 +37,7 @@ export function InvoiceOverview({ summary }: { summary: InvoiceSummary }) {
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={chartData} layout="vertical" margin={{ top: 0, right: 16, left: 0, bottom: 0 }}>
                 <XAxis type="number" hide />
-                <YAxis type="category" dataKey="name" width={70} tick={{ fill: '#9ca3af', fontSize: 11 }} />
+                <YAxis type="category" dataKey="name" width={70} tick={{ fill: '#cbd5e1', fontSize: 11 }} />
                 <Bar dataKey="value" radius={4}>
                   {chartData.map((_, i) => (
                     <Cell key={i} fill={BAR_COLORS[i]} />

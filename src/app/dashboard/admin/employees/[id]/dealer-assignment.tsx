@@ -74,7 +74,7 @@ export function DealerAssignment({
   }
 
   return (
-    <div className="bg-zinc-200/50 dark:bg-white/5 border border-zinc-200 dark:border-gray-800 rounded-lg p-6">
+    <div className="bg-zinc-200/50 dark:bg-zinc-950/80 border border-zinc-200 dark:border-gray-800 rounded-lg p-6">
       <h3 className="text-lg font-semibold text-zinc-900 dark:text-white mb-4">Dealer Assignments</h3>
       
       {error && (

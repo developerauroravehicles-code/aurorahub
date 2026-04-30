@@ -6,6 +6,54 @@ import { calculatePerCompletedAmount, calculateDeductions, calculateGrossFromNet
 
 const PAYMENT_TYPES = ['salary', 'hourly', 'per_installation', 'per_completed_tiered', 'commission', 'bonus', 'job_based', 'dealer_commission', 'platform_commission'] as const
 
+export type ExtraEarningInput = { id: string; label: string; amount: number }
+
+function sanitizeNum(n: unknown, fallback = 0) {
+  const x = typeof n === 'number' ? n : parseFloat(String(n))
+  return Number.isFinite(x) ? x : fallback
+}
+
+function normalizeExtraEarningRows(raw: unknown): ExtraEarningInput[] {
+  const extrasRaw = Array.isArray(raw) ? raw : []
+  return extrasRaw
+    .map((row) => {
+      if (!row || typeof row !== 'object') return null
+      const o = row as Record<string, unknown>
+      const amount = Math.max(0, sanitizeNum(o.amount, 0))
+      if (amount <= 0) return null
+      return {
+        id: typeof o.id === 'string' && o.id.length > 0 ? o.id : crypto.randomUUID(),
+        label: (typeof o.label === 'string' ? o.label : 'Extra').trim() || 'Extra payment',
+        amount: Math.round(amount * 100) / 100,
+      }
+    })
+    .filter((e): e is ExtraEarningInput => e != null)
+}
+
+/** Base target net → base gross; optional extra gross lines; CPP/EI/taxes on combined gross. */
+function buildDeductionMetadataFromTargetNet(
+  baseTargetNet: number,
+  extraRaw: unknown,
+  additionalMeta: Record<string, unknown> = {}
+): { deduction_metadata: Record<string, unknown>; net: number } {
+  const baseGross = calculateGrossFromNet(baseTargetNet)
+  const extra_earnings = normalizeExtraEarningRows(extraRaw)
+  const extrasSum = extra_earnings.reduce((s, e) => s + e.amount, 0)
+  const effectiveGross = Math.round((baseGross + extrasSum) * 100) / 100
+  const d = calculateDeductions(effectiveGross)
+  const deduction_metadata: Record<string, unknown> = {
+    gross: Math.round(baseGross * 100) / 100,
+    cpp: Math.round(d.cpp * 100) / 100,
+    ei: Math.round(d.ei * 100) / 100,
+    federal_tax: Math.round(d.federalTax * 100) / 100,
+    provincial_tax: Math.round(d.provincialTax * 100) / 100,
+    net: Math.round(d.net * 100) / 100,
+    ...additionalMeta,
+  }
+  if (extra_earnings.length > 0) deduction_metadata.extra_earnings = extra_earnings
+  return { deduction_metadata, net: deduction_metadata.net as number }
+}
+
 async function ensureAuth() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -248,32 +296,29 @@ export async function deletePerCompletedTier(id: string) {
 // Payment records - amount = HEDEF NET (Gross bu net'ten hesaplanır)
 export async function createPaymentRecord(formData: {
   personnel_id: string
-  amount: number  // Target Net (CAD)
+  amount: number  // Target Net (CAD) for base pay (before extra gross lines)
   payment_type?: string
   period_start?: string
   period_end?: string
   completed_count?: number
   status?: string
   notes?: string
+  /** Bonus / commission / overtime etc. — amounts are gross CAD added to base gross; taxes recalculated on total. */
+  extra_earnings?: { id?: string; label: string; amount: number }[]
 }) {
   const { supabase } = await ensureAuth()
   if (!supabase) return { error: 'Not authenticated' }
 
   const targetNet = formData.amount
-  const gross = calculateGrossFromNet(targetNet)
-  const deductions = calculateDeductions(gross)
-  const deductionMetadata = {
-    gross,
-    cpp: Math.round(deductions.cpp * 100) / 100,
-    ei: Math.round(deductions.ei * 100) / 100,
-    federal_tax: Math.round(deductions.federalTax * 100) / 100,
-    provincial_tax: Math.round(deductions.provincialTax * 100) / 100,
-    net: Math.round(deductions.net * 100) / 100,
-  }
+  const { deduction_metadata: deductionMetadata, net: recordNet } = buildDeductionMetadataFromTargetNet(
+    targetNet,
+    formData.extra_earnings ?? [],
+    {}
+  )
 
   const { error } = await supabase.from('payment_records').insert({
     personnel_id: formData.personnel_id,
-    amount: deductionMetadata.net,
+    amount: recordNet,
     payment_type: formData.payment_type || null,
     period_start: formData.period_start || null,
     period_end: formData.period_end || null,
@@ -292,6 +337,7 @@ export async function createPaymentRecordFromPerCompleted(formData: {
   period_start: string
   period_end: string
   tier_id: string
+  extra_earnings?: { id?: string; label: string; amount: number }[]
 }) {
   const { supabase } = await ensureAuth()
   if (!supabase) return { error: 'Not authenticated' }
@@ -312,25 +358,20 @@ export async function createPaymentRecordFromPerCompleted(formData: {
   const baseNetAmount = Number(tier.base_amount)   // NET
   const perCompletedNetAmount = Number(tier.per_completed_amount)  // NET per each
   const targetNet = calculatePerCompletedAmount(baseCompleted, baseNetAmount, perCompletedNetAmount, count)
-  const gross = calculateGrossFromNet(targetNet)
-
-  const deductions = calculateDeductions(gross)
-  const deductionMetadata = {
-    gross,
-    cpp: Math.round(deductions.cpp * 100) / 100,
-    ei: Math.round(deductions.ei * 100) / 100,
-    federal_tax: Math.round(deductions.federalTax * 100) / 100,
-    provincial_tax: Math.round(deductions.provincialTax * 100) / 100,
-    net: Math.round(deductions.net * 100) / 100,
-    completed_count: count,
-    base_completed: baseCompleted,
-    base_amount: baseNetAmount,
-    per_completed_amount: perCompletedNetAmount,
-  }
+  const { deduction_metadata: deductionMetadata, net: recordNet } = buildDeductionMetadataFromTargetNet(
+    targetNet,
+    formData.extra_earnings ?? [],
+    {
+      completed_count: count,
+      base_completed: baseCompleted,
+      base_amount: baseNetAmount,
+      per_completed_amount: perCompletedNetAmount,
+    }
+  )
 
   const { error } = await supabase.from('payment_records').insert({
     personnel_id: formData.personnel_id,
-    amount: deductionMetadata.net,
+    amount: recordNet,
     payment_type: 'per_completed_tiered',
     period_start: formData.period_start,
     period_end: formData.period_end,
@@ -356,6 +397,59 @@ export async function updatePaymentRecord(
   if (Object.keys(update).length === 0) return { success: true }
   const { error } = await supabase.from('payment_records').update(update).eq('id', id)
   if (error) return { error: error.message }
+  revalidatePath('/dashboard/hr/payroll')
+  return { success: true }
+}
+
+/** Persist HR-adjusted gross, taxes, optional extra earning lines; updates net and payment amount. */
+export async function updatePaymentDeductionMetadata(
+  paymentRecordId: string,
+  patch: {
+    gross: number
+    cpp: number
+    ei: number
+    federal_tax: number
+    provincial_tax: number
+    extra_earnings: { id?: string; label: string; amount: number }[]
+  }
+) {
+  const { supabase } = await ensureAuth()
+  if (!supabase) return { error: 'Not authenticated' }
+
+  const gross = sanitizeNum(patch.gross, 0)
+  const cpp = Math.max(0, sanitizeNum(patch.cpp, 0))
+  const ei = Math.max(0, sanitizeNum(patch.ei, 0))
+  const federal_tax = Math.max(0, sanitizeNum(patch.federal_tax, 0))
+  const provincial_tax = Math.max(0, sanitizeNum(patch.provincial_tax, 0))
+
+  const extra_earnings = normalizeExtraEarningRows(patch.extra_earnings)
+
+  const extrasSum = extra_earnings.reduce((s, e) => s + e.amount, 0)
+  const effectiveGross = Math.round((gross + extrasSum) * 100) / 100
+  const net = Math.round((effectiveGross - cpp - ei - federal_tax - provincial_tax) * 100) / 100
+
+  const { data: row, error: fetchErr } = await supabase.from('payment_records').select('deduction_metadata').eq('id', paymentRecordId).single()
+  if (fetchErr) return { error: fetchErr.message }
+  const prevMeta = ((row?.deduction_metadata ?? {}) as Record<string, unknown>) || {}
+
+  const nextMeta: Record<string, unknown> = {
+    ...prevMeta,
+    gross: Math.round(gross * 100) / 100,
+    cpp: Math.round(cpp * 100) / 100,
+    ei: Math.round(ei * 100) / 100,
+    federal_tax: Math.round(federal_tax * 100) / 100,
+    provincial_tax: Math.round(provincial_tax * 100) / 100,
+    net,
+  }
+  if (extra_earnings.length > 0) nextMeta.extra_earnings = extra_earnings
+  else delete nextMeta.extra_earnings
+
+  const { error: updateErr } = await supabase
+    .from('payment_records')
+    .update({ amount: net, deduction_metadata: nextMeta })
+    .eq('id', paymentRecordId)
+
+  if (updateErr) return { error: updateErr.message }
   revalidatePath('/dashboard/hr/payroll')
   return { success: true }
 }

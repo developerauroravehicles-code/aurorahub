@@ -65,7 +65,7 @@ export function ManagerNotesWidget() {
 
   if (error) {
     return (
-      <div className="bg-zinc-200/50 dark:bg-white/5 border border-zinc-200 dark:border-gray-800 rounded-lg p-6">
+      <div className="bg-zinc-200/50 dark:bg-zinc-950/80 border border-zinc-200 dark:border-gray-800 rounded-lg p-6">
         <h2 className="text-lg font-semibold text-zinc-900 dark:text-white mb-2">Notes & Reminders</h2>
         <p className="text-red-400 text-sm">{error}</p>
       </div>
@@ -73,7 +73,7 @@ export function ManagerNotesWidget() {
   }
 
   return (
-    <div className="bg-zinc-200/50 dark:bg-white/5 border border-zinc-200 dark:border-gray-800 rounded-lg p-6">
+    <div className="bg-zinc-200/50 dark:bg-zinc-950/80 border border-zinc-200 dark:border-gray-800 rounded-lg p-6">
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-lg font-semibold text-zinc-900 dark:text-white">Notes & Reminders</h2>
       </div>

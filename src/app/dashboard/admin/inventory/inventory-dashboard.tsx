@@ -19,7 +19,7 @@ import {
   Pie,
   Cell,
 } from 'recharts'
-import { addManualInventoryMovement, upsertInventoryThreshold } from './actions'
+import { addManualInventoryMovement, upsertInventoryThreshold, resetInventoryStockData } from './actions'
 import { createCameraModel, updateCameraStock } from '@/app/dashboard/system-management/actions'
 import {
   Package,
@@ -31,6 +31,7 @@ import {
   Filter,
   BarChart3,
   ClipboardList,
+  Loader2,
 } from 'lucide-react'
 import { SYSTEM_DEFAULT_TIMEZONE, formatInPT } from '@/lib/timezone-defaults'
 
@@ -211,6 +212,9 @@ export function InventoryDashboard({
   const [regionIssuesOnly, setRegionIssuesOnly] = useState(false)
   const [regionSortKey, setRegionSortKey] = useState<RegionSortKey>('code')
   const [regionSortDir, setRegionSortDir] = useState<'asc' | 'desc'>('asc')
+
+  const [resetConfirmText, setResetConfirmText] = useState('')
+  const [resetPending, setResetPending] = useState(false)
 
   useEffect(() => {
     if (!camCreateState) return
@@ -1131,6 +1135,23 @@ export function InventoryDashboard({
       setThrDealerId('')
       setThrCameraId('')
       setThrMinQty('')
+      router.refresh()
+    }
+  }
+
+  async function handleInventoryReset() {
+    if (resetConfirmText.trim() !== 'RESET') {
+      setMsg({ type: 'err', text: 'Type RESET (all caps) to confirm.' })
+      return
+    }
+    setResetPending(true)
+    setMsg(null)
+    const r = await resetInventoryStockData()
+    setResetPending(false)
+    if (r.error) setMsg({ type: 'err', text: r.error })
+    else {
+      setMsg({ type: 'ok', text: r.success ?? 'Inventory stock data reset.' })
+      setResetConfirmText('')
       router.refresh()
     }
   }
@@ -2748,6 +2769,46 @@ export function InventoryDashboard({
               </form>
             </div>
           </div>
+
+          <section className="rounded-lg border border-red-800/60 bg-red-950/25 p-4 space-y-3">
+            <h3 className="text-sm font-semibold text-red-200">Danger zone — reset stock data</h3>
+            <p className="text-xs text-red-200/80 leading-relaxed">
+              Deletes <strong>all</strong> rows in <code className="text-red-100/90">inventory_movements</code> (including
+              consumption history). Sets every <code className="text-red-100/90">camera_models.stock_quantity</code> to{' '}
+              <strong>0</strong>. Thresholds are unchanged; demands are unchanged. Enter stock again with Receipt; new completed
+              demands will consume as usual.
+            </p>
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+              <div className="flex-1">
+                <label htmlFor="inv-reset-confirm" className="block text-xs text-red-200/90 mb-1">
+                  Type RESET to confirm
+                </label>
+                <input
+                  id="inv-reset-confirm"
+                  type="text"
+                  value={resetConfirmText}
+                  onChange={(e) => setResetConfirmText(e.target.value)}
+                  placeholder="RESET"
+                  autoComplete="off"
+                  className="w-full max-w-sm rounded border border-red-800/50 bg-zinc-900 px-3 py-2 text-sm text-white placeholder:text-zinc-500"
+                />
+              </div>
+              <button
+                type="button"
+                disabled={resetPending || resetConfirmText.trim() !== 'RESET'}
+                onClick={() => void handleInventoryReset()}
+                className="rounded-lg border border-red-600 bg-red-900/50 px-4 py-2 text-sm font-medium text-red-100 hover:bg-red-900/80 disabled:opacity-40 disabled:pointer-events-none"
+              >
+                {resetPending ? (
+                  <span className="inline-flex items-center gap-2">
+                    <Loader2 className="w-4 h-4 animate-spin" /> Resetting…
+                  </span>
+                ) : (
+                  'Reset all inventory stock data'
+                )}
+              </button>
+            </div>
+          </section>
         </div>
       )}
     </div>

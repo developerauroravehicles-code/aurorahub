@@ -93,14 +93,14 @@ export function InvoiceDateFilter({ selectedMonth, startDate, endDate }: Invoice
   return (
     <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
       <div className="flex items-center gap-4">
-        <label className="text-sm font-medium text-zinc-500 dark:text-gray-400">Period:</label>
+        <label className="text-sm font-medium text-zinc-600 dark:text-zinc-300">Period:</label>
         <select
           value={selectedMonth}
           onChange={handleMonthChange}
-          className="border border-zinc-300 dark:border-gray-700 bg-zinc-200/50 dark:bg-white/5 px-3 py-2 rounded text-zinc-900 dark:text-white text-sm focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00] min-w-[140px]"
+          className="min-w-[140px] rounded border border-zinc-300 bg-zinc-100 px-3 py-2 text-sm text-zinc-900 shadow-sm focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00] dark:border-gray-600 dark:bg-zinc-900 dark:text-zinc-100 dark:[color-scheme:dark]"
         >
           {options.map((o) => (
-            <option key={o.value || 'all'} value={o.value} className="bg-zinc-50 dark:bg-black text-zinc-900 dark:text-white">
+            <option key={o.value || 'all'} value={o.value} className="bg-white text-zinc-900 dark:bg-zinc-900 dark:text-zinc-100">
               {o.label}
             </option>
           ))}
@@ -127,7 +127,7 @@ export function InvoiceDateFilter({ selectedMonth, startDate, endDate }: Invoice
             }}
             disabled={monthLocked}
             placeholder="e.g. 3 March – 20 March"
-            className="flex-1 min-w-[200px] border border-zinc-300 dark:border-gray-700 bg-zinc-200/50 dark:bg-white/5 px-3 py-2 rounded text-zinc-900 dark:text-white text-sm placeholder:text-zinc-600 dark:text-gray-600 focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00] disabled:opacity-45 disabled:cursor-not-allowed"
+            className="flex-1 min-w-[200px] rounded border border-zinc-300 bg-zinc-100 px-3 py-2 text-sm text-zinc-900 shadow-sm placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00] disabled:opacity-45 disabled:cursor-not-allowed dark:border-gray-600 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-gray-500"
             title={monthLocked ? 'Choose “All time” or a month above to enter a custom range' : undefined}
           />
           <button

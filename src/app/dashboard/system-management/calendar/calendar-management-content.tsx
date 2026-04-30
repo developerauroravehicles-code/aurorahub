@@ -271,7 +271,7 @@ export function CalendarManagementContent({
           const saturdaySetting = getSetting(dealer.id, 'saturday')
           const sundaySetting = getSetting(dealer.id, 'sunday')
           return (
-            <div key={dealer.id} className="bg-zinc-200/50 dark:bg-white/5 border border-zinc-200 dark:border-gray-800 rounded-lg p-6 mb-4">
+            <div key={dealer.id} className="bg-zinc-200/50 dark:bg-zinc-950/80 border border-zinc-200 dark:border-gray-800 rounded-lg p-6 mb-4">
               <h3 className="text-md font-semibold text-zinc-900 dark:text-white mb-4">{dealer.name}</h3>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 {/* Weekday */}
@@ -518,7 +518,7 @@ export function CalendarManagementContent({
           const isSlotSelected = (s: { start_minutes: number; end_minutes: number }) =>
             selectedSlots.some(x => x.start_minutes === s.start_minutes && x.end_minutes === s.end_minutes)
           return (
-            <div key={dealer.id} className="bg-zinc-200/50 dark:bg-white/5 border border-zinc-200 dark:border-gray-800 rounded-lg p-6 mb-4">
+            <div key={dealer.id} className="bg-zinc-200/50 dark:bg-zinc-950/80 border border-zinc-200 dark:border-gray-800 rounded-lg p-6 mb-4">
               <h3 className="text-md font-semibold text-zinc-900 dark:text-white mb-4">{dealer.name}</h3>
               <div className="space-y-4 mb-6">
                 <div className="flex flex-wrap items-end gap-4">

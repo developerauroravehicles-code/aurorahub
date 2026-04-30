@@ -39,6 +39,11 @@ body {
   max-width: 100vw;
 }
 
+/* Native <select> dropdown list: use dark system UI where supported (improves readability on Windows Chrome). */
+.dark select {
+  color-scheme: dark;
+}
+
 /* Landing Page Animations */
 @keyframes fade-in-up {
   from {

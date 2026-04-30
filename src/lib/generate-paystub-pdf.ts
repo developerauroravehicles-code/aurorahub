@@ -15,6 +15,8 @@ export interface PayStubPdfData {
   periodLabel?: string | null
   paymentTypeLabel?: string | null
   gross: number
+  /** Optional extra positive earnings (shown after base gross). */
+  extraEarnings?: { label: string; amount: number }[]
   cpp: number
   ei: number
   federal_tax: number
@@ -97,23 +99,30 @@ export function buildPayStubPdf(data: PayStubPdfData): jsPDF {
   const kindNote =
     data.documentKind === 'estimate'
       ? 'Calculator estimate - not a payroll register entry.'
-      : 'Payment record - amounts from system calculation.'
+      : 'Payment record - amounts may have been adjusted by HR.'
 
   const tableWidth = pageWidth - 2 * margin
+  const earningRows: (string | { content: string; styles?: Record<string, unknown> })[][] = [
+    ['Base gross earnings', fmtCad(data.gross)],
+  ]
+  for (const ex of data.extraEarnings ?? []) {
+    if (ex.amount > 0) earningRows.push([ex.label.trim() || 'Extra payment', fmtCad(ex.amount)])
+  }
+  const body: (string | { content: string; styles?: Record<string, unknown> })[][] = [
+    ...earningRows,
+    ['CPP (Canada Pension Plan)', `-${fmtCad(data.cpp)}`],
+    ['EI (Employment Insurance)', `-${fmtCad(data.ei)}`],
+    ['Federal income tax', `-${fmtCad(data.federal_tax)}`],
+    ['Provincial income tax (BC)', `-${fmtCad(data.provincial_tax)}`],
+    [
+      { content: 'Net pay', styles: { fontStyle: 'bold' as const } },
+      { content: fmtCad(data.net), styles: { fontStyle: 'bold' as const, halign: 'right' as const } },
+    ],
+  ]
   autoTable(doc, {
     startY: y,
     head: [['Description', 'Amount (CAD)']],
-    body: [
-      ['Gross earnings', fmtCad(data.gross)],
-      ['CPP (Canada Pension Plan)', `-${fmtCad(data.cpp)}`],
-      ['EI (Employment Insurance)', `-${fmtCad(data.ei)}`],
-      ['Federal income tax', `-${fmtCad(data.federal_tax)}`],
-      ['Provincial income tax (BC)', `-${fmtCad(data.provincial_tax)}`],
-      [
-        { content: 'Net pay', styles: { fontStyle: 'bold' as const } },
-        { content: fmtCad(data.net), styles: { fontStyle: 'bold' as const, halign: 'right' as const } },
-      ],
-    ],
+    body,
     theme: 'grid',
     headStyles: {
       fillColor: [194, 126, 0],

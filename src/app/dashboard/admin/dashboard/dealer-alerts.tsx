@@ -39,17 +39,17 @@ export function DealerAlertsWidget() {
 
   if (loading) {
     return (
-      <div className="bg-zinc-200/50 dark:bg-zinc-200/50 dark:bg-white/5 border border-zinc-200 dark:border-zinc-200 dark:border-gray-800 rounded-lg p-6">
-        <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-900 dark:text-white mb-4">Dealer Alerts</h2>
-        <p className="text-zinc-500 dark:text-zinc-500 dark:text-gray-500 text-sm">Loading...</p>
+      <div className="bg-zinc-200/50 dark:bg-zinc-950/80 border border-zinc-200 dark:border-gray-800 rounded-lg p-6">
+        <h2 className="text-lg font-semibold text-zinc-900 dark:text-white mb-4">Dealer Alerts</h2>
+        <p className="text-zinc-600 dark:text-gray-500 text-sm">Loading...</p>
       </div>
     )
   }
 
   return (
-    <div className="bg-zinc-200/50 dark:bg-zinc-200/50 dark:bg-white/5 border border-zinc-200 dark:border-zinc-200 dark:border-gray-800 rounded-lg p-6">
+    <div className="bg-zinc-200/50 dark:bg-zinc-950/80 border border-zinc-200 dark:border-gray-800 rounded-lg p-6">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-900 dark:text-white flex items-center gap-2">
+        <h2 className="text-lg font-semibold text-zinc-900 dark:text-white flex items-center gap-2">
           <AlertTriangle className="w-5 h-5 text-amber-500" />
           Dealer Alerts
         </h2>
@@ -61,7 +61,7 @@ export function DealerAlertsWidget() {
       </div>
 
       {alerts.length === 0 ? (
-        <p className="text-zinc-500 dark:text-zinc-500 dark:text-gray-500 text-sm">No alerts at this time.</p>
+        <p className="text-zinc-600 dark:text-gray-500 text-sm">No alerts at this time.</p>
       ) : (
         <ul className="space-y-2 max-h-[240px] overflow-y-auto">
           {alerts.slice(0, 20).map((alert, i) => {
@@ -71,15 +71,15 @@ export function DealerAlertsWidget() {
               <li key={`${alert.dealerId}-${alert.type}-${i}`}>
                 <Link
                   href={config.href}
-                  className="flex items-center gap-3 p-3 rounded-lg border border-zinc-300 dark:border-zinc-300 dark:border-gray-700 bg-zinc-50 dark:bg-black/20 hover:bg-zinc-100/90 dark:bg-black/30 transition-colors"
+                  className="flex items-center gap-3 p-3 rounded-lg border border-zinc-300 dark:border-gray-700 bg-zinc-50 dark:bg-zinc-900/45 hover:bg-zinc-100/90 dark:hover:bg-zinc-900/70 transition-colors"
                 >
                   <Icon className={`w-4 h-4 shrink-0 ${config.color}`} />
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-zinc-900 dark:text-zinc-900 dark:text-white truncate">{alert.dealerName}</p>
-                    <p className="text-xs text-zinc-500 dark:text-zinc-500 dark:text-gray-500">{config.label}</p>
+                    <p className="text-sm font-medium text-zinc-900 dark:text-white truncate">{alert.dealerName}</p>
+                    <p className="text-xs text-zinc-600 dark:text-gray-400">{config.label}</p>
                   </div>
                   {alert.count > 1 && (
-                    <span className="text-xs font-medium text-zinc-500 dark:text-zinc-500 dark:text-gray-400">{alert.count}</span>
+                    <span className="text-xs font-medium text-zinc-500 dark:text-gray-400">{alert.count}</span>
                   )}
                 </Link>
               </li>

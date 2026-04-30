@@ -18,8 +18,10 @@ import {
   calculatePayStub,
   calculatePayStubFromNet,
 } from './actions'
-import { calculatePerCompletedAmount, calculateGrossFromNet } from './payroll-utils'
+import { calculatePerCompletedAmount, calculateGrossFromNet, type ExtraEarningLine } from './payroll-utils'
 import { downloadPayStubPdf } from '@/lib/generate-paystub-pdf'
+import { PayStubEditor } from './paystub-editor'
+import { ExtraEarningsInput } from './extra-earnings-input'
 import { Pencil, Trash2, Plus, DollarSign, Calculator, FileText, Loader2, Receipt, Download } from 'lucide-react'
 
 const PAYMENT_TYPE_LABELS: Record<string, string> = {
@@ -78,7 +80,7 @@ export function PayrollContent({
     period_start: string | null
     period_end: string | null
     completed_count: number | null
-    deduction_metadata: Record<string, number> | null
+    deduction_metadata: Record<string, unknown> | null
     status: string
     paid_at: string | null
     notes: string | null
@@ -94,7 +96,9 @@ export function PayrollContent({
   const [editingTierId, setEditingTierId] = useState<string | null>(null)
   const [showPaymentForm, setShowPaymentForm] = useState(false)
   const [showPerCompletedPaymentForm, setShowPerCompletedPaymentForm] = useState(false)
-  const [viewingStubPayment, setViewingStubPayment] = useState<typeof payments[0] | null>(null)
+  const [viewingStubPaymentId, setViewingStubPaymentId] = useState<string | null>(null)
+
+  const viewingStubPayment = viewingStubPaymentId ? payments.find((p) => p.id === viewingStubPaymentId) : undefined
 
   // Default period: current month
   const now = new Date()
@@ -339,7 +343,7 @@ export function PayrollContent({
                       </td>
                       <td className="px-4 py-2 text-right">
                         {meta && (
-                          <button type="button" onClick={() => { setViewingStubPayment(p); setActiveTab('paystub') }} className="text-[#C27E00] hover:underline text-xs mr-2">
+                          <button type="button" onClick={() => { setViewingStubPaymentId(p.id); setActiveTab('paystub') }} className="text-[#C27E00] hover:underline text-xs mr-2">
                             Stub
                           </button>
                         )}
@@ -359,7 +363,7 @@ export function PayrollContent({
 
       {activeTab === 'paystub' && (
         <div className="space-y-6">
-          {viewingStubPayment?.deduction_metadata && (
+          {viewingStubPaymentId && viewingStubPayment?.deduction_metadata && (
             <div className="bg-zinc-200/50 dark:bg-white/5 rounded-lg border border-zinc-200 dark:border-gray-800 p-6">
               <h2 className="text-lg font-semibold text-zinc-900 dark:text-white mb-2">Pay Stub: {viewingStubPayment.personnel?.full_name}</h2>
               <p className="text-zinc-500 dark:text-gray-400 text-sm mb-4">
@@ -368,37 +372,22 @@ export function PayrollContent({
                   : ''}
                 {viewingStubPayment.completed_count != null && ` • ${viewingStubPayment.completed_count} completed`}
               </p>
-              <PayStubDisplay meta={viewingStubPayment.deduction_metadata} />
-              <div className="mt-4 flex flex-wrap items-center gap-3">
-                <button
-                  type="button"
-                  onClick={() => {
-                    const m = viewingStubPayment.deduction_metadata!
-                    downloadPayStubPdf({
-                      employeeName: viewingStubPayment.personnel?.full_name?.trim() || 'Employee',
-                      periodLabel:
-                        viewingStubPayment.period_start && viewingStubPayment.period_end
-                          ? `${new Date(viewingStubPayment.period_start).toLocaleDateString()} – ${new Date(viewingStubPayment.period_end).toLocaleDateString()}`
-                          : null,
-                      paymentTypeLabel:
-                        PAYMENT_TYPE_LABELS[viewingStubPayment.payment_type ?? ''] ?? viewingStubPayment.payment_type ?? null,
-                      gross: m.gross ?? 0,
-                      cpp: m.cpp ?? 0,
-                      ei: m.ei ?? 0,
-                      federal_tax: m.federal_tax ?? 0,
-                      provincial_tax: m.provincial_tax ?? 0,
-                      net: m.net ?? 0,
-                      documentKind: 'record',
-                    })
-                  }}
-                  className="inline-flex items-center gap-2 px-3 py-1.5 rounded bg-[#C27E00] text-white text-sm hover:bg-[#a06900]"
-                >
-                  <Download className="w-4 h-4" /> Download PDF
-                </button>
-                <button type="button" onClick={() => setViewingStubPayment(null)} className="text-zinc-500 dark:text-gray-400 hover:text-zinc-900 dark:text-white text-sm">
-                  Close
-                </button>
-              </div>
+              <PayStubEditor payment={viewingStubPayment} />
+              <button
+                type="button"
+                onClick={() => setViewingStubPaymentId(null)}
+                className="mt-4 text-zinc-500 dark:text-gray-400 hover:text-zinc-900 dark:text-white text-sm"
+              >
+                Close
+              </button>
+            </div>
+          )}
+          {viewingStubPaymentId && !viewingStubPayment && (
+            <div className="rounded-lg border border-zinc-200 dark:border-gray-800 p-4 text-sm text-zinc-600 dark:text-gray-300">
+              That payment record is no longer in the list (refresh may have removed it).{' '}
+              <button type="button" onClick={() => setViewingStubPaymentId(null)} className="text-[#C27E00] hover:underline">
+                Close
+              </button>
             </div>
           )}
           <PayStubCalculator />
@@ -579,6 +568,7 @@ function PerCompletedTierForm({ personnel, tier, onClose, onSuccess }: {
 function ManualPaymentForm({ personnel, onClose, onSuccess }: { personnel: { id: string; full_name: string }[]; onClose: () => void; onSuccess: () => void }) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [extraEarnings, setExtraEarnings] = useState<ExtraEarningLine[]>([])
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -595,6 +585,7 @@ function ManualPaymentForm({ personnel, onClose, onSuccess }: { personnel: { id:
       period_end: (form.elements.namedItem('period_end') as HTMLInputElement).value || undefined,
       status: (form.elements.namedItem('status') as HTMLSelectElement).value || 'pending',
       notes: (form.elements.namedItem('notes') as HTMLTextAreaElement).value.trim() || undefined,
+      extra_earnings: extraEarnings,
     })
     if (result.error) setError(result.error)
     else onSuccess()
@@ -637,6 +628,9 @@ function ManualPaymentForm({ personnel, onClose, onSuccess }: { personnel: { id:
           </select>
         </div>
       </div>
+      <div className="rounded-lg border border-zinc-300 dark:border-gray-700 bg-zinc-50/90 dark:bg-black/25 p-3">
+        <ExtraEarningsInput extras={extraEarnings} onChange={setExtraEarnings} />
+      </div>
       <div><label className="block text-xs text-zinc-500 dark:text-gray-400 mb-1">Notes</label><textarea name="notes" rows={2} className="w-full rounded bg-zinc-200 dark:bg-gray-900 border border-zinc-300 dark:border-gray-700 px-3 py-2 text-zinc-900 dark:text-white text-sm" /></div>
       {error && <p className="text-red-400 text-sm">{error}</p>}
       <div className="flex gap-2">
@@ -672,6 +666,7 @@ function PerCompletedPaymentForm({
   const [completedDemands, setCompletedDemands] = useState<{ id: string; demand_number: string | null; customer: string; vehicle: string; date: string }[]>([])
   const [fetchError, setFetchError] = useState<string | null>(null)
   const [fetchingCount, setFetchingCount] = useState(false)
+  const [extraEarnings, setExtraEarnings] = useState<ExtraEarningLine[]>([])
 
   const availableTiers = perCompletedTiers.filter((t) => t.personnel_id === personnelId)
 
@@ -707,6 +702,7 @@ function PerCompletedPaymentForm({
       period_start: periodStart,
       period_end: periodEnd,
       tier_id: tierId,
+      extra_earnings: extraEarnings,
     })
     if (result.error) setError(result.error)
     else onSuccess()
@@ -725,6 +721,7 @@ function PerCompletedPaymentForm({
             onChange={(e) => {
               const pid = e.target.value
               setPersonnelId(pid)
+              setExtraEarnings([])
               const first = perCompletedTiers.find((t) => t.personnel_id === pid)
               setTierId(first?.id ?? '')
               setCompletedCount(null)
@@ -764,6 +761,9 @@ function PerCompletedPaymentForm({
           <label className="block text-xs text-zinc-500 dark:text-gray-400 mb-1">Period End</label>
           <input type="date" value={periodEnd} onChange={(e) => setPeriodEnd(e.target.value)} className="w-full rounded bg-zinc-200 dark:bg-gray-900 border border-zinc-300 dark:border-gray-700 px-3 py-2 text-zinc-900 dark:text-white text-sm" />
         </div>
+      </div>
+      <div className="rounded-lg border border-zinc-300 dark:border-gray-700 bg-zinc-50/90 dark:bg-black/25 p-3">
+        <ExtraEarningsInput extras={extraEarnings} onChange={setExtraEarnings} />
       </div>
       <div className="space-y-2">
         {fetchError && <p className="text-amber-400 text-sm">{fetchError}</p>}
@@ -826,26 +826,6 @@ function PerCompletedPaymentForm({
         <button type="button" onClick={onClose} className="px-3 py-1.5 rounded bg-zinc-200 dark:bg-white/10 text-zinc-500 dark:text-gray-400 text-sm">Cancel</button>
       </div>
     </form>
-  )
-}
-
-function PayStubDisplay({ meta }: { meta: Record<string, number> }) {
-  const gross = meta.gross ?? 0
-  const cpp = meta.cpp ?? 0
-  const ei = meta.ei ?? 0
-  const federalTax = meta.federal_tax ?? 0
-  const provincialTax = meta.provincial_tax ?? 0
-  const net = meta.net ?? 0
-  const totalDeductions = cpp + ei + federalTax + provincialTax
-  return (
-    <dl className="space-y-2 text-sm max-w-md">
-      <div className="flex justify-between"><dt className="text-zinc-500 dark:text-gray-400">Gross Earnings</dt><dd className="text-zinc-900 dark:text-white">{gross.toLocaleString('en-CA')} CAD</dd></div>
-      <div className="flex justify-between"><dt className="text-zinc-500 dark:text-gray-400">CPP</dt><dd className="text-red-400">-{cpp.toLocaleString('en-CA')}</dd></div>
-      <div className="flex justify-between"><dt className="text-zinc-500 dark:text-gray-400">EI</dt><dd className="text-red-400">-{ei.toLocaleString('en-CA')}</dd></div>
-      <div className="flex justify-between"><dt className="text-zinc-500 dark:text-gray-400">Federal Tax</dt><dd className="text-red-400">-{federalTax.toLocaleString('en-CA')}</dd></div>
-      <div className="flex justify-between"><dt className="text-zinc-500 dark:text-gray-400">Provincial Tax (BC)</dt><dd className="text-red-400">-{provincialTax.toLocaleString('en-CA')}</dd></div>
-      <div className="flex justify-between border-t border-zinc-300 dark:border-gray-700 pt-2 mt-2"><dt className="text-zinc-600 dark:text-gray-300 font-medium">Net Pay</dt><dd className="text-green-400 font-medium">{net.toLocaleString('en-CA')} CAD</dd></div>
-    </dl>
   )
 }
 

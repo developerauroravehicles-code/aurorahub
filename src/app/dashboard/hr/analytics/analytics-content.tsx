@@ -104,7 +104,7 @@ export function AnalyticsContent({
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="bg-zinc-200/50 dark:bg-white/5 border border-zinc-200 dark:border-gray-800 rounded-lg p-6">
+            <div className="bg-zinc-200/50 dark:bg-zinc-950/80 border border-zinc-200 dark:border-gray-800 rounded-lg p-6">
               <h3 className="text-sm font-medium text-zinc-500 dark:text-gray-400 mb-3">Personnel by Status</h3>
               {chartData.statusPie.length === 0 ? (
                 <p className="text-zinc-500 dark:text-gray-500 py-8">No data.</p>
@@ -122,7 +122,7 @@ export function AnalyticsContent({
                 </ResponsiveContainer>
               )}
             </div>
-            <div className="bg-zinc-200/50 dark:bg-white/5 border border-zinc-200 dark:border-gray-800 rounded-lg p-6">
+            <div className="bg-zinc-200/50 dark:bg-zinc-950/80 border border-zinc-200 dark:border-gray-800 rounded-lg p-6">
               <h3 className="text-sm font-medium text-zinc-500 dark:text-gray-400 mb-3">Top Provinces</h3>
               {provinceChartData.length === 0 ? (
                 <p className="text-zinc-500 dark:text-gray-500 py-8">No data.</p>
@@ -145,7 +145,7 @@ export function AnalyticsContent({
       {activeTab === 'workforce' && (
         <div className="space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="bg-zinc-200/50 dark:bg-white/5 border border-zinc-200 dark:border-gray-800 rounded-lg p-6">
+            <div className="bg-zinc-200/50 dark:bg-zinc-950/80 border border-zinc-200 dark:border-gray-800 rounded-lg p-6">
               <h3 className="text-sm font-medium text-zinc-500 dark:text-gray-400 mb-3">Personnel by Worker Type</h3>
               {chartData.workerTypePie.length === 0 ? (
                 <p className="text-zinc-500 dark:text-gray-500 py-8">No data.</p>
@@ -163,7 +163,7 @@ export function AnalyticsContent({
                 </ResponsiveContainer>
               )}
             </div>
-            <div className="bg-zinc-200/50 dark:bg-white/5 border border-zinc-200 dark:border-gray-800 rounded-lg p-6">
+            <div className="bg-zinc-200/50 dark:bg-zinc-950/80 border border-zinc-200 dark:border-gray-800 rounded-lg p-6">
               <h3 className="text-sm font-medium text-zinc-500 dark:text-gray-400 mb-3">Personnel by Province</h3>
               {provinceChartData.length === 0 ? (
                 <p className="text-zinc-500 dark:text-gray-500 py-8">No data.</p>
@@ -180,7 +180,7 @@ export function AnalyticsContent({
               )}
             </div>
           </div>
-          <div className="bg-zinc-200/50 dark:bg-white/5 border border-zinc-200 dark:border-gray-800 rounded-lg p-6">
+          <div className="bg-zinc-200/50 dark:bg-zinc-950/80 border border-zinc-200 dark:border-gray-800 rounded-lg p-6">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-semibold text-zinc-900 dark:text-white">Workforce Summary</h3>
               <Link href="/dashboard/hr/personnel" className="text-sm text-[#C27E00] hover:underline">View Personnel →</Link>
@@ -207,7 +207,7 @@ export function AnalyticsContent({
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="bg-zinc-200/50 dark:bg-white/5 border border-zinc-200 dark:border-gray-800 rounded-lg p-6">
+            <div className="bg-zinc-200/50 dark:bg-zinc-950/80 border border-zinc-200 dark:border-gray-800 rounded-lg p-6">
               <div className="flex justify-between items-center mb-4">
                 <h3 className="text-lg font-semibold text-zinc-900 dark:text-white">Certifications Expiring Soon</h3>
                 <Link href="/dashboard/hr/training" className="text-sm text-[#C27E00] hover:underline">Training →</Link>
@@ -227,7 +227,7 @@ export function AnalyticsContent({
                 </ul>
               )}
             </div>
-            <div className="bg-zinc-200/50 dark:bg-white/5 border border-zinc-200 dark:border-gray-800 rounded-lg p-6">
+            <div className="bg-zinc-200/50 dark:bg-zinc-950/80 border border-zinc-200 dark:border-gray-800 rounded-lg p-6">
               <div className="flex justify-between items-center mb-4">
                 <h3 className="text-lg font-semibold text-zinc-900 dark:text-white">Compliance Documents Expiring</h3>
                 <Link href="/dashboard/hr/compliance" className="text-sm text-[#C27E00] hover:underline">Compliance →</Link>
@@ -262,7 +262,7 @@ export function AnalyticsContent({
             <KpiCard title="Completed Demands (1y)" value={s.totalCompletedDemands} color="text-green-400" />
           </div>
 
-          <div className="bg-zinc-200/50 dark:bg-white/5 border border-zinc-200 dark:border-gray-800 rounded-lg p-6">
+          <div className="bg-zinc-200/50 dark:bg-zinc-950/80 border border-zinc-200 dark:border-gray-800 rounded-lg p-6">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-semibold text-zinc-900 dark:text-white">Performance Overview</h3>
               <Link href="/dashboard/hr/performance" className="text-sm text-[#C27E00] hover:underline">Performance →</Link>
@@ -290,7 +290,7 @@ export function AnalyticsContent({
       {activeTab === 'trends' && (
         <div className="space-y-6">
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-            <div className="bg-zinc-200/50 dark:bg-white/5 border border-zinc-200 dark:border-gray-800 rounded-lg p-6">
+            <div className="bg-zinc-200/50 dark:bg-zinc-950/80 border border-zinc-200 dark:border-gray-800 rounded-lg p-6">
               <h3 className="text-sm font-medium text-zinc-500 dark:text-gray-400 mb-3">New Hires by Month (Last 12 Months)</h3>
               {chartData.hiresByMonth.length === 0 ? (
                 <p className="text-zinc-500 dark:text-gray-500 py-8">No hires in the last 12 months.</p>
@@ -306,7 +306,7 @@ export function AnalyticsContent({
                 </ResponsiveContainer>
               )}
             </div>
-            <div className="bg-zinc-200/50 dark:bg-white/5 border border-zinc-200 dark:border-gray-800 rounded-lg p-6">
+            <div className="bg-zinc-200/50 dark:bg-zinc-950/80 border border-zinc-200 dark:border-gray-800 rounded-lg p-6">
               <h3 className="text-sm font-medium text-zinc-500 dark:text-gray-400 mb-3">Completed Demands by Month (Last 6 Months)</h3>
               {chartData.completionsByMonth.length === 0 ? (
                 <p className="text-zinc-500 dark:text-gray-500 py-8">No completions in the last 6 months.</p>
@@ -343,7 +343,7 @@ function KpiCard({
   color?: string
 }) {
   return (
-    <div className="bg-zinc-200/50 dark:bg-white/5 border border-zinc-200 dark:border-gray-800 p-4 md:p-6 rounded-lg">
+    <div className="bg-zinc-200/50 dark:bg-zinc-950/80 border border-zinc-200 dark:border-gray-800 p-4 md:p-6 rounded-lg">
       <div className="flex items-center justify-between mb-2">
         <h3 className="text-sm font-medium text-zinc-500 dark:text-gray-400">{title}</h3>
         {icon && <span className="text-zinc-500 dark:text-gray-500">{icon}</span>}

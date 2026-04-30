@@ -24,7 +24,7 @@ export function InventoryStockAlertsWidget({
       <div className="flex flex-wrap items-start justify-between gap-4 mb-4">
         <div className="flex items-center gap-3">
           <div
-            className={`flex h-11 w-11 items-center justify-center rounded-lg ${hasRisk ? 'bg-amber-500/15' : 'bg-zinc-200/50 dark:bg-white/5'}`}
+            className={`flex h-11 w-11 items-center justify-center rounded-lg ${hasRisk ? 'bg-amber-500/15' : 'bg-zinc-200/50 dark:bg-zinc-900/60'}`}
           >
             <Package className={`h-5 w-5 ${hasRisk ? 'text-amber-400' : 'text-[#C27E00]'}`} />
           </div>
@@ -44,25 +44,25 @@ export function InventoryStockAlertsWidget({
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
-        <div className="rounded-lg border border-zinc-200 dark:border-gray-800 bg-zinc-200/50 dark:bg-white/5 px-3 py-2">
+        <div className="rounded-lg border border-zinc-200 dark:border-gray-800 bg-zinc-200/50 dark:bg-zinc-900/55 px-3 py-2">
           <p className="text-[10px] uppercase tracking-wider text-zinc-500 dark:text-gray-500">Negative rows</p>
           <p className={`text-xl font-bold tabular-nums ${summary.shortSkuLines > 0 ? 'text-red-400' : 'text-zinc-900 dark:text-white'}`}>
             {summary.shortSkuLines}
           </p>
         </div>
-        <div className="rounded-lg border border-zinc-200 dark:border-gray-800 bg-zinc-200/50 dark:bg-white/5 px-3 py-2">
+        <div className="rounded-lg border border-zinc-200 dark:border-gray-800 bg-zinc-200/50 dark:bg-zinc-900/55 px-3 py-2">
           <p className="text-[10px] uppercase tracking-wider text-zinc-500 dark:text-gray-500">Below min.</p>
           <p className={`text-xl font-bold tabular-nums ${summary.belowMinLines > 0 ? 'text-amber-300' : 'text-zinc-900 dark:text-white'}`}>
             {summary.belowMinLines}
           </p>
         </div>
-        <div className="rounded-lg border border-zinc-200 dark:border-gray-800 bg-zinc-200/50 dark:bg-white/5 px-3 py-2">
+        <div className="rounded-lg border border-zinc-200 dark:border-gray-800 bg-zinc-200/50 dark:bg-zinc-900/55 px-3 py-2">
           <p className="text-[10px] uppercase tracking-wider text-zinc-500 dark:text-gray-500">Negative models</p>
           <p className={`text-xl font-bold tabular-nums ${summary.negModelRollups > 0 ? 'text-red-300' : 'text-zinc-900 dark:text-white'}`}>
             {summary.negModelRollups}
           </p>
         </div>
-        <div className="rounded-lg border border-zinc-200 dark:border-gray-800 bg-zinc-200/50 dark:bg-white/5 px-3 py-2">
+        <div className="rounded-lg border border-zinc-200 dark:border-gray-800 bg-zinc-200/50 dark:bg-zinc-900/55 px-3 py-2">
           <p className="text-[10px] uppercase tracking-wider text-zinc-500 dark:text-gray-500">Total dealer stock</p>
           <p
             className={`text-xl font-bold tabular-nums ${summary.dealerQtyTotal < 0 ? 'text-red-400' : 'text-zinc-800 dark:text-gray-200'}`}

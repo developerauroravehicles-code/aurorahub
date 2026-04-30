@@ -91,3 +91,30 @@ export async function upsertInventoryThreshold(formData: FormData): Promise<{ er
   revalidatePath('/dashboard/admin/inventory')
   return { success: true }
 }
+
+export async function resetInventoryStockData(): Promise<{
+  error?: string
+  success?: string
+  movements_deleted?: number
+}> {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { error: 'Unauthorized' }
+
+  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+  if (!profile || profile.role !== 'aurora_manager') {
+    return { error: 'Only Aurora Manager can reset inventory stock' }
+  }
+
+  const { data, error } = await supabase.rpc('reset_inventory_stock_data')
+  if (error) return { error: error.message }
+
+  const row = data as { movements_deleted?: number; success?: boolean } | null
+  const n = typeof row?.movements_deleted === 'number' ? row.movements_deleted : undefined
+  const suffix = n != null ? ` (${n} movement row(s) removed.)` : ''
+  revalidatePath('/dashboard/admin/inventory')
+  revalidatePath('/dashboard')
+  return { success: `Inventory ledger cleared and HQ catalog quantities set to 0.${suffix}` }
+}

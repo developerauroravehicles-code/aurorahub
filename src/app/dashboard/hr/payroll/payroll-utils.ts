@@ -46,6 +46,26 @@ export function calculateDeductions(gross: number, payPeriodsPerYear: number = 2
   return { cpp, ei, federalTax, provincialTax, totalDeductions, net }
 }
 
+export type ExtraEarningLine = { id: string; label: string; amount: number }
+
+/**
+ * Effective gross (base gross + extra earnings), then net after payroll deductions shown on stub.
+ */
+export function computeEffectiveGrossAndNet(
+  baseGross: number,
+  extraEarnings: ExtraEarningLine[],
+  cpp: number,
+  ei: number,
+  federalTax: number,
+  provincialTax: number
+): { effectiveGross: number; net: number } {
+  const extrasSum = extraEarnings.reduce((s, e) => s + Math.max(0, Number(e.amount) || 0), 0)
+  const effectiveGross = Math.round((Math.max(0, baseGross) + extrasSum) * 100) / 100
+  const totalTaxes = cpp + ei + federalTax + provincialTax
+  const net = Math.round((effectiveGross - totalTaxes) * 100) / 100
+  return { effectiveGross, net }
+}
+
 /** Calculate Gross from target Net (after CPP, EI, taxes) */
 export function calculateGrossFromNet(targetNet: number, payPeriodsPerYear: number = 26): number {
   if (targetNet <= 0) return 0

@@ -30,16 +30,15 @@ export function GMDashboardMonthSelector({ currentMonth }: { currentMonth: strin
   }
 
   const options = getMonthOptions()
-  const currentLabel = options.find(o => o.value === currentMonth)?.label ?? currentMonth
 
   return (
     <select
       value={currentMonth}
       onChange={handleChange}
-      className="bg-transparent text-zinc-500 dark:text-gray-400 border-0 p-0 text-xs cursor-pointer hover:text-zinc-600 dark:text-gray-300 focus:outline-none focus:ring-0"
+      className="rounded border border-zinc-300 bg-zinc-100 px-2 py-1 text-xs text-zinc-900 cursor-pointer shadow-sm hover:bg-zinc-200 focus:outline-none focus:ring-1 focus:ring-[#C27E00] dark:border-gray-600 dark:bg-zinc-900 dark:text-zinc-100 dark:[color-scheme:dark]"
     >
       {options.map(o => (
-        <option key={o.value} value={o.value} className="bg-zinc-50 dark:bg-black text-zinc-900 dark:text-white">
+        <option key={o.value} value={o.value} className="bg-white text-zinc-900 dark:bg-zinc-900 dark:text-zinc-100">
           {o.label}
         </option>
       ))}

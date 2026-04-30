@@ -23,9 +23,9 @@ export function DemandOverview({
   const total = counts.pending_finance + counts.approved + counts.completed + counts.cancelled
 
   return (
-    <div className="bg-zinc-200/50 dark:bg-zinc-200/50 dark:bg-white/5 border border-zinc-200 dark:border-zinc-200 dark:border-gray-800 rounded-lg p-6">
+    <div className="bg-zinc-200/50 dark:bg-zinc-950/80 border border-zinc-200 dark:border-gray-800 rounded-lg p-6">
       <div className="flex justify-between items-center mb-4">
-        <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-900 dark:text-white">Demand Overview</h2>
+        <h2 className="text-lg font-semibold text-zinc-900 dark:text-white">Demand Overview</h2>
         <Link
           href="/dashboard/admin/demands"
           className="text-sm text-[#C27E00] hover:text-[#a06900] transition-colors"
@@ -37,9 +37,9 @@ export function DemandOverview({
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <div className="min-h-[200px]">
           {total === 0 ? (
-            <p className="text-zinc-500 dark:text-zinc-500 dark:text-gray-500 text-sm py-8">No demands yet.</p>
+            <p className="text-zinc-600 dark:text-gray-500 text-sm py-8">No demands yet.</p>
           ) : data.length === 0 ? (
-            <p className="text-zinc-500 dark:text-zinc-500 dark:text-gray-500 text-sm py-8">No data to display.</p>
+            <p className="text-zinc-600 dark:text-gray-500 text-sm py-8">No data to display.</p>
           ) : (
             <ResponsiveContainer width="100%" height={200}>
               <PieChart>
@@ -63,7 +63,7 @@ export function DemandOverview({
                 />
                 <Legend
                   wrapperStyle={{ fontSize: '12px' }}
-                  formatter={(value) => <span className="text-zinc-600 dark:text-zinc-600 dark:text-gray-300">{value}</span>}
+                  formatter={(value) => <span className="text-zinc-700 dark:text-zinc-300">{value}</span>}
                 />
               </PieChart>
             </ResponsiveContainer>
@@ -71,9 +71,9 @@ export function DemandOverview({
         </div>
 
         <div>
-          <h3 className="text-sm font-medium text-zinc-500 dark:text-zinc-500 dark:text-gray-400 mb-2">Recent Demands</h3>
+          <h3 className="text-sm font-medium text-zinc-700 dark:text-gray-300 mb-2">Recent Demands</h3>
           {recentDemands.length === 0 ? (
-            <p className="text-zinc-500 dark:text-zinc-500 dark:text-gray-500 text-sm">No recent demands.</p>
+            <p className="text-zinc-600 dark:text-gray-500 text-sm">No recent demands.</p>
           ) : (
             <ul className="space-y-2 max-h-[180px] overflow-y-auto">
               {recentDemands.slice(0, 5).map(d => {
@@ -87,15 +87,15 @@ export function DemandOverview({
                   <li key={d.id}>
                     <Link
                       href={`/dashboard/admin/demands/${d.id}`}
-                      className="flex items-center gap-2 p-2 rounded-lg border border-zinc-300 dark:border-zinc-300 dark:border-gray-700 bg-zinc-50 dark:bg-black/20 hover:bg-zinc-100/90 dark:bg-black/30 transition-colors"
+                      className="flex items-center gap-2 p-2 rounded-lg border border-zinc-300 dark:border-gray-700 bg-zinc-50 dark:bg-zinc-900/45 hover:bg-zinc-100/90 dark:hover:bg-zinc-900/70 transition-colors"
                     >
                       <span className="text-sm font-medium text-zinc-900 dark:text-white truncate flex-1">
                         {d.customer_firstname} {d.customer_lastname}
                         {d.demand_number != null && (
-                          <span className="text-zinc-500 dark:text-zinc-500 dark:text-gray-500 text-xs ml-1">#{d.demand_number}</span>
+                          <span className="text-zinc-500 dark:text-gray-500 text-xs ml-1">#{d.demand_number}</span>
                         )}
                       </span>
-                      <span className={`text-xs px-2 py-0.5 rounded ${statusColors[d.status] ?? 'bg-gray-800 text-zinc-500 dark:text-zinc-500 dark:text-gray-400'}`}>
+                      <span className={`text-xs px-2 py-0.5 rounded ${statusColors[d.status] ?? 'bg-gray-800 text-zinc-500 dark:text-gray-400'}`}>
                         {d.status.replace('_', ' ')}
                       </span>
                     </Link>

@@ -26,9 +26,9 @@ export function EmployeeOverview({ counts }: { counts: EmployeeRoleCounts }) {
   const total = counts.sales + counts.finance + counts.specialist + counts.aurora_manager
 
   return (
-    <div className="bg-zinc-200/50 dark:bg-zinc-200/50 dark:bg-white/5 border border-zinc-200 dark:border-zinc-200 dark:border-gray-800 rounded-lg p-6">
+    <div className="bg-zinc-200/50 dark:bg-zinc-950/80 border border-zinc-200 dark:border-gray-800 rounded-lg p-6">
       <div className="flex justify-between items-center mb-4">
-        <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-900 dark:text-white">Employee Overview</h2>
+        <h2 className="text-lg font-semibold text-zinc-900 dark:text-white">Employee Overview</h2>
         <Link
           href="/dashboard/admin/employees"
           className="text-sm text-[#C27E00] hover:text-[#a06900] transition-colors"
@@ -38,7 +38,7 @@ export function EmployeeOverview({ counts }: { counts: EmployeeRoleCounts }) {
       </div>
 
       {total === 0 ? (
-        <p className="text-zinc-500 dark:text-zinc-500 dark:text-gray-500 text-sm">No employees yet.</p>
+        <p className="text-zinc-600 dark:text-gray-500 text-sm">No employees yet.</p>
       ) : (
         <div className="min-h-[180px]">
           <ResponsiveContainer width="100%" height={180}>
@@ -62,7 +62,7 @@ export function EmployeeOverview({ counts }: { counts: EmployeeRoleCounts }) {
               />
               <Legend
                 wrapperStyle={{ fontSize: '11px' }}
-                formatter={(value) => <span className="text-zinc-600 dark:text-zinc-600 dark:text-gray-300">{value}</span>}
+                formatter={(value) => <span className="text-zinc-700 dark:text-zinc-300">{value}</span>}
               />
             </PieChart>
           </ResponsiveContainer>
