@@ -129,12 +129,12 @@ export function DemandForm({ cameraModels, defaultAddress = '', timezoneName: pr
         
         <div>
           <label className="block text-base font-medium text-zinc-600 dark:text-gray-300">First Name</label>
-          <input name="firstName" required style={{ textTransform: 'uppercase' }} onInput={(e) => { (e.target as HTMLInputElement).value = (e.target as HTMLInputElement).value.toUpperCase() }} className="mt-1.5 block w-full rounded-md border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 py-2.5 px-3 text-base shadow-sm focus:border-[#C27E00] focus:outline-none focus:ring-[#C27E00] text-white" />
+          <input name="firstName" required style={{ textTransform: 'uppercase' }} onInput={(e) => { (e.target as HTMLInputElement).value = (e.target as HTMLInputElement).value.toUpperCase() }} className="mt-1.5 block w-full rounded-md border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 py-2.5 px-3 text-base shadow-sm focus:border-[#C27E00] focus:outline-none focus:ring-[#C27E00] text-zinc-900 dark:text-white placeholder:text-zinc-500 dark:placeholder:text-gray-500" />
         </div>
 
         <div>
           <label className="block text-base font-medium text-zinc-600 dark:text-gray-300">Last Name</label>
-          <input name="lastName" required style={{ textTransform: 'uppercase' }} onInput={(e) => { (e.target as HTMLInputElement).value = (e.target as HTMLInputElement).value.toUpperCase() }} className="mt-1.5 block w-full rounded-md border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 py-2.5 px-3 shadow-sm focus:border-[#C27E00] focus:outline-none focus:ring-[#C27E00] text-base text-white" />
+          <input name="lastName" required style={{ textTransform: 'uppercase' }} onInput={(e) => { (e.target as HTMLInputElement).value = (e.target as HTMLInputElement).value.toUpperCase() }} className="mt-1.5 block w-full rounded-md border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 py-2.5 px-3 shadow-sm focus:border-[#C27E00] focus:outline-none focus:ring-[#C27E00] text-base text-zinc-900 dark:text-white placeholder:text-zinc-500 dark:placeholder:text-gray-500" />
         </div>
 
         <div>
@@ -145,7 +145,7 @@ export function DemandForm({ cameraModels, defaultAddress = '', timezoneName: pr
             name="phone"
             required
             placeholder="416 - 123 - 4567"
-            className="mt-1.5 block w-full rounded-md border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 py-2.5 px-3 shadow-sm focus:border-[#C27E00] focus:outline-none focus:ring-[#C27E00] text-base text-white"
+            className="mt-1.5 block w-full rounded-md border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 py-2.5 px-3 shadow-sm focus:border-[#C27E00] focus:outline-none focus:ring-[#C27E00] text-base text-zinc-900 dark:text-white placeholder:text-zinc-500 dark:placeholder:text-gray-500"
           />
         </div>
 
@@ -175,7 +175,7 @@ export function DemandForm({ cameraModels, defaultAddress = '', timezoneName: pr
               setCustomModel('')
             }}
             required
-            className="mt-1.5 block w-full rounded-md border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 py-2.5 px-3 shadow-sm focus:border-[#C27E00] focus:outline-none focus:ring-[#C27E00] text-base text-white"
+            className="mt-1.5 block w-full rounded-md border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 py-2.5 px-3 shadow-sm focus:border-[#C27E00] focus:outline-none focus:ring-[#C27E00] text-base text-zinc-900 dark:text-white placeholder:text-zinc-500 dark:placeholder:text-gray-500"
           >
             <option value="">-- Select make --</option>
             {VEHICLE_MAKES_CA.map((make) => (
@@ -198,7 +198,7 @@ export function DemandForm({ cameraModels, defaultAddress = '', timezoneName: pr
                   setCustomModel(e.target.value === '__custom__' ? customModel : '')
                 }}
                 required={selectedModel !== '__custom__'}
-                className="mt-1.5 block w-full rounded-md border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 py-2.5 px-3 shadow-sm focus:border-[#C27E00] focus:outline-none focus:ring-[#C27E00] text-base text-white"
+                className="mt-1.5 block w-full rounded-md border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 py-2.5 px-3 shadow-sm focus:border-[#C27E00] focus:outline-none focus:ring-[#C27E00] text-base text-zinc-900 dark:text-white placeholder:text-zinc-500 dark:placeholder:text-gray-500"
               >
                 <option value="">-- Select model --</option>
                 {getModelsForMake(selectedMake).map((model) => (
@@ -212,7 +212,7 @@ export function DemandForm({ cameraModels, defaultAddress = '', timezoneName: pr
                 <select
                   value={selectedTrim}
                   onChange={(e) => setSelectedTrim(e.target.value)}
-                  className="mt-1.5 block w-full rounded-md border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 py-2.5 px-3 shadow-sm focus:border-[#C27E00] focus:outline-none focus:ring-[#C27E00] text-base text-white"
+                  className="mt-1.5 block w-full rounded-md border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 py-2.5 px-3 shadow-sm focus:border-[#C27E00] focus:outline-none focus:ring-[#C27E00] text-base text-zinc-900 dark:text-white placeholder:text-zinc-500 dark:placeholder:text-gray-500"
                 >
                   <option value="">-- Select trim (optional) --</option>
                   {getTrimsForModel(selectedMake, selectedModel).map((trim) => (
@@ -230,7 +230,7 @@ export function DemandForm({ cameraModels, defaultAddress = '', timezoneName: pr
                   placeholder="Enter model name"
                   required
                   name="vehicleModel"
-                  className="mt-1.5 block w-full rounded-md border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 py-2.5 px-3 shadow-sm focus:border-[#C27E00] focus:outline-none focus:ring-[#C27E00] text-base text-white"
+                  className="mt-1.5 block w-full rounded-md border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 py-2.5 px-3 shadow-sm focus:border-[#C27E00] focus:outline-none focus:ring-[#C27E00] text-base text-zinc-900 dark:text-white placeholder:text-zinc-500 dark:placeholder:text-gray-500"
                 />
               )}
               {(selectedModel && selectedModel !== '__custom__') && (
@@ -254,7 +254,7 @@ export function DemandForm({ cameraModels, defaultAddress = '', timezoneName: pr
 
         <div>
           <label className="block text-base font-medium text-zinc-600 dark:text-gray-300">Year</label>
-          <input name="vehicleYear" type="number" min="1900" max="2100" required className="mt-1.5 block w-full rounded-md border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 py-2.5 px-3 shadow-sm focus:border-[#C27E00] focus:outline-none focus:ring-[#C27E00] text-base text-white" />
+          <input name="vehicleYear" type="number" min="1900" max="2100" required className="mt-1.5 block w-full rounded-md border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 py-2.5 px-3 shadow-sm focus:border-[#C27E00] focus:outline-none focus:ring-[#C27E00] text-base text-zinc-900 dark:text-white placeholder:text-zinc-500 dark:placeholder:text-gray-500" />
         </div>
 
         <div>
@@ -264,7 +264,7 @@ export function DemandForm({ cameraModels, defaultAddress = '', timezoneName: pr
             style={{ textTransform: 'uppercase' }}
             onInput={(e) => { (e.target as HTMLInputElement).value = (e.target as HTMLInputElement).value.toUpperCase() }} 
             required 
-            className="mt-1.5 block w-full rounded-md border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 py-2.5 px-3 shadow-sm focus:border-[#C27E00] focus:outline-none focus:ring-[#C27E00] text-base text-white" 
+            className="mt-1.5 block w-full rounded-md border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 py-2.5 px-3 shadow-sm focus:border-[#C27E00] focus:outline-none focus:ring-[#C27E00] text-base text-zinc-900 dark:text-white placeholder:text-zinc-500 dark:placeholder:text-gray-500" 
             placeholder="Enter stock number"
           />
         </div>
@@ -277,7 +277,7 @@ export function DemandForm({ cameraModels, defaultAddress = '', timezoneName: pr
             onInput={(e) => { (e.target as HTMLInputElement).value = (e.target as HTMLInputElement).value.toUpperCase() }} 
             required
             minLength={6}
-            className="mt-1.5 block w-full rounded-md border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 py-2.5 px-3 shadow-sm focus:border-[#C27E00] focus:outline-none focus:ring-[#C27E00] text-base text-white" 
+            className="mt-1.5 block w-full rounded-md border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 py-2.5 px-3 shadow-sm focus:border-[#C27E00] focus:outline-none focus:ring-[#C27E00] text-base text-zinc-900 dark:text-white placeholder:text-zinc-500 dark:placeholder:text-gray-500" 
             placeholder="Last 6 digits"
           />
         </div>
@@ -295,7 +295,7 @@ export function DemandForm({ cameraModels, defaultAddress = '', timezoneName: pr
                   setCustomCamera('')
                 }}
                 required
-                className="mt-1.5 block w-full rounded-md border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 py-2.5 px-3 shadow-sm focus:border-[#C27E00] focus:outline-none focus:ring-[#C27E00] text-base text-white"
+                className="mt-1.5 block w-full rounded-md border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 py-2.5 px-3 shadow-sm focus:border-[#C27E00] focus:outline-none focus:ring-[#C27E00] text-base text-zinc-900 dark:text-white placeholder:text-zinc-500 dark:placeholder:text-gray-500"
               >
                 <option value="">-- Select a camera model --</option>
                 {cameraModels.map((camera) => (
@@ -312,7 +312,7 @@ export function DemandForm({ cameraModels, defaultAddress = '', timezoneName: pr
                   onChange={(e) => setCustomCamera(e.target.value)}
                   placeholder="Enter custom camera model"
                   required={selectedCamera === '__custom__'}
-                  className="mt-1.5 block w-full rounded-md border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 py-2.5 px-3 shadow-sm focus:border-[#C27E00] focus:outline-none focus:ring-[#C27E00] text-base text-white"
+                  className="mt-1.5 block w-full rounded-md border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 py-2.5 px-3 shadow-sm focus:border-[#C27E00] focus:outline-none focus:ring-[#C27E00] text-base text-zinc-900 dark:text-white placeholder:text-zinc-500 dark:placeholder:text-gray-500"
                 />
               )}
               {!selectedCamera && (
@@ -340,7 +340,7 @@ export function DemandForm({ cameraModels, defaultAddress = '', timezoneName: pr
               <input
                 name="cameraModel"
                 required
-                className="mt-1.5 block w-full rounded-md border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 py-2.5 px-3 shadow-sm focus:border-[#C27E00] focus:outline-none focus:ring-[#C27E00] text-base text-white"
+                className="mt-1.5 block w-full rounded-md border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 py-2.5 px-3 shadow-sm focus:border-[#C27E00] focus:outline-none focus:ring-[#C27E00] text-base text-zinc-900 dark:text-white placeholder:text-zinc-500 dark:placeholder:text-gray-500"
                 placeholder="Enter camera model"
               />
               <p className="text-sm text-zinc-500 dark:text-gray-500 mt-1.5">No camera models available. Enter manually.</p>
@@ -447,7 +447,7 @@ export function DemandForm({ cameraModels, defaultAddress = '', timezoneName: pr
             name="comment"
             rows={3}
             placeholder="Optional note from the person creating this demand..."
-            className="mt-1.5 block w-full rounded-md border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 py-2.5 px-3 shadow-sm focus:border-[#C27E00] focus:outline-none focus:ring-[#C27E00] text-base text-white"
+            className="mt-1.5 block w-full rounded-md border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 py-2.5 px-3 shadow-sm focus:border-[#C27E00] focus:outline-none focus:ring-[#C27E00] text-base text-zinc-900 dark:text-white placeholder:text-zinc-500 dark:placeholder:text-gray-500"
           />
         </div>
       </div>

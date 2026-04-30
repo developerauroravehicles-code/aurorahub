@@ -5,7 +5,8 @@ import { updateDemandByAuroraManager } from './actions'
 import { getAvailableSlotsForEdit } from '@/app/dashboard/system-management/calendar/actions'
 import { useRouter } from 'next/navigation'
 import { formatInTimeZone } from 'date-fns-tz'
-import { SYSTEM_DEFAULT_TIMEZONE } from '@/lib/timezone-defaults'
+import { SYSTEM_DEFAULT_TIMEZONE, getEffectiveTimezone } from '@/lib/timezone-defaults'
+import { getTimezoneFromDealer } from '@/lib/dealer-timezone'
 import { VEHICLE_MAKES_CA } from '@/lib/vehicle-makes'
 import { getModelsForMake, getTrimsForModel } from '@/lib/vehicle-models'
 import { CanadianPhoneInput, formatCanadianPhone } from '@/components/canadian-phone-input'
@@ -59,8 +60,9 @@ export function RescheduleDemandModal({ demand, isOpen, onClose }: RescheduleDem
     stock_number: demand.stock_number || '',
     camera_model: demand.camera_model,
   })
+  const dealerTz = getEffectiveTimezone(getTimezoneFromDealer(demand.dealers ?? null))
   const initialAppointment = new Date(demand.appointment_date)
-  const [selectedDate, setSelectedDate] = useState(() => formatInTimeZone(initialAppointment, SYSTEM_DEFAULT_TIMEZONE, 'yyyy-MM-dd'))
+  const [selectedDate, setSelectedDate] = useState(() => formatInTimeZone(initialAppointment, dealerTz, 'yyyy-MM-dd'))
   const [selectedSlot, setSelectedSlot] = useState<string>(() => demand.appointment_date)
   const [availableSlots, setAvailableSlots] = useState<string[]>([])
   const [slotsTimezone, setSlotsTimezone] = useState<string | null>(null)
@@ -81,8 +83,9 @@ export function RescheduleDemandModal({ demand, isOpen, onClose }: RescheduleDem
         stock_number: demand.stock_number || '',
         camera_model: demand.camera_model,
       })
+      const tz = getEffectiveTimezone(getTimezoneFromDealer(demand.dealers ?? null))
       const d = new Date(demand.appointment_date)
-      setSelectedDate(formatInTimeZone(d, SYSTEM_DEFAULT_TIMEZONE, 'yyyy-MM-dd'))
+      setSelectedDate(formatInTimeZone(d, tz, 'yyyy-MM-dd'))
       setSelectedSlot(demand.appointment_date)
       setError(null)
       setShowSmsConfirm(false)
@@ -115,7 +118,6 @@ export function RescheduleDemandModal({ demand, isOpen, onClose }: RescheduleDem
     Object.entries(formData).forEach(([key, value]) => form.append(key, value.toString()))
     if (isExternal) {
       form.append('appointment_date_date', selectedDate)
-      form.append('appointment_date', selectedDate + 'T12:00:00.000Z')
     } else {
       form.append('appointment_date', selectedSlot)
     }
@@ -123,10 +125,13 @@ export function RescheduleDemandModal({ demand, isOpen, onClose }: RescheduleDem
   }
 
   const appointmentChanged = () => {
+    if (isExternal) {
+      const oldCal = `${formatInTimeZone(new Date(demand.appointment_date), dealerTz, 'yyyy-MM-dd')} 12:00`
+      const newCal = `${selectedDate} 12:00`
+      return oldCal !== newCal
+    }
     const oldStr = formatInTimeZone(new Date(demand.appointment_date), SYSTEM_DEFAULT_TIMEZONE, 'yyyy-MM-dd HH:mm')
-    const newStr = isExternal
-      ? selectedDate + ' 12:00'
-      : formatInTimeZone(new Date(selectedSlot), SYSTEM_DEFAULT_TIMEZONE, 'yyyy-MM-dd HH:mm')
+    const newStr = formatInTimeZone(new Date(selectedSlot), SYSTEM_DEFAULT_TIMEZONE, 'yyyy-MM-dd HH:mm')
     return oldStr !== newStr
   }
 
@@ -172,8 +177,9 @@ export function RescheduleDemandModal({ demand, isOpen, onClose }: RescheduleDem
 
   if (!isOpen) return null
 
-  const inputClass = 'w-full border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 py-2 px-3 rounded text-white focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]'
-  const today = formatInTimeZone(new Date(), SYSTEM_DEFAULT_TIMEZONE, 'yyyy-MM-dd')
+  const inputClass =
+    'w-full border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 py-2 px-3 rounded text-zinc-900 dark:text-white placeholder:text-zinc-500 dark:placeholder:text-gray-500 focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]'
+  const today = formatInTimeZone(new Date(), isExternal ? dealerTz : SYSTEM_DEFAULT_TIMEZONE, 'yyyy-MM-dd')
 
   return (
     <>
@@ -224,7 +230,11 @@ export function RescheduleDemandModal({ demand, isOpen, onClose }: RescheduleDem
                   <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300 mb-1">Vehicle Make *</label>
                   <select value={formData.vehicle_make} onChange={(e) => setFormData({ ...formData, vehicle_make: e.target.value, vehicle_model: '' })} required className={inputClass}>
                     <option value="">-- Select --</option>
-                    {VEHICLE_MAKES_CA.map((m) => <option key={m} value={m} className="bg-zinc-50 dark:bg-black">{m}</option>)}
+                    {VEHICLE_MAKES_CA.map((m) => (
+                      <option key={m} value={m} className="bg-white text-zinc-900 dark:bg-black dark:text-white">
+                        {m}
+                      </option>
+                    ))}
                   </select>
                 </div>
                 <div>
@@ -247,12 +257,12 @@ export function RescheduleDemandModal({ demand, isOpen, onClose }: RescheduleDem
                 <div className="md:col-span-2">
                   <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300 mb-1">Appointment *</label>
                   {isExternal ? (
-                    <input type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} min={today} className={`${inputClass} max-w-xs [color-scheme:dark]`} />
+                    <input type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} min={today} className={`${inputClass} max-w-xs dark:[color-scheme:dark]`} />
                   ) : !demand.dealer_id ? (
                     <p className="text-sm text-amber-500">Dealer not set; cannot show slots.</p>
                   ) : (
                     <div className="space-y-3">
-                      <input type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} min={today} className={`${inputClass} max-w-xs [color-scheme:dark]`} />
+                      <input type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} min={today} className={`${inputClass} max-w-xs dark:[color-scheme:dark]`} />
                       {slotsLoading ? <p className="text-sm text-zinc-500 dark:text-gray-500">Loading slots…</p> : availableSlots.length === 0 ? <p className="text-sm text-amber-500">No available slots.</p> : (
                         <div className="flex flex-wrap gap-2">
                           {availableSlots.map((slot) => (

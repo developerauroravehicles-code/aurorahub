@@ -1,10 +1,10 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import { format } from 'date-fns'
 import { formatInTimeZone, fromZonedTime } from 'date-fns-tz'
 import { getEffectiveTimezone, getTodayRangeInTimezone } from '@/lib/timezone-defaults'
 import { Filter, X } from 'lucide-react'
+import { demandMatchesSmartSearch } from '@/lib/demand-smart-search'
 
 interface Demand {
   id: string
@@ -13,6 +13,8 @@ interface Demand {
   created_at: string
   customer_firstname: string
   customer_lastname: string
+  customer_phone?: string | null
+  vin_last6?: string | null
   vehicle_year: number
   vehicle_make: string
   vehicle_model: string
@@ -30,7 +32,6 @@ interface DemandsListProps {
 export function DemandsList({ demands, timezoneName = null, duplicateStockNumbers = [] }: DemandsListProps) {
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [dateFilter, setDateFilter] = useState<string>('all')
-  const [searchType, setSearchType] = useState<'customer' | 'demand_id'>('customer')
   const [searchValue, setSearchValue] = useState<string>('')
   const [showFilters, setShowFilters] = useState(false)
 
@@ -83,22 +84,12 @@ export function DemandsList({ demands, timezoneName = null, duplicateStockNumber
       }
     }
 
-    // Search filter (by selected criterion only)
     if (searchValue.trim()) {
-      const query = searchValue.toLowerCase().trim()
-      if (searchType === 'customer') {
-        filtered = filtered.filter(d =>
-          `${d.customer_firstname} ${d.customer_lastname}`.toLowerCase().includes(query)
-        )
-      } else {
-        filtered = filtered.filter(d =>
-          d.demand_number != null && String(d.demand_number).toLowerCase().includes(query)
-        )
-      }
+      filtered = filtered.filter(d => demandMatchesSmartSearch(d, searchValue))
     }
 
     return filtered
-  }, [demands, statusFilter, dateFilter, searchType, searchValue, timezoneName])
+  }, [demands, statusFilter, dateFilter, searchValue, timezoneName])
 
   const hasActiveFilters = statusFilter !== 'all' || dateFilter !== 'all' || searchValue.trim() !== ''
 
@@ -138,31 +129,19 @@ export function DemandsList({ demands, timezoneName = null, duplicateStockNumber
 
         {showFilters && (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {/* Search - by customer name or demand ID */}
-            <div className="md:col-span-2 flex gap-2">
-              <div className="flex-1 min-w-0">
-                <label className="block text-xs font-medium text-zinc-500 dark:text-gray-400 mb-1">Search by</label>
-                <select
-                  value={searchType}
-                  onChange={(e) => setSearchType(e.target.value as 'customer' | 'demand_id')}
-                  className="w-full border border-zinc-300 dark:border-gray-700 bg-zinc-200/50 dark:bg-white/5 p-2 rounded text-zinc-900 dark:text-white text-sm focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]"
-                >
-                  <option value="customer" className="bg-zinc-50 dark:bg-black">Customer name</option>
-                  <option value="demand_id" className="bg-zinc-50 dark:bg-black">Demand ID</option>
-                </select>
-              </div>
-              <div className="flex-1 min-w-0">
-                <label className="block text-xs font-medium text-zinc-500 dark:text-gray-400 mb-1">
-                  {searchType === 'customer' ? 'Name' : 'Demand ID'}
-                </label>
-                <input
-                  type="text"
-                  value={searchValue}
-                  onChange={(e) => setSearchValue(e.target.value)}
-                  placeholder={searchType === 'customer' ? 'Customer first or last name...' : 'ARR20260000001'}
-                  className="w-full border border-zinc-300 dark:border-gray-700 bg-zinc-200/50 dark:bg-white/5 p-2 rounded text-zinc-900 dark:text-white text-sm focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]"
-                />
-              </div>
+            <div className="md:col-span-3">
+              <label className="block text-xs font-medium text-zinc-500 dark:text-gray-400 mb-1">Search</label>
+              <input
+                type="search"
+                value={searchValue}
+                onChange={(e) => setSearchValue(e.target.value)}
+                placeholder="Name, phone, VIN, stock, or demand # — auto-detected"
+                autoComplete="off"
+                className="w-full border border-zinc-300 dark:border-gray-700 bg-zinc-200/50 dark:bg-white/5 p-2 rounded text-zinc-900 dark:text-white text-sm placeholder:text-zinc-500 dark:placeholder:text-gray-500 focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]"
+              />
+              <p className="mt-1 text-xs text-zinc-500 dark:text-gray-500">
+                Matches customer name, phone, VIN (last 6), stock number, or demand reference (OR).
+              </p>
             </div>
 
             {/* Status Filter */}

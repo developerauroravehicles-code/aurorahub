@@ -3,9 +3,11 @@
 import { useState, useMemo, useEffect, useRef } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { formatInTimeZone } from 'date-fns-tz'
-import { SYSTEM_DEFAULT_TIMEZONE, getPTDateRanges } from '@/lib/timezone-defaults'
+import { getEffectiveTimezone, getPTDateRanges } from '@/lib/timezone-defaults'
+import { getTimezoneFromDealer } from '@/lib/dealer-timezone'
 import { Filter, X, Plus } from 'lucide-react'
 import Link from 'next/link'
+import { demandMatchesSmartSearch } from '@/lib/demand-smart-search'
 import { CreateExternalDemandForm } from './create-external-demand-form'
 
 interface Dealer {
@@ -25,6 +27,7 @@ interface Demand {
   created_at: string
   customer_firstname: string
   customer_lastname: string
+  customer_phone?: string | null
   vehicle_year: number
   vehicle_make: string
   vehicle_model: string
@@ -32,7 +35,7 @@ interface Demand {
   is_external?: boolean | null
   vin_last6?: string | null
   stock_number?: string | null
-  dealers?: { name: string; region_codes?: { timezones?: { name: string } } } | null
+  dealers?: { name: string; region_codes?: { timezones?: { name: string } | Array<{ name: string }> } | Array<{ timezones?: { name: string } | Array<{ name: string }> }> } | null
   profiles?: { full_name: string } | null
   assigned_specialist?: { full_name: string } | null
   assigned_finance?: { full_name: string } | null
@@ -159,7 +162,6 @@ export function DemandsList({ demands, dealers, specialists, selectedDealerId, c
     () => buildPersistQS(dateFilter, statusFilter, selectedDealerId, !!hideDealerFilter),
     [dateFilter, statusFilter, selectedDealerId, hideDealerFilter]
   )
-  const [searchType, setSearchType] = useState<'customer' | 'demand_id' | 'vin' | 'stock_number'>('customer')
   const [searchValue, setSearchValue] = useState<string>('')
   const [showFilters, setShowFilters] = useState(false)
   const dealerFilterActive = !hideDealerFilter && selectedDealerId !== 'all'
@@ -193,30 +195,12 @@ export function DemandsList({ demands, dealers, specialists, selectedDealerId, c
       }
     }
 
-    // Search filter (by selected criterion only)
     if (searchValue.trim()) {
-      const query = searchValue.toLowerCase().trim().replace(/\s/g, '')
-      if (searchType === 'customer') {
-        filtered = filtered.filter(d =>
-          `${d.customer_firstname} ${d.customer_lastname}`.toLowerCase().includes(query)
-        )
-      } else if (searchType === 'demand_id') {
-        filtered = filtered.filter(d =>
-          d.demand_number != null && String(d.demand_number).toLowerCase().includes(query)
-        )
-      } else if (searchType === 'vin') {
-        filtered = filtered.filter(d =>
-          d.vin_last6 != null && d.vin_last6.replace(/\s/g, '').toLowerCase().includes(query)
-        )
-      } else if (searchType === 'stock_number') {
-        filtered = filtered.filter(d =>
-          d.stock_number != null && d.stock_number.toLowerCase().includes(query)
-        )
-      }
+      filtered = filtered.filter(d => demandMatchesSmartSearch(d, searchValue))
     }
 
     return filtered
-  }, [demands, statusFilter, dateFilter, searchType, searchValue])
+  }, [demands, statusFilter, dateFilter, searchValue])
 
   const hasActiveFilters = statusFilter !== 'all' || dateFilter !== 'all' || searchValue.trim() !== '' || dealerFilterActive
 
@@ -320,38 +304,19 @@ export function DemandsList({ demands, dealers, specialists, selectedDealerId, c
 
         {showFilters && (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {/* Search - by customer, demand ID, VIN, or stock number */}
-            <div className="md:col-span-2 flex gap-2">
-              <div className="flex-1 min-w-0">
-                <label className="block text-xs font-medium text-zinc-500 dark:text-gray-400 mb-1">Search by</label>
-                <select
-                  value={searchType}
-                  onChange={(e) => setSearchType(e.target.value as 'customer' | 'demand_id' | 'vin' | 'stock_number')}
-                  className="w-full border border-zinc-300 dark:border-gray-700 bg-zinc-200/50 dark:bg-white/5 p-2 rounded text-zinc-900 dark:text-white text-sm focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]"
-                >
-                  <option value="customer" className="bg-zinc-50 dark:bg-black">Customer name</option>
-                  <option value="demand_id" className="bg-zinc-50 dark:bg-black">Demand ID</option>
-                  <option value="vin" className="bg-zinc-50 dark:bg-black">VIN No</option>
-                  <option value="stock_number" className="bg-zinc-50 dark:bg-black">Stock Number</option>
-                </select>
-              </div>
-              <div className="flex-1 min-w-0">
-                <label className="block text-xs font-medium text-zinc-500 dark:text-gray-400 mb-1">
-                  {searchType === 'customer' ? 'Name' : searchType === 'demand_id' ? 'Demand ID' : searchType === 'vin' ? 'VIN No' : 'Stock Number'}
-                </label>
-                <input
-                  type="text"
-                  value={searchValue}
-                  onChange={(e) => setSearchValue(e.target.value)}
-                  placeholder={
-                    searchType === 'customer' ? 'Customer first or last name...' :
-                    searchType === 'demand_id' ? 'ARR20260000001' :
-                    searchType === 'vin' ? 'Last 6 digits or full VIN' :
-                    'Stock number'
-                  }
-                  className="w-full border border-zinc-300 dark:border-gray-700 bg-zinc-200/50 dark:bg-white/5 p-2 rounded text-zinc-900 dark:text-white text-sm focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]"
-                />
-              </div>
+            <div className="md:col-span-3">
+              <label className="block text-xs font-medium text-zinc-500 dark:text-gray-400 mb-1">Search</label>
+              <input
+                type="search"
+                value={searchValue}
+                onChange={(e) => setSearchValue(e.target.value)}
+                placeholder="Name, phone, VIN, stock, or demand # — auto-detected"
+                autoComplete="off"
+                className="w-full border border-zinc-300 dark:border-gray-700 bg-zinc-200/50 dark:bg-white/5 p-2 rounded text-zinc-900 dark:text-white text-sm placeholder:text-zinc-500 dark:placeholder:text-gray-500 focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]"
+              />
+              <p className="mt-1 text-xs text-zinc-500 dark:text-gray-500">
+                Matches customer name, phone, VIN (last 6), stock number, demand reference (OR).
+              </p>
             </div>
 
             {/* Status Filter */}
@@ -413,6 +378,8 @@ export function DemandsList({ demands, dealers, specialists, selectedDealerId, c
                   ? `/dashboard/admin/demands/${demand.id}?${persistQueryString}`
                   : `/dashboard/admin/demands/${demand.id}`
 
+              const dealerTz = getEffectiveTimezone(getTimezoneFromDealer(demand.dealers as Parameters<typeof getTimezoneFromDealer>[0]))
+
               return (
                 <li key={demand.id} className="p-4 hover:bg-zinc-200/50 dark:bg-white/5 transition-colors">
                   <Link href={detailHref} className="block">
@@ -434,8 +401,8 @@ export function DemandsList({ demands, dealers, specialists, selectedDealerId, c
                         </p>
                         <p className="text-sm text-zinc-500 dark:text-gray-500">
                           Appointment: {demand.is_external
-                            ? formatInTimeZone(new Date(demand.appointment_date), SYSTEM_DEFAULT_TIMEZONE, 'PPP') + ' (External)'
-                            : formatInTimeZone(new Date(demand.appointment_date), SYSTEM_DEFAULT_TIMEZONE, 'PPP h:mm a')}
+                            ? formatInTimeZone(new Date(demand.appointment_date), dealerTz, 'PPP') + ' (External)'
+                            : formatInTimeZone(new Date(demand.appointment_date), dealerTz, 'PPP h:mm a')}
                         </p>
                         <p className="text-xs text-zinc-600 dark:text-gray-600 mt-1">
                           Dealer: {(demand.dealers as any)?.name || 'Unknown'} | Created by: {(demand.profiles as any)?.full_name || 'Unknown'}

@@ -39,7 +39,7 @@ export function OnboardingTaskForm({
           <select
             name="profile_id"
             required
-            className="w-full rounded-md bg-zinc-200 dark:bg-gray-900 border border-zinc-300 dark:border-gray-700 text-white px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#C27E00] [&>option]:bg-zinc-200 dark:bg-gray-900 [&>option]:text-white"
+            className="w-full rounded-md bg-zinc-200 dark:bg-gray-900 border border-zinc-300 dark:border-gray-700 text-zinc-900 dark:text-white px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#C27E00] [&>option]:bg-white dark:[&>option]:bg-gray-900 [&>option]:text-zinc-900 dark:[&>option]:text-white"
             style={{ colorScheme: 'light' }}
           >
             <option value="">Select employee</option>
@@ -57,7 +57,7 @@ export function OnboardingTaskForm({
             name="title"
             required
             placeholder="e.g. Complete safety training"
-            className="w-full rounded-md bg-zinc-200/50 dark:bg-white/5 border border-zinc-300 dark:border-gray-700 text-white px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#C27E00]"
+            className="w-full rounded-md bg-zinc-200/50 dark:bg-white/5 border border-zinc-300 dark:border-gray-700 text-zinc-900 dark:text-white placeholder:text-zinc-500 dark:placeholder:text-gray-500 px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#C27E00]"
           />
         </div>
         <div>
@@ -65,7 +65,7 @@ export function OnboardingTaskForm({
           <textarea
             name="description"
             rows={2}
-            className="w-full rounded-md bg-zinc-200/50 dark:bg-white/5 border border-zinc-300 dark:border-gray-700 text-white px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#C27E00]"
+            className="w-full rounded-md bg-zinc-200/50 dark:bg-white/5 border border-zinc-300 dark:border-gray-700 text-zinc-900 dark:text-white placeholder:text-zinc-500 dark:placeholder:text-gray-500 px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#C27E00]"
           />
         </div>
         <div>
@@ -73,7 +73,7 @@ export function OnboardingTaskForm({
           <input
             type="date"
             name="due_date"
-            className="w-full rounded-md bg-zinc-200/50 dark:bg-white/5 border border-zinc-300 dark:border-gray-700 text-white px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#C27E00]"
+            className="w-full rounded-md bg-zinc-200/50 dark:bg-white/5 border border-zinc-300 dark:border-gray-700 text-zinc-900 dark:text-white placeholder:text-zinc-500 dark:placeholder:text-gray-500 px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#C27E00]"
           />
         </div>
         {error && <p className="text-sm text-red-400">{error}</p>}

@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { formatInTimeZone } from 'date-fns-tz'
 import { getEffectiveTimezone } from '@/lib/timezone-defaults'
+import { getTimezoneFromDealer } from '@/lib/dealer-timezone'
 import { checkCurrentUserPermission } from '@/lib/permissions'
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
@@ -13,6 +14,7 @@ import { EditVinForm } from '../edit-vin-form'
 import { EditStockNumberForm } from '../edit-stock-number-form'
 import { RescheduleDemandButton } from '../reschedule-demand-button'
 import { DemandManualSmsPanel } from '../demand-manual-sms-panel'
+import { DemandInstallationNotesSection, type InstallationNoteRow } from '../demand-installation-notes-section'
 
 /** List filters (date, status, dealer) are passed on the detail URL so "Back" can restore them. */
 function demandsListHrefFromDetailSearch(
@@ -64,6 +66,10 @@ export default async function DemandDetailsPage({
     )
   }
 
+  const displayTzForDemand = getEffectiveTimezone(
+    getTimezoneFromDealer(demand.dealers as Parameters<typeof getTimezoneFromDealer>[0])
+  )
+
   // Fetch demand logs (admin client - user already verified access via demand fetch)
   const admin = createAdminClient()
   const { data: logsRows } = await admin
@@ -94,10 +100,37 @@ export default async function DemandDetailsPage({
 
   let isAuroraManager = false
   let canSendManualSms = false
+  let installationNotes: InstallationNoteRow[] = []
   if (user) {
     const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
     isAuroraManager = profile?.role === 'aurora_manager'
     canSendManualSms = await checkCurrentUserPermission('comm.sms.send')
+
+    if (isAuroraManager) {
+      const { data: notesRows } = await supabase
+        .from('demand_installation_notes')
+        .select('id, body, created_at, author_id, profiles!demand_installation_notes_author_id_fkey(full_name)')
+        .eq('demand_id', id)
+        .order('created_at', { ascending: false })
+
+      installationNotes =
+        notesRows?.map((row: any) => {
+          const raw = row.profiles
+          const profiles =
+            raw == null
+              ? null
+              : Array.isArray(raw)
+                ? (raw[0] as { full_name?: string | null }) ?? null
+                : (raw as { full_name?: string | null })
+          return {
+            id: row.id as string,
+            body: row.body as string,
+            created_at: row.created_at as string,
+            author_id: row.author_id as string | undefined,
+            profiles: profiles ? { full_name: profiles.full_name ?? null } : null,
+          }
+        }) ?? []
+    }
   }
 
   // Fetch specialists and finance users for Aurora Manager (change assignment)
@@ -111,7 +144,7 @@ export default async function DemandDetailsPage({
   const customerName = `${demand.customer_firstname} ${demand.customer_lastname}`
   const formattedAppointment = formatInTimeZone(
     new Date(demand.appointment_date),
-    getEffectiveTimezone((demand.dealers as { region_codes?: { timezones?: { name: string } } } | null)?.region_codes?.timezones?.name ?? null),
+    getEffectiveTimezone(getTimezoneFromDealer(demand.dealers as Parameters<typeof getTimezoneFromDealer>[0])),
     'PPP h:mm a'
   )
 
@@ -203,8 +236,8 @@ export default async function DemandDetailsPage({
             </div>
             <div>
               <p className="text-sm text-zinc-500 dark:text-gray-400">Appointment Date</p>
-              <p className="text-white font-semibold text-[#C27E00]">
-                {formatInTimeZone(new Date(demand.appointment_date), getEffectiveTimezone((demand.dealers as { region_codes?: { timezones?: { name: string } } } | null)?.region_codes?.timezones?.name ?? null), 'PPP h:mm a')}
+              <p className="text-zinc-900 dark:text-white font-semibold text-[#C27E00]">
+                {formatInTimeZone(new Date(demand.appointment_date), displayTzForDemand, 'PPP h:mm a')}
               </p>
             </div>
           </div>
@@ -293,6 +326,14 @@ export default async function DemandDetailsPage({
             </div>
           </div>
         </div>
+
+        {isAuroraManager && (
+          <DemandInstallationNotesSection
+            demandId={id}
+            initialNotes={installationNotes}
+            timezoneName={displayTzForDemand}
+          />
+        )}
       </div>
 
       {/* Process History / Demand Logs */}

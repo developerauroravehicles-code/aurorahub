@@ -29,7 +29,8 @@ interface CreateExternalDemandFormProps {
   onCancel?: () => void
 }
 
-const inputClass = 'mt-1 block w-full rounded-md border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 py-2 px-3 shadow-sm focus:border-[#C27E00] focus:outline-none focus:ring-[#C27E00] sm:text-sm text-white'
+const inputClass =
+  'mt-1 block w-full rounded-md border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 py-2 px-3 shadow-sm focus:border-[#C27E00] focus:outline-none focus:ring-[#C27E00] sm:text-sm text-zinc-900 dark:text-white placeholder:text-zinc-500 dark:placeholder:text-gray-500'
 const inputReadOnlyClass = inputClass + ' opacity-75 cursor-not-allowed'
 
 export function CreateExternalDemandForm({ dealers, specialists, onSuccess, onCancel }: CreateExternalDemandFormProps) {
@@ -91,7 +92,9 @@ export function CreateExternalDemandForm({ dealers, specialists, onSuccess, onCa
           >
             <option value="">-- Select dealer --</option>
             {dealers.map((d) => (
-              <option key={d.id} value={d.id} className="bg-zinc-50 dark:bg-black">{d.name}</option>
+              <option key={d.id} value={d.id} className="bg-white text-zinc-900 dark:bg-black dark:text-white">
+                {d.name}
+              </option>
             ))}
           </select>
         </div>
@@ -113,9 +116,11 @@ export function CreateExternalDemandForm({ dealers, specialists, onSuccess, onCa
           <div className="sm:col-span-2">
             <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300">Specialist</label>
             <select name="assignedSpecialistId" className={inputClass}>
-              <option value="" className="bg-zinc-50 dark:bg-black">-- No specialist assigned --</option>
+              <option value="" className="bg-white text-zinc-900 dark:bg-black dark:text-white">
+                -- No specialist assigned --
+              </option>
               {specialists.map((s) => (
-                <option key={s.id} value={s.id} className="bg-zinc-50 dark:bg-black">
+                <option key={s.id} value={s.id} className="bg-white text-zinc-900 dark:bg-black dark:text-white">
                   {s.full_name || 'Unknown'}
                 </option>
               ))}
@@ -230,7 +235,9 @@ export function CreateExternalDemandForm({ dealers, specialists, onSuccess, onCa
           >
             <option value="">-- Select --</option>
             {VEHICLE_MAKES_CA.map((m) => (
-              <option key={m} value={m} className="bg-zinc-50 dark:bg-black">{m}</option>
+              <option key={m} value={m} className="bg-white text-zinc-900 dark:bg-black dark:text-white">
+                {m}
+              </option>
             ))}
           </select>
         </div>
@@ -250,9 +257,13 @@ export function CreateExternalDemandForm({ dealers, specialists, onSuccess, onCa
               >
                 <option value="">-- Select --</option>
                 {getModelsForMake(selectedMake).map((m) => (
-                  <option key={m} value={m} className="bg-zinc-50 dark:bg-black">{m}</option>
+                  <option key={m} value={m} className="bg-white text-zinc-900 dark:bg-black dark:text-white">
+                    {m}
+                  </option>
                 ))}
-                <option value="__custom__" className="bg-zinc-50 dark:bg-black">Other</option>
+                <option value="__custom__" className="bg-white text-zinc-900 dark:bg-black dark:text-white">
+                  Other
+                </option>
               </select>
               {selectedModel === '__custom__' && (
                 <input
@@ -275,7 +286,9 @@ export function CreateExternalDemandForm({ dealers, specialists, onSuccess, onCa
                     >
                       <option value="">-- Trim (optional) --</option>
                       {getTrimsForModel(selectedMake, selectedModel).map((t) => (
-                        <option key={t} value={t} className="bg-zinc-50 dark:bg-black">{t}</option>
+                        <option key={t} value={t} className="bg-white text-zinc-900 dark:bg-black dark:text-white">
+                          {t}
+                        </option>
                       ))}
                     </select>
                   ) : null}
@@ -328,9 +341,13 @@ export function CreateExternalDemandForm({ dealers, specialists, onSuccess, onCa
               >
                 <option value="">-- Select --</option>
                 {cameraModels.map((c) => (
-                  <option key={c.id} value={c.name} className="bg-zinc-50 dark:bg-black">{c.name}</option>
+                  <option key={c.id} value={c.name} className="bg-white text-zinc-900 dark:bg-black dark:text-white">
+                    {c.name}
+                  </option>
                 ))}
-                <option value="__custom__" className="bg-zinc-50 dark:bg-black">Other</option>
+                <option value="__custom__" className="bg-white text-zinc-900 dark:bg-black dark:text-white">
+                  Other
+                </option>
               </select>
               {selectedCamera === '__custom__' && (
                 <input

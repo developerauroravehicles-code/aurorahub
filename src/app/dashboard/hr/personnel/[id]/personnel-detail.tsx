@@ -129,7 +129,8 @@ export function PersonnelDetail({
   const [editingInstaller, setEditingInstaller] = useState(false)
   const [installerLoading, setInstallerLoading] = useState(false)
 
-  const inputClass = 'w-full rounded-md bg-zinc-200/50 dark:bg-white/5 border border-zinc-300 dark:border-gray-700 text-white px-3 py-2 text-sm focus:ring-1 focus:ring-[#C27E00]'
+  const inputClass =
+    'w-full rounded-md bg-zinc-200/50 dark:bg-white/5 border border-zinc-300 dark:border-gray-700 text-zinc-900 dark:text-white placeholder:text-zinc-500 dark:placeholder:text-gray-500 px-3 py-2 text-sm focus:ring-1 focus:ring-[#C27E00]'
   const selectClass = 'w-full rounded-md bg-zinc-200 dark:bg-gray-900 border border-zinc-300 dark:border-gray-700 text-white px-3 py-2 text-sm focus:ring-1 focus:ring-[#C27E00] focus:outline-none [&>option]:bg-zinc-200 dark:bg-gray-900 [&>option]:text-white'
   const labelClass = 'block text-sm text-zinc-500 dark:text-gray-400 mb-1'
 
