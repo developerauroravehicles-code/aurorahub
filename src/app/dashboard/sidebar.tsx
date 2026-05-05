@@ -153,6 +153,7 @@ export function Sidebar({
     links.push({ name: 'Reports', href: '/dashboard/admin/reports', icon: FileText })
     if (role === 'aurora_manager') {
       links.push({ name: 'Employees', href: '/dashboard/admin/employees', icon: Users })
+      links.push({ name: 'Customers', href: '/dashboard/admin/customers', icon: UserCircle })
     }
     links.push({ name: 'Invoice', href: '/dashboard/admin/invoices', icon: Receipt })
     links.push({ name: 'Statement', href: '/dashboard/admin/statements', icon: FileText })
