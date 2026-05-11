@@ -1,9 +1,12 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import Link from 'next/link'
 import { formatInPT } from '@/lib/timezone-defaults'
-import { phoneKeyToCustomerRouteKey } from '@/lib/customer-key'
+import { getSmsSettings } from '@/lib/sms-resolver'
 import { CustomersListExcelButton } from './customers-excel-export'
+import { CustomersDirectoryList } from './customers-directory-list'
+
+/** Bulk SMS runs in-process; extend limit so large selections can finish (requires host support, e.g. Vercel). */
+export const maxDuration = 120
 
 type CustomerSummaryRow = {
   phone_key: string
@@ -37,7 +40,10 @@ export default async function CustomersPage() {
     redirect('/dashboard')
   }
 
-  const { data: rows, error } = await supabase.rpc('customer_directory_summaries')
+  const [{ data: rows, error }, smsSettings] = await Promise.all([
+    supabase.rpc('customer_directory_summaries'),
+    getSmsSettings(supabase),
+  ])
 
   const summaries = (rows ?? []) as CustomerSummaryRow[]
 
@@ -51,6 +57,9 @@ export default async function CustomersPage() {
     latestDealer: row.latest_dealer_name ?? '',
     latestWarrantyEnd: row.latest_warranty_end ?? null,
   }))
+
+  const signaturePreview =
+    typeof smsSettings.signature === 'string' ? smsSettings.signature.trim() : ''
 
   return (
     <div className="space-y-8">
@@ -67,40 +76,11 @@ export default async function CustomersPage() {
             Could not load customers: {error.message}
           </p>
         )}
-        <div className="overflow-hidden rounded-lg border border-zinc-200 bg-zinc-200/50 shadow dark:border-gray-800 dark:bg-white/5">
-          {summaries.length === 0 ? (
-            <p className="px-4 py-8 text-center text-sm text-zinc-500 dark:text-gray-400">No customers found.</p>
-          ) : (
-            <ul className="divide-y divide-zinc-200 dark:divide-gray-800">
-              {summaries.map((row) => {
-                const name = `${row.customer_firstname ?? ''} ${row.customer_lastname ?? ''}`.trim() || 'Unknown'
-                const routeKey = phoneKeyToCustomerRouteKey(row.phone_key)
-                return (
-                  <li key={row.phone_key}>
-                    <Link
-                      href={`/dashboard/admin/customers/${routeKey}`}
-                      className="flex items-center justify-between gap-4 px-4 py-4 transition-colors hover:bg-zinc-200/50 dark:hover:bg-white/5"
-                    >
-                      <div className="min-w-0">
-                        <p className="font-semibold text-zinc-900 dark:text-white">{name}</p>
-                        <p className="truncate text-sm text-zinc-500 dark:text-gray-400">{row.customer_phone}</p>
-                      </div>
-                      <div className="shrink-0 text-right text-sm text-zinc-600 dark:text-gray-400">
-                        <p>
-                          <span className="text-[#C27E00]">{row.demand_count}</span> demand
-                          {row.demand_count === 1 ? '' : 's'}
-                        </p>
-                        <p className="text-xs text-zinc-500 dark:text-gray-500">
-                          Last activity {formatInPT(row.last_activity, 'd MMM yyyy')}
-                        </p>
-                      </div>
-                    </Link>
-                  </li>
-                )
-              })}
-            </ul>
-          )}
-        </div>
+        {summaries.length === 0 && !error ? (
+          <p className="px-4 py-8 text-center text-sm text-zinc-500 dark:text-gray-400">No customers found.</p>
+        ) : summaries.length > 0 ? (
+          <CustomersDirectoryList rows={summaries} signaturePreview={signaturePreview} />
+        ) : null}
       </div>
     </div>
   )

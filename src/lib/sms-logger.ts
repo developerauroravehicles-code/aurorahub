@@ -1,7 +1,13 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import type { SupabaseClient } from '@supabase/supabase-js'
 
-export type SmsMessageType = 'appointment_created' | 'cancellation_notice' | 'rescheduling_notice' | 'four_hour_reminder' | 'twenty_four_hour_reminder'
+export type SmsMessageType =
+  | 'appointment_created'
+  | 'cancellation_notice'
+  | 'rescheduling_notice'
+  | 'four_hour_reminder'
+  | 'twenty_four_hour_reminder'
+  | 'customer_directory_manual'
 
 export interface LogSmsParams {
   phoneNumber: string
