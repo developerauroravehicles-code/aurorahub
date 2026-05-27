@@ -2,9 +2,9 @@ import { fromZonedTime } from 'date-fns-tz'
 import { formatInTimeZone } from 'date-fns-tz'
 
 /**
- * System base timezone: Pacific Time (America/Vancouver).
- * All system-level date/time logic (today, now, past checks, SMS logs) uses this.
- * Dealers convert for display only - if dealer is Pacific, no conversion needed.
+ * System base timezone: US & Canada Pacific wall clock (`America/Vancouver` IANA —
+ * PST/PDT, same offsets as `America/Los_Angeles`).
+ * Used for HQ windows: statements, invoices, slot-day boundaries, and the demand calendar grid.
  */
 export const SYSTEM_DEFAULT_TIMEZONE = 'America/Vancouver' as const
 

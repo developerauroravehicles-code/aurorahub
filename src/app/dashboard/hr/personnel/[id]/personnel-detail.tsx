@@ -503,10 +503,12 @@ export function PersonnelDetail({
                     <div>
                       <label className={labelClass}>Customer Rating (0-5)</label>
                       <input name="customer_rating" type="number" step="0.1" min="0" max="5" className={inputClass} defaultValue={installerProfile.customer_rating != null ? String(installerProfile.customer_rating) : ''} />
+                      <p className="text-xs text-zinc-500 dark:text-gray-500 mt-1">Averaged from customer portal ratings (1–5 per installation). HR can override manually.</p>
                     </div>
                     <div>
                       <label className={labelClass}>Quality Score (0-5)</label>
                       <input name="quality_score" type="number" step="0.1" min="0" max="5" className={inputClass} defaultValue={installerProfile.quality_score != null ? String(installerProfile.quality_score) : ''} />
+                      <p className="text-xs text-zinc-500 dark:text-gray-500 mt-1">Averaged from customer portal quality scores (1–5 per installation).</p>
                     </div>
                     <div className="md:col-span-2">
                       <p className="text-sm text-zinc-500 dark:text-gray-400">Completion Rate is auto-calculated from assigned demands (completed / total).</p>
@@ -777,10 +779,12 @@ export function PersonnelDetail({
                     <div>
                       <label className={labelClass}>Customer Rating (0-5)</label>
                       <input name="customer_rating" type="number" step="0.1" min="0" max="5" className={inputClass} defaultValue={installerProfile.customer_rating != null ? String(installerProfile.customer_rating) : ''} />
+                      <p className="text-xs text-zinc-500 dark:text-gray-500 mt-1">Averaged from customer portal ratings (1–5 per installation). HR can override manually.</p>
                     </div>
                     <div>
                       <label className={labelClass}>Quality Score (0-5)</label>
                       <input name="quality_score" type="number" step="0.1" min="0" max="5" className={inputClass} defaultValue={installerProfile.quality_score != null ? String(installerProfile.quality_score) : ''} />
+                      <p className="text-xs text-zinc-500 dark:text-gray-500 mt-1">Averaged from customer portal quality scores (1–5 per installation).</p>
                     </div>
                     <div className="md:col-span-2">
                       <p className="text-sm text-zinc-500 dark:text-gray-400">Completion Rate is auto-calculated from assigned demands (completed / total).</p>

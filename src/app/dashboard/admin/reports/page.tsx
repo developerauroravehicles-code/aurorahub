@@ -3,8 +3,8 @@
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { startOfMonth, endOfMonth, subMonths } from 'date-fns'
-import { formatInTimeZone, fromZonedTime } from 'date-fns-tz'
-import { SYSTEM_DEFAULT_TIMEZONE } from '@/lib/timezone-defaults'
+import { formatInTimeZone } from 'date-fns-tz'
+import { getDateRangeInTimezone, SYSTEM_DEFAULT_TIMEZONE } from '@/lib/timezone-defaults'
 import { exportReportToPdf, type ExportReportOptions } from '@/lib/export-report-pdf'
 import { SendReportEmailModal } from '@/components/send-report-email-modal'
 import { ReportPreviewModal } from '@/components/report-preview-modal'
@@ -158,16 +158,13 @@ export default function AdminReportsPage() {
         }
       }
 
-      const [sy, sm, sd] = startDate.split('-').map(Number)
-      const [ey, em, ed] = endDate.split('-').map(Number)
-      const rangeStart = fromZonedTime(new Date(sy, sm - 1, sd, 0, 0, 0), SYSTEM_DEFAULT_TIMEZONE).toISOString()
-      const rangeEnd = fromZonedTime(new Date(ey, em - 1, ed, 23, 59, 59, 999), SYSTEM_DEFAULT_TIMEZONE).toISOString()
+      const { start: rangeStart, end: rangeEnd } = getDateRangeInTimezone(startDate, endDate, SYSTEM_DEFAULT_TIMEZONE)
 
       let query = supabase
         .from('demands')
         .select('id, demand_number, status, created_at, camera_model, vehicle_make, vehicle_model, vehicle_year, appointment_date, dealer_id, assigned_specialist_id, assigned_finance_id, created_by, customer_firstname, customer_lastname, dealers(region_codes(timezone_id, timezones(name)))')
-        .gte('created_at', rangeStart)
-        .lte('created_at', rangeEnd)
+        .gte('appointment_date', rangeStart)
+        .lte('appointment_date', rangeEnd)
 
       // Filter by dealer
       // If General Manager, always filter by their dealer
@@ -192,7 +189,7 @@ export default function AdminReportsPage() {
       }
 
       const { data: demandsData, error } = await query
-        .order('created_at', { ascending: false })
+        .order('appointment_date', { ascending: false })
 
       if (error) {
         console.error('Error fetching demands:', error)
@@ -433,6 +430,11 @@ export default function AdminReportsPage() {
             />
           </div>
         </div>
+
+        <p className="text-xs text-zinc-500 dark:text-gray-400 mt-3 max-w-3xl">
+          Date range filters by{' '}
+          <strong className="text-zinc-600 dark:text-gray-300">installation (appointment) date</strong> in Pacific time — not when the demand was entered. Retroactive/external entries count in the period of the scheduled job.
+        </p>
 
         {/* Quick Date Range Buttons */}
         <div className="flex gap-2 mt-4">

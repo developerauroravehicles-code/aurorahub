@@ -452,3 +452,46 @@ export async function deleteDemand(demandId: string): Promise<{ error?: string }
   revalidatePath('/dashboard/admin/demands')
   return {}
 }
+
+/**
+ * Set completed_at from appointment_date so statements / monthly reports match the retroactive job date.
+ */
+export async function alignDemandCompletedAtToAppointmentDate(demandId: string): Promise<{ error?: string }> {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { error: 'Unauthorized' }
+
+  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+  if (profile?.role !== 'aurora_manager') {
+    return { error: 'Only Aurora Manager can update completion date' }
+  }
+
+  const { data: row } = await supabase
+    .from('demands')
+    .select('status, appointment_date')
+    .eq('id', demandId)
+    .single()
+
+  if (!row || row.status !== 'completed') return { error: 'Only completed demands can be aligned' }
+  if (!row.appointment_date) return { error: 'Missing appointment date' }
+
+  const { error } = await supabase.from('demands').update({ completed_at: row.appointment_date }).eq('id', demandId)
+
+  if (error) return { error: error.message }
+
+  logDemandChange({
+    demandId,
+    actorId: user.id,
+    previousStatus: 'completed',
+    newStatus: 'completed',
+    notes: 'completed_at aligned to appointment_date (reporting / statements)',
+  }).catch(() => {})
+
+  revalidatePath('/dashboard/admin/demands')
+  revalidatePath(`/dashboard/admin/demands/${demandId}`)
+  revalidatePath('/dashboard/admin/statements')
+  revalidatePath('/dashboard/admin/invoices')
+  return {}
+}

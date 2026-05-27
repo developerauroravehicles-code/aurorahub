@@ -2,6 +2,7 @@
 
 import { format } from 'date-fns'
 import { formatInTimeZone } from 'date-fns-tz'
+import { SYSTEM_DEFAULT_TIMEZONE } from '@/lib/timezone-defaults'
 
 export interface AppointmentAlert {
   id: string
@@ -23,16 +24,17 @@ interface AppointmentAlertsProps {
 
 type AlertStatus = 'overdue' | 'today' | 'tomorrow' | 'normal'
 
-function getAlertStatus(appointmentDate: string): AlertStatus {
-  const now = new Date()
-  now.setHours(0, 0, 0, 0)
-  
-  const appointment = new Date(appointmentDate)
-  appointment.setHours(0, 0, 0, 0)
-  
-  const diffTime = appointment.getTime() - now.getTime()
-  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24))
-  
+function ymdToUtcMidnightMs(ymd: string): number {
+  const [y, mo, d] = ymd.split('-').map(Number)
+  return Date.UTC(y, mo - 1, d)
+}
+
+function getAlertStatus(appointmentDateIso: string): AlertStatus {
+  const tz = SYSTEM_DEFAULT_TIMEZONE
+  const aptYmd = formatInTimeZone(new Date(appointmentDateIso), tz, 'yyyy-MM-dd')
+  const todayYmd = formatInTimeZone(new Date(), tz, 'yyyy-MM-dd')
+  const diffDays = Math.round((ymdToUtcMidnightMs(aptYmd) - ymdToUtcMidnightMs(todayYmd)) / (1000 * 60 * 60 * 24))
+
   if (diffDays < 0) return 'overdue'
   if (diffDays === 0) return 'today'
   if (diffDays === 1) return 'tomorrow'

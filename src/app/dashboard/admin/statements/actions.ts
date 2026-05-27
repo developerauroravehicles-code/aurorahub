@@ -5,7 +5,9 @@ import { getDateRangeInTimezone, SYSTEM_DEFAULT_TIMEZONE } from '@/lib/timezone-
 import { buildStatementPdf, getStatementPdfBase64 } from '@/lib/generate-statement-pdf'
 import { uploadStatementToDrive, type GoogleDriveSettings } from '@/lib/google-drive'
 import type { StatementPdfData } from '@/lib/generate-statement-pdf'
-import { sendDocumentPdfEmail, parseEmailRecipients, buildStatementInvoicesEmailHtml } from '@/lib/email'
+import { sendDocumentPdfEmail, buildStatementInvoicesEmailHtml } from '@/lib/email'
+import { parseEmailComposePayload, type EmailComposePayload } from '@/lib/email-compose'
+import type { EmailDeliveryOptions } from '@/lib/email'
 
 export interface DealerOption {
   id: string
@@ -150,8 +152,8 @@ export async function uploadStatementToDriveAction(
 }
 
 export async function sendStatementPdfEmailAction(
-  recipientsRaw: string,
-  statementData: StatementPdfData
+  statementData: StatementPdfData,
+  composePayload: EmailComposePayload
 ): Promise<{ success?: boolean; error?: string }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -164,8 +166,8 @@ export async function sendStatementPdfEmailAction(
     return { error: 'Unauthorized' }
   }
 
-  const to = parseEmailRecipients(recipientsRaw)
-  if (to.length === 0) return { error: 'Enter at least one valid email address' }
+  const { parsed, error: parseError } = parseEmailComposePayload(composePayload)
+  if (!parsed) return { error: parseError ?? 'Invalid email' }
 
   if (statementData.rows.length === 0) {
     return { error: 'No statement data to send' }
@@ -176,13 +178,21 @@ export async function sendStatementPdfEmailAction(
     statementData.dateFrom && statementData.dateTo
       ? `${statementData.dateFrom} – ${statementData.dateTo}`
       : 'selected period'
-  const subject = `Statement — ${statementData.dealerName} (${period})`
+  const defaultSubject = `Statement — ${statementData.dealerName} (${period})`
   const documentTitle = `Statement — ${statementData.dealerName}`
   const bodyIntro = `Please find attached the account statement for ${statementData.dealerName} covering ${period}.`
 
+  const compose: EmailDeliveryOptions = {
+    cc: parsed.cc,
+    bcc: parsed.bcc,
+    subject: parsed.subject,
+    bodyHtml: parsed.bodyHtml,
+    extraAttachments: parsed.extraAttachments,
+  }
+
   const result = await sendDocumentPdfEmail({
-    to,
-    subject,
+    to: parsed.to,
+    subject: defaultSubject,
     documentTitle,
     bodyIntro,
     pdfBase64: base64,
@@ -190,6 +200,7 @@ export async function sendStatementPdfEmailAction(
     senderId: user.id,
     mailType: 'statement',
     bodyHtmlExtra: buildStatementInvoicesEmailHtml(statementData.rows),
+    compose,
   })
 
   if (!result.success) return { error: result.error ?? 'Failed to send email' }

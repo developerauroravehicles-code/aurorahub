@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { formatInTimeZone } from 'date-fns-tz'
-import { getEffectiveTimezone } from '@/lib/timezone-defaults'
+import { getEffectiveTimezone, formatInPT } from '@/lib/timezone-defaults'
 import { getTimezoneFromDealer } from '@/lib/dealer-timezone'
 import { checkCurrentUserPermission } from '@/lib/permissions'
 import Link from 'next/link'
@@ -15,6 +15,7 @@ import { EditStockNumberForm } from '../edit-stock-number-form'
 import { RescheduleDemandButton } from '../reschedule-demand-button'
 import { DemandManualSmsPanel } from '../demand-manual-sms-panel'
 import { DemandInstallationNotesSection, type InstallationNoteRow } from '../demand-installation-notes-section'
+import { AlignDemandCompletionDateButton } from '../align-demand-completion-button'
 
 /** List filters (date, status, dealer) are passed on the detail URL so "Back" can restore them. */
 function demandsListHrefFromDetailSearch(
@@ -324,6 +325,24 @@ export default async function DemandDetailsPage({
               <p className="text-sm text-zinc-500 dark:text-gray-400">Last Updated</p>
               <p className="text-zinc-900 dark:text-white">{formatInTimeZone(new Date(demand.updated_at || demand.created_at), getEffectiveTimezone((demand.dealers as { region_codes?: { timezones?: { name: string } } } | null)?.region_codes?.timezones?.name ?? null), 'PPP h:mm a')}</p>
             </div>
+            {(demand as { completed_at?: string | null }).completed_at && (
+              <div>
+                <p className="text-sm text-zinc-500 dark:text-gray-400">Completed At (Pacific — statements / invoices)</p>
+                <p className="text-zinc-900 dark:text-white">
+                  {formatInPT((demand as { completed_at: string }).completed_at, 'PPP h:mm a')}
+                </p>
+                {isAuroraManager && demand.status === 'completed' && (
+                  <AlignDemandCompletionDateButton demandId={id} />
+                )}
+              </div>
+            )}
+            {isAuroraManager && demand.status === 'completed' && !(demand as { completed_at?: string | null }).completed_at && (
+              <div>
+                <p className="text-sm text-zinc-500 dark:text-gray-400">Completed At</p>
+                <p className="text-zinc-500 dark:text-gray-500 text-sm">Not set — use align to match appointment for reporting.</p>
+                <AlignDemandCompletionDateButton demandId={id} />
+              </div>
+            )}
           </div>
         </div>
 

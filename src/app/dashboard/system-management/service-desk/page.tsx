@@ -6,6 +6,29 @@ import { ServiceDeskContent } from './service-desk-content'
 const VALID_TABS = ['tickets', 'incidents', 'changes', 'releases', 'knowledge'] as const
 type Tab = (typeof VALID_TABS)[number]
 
+type TicketScreenshot = { fileId: string; webViewLink: string | null; name: string }
+
+function parseTicketScreenshots(value: unknown): TicketScreenshot[] {
+  if (!Array.isArray(value)) return []
+  return value
+    .map((raw) => {
+      if (!raw || typeof raw !== 'object') return null
+      const r = raw as Record<string, unknown>
+      const fileId =
+        typeof r.fileId === 'string' ? r.fileId
+          : typeof r.file_id === 'string' ? r.file_id : null
+      if (!fileId?.trim()) return null
+      const webViewLink =
+        typeof r.webViewLink === 'string' ? r.webViewLink
+          : typeof r.web_view_link === 'string' ? r.web_view_link : null
+      const name =
+        typeof r.name === 'string' && r.name.trim() ? r.name
+          : `${fileId.slice(0, 8)}…`
+      return { fileId, webViewLink, name }
+    })
+    .filter((x): x is TicketScreenshot => x !== null)
+}
+
 export default async function ServiceDeskPage({ searchParams }: { searchParams: Promise<{ tab?: string }> }) {
   const params = await searchParams
   const tab = params?.tab
@@ -20,11 +43,39 @@ export default async function ServiceDeskPage({ searchParams }: { searchParams: 
   // Use admin client for IT and aurora_manager to bypass any RLS edge cases - ensures full ticket visibility and management
   const db = createAdminClient()
 
-  const [ticketsRes, incidentsRes, changesRes, releasesRes, knowledgeRes, assigneesRes] = await Promise.all([
-    db
+  const ticketsSelectBase = 'id, ticket_number, title, description, category, priority, status, sla_due_at, resolved_at, resolution_notes, created_at, assigned_to, requested_by'
+  const ticketsWithScreenshotsRes = await db
+    .from('it_tickets')
+    .select(`${ticketsSelectBase}, screenshots`)
+    .order('created_at', { ascending: false })
+
+  let tickets = (ticketsWithScreenshotsRes.data ?? []) as Array<{
+    id: string
+    ticket_number: string | null
+    title: string
+    description: string | null
+    category: string
+    priority: string
+    status: string
+    sla_due_at: string | null
+    resolved_at: string | null
+    resolution_notes: string | null
+    created_at: string
+    assigned_to: string | null
+    requested_by: string
+    screenshots?: unknown
+  }>
+
+  // Backward compatibility while screenshots migration is not yet applied.
+  if (ticketsWithScreenshotsRes.error && /screenshots/i.test(ticketsWithScreenshotsRes.error.message)) {
+    const fallbackTicketsRes = await db
       .from('it_tickets')
-      .select('id, ticket_number, title, description, category, priority, status, sla_due_at, resolved_at, resolution_notes, created_at, assigned_to, requested_by')
-      .order('created_at', { ascending: false }),
+      .select(ticketsSelectBase)
+      .order('created_at', { ascending: false })
+    tickets = (fallbackTicketsRes.data ?? []) as typeof tickets
+  }
+
+  const [incidentsRes, changesRes, releasesRes, knowledgeRes, assigneesRes] = await Promise.all([
     db
       .from('it_incidents')
       .select('id, incident_number, title, description, severity, impact_scope, status, root_cause, resolution_notes, post_mortem, resolved_at, created_at')
@@ -48,7 +99,6 @@ export default async function ServiceDeskPage({ searchParams }: { searchParams: 
       .order('full_name'),
   ])
 
-  const tickets = ticketsRes.data ?? []
   const incidents = incidentsRes.data ?? []
   const changes = changesRes.data ?? []
   const releases = releasesRes.data ?? []
@@ -61,6 +111,7 @@ export default async function ServiceDeskPage({ searchParams }: { searchParams: 
   const profileMap = Object.fromEntries((profileRows ?? []).map((p) => [p.id, p.full_name ?? '—']))
   const ticketsWithNames = tickets.map((t) => ({
     ...t,
+    screenshots: parseTicketScreenshots(t.screenshots),
     assigned: t.assigned_to ? { id: t.assigned_to, full_name: profileMap[t.assigned_to] ?? '—' } : null,
     requester: t.requested_by ? { id: t.requested_by, full_name: profileMap[t.requested_by] ?? '—' } : null,
   }))
@@ -83,3 +134,4 @@ export default async function ServiceDeskPage({ searchParams }: { searchParams: 
     </div>
   )
 }
+

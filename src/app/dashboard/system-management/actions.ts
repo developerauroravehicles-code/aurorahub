@@ -583,7 +583,43 @@ export async function assignCameraToDealer(cameraId: string, dealerId: string) {
   notifyCameraDealerAssignment('assigned', dealerId, cameraId).catch(() => {})
 
   revalidatePath('/dashboard/configuration/cameras')
+  revalidatePath('/dashboard/system-management/dealer')
   return { success: 'Camera assigned to dealer successfully!' }
+}
+
+/** Bulk link one catalog model to every dealer (for reporting/UI parity). Demand forms already use full active catalog. */
+export async function assignCameraToAllDealers(cameraId: string) {
+  await verifyAuroraManager()
+  const supabaseAdmin = getAdminClient()
+
+  const { data: dealers, error: dealersError } = await supabaseAdmin.from('dealers').select('id')
+  if (dealersError || !dealers?.length) {
+    return { error: dealersError?.message ?? 'No dealers found' }
+  }
+
+  const { data: existing, error: exError } = await supabaseAdmin
+    .from('dealer_cameras')
+    .select('dealer_id')
+    .eq('camera_model_id', cameraId)
+
+  if (exError) return { error: exError.message }
+
+  const assigned = new Set((existing ?? []).map((r) => r.dealer_id))
+  const rows = dealers.filter((d) => !assigned.has(d.id)).map((d) => ({
+    dealer_id: d.id,
+    camera_model_id: cameraId,
+  }))
+
+  if (rows.length === 0) {
+    return { success: 'This camera is already assigned to all dealers.', assigned: 0 }
+  }
+
+  const { error: insError } = await supabaseAdmin.from('dealer_cameras').insert(rows)
+  if (insError) return { error: insError.message }
+
+  revalidatePath('/dashboard/configuration/cameras')
+  revalidatePath('/dashboard/system-management/dealer')
+  return { success: `Assigned to ${rows.length} dealer(s).`, assigned: rows.length }
 }
 
 export async function removeCameraFromDealer(cameraId: string, dealerId: string) {
@@ -604,6 +640,7 @@ export async function removeCameraFromDealer(cameraId: string, dealerId: string)
   notifyCameraDealerAssignment('removed', dealerId, cameraId).catch(() => {})
 
   revalidatePath('/dashboard/configuration/cameras')
+  revalidatePath('/dashboard/system-management/dealer')
   return { success: 'Camera removed from dealer successfully!' }
 }
 

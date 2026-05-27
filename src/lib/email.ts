@@ -23,6 +23,49 @@ export function parseEmailRecipients(raw: string): string[] {
   return out
 }
 
+/** Strip dangerous markup from user-authored HTML in compose. */
+export function sanitizeUserEmailHtml(html: string): string {
+  if (!html.trim()) return ''
+  return html
+    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+    .replace(/<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/gi, '')
+    .replace(/\son\w+\s*=\s*(".*?"|'.*?'|[^\s>]+)/gi, '')
+    .replace(/javascript:/gi, '')
+}
+
+export interface EmailDeliveryOptions {
+  cc?: string[]
+  bcc?: string[]
+  /** Custom subject (overrides default when set). */
+  subject?: string
+  /** Rich-text body from compose modal (HTML). */
+  bodyHtml?: string
+  extraAttachments?: { filename: string; content: Buffer }[]
+}
+
+function buildComposedEmailBody(params: {
+  documentTitle: string
+  bodyIntro: string
+  bodyHtmlExtra?: string
+  userBodyHtml?: string
+  attachmentNote: string
+  maxWidth?: string
+}): string {
+  const { documentTitle, bodyIntro, bodyHtmlExtra, userBodyHtml, attachmentNote, maxWidth = '720px' } = params
+  const safeIntro = bodyIntro.replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br/>')
+  const safeUser = userBodyHtml ? sanitizeUserEmailHtml(userBodyHtml) : ''
+
+  return `
+    <div style="font-family: Arial, sans-serif; max-width: ${maxWidth}; margin: 0 auto;">
+      <h2 style="color: #C27E00;">${documentTitle.replace(/</g, '&lt;')}</h2>
+      ${safeUser || `<p>${safeIntro}</p>`}
+      ${bodyHtmlExtra ?? ''}
+      <p style="margin-top: 24px; color: #666; font-size: 14px;">${attachmentNote}</p>
+      <p style="margin-top: 16px; color: #999; font-size: 12px;">— Aurora Vehicles</p>
+    </div>
+  `
+}
+
 /** Escape text for safe insertion into HTML email bodies. */
 export function escapeHtmlForEmail(text: string): string {
   return text
@@ -247,35 +290,59 @@ export interface SendDocumentPdfEmailParams {
   mailType: 'invoice' | 'statement'
   /** Pre-built valid HTML fragment (e.g. statement line items table). Inserted between intro and attachment notice. */
   bodyHtmlExtra?: string
+  /** @deprecated Use compose.bodyHtml */
+  optionalMessage?: string
+  compose?: EmailDeliveryOptions
 }
 
 /** Send a single PDF attachment (invoice or dealer statement). Uses SMTP from mail_settings when set, else Resend. */
 export async function sendDocumentPdfEmail(
   params: SendDocumentPdfEmailParams
 ): Promise<{ success: boolean; error?: string }> {
-  const { to, subject, documentTitle, bodyIntro, pdfBase64, fileName, senderId, mailType, bodyHtmlExtra } = params
+  const {
+    to,
+    subject: defaultSubject,
+    documentTitle,
+    bodyIntro,
+    pdfBase64,
+    fileName,
+    senderId,
+    mailType,
+    bodyHtmlExtra,
+    optionalMessage,
+    compose,
+  } = params
 
   if (to.length === 0) {
     return { success: false, error: 'No recipients specified' }
   }
 
-  const safeIntro = bodyIntro.replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br/>')
-  const maxW = bodyHtmlExtra ? '720px' : '600px'
+  const subject = compose?.subject?.trim() || defaultSubject
+  const cc = compose?.cc ?? []
+  const bcc = compose?.bcc ?? []
   const attachmentNote =
     mailType === 'statement'
       ? 'The invoices listed above are included in detail in this email. A PDF statement is also attached.'
       : 'Please find the attached PDF.'
-  const htmlBody = `
-    <div style="font-family: Arial, sans-serif; max-width: ${maxW}; margin: 0 auto;">
-      <h2 style="color: #C27E00;">${documentTitle.replace(/</g, '&lt;')}</h2>
-      <p>${safeIntro}</p>
-      ${bodyHtmlExtra ?? ''}
-      <p style="margin-top: 24px; color: #666; font-size: 14px;">${attachmentNote}</p>
-      <p style="margin-top: 16px; color: #999; font-size: 12px;">— Aurora Vehicles</p>
-    </div>
-  `
+  const userBody =
+    compose?.bodyHtml?.trim() ||
+    (optionalMessage
+      ? `<div style="margin: 16px 0; padding: 12px; background: #f5f5f5; border-radius: 8px;">${optionalMessage.replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br/>')}</div>`
+      : '')
+  const htmlBody = buildComposedEmailBody({
+    documentTitle,
+    bodyIntro,
+    bodyHtmlExtra,
+    userBodyHtml: userBody,
+    attachmentNote,
+    maxWidth: bodyHtmlExtra ? '720px' : '600px',
+  })
 
   const pdfBuffer = Buffer.from(pdfBase64, 'base64')
+  const allAttachments = [
+    { filename: fileName, content: pdfBuffer },
+    ...(compose?.extraAttachments ?? []),
+  ]
 
   const doLog = (success: boolean, errorMessage?: string) => {
     logMailSent({
@@ -293,9 +360,11 @@ export async function sendDocumentPdfEmail(
   if (mailSettings) {
     const result = await sendEmailViaSMTP(mailSettings, {
       to,
+      cc,
+      bcc,
       subject,
       html: htmlBody,
-      attachments: [{ filename: fileName, content: pdfBuffer }],
+      attachments: allAttachments,
     })
     doLog(result.success, result.error)
     return result
@@ -311,9 +380,11 @@ export async function sendDocumentPdfEmail(
     const { error } = await resend.emails.send({
       from: FROM_EMAIL,
       to,
+      cc: cc.length ? cc : undefined,
+      bcc: bcc.length ? bcc : undefined,
       subject,
       html: htmlBody,
-      attachments: [{ filename: fileName, content: pdfBuffer }],
+      attachments: allAttachments,
     })
 
     if (error) {
@@ -344,10 +415,13 @@ export async function sendBulkInvoicesPdfEmail(params: {
   documentTitle: string
   bodyIntro: string
   bodyHtmlExtra: string
+  optionalMessage?: string
   attachments: BulkInvoicePdfAttachment[]
   senderId?: string
+  compose?: EmailDeliveryOptions
 }): Promise<{ success: boolean; error?: string }> {
-  const { to, subject, documentTitle, bodyIntro, bodyHtmlExtra, attachments, senderId } = params
+  const { to, subject: defaultSubject, documentTitle, bodyIntro, bodyHtmlExtra, optionalMessage, attachments, senderId, compose } =
+    params
   const n = attachments.length
 
   if (to.length === 0) {
@@ -357,16 +431,25 @@ export async function sendBulkInvoicesPdfEmail(params: {
     return { success: false, error: 'No invoice files to attach' }
   }
 
-  const safeIntro = bodyIntro.replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br/>')
-  const htmlBody = `
-    <div style="font-family: Arial, sans-serif; max-width: 720px; margin: 0 auto;">
-      <h2 style="color: #C27E00;">${documentTitle.replace(/</g, '&lt;')}</h2>
-      <p>${safeIntro}</p>
-      ${bodyHtmlExtra}
-      <p style="margin-top: 24px; color: #666; font-size: 14px;">${n} invoice PDF file${n !== 1 ? 's are' : ' is'} attached to this message.</p>
-      <p style="margin-top: 16px; color: #999; font-size: 12px;">— Aurora Vehicles</p>
-    </div>
-  `
+  const subject = compose?.subject?.trim() || defaultSubject
+  const cc = compose?.cc ?? []
+  const bcc = compose?.bcc ?? []
+  const userBody =
+    compose?.bodyHtml?.trim() ||
+    (optionalMessage
+      ? `<div style="margin: 16px 0; padding: 12px; background: #f5f5f5; border-radius: 8px;">${optionalMessage.replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br/>')}</div>`
+      : '')
+  const htmlBody = buildComposedEmailBody({
+    documentTitle,
+    bodyIntro,
+    bodyHtmlExtra,
+    userBodyHtml: userBody,
+    attachmentNote: `${n} invoice PDF file${n !== 1 ? 's are' : ' is'} attached to this message.`,
+  })
+  const allAttachments = [
+    ...attachments.map((a) => ({ filename: a.filename, content: a.content })),
+    ...(compose?.extraAttachments ?? []),
+  ]
 
   const doLog = (success: boolean, errorMessage?: string) => {
     logMailSent({
@@ -384,9 +467,11 @@ export async function sendBulkInvoicesPdfEmail(params: {
   if (mailSettings) {
     const result = await sendEmailViaSMTP(mailSettings, {
       to,
+      cc,
+      bcc,
       subject,
       html: htmlBody,
-      attachments: attachments.map((a) => ({ filename: a.filename, content: a.content })),
+      attachments: allAttachments,
     })
     doLog(result.success, result.error)
     return result
@@ -402,12 +487,11 @@ export async function sendBulkInvoicesPdfEmail(params: {
     const { error } = await resend.emails.send({
       from: FROM_EMAIL,
       to,
+      cc: cc.length ? cc : undefined,
+      bcc: bcc.length ? bcc : undefined,
       subject,
       html: htmlBody,
-      attachments: attachments.map((a) => ({
-        filename: a.filename,
-        content: a.content,
-      })),
+      attachments: allAttachments,
     })
 
     if (error) {

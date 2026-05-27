@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { format, startOfMonth, endOfMonth, subMonths } from 'date-fns'
 import { formatInTimeZone } from 'date-fns-tz'
-import { SYSTEM_DEFAULT_TIMEZONE } from '@/lib/timezone-defaults'
+import { SYSTEM_DEFAULT_TIMEZONE, getDateRangeInTimezone } from '@/lib/timezone-defaults'
 import { exportReportToPdf, type ExportReportOptions } from '@/lib/export-report-pdf'
 import { SendReportEmailModal } from '@/components/send-report-email-modal'
 import { ReportPreviewModal } from '@/components/report-preview-modal'
@@ -45,14 +45,16 @@ export default function SpecialistReportsPage() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
 
+      const { start: rangeStart, end: rangeEnd } = getDateRangeInTimezone(startDate, endDate, SYSTEM_DEFAULT_TIMEZONE)
+
       // Fetch demands assigned to this specialist
       const { data: demandsData, error } = await supabase
         .from('demands')
         .select('id, demand_number, status, created_at, camera_model, vehicle_make, vehicle_model, vehicle_year, appointment_date, customer_firstname, customer_lastname')
         .eq('assigned_specialist_id', user.id)
-        .gte('created_at', `${startDate}T00:00:00`)
-        .lte('created_at', `${endDate}T23:59:59`)
-        .order('created_at', { ascending: false })
+        .gte('appointment_date', rangeStart)
+        .lte('appointment_date', rangeEnd)
+        .order('appointment_date', { ascending: false })
 
       if (error) {
         console.error('Error fetching demands:', error)
@@ -224,6 +226,10 @@ export default function SpecialistReportsPage() {
             </button>
           </div>
         </div>
+        <p className="text-xs text-zinc-500 dark:text-gray-400 mt-3">
+          Uses each demand&apos;s <strong className="text-zinc-600 dark:text-gray-300">appointment (install) date</strong> in Pacific
+          time — not when the record was created in AuroraHub.
+        </p>
       </div>
 
       {loading ? (

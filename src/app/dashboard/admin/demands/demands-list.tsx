@@ -3,7 +3,7 @@
 import { useState, useMemo, useEffect, useRef } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { formatInTimeZone } from 'date-fns-tz'
-import { getEffectiveTimezone, getPTDateRanges } from '@/lib/timezone-defaults'
+import { getEffectiveTimezone, getPTDateRanges, SYSTEM_DEFAULT_TIMEZONE } from '@/lib/timezone-defaults'
 import { getTimezoneFromDealer } from '@/lib/dealer-timezone'
 import { Filter, X, Plus } from 'lucide-react'
 import Link from 'next/link'

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useTransition, memo, useCallback } from 'react'
-import { createCameraModel, deleteCameraModel, toggleCameraModelStatus, updateCameraModel, updateCameraStock, assignCameraToDealer, removeCameraFromDealer } from '../actions'
+import { createCameraModel, deleteCameraModel, toggleCameraModelStatus, updateCameraModel, updateCameraStock, assignCameraToDealer, assignCameraToAllDealers, removeCameraFromDealer } from '../actions'
 import { useActionState } from 'react'
 import { Trash2, Power, PowerOff, Edit2, Package, Building2, X } from 'lucide-react'
 import { useRouter } from 'next/navigation'
@@ -20,6 +20,7 @@ export const CameraManagementContent = memo(function CameraManagementContent({ c
   const [dealerAssigningId, setDealerAssigningId] = useState<string | null>(null)
   const [assigningDealerId, setAssigningDealerId] = useState<string | null>(null)
   const [removingDealerId, setRemovingDealerId] = useState<string | null>(null)
+  const [bulkAssigning, setBulkAssigning] = useState(false)
   const router = useRouter()
 
   useEffect(() => {
@@ -407,6 +408,31 @@ export const CameraManagementContent = memo(function CameraManagementContent({ c
               </button>
             </div>
             <div className="space-y-4">
+              <p className="text-xs text-zinc-500 dark:text-gray-400">
+                Demand forms list all active catalog cameras. Use bulk assign to mirror this model on every dealer for reference and reports.
+              </p>
+              <button
+                type="button"
+                disabled={bulkAssigning || !dealerAssigningId}
+                onClick={async () => {
+                  if (!dealerAssigningId) return
+                  if (!confirm('Assign this camera model to all dealers? Existing links are kept; only missing dealers are added.')) return
+                  setBulkAssigning(true)
+                  try {
+                    const result = await assignCameraToAllDealers(dealerAssigningId)
+                    if (result?.error) {
+                      alert(result.error)
+                    } else if (result?.success) {
+                      router.refresh()
+                    }
+                  } finally {
+                    setBulkAssigning(false)
+                  }
+                }}
+                className="w-full rounded-md border border-[#C27E00]/50 bg-[#C27E00]/15 px-3 py-2 text-sm font-medium text-[#C27E00] hover:bg-[#C27E00]/25 disabled:opacity-50"
+              >
+                {bulkAssigning ? 'Assigning…' : 'Assign to all dealers'}
+              </button>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-96 overflow-y-auto">
                 {dealers.map((dealer) => (
                   <DealerAssignmentItem

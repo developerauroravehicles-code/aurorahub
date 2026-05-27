@@ -19,7 +19,9 @@ function parseCompleteDateToYYYYMMDD(s: string): string | null {
 import { revalidatePath } from 'next/cache'
 import { buildInvoicePdf, getInvoicePdfBase64 } from '@/lib/generate-invoice-pdf'
 import { uploadInvoiceToDrive } from '@/lib/google-drive'
-import { sendDocumentPdfEmail, sendBulkInvoicesPdfEmail, buildBulkInvoicesSummaryHtml, parseEmailRecipients } from '@/lib/email'
+import { sendDocumentPdfEmail, sendBulkInvoicesPdfEmail, buildBulkInvoicesSummaryHtml } from '@/lib/email'
+import type { EmailDeliveryOptions } from '@/lib/email'
+import { parseEmailComposePayload, type EmailComposePayload } from '@/lib/email-compose'
 import type { InvoiceRowData } from '@/lib/generate-invoice-pdf'
 import { demandRecordToInvoiceRowData } from '@/lib/invoice-row-pdf-data'
 import { getSystemLogo } from '@/app/dashboard/system-management/logo/actions'
@@ -266,8 +268,8 @@ export async function uploadInvoiceToDriveAction(
 }
 
 export async function sendInvoicePdfEmailAction(
-  recipientsRaw: string,
-  invoiceData: InvoiceRowData
+  invoiceData: InvoiceRowData,
+  composePayload: EmailComposePayload
 ): Promise<{ success?: boolean; error?: string }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -283,24 +285,33 @@ export async function sendInvoicePdfEmailAction(
     return { error: 'Only Aurora Manager can email invoices' }
   }
 
-  const to = parseEmailRecipients(recipientsRaw)
-  if (to.length === 0) return { error: 'Enter at least one valid email address' }
+  const { parsed, error: parseError } = parseEmailComposePayload(composePayload)
+  if (!parsed) return { error: parseError ?? 'Invalid email' }
 
   const { base64, fileName } = getInvoicePdfBase64(invoiceData)
   const invLabel = invoiceData.demand_number ? `#${invoiceData.demand_number}` : 'Invoice'
-  const subject = `Invoice ${invLabel} — Aurora Vehicles`
+  const defaultSubject = `Invoice ${invLabel} — Aurora Vehicles`
   const documentTitle = `Invoice ${invLabel}`
   const bodyIntro = `Please find attached the invoice for ${invoiceData.customerName} (${invLabel}).`
 
+  const compose: EmailDeliveryOptions = {
+    cc: parsed.cc,
+    bcc: parsed.bcc,
+    subject: parsed.subject,
+    bodyHtml: parsed.bodyHtml,
+    extraAttachments: parsed.extraAttachments,
+  }
+
   const result = await sendDocumentPdfEmail({
-    to,
-    subject,
+    to: parsed.to,
+    subject: defaultSubject,
     documentTitle,
     bodyIntro,
     pdfBase64: base64,
     fileName,
     senderId: user.id,
     mailType: 'invoice',
+    compose,
   })
 
   if (!result.success) return { error: result.error ?? 'Failed to send email' }
@@ -308,8 +319,8 @@ export async function sendInvoicePdfEmailAction(
 }
 
 export async function sendBulkInvoicePdfEmailAction(
-  recipientsRaw: string,
-  demandIds: string[]
+  demandIds: string[],
+  composePayload: EmailComposePayload
 ): Promise<{ success?: boolean; error?: string }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -331,8 +342,8 @@ export async function sendBulkInvoicePdfEmailAction(
     return { error: `Select at most ${BULK_INVOICE_EMAIL_MAX} invoices per email` }
   }
 
-  const to = parseEmailRecipients(recipientsRaw)
-  if (to.length === 0) return { error: 'Enter at least one valid email address' }
+  const { parsed, error: parseError } = parseEmailComposePayload(composePayload)
+  if (!parsed) return { error: parseError ?? 'Invalid email' }
 
   const { data: rows, error } = await supabase
     .from('demands')
@@ -360,7 +371,7 @@ export async function sendBulkInvoicePdfEmailAction(
   }
 
   const n = summaryItems.length
-  const subject =
+  const defaultSubject =
     n === 1 && summaryItems[0]?.demand_number
       ? `Invoice #${summaryItems[0].demand_number} — Aurora Vehicles`
       : `${n} invoices — Aurora Vehicles`
@@ -370,14 +381,23 @@ export async function sendBulkInvoicePdfEmailAction(
       ? `Please find attached the invoice for ${summaryItems[0].customerName}.`
       : 'Please find attached the invoice PDFs for the selected completed demands.'
 
+  const compose: EmailDeliveryOptions = {
+    cc: parsed.cc,
+    bcc: parsed.bcc,
+    subject: parsed.subject,
+    bodyHtml: parsed.bodyHtml,
+    extraAttachments: parsed.extraAttachments,
+  }
+
   const result = await sendBulkInvoicesPdfEmail({
-    to,
-    subject,
+    to: parsed.to,
+    subject: defaultSubject,
     documentTitle,
     bodyIntro,
     bodyHtmlExtra: buildBulkInvoicesSummaryHtml(summaryItems),
     attachments,
     senderId: user.id,
+    compose,
   })
 
   if (!result.success) return { error: result.error ?? 'Failed to send email' }

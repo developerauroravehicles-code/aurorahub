@@ -1,9 +1,10 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   createTicket,
+  addTicketScreenshots,
   updateTicket,
   deleteTicket,
   createIncident,
@@ -31,6 +32,8 @@ import {
   Loader2,
   Eye,
   X,
+  Search,
+  ExternalLink,
 } from 'lucide-react'
 import { formatInPT, ptDatetimeLocalToISO } from '@/lib/timezone-defaults'
 
@@ -52,6 +55,12 @@ function getClosingDuration(createdAt: string, resolvedAt: string | null): numbe
   const start = new Date(createdAt).getTime()
   const end = new Date(resolvedAt).getTime()
   return end - start
+}
+
+/** Open screenshot in Drive (fallback if webViewLink missing) */
+function driveScreenshotHref(s: { fileId: string; webViewLink?: string | null }): string {
+  if (s.webViewLink?.trim()) return s.webViewLink.trim()
+  return `https://drive.google.com/file/d/${encodeURIComponent(s.fileId)}/view`
 }
 
 const TICKET_CATEGORIES: Record<string, string> = {
@@ -139,6 +148,11 @@ const KB_CATEGORIES: Record<string, string> = {
   other: 'Other',
 }
 
+const TICKET_SCREENSHOT_ACCEPT = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'] as const
+const TICKET_SCREENSHOT_INPUT_ACCEPT = TICKET_SCREENSHOT_ACCEPT.join(',')
+const TICKET_SCREENSHOT_MAX_FILES = 3
+const TICKET_SCREENSHOT_MAX_MB = 5
+
 type Tab = 'tickets' | 'incidents' | 'changes' | 'releases' | 'knowledge'
 
 export function ServiceDeskContent({
@@ -164,6 +178,7 @@ export function ServiceDeskContent({
     resolved_at: string | null
     resolution_notes: string | null
     created_at: string
+    screenshots?: Array<{ fileId: string; webViewLink?: string | null; name: string }>
     assigned?: { id: string; full_name: string | null } | null
     requester?: { id: string; full_name: string | null } | null
   }>
@@ -232,6 +247,55 @@ export function ServiceDeskContent({
   const [showKbForm, setShowKbForm] = useState(false)
   const [editingKbId, setEditingKbId] = useState<string | null>(null)
 
+  const [ticketSearch, setTicketSearch] = useState('')
+  const [ticketFilterCategory, setTicketFilterCategory] = useState('')
+  const [ticketFilterPriority, setTicketFilterPriority] = useState('')
+  const [ticketFilterStatus, setTicketFilterStatus] = useState('')
+  const [ticketFilterAssigned, setTicketFilterAssigned] = useState('')
+  const [ticketFilterRequester, setTicketFilterRequester] = useState('')
+
+  const ticketRequesterOptions = useMemo(() => {
+    const byId = new Map<string, string>()
+    for (const t of tickets) {
+      if (t.requested_by && !byId.has(t.requested_by)) {
+        byId.set(t.requested_by, t.requester?.full_name?.trim() || t.requested_by)
+      }
+    }
+    return [...byId.entries()].sort((a, b) => a[1].localeCompare(b[1], undefined, { sensitivity: 'base' }))
+  }, [tickets])
+
+  const filteredTickets = useMemo(() => {
+    const q = ticketSearch.trim().toLowerCase()
+    return tickets.filter((t) => {
+      if (ticketFilterCategory && t.category !== ticketFilterCategory) return false
+      if (ticketFilterPriority && t.priority !== ticketFilterPriority) return false
+      if (ticketFilterStatus && t.status !== ticketFilterStatus) return false
+      if (ticketFilterAssigned === '__unassigned__') {
+        if (t.assigned_to) return false
+      } else if (ticketFilterAssigned && t.assigned_to !== ticketFilterAssigned) {
+        return false
+      }
+      if (ticketFilterRequester && t.requested_by !== ticketFilterRequester) return false
+      if (!q) return true
+      const num = (t.ticket_number ?? '').toLowerCase()
+      const title = t.title.toLowerCase()
+      const desc = (t.description ?? '').toLowerCase()
+      const catLabel = (TICKET_CATEGORIES[t.category] ?? t.category).toLowerCase()
+      return num.includes(q) || title.includes(q) || desc.includes(q) || catLabel.includes(q)
+    })
+  }, [
+    tickets,
+    ticketSearch,
+    ticketFilterCategory,
+    ticketFilterPriority,
+    ticketFilterStatus,
+    ticketFilterAssigned,
+    ticketFilterRequester,
+  ])
+
+  const selectClass =
+    'rounded bg-zinc-200 dark:bg-gray-900 border border-zinc-300 dark:border-gray-700 px-2 py-1.5 text-zinc-900 dark:text-white text-sm min-w-0'
+
   const tabs: { id: Tab; name: string; icon: typeof Ticket }[] = [
     { id: 'tickets', name: 'Tickets', icon: Ticket },
     { id: 'incidents', name: 'Incidents', icon: AlertTriangle },
@@ -274,6 +338,127 @@ export function ServiceDeskContent({
               <Plus className="w-4 h-4" /> New Ticket
             </button>
           </div>
+          <div className="mb-4 rounded-md border border-zinc-300 bg-zinc-100/90 p-3 dark:border-gray-700 dark:bg-black/30">
+            <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+              <span className="text-xs font-medium text-zinc-600 dark:text-gray-400">Filters</span>
+              {(ticketSearch ||
+                ticketFilterCategory ||
+                ticketFilterPriority ||
+                ticketFilterStatus ||
+                ticketFilterAssigned ||
+                ticketFilterRequester) && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setTicketSearch('')
+                    setTicketFilterCategory('')
+                    setTicketFilterPriority('')
+                    setTicketFilterStatus('')
+                    setTicketFilterAssigned('')
+                    setTicketFilterRequester('')
+                  }}
+                  className="text-xs text-[#C27E00] hover:underline"
+                >
+                  Clear all
+                </button>
+              )}
+            </div>
+            <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-end">
+              <div className="min-w-0 flex-1 sm:min-w-[180px] sm:max-w-xs">
+                <label className="mb-1 block text-xs text-zinc-500 dark:text-gray-500">Search</label>
+                <div className="relative">
+                  <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
+                  <input
+                    type="search"
+                    value={ticketSearch}
+                    onChange={(e) => setTicketSearch(e.target.value)}
+                    placeholder="Number, title, description…"
+                    className={`w-full pl-9 ${selectClass}`}
+                    autoComplete="off"
+                  />
+                </div>
+              </div>
+              <div className="w-full sm:w-auto sm:min-w-[130px]">
+                <label className="mb-1 block text-xs text-zinc-500 dark:text-gray-500">Category</label>
+                <select
+                  value={ticketFilterCategory}
+                  onChange={(e) => setTicketFilterCategory(e.target.value)}
+                  className={`w-full ${selectClass}`}
+                >
+                  <option value="">All</option>
+                  {Object.entries(TICKET_CATEGORIES).map(([v, l]) => (
+                    <option key={v} value={v}>
+                      {l}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="w-full sm:w-auto sm:min-w-[120px]">
+                <label className="mb-1 block text-xs text-zinc-500 dark:text-gray-500">Priority</label>
+                <select
+                  value={ticketFilterPriority}
+                  onChange={(e) => setTicketFilterPriority(e.target.value)}
+                  className={`w-full ${selectClass}`}
+                >
+                  <option value="">All</option>
+                  {Object.entries(PRIORITIES).map(([v, l]) => (
+                    <option key={v} value={v}>
+                      {l}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="w-full sm:w-auto sm:min-w-[130px]">
+                <label className="mb-1 block text-xs text-zinc-500 dark:text-gray-500">Status</label>
+                <select
+                  value={ticketFilterStatus}
+                  onChange={(e) => setTicketFilterStatus(e.target.value)}
+                  className={`w-full ${selectClass}`}
+                >
+                  <option value="">All</option>
+                  {Object.entries(TICKET_STATUSES).map(([v, l]) => (
+                    <option key={v} value={v}>
+                      {l}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="w-full sm:w-auto sm:min-w-[140px]">
+                <label className="mb-1 block text-xs text-zinc-500 dark:text-gray-500">Assigned</label>
+                <select
+                  value={ticketFilterAssigned}
+                  onChange={(e) => setTicketFilterAssigned(e.target.value)}
+                  className={`w-full ${selectClass}`}
+                >
+                  <option value="">All</option>
+                  <option value="__unassigned__">Unassigned</option>
+                  {assignees.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.full_name ?? p.id}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="w-full sm:w-auto sm:min-w-[140px]">
+                <label className="mb-1 block text-xs text-zinc-500 dark:text-gray-500">Requested by</label>
+                <select
+                  value={ticketFilterRequester}
+                  onChange={(e) => setTicketFilterRequester(e.target.value)}
+                  className={`w-full ${selectClass}`}
+                >
+                  <option value="">All</option>
+                  {ticketRequesterOptions.map(([id, name]) => (
+                    <option key={id} value={id}>
+                      {name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <p className="mt-2 text-xs text-zinc-500 dark:text-gray-500">
+              Showing {filteredTickets.length} of {tickets.length} ticket{tickets.length === 1 ? '' : 's'}
+            </p>
+          </div>
           {showTicketForm && (
             <TicketForm
               assignees={assignees}
@@ -299,7 +484,7 @@ export function ServiceDeskContent({
                 </tr>
               </thead>
               <tbody className="divide-y divide-zinc-200 dark:divide-gray-800">
-                {tickets.map((t) => (
+                {filteredTickets.map((t) => (
                   <tr key={t.id}>
                     <td className="px-4 py-2 text-[#C27E00] font-mono">{t.ticket_number ?? '—'}</td>
                     <td className="px-4 py-2 text-zinc-900 dark:text-white max-w-[200px] truncate" title={t.title}>{t.title}</td>
@@ -361,6 +546,26 @@ export function ServiceDeskContent({
                           <p className="text-zinc-600 dark:text-gray-300 mt-1 whitespace-pre-wrap">{t.resolution_notes}</p>
                         </div>
                       )}
+                      {t.screenshots && t.screenshots.length > 0 && (
+                        <div>
+                          <span className="text-zinc-500 dark:text-gray-500">Screenshots:</span>
+                          <ul className="mt-1 list-inside list-disc space-y-1 text-zinc-600 dark:text-gray-300">
+                            {t.screenshots.map((s) => (
+                              <li key={s.fileId}>
+                                <a
+                                  href={driveScreenshotHref(s)}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center gap-1 text-[#C27E00] hover:underline"
+                                >
+                                  {s.name}
+                                  <ExternalLink className="h-3.5 w-3.5 shrink-0" />
+                                </a>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
                     </div>
                     <div className="mt-4 flex justify-end">
                       <button onClick={() => { setViewingTicketId(null); setEditingTicketId(t.id); setShowTicketForm(true) }} className="px-3 py-1.5 rounded bg-[#C27E00] text-white text-sm hover:bg-[#a06900]">
@@ -371,6 +576,9 @@ export function ServiceDeskContent({
                 </div>
               )
             })()}
+            {filteredTickets.length === 0 && tickets.length > 0 && (
+              <p className="text-zinc-500 dark:text-gray-500 py-6 text-center">No tickets match these filters.</p>
+            )}
             {tickets.length === 0 && !showTicketForm && (
               <p className="text-zinc-500 dark:text-gray-500 py-6 text-center">No tickets yet.</p>
             )}
@@ -615,14 +823,116 @@ function TicketForm({
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const isEdit = !!ticket
+  const existingScreenshotCount = ticket?.screenshots?.length ?? 0
+  const totalScreenshotLimit = isEdit
+    ? Math.max(0, TICKET_SCREENSHOT_MAX_FILES - existingScreenshotCount)
+    : TICKET_SCREENSHOT_MAX_FILES
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  type DraftRow = { id: string; file: File; previewUrl: string }
+  const [draftScreenshots, setDraftScreenshots] = useState<DraftRow[]>([])
+  const draftScreenshotsRef = useRef<DraftRow[]>([])
+  draftScreenshotsRef.current = draftScreenshots
+
+  useEffect(() => {
+    return () => {
+      draftScreenshotsRef.current.forEach((row) => URL.revokeObjectURL(row.previewUrl))
+    }
+  }, [])
+
+  function addScreenshotFiles(fileList: FileList | null) {
+    if (!fileList?.length) return
+    const candidates: File[] = []
+    for (let i = 0; i < fileList.length; i++) {
+      const f = fileList.item(i)
+      if (f) candidates.push(f)
+    }
+    for (const f of candidates) {
+      if (!TICKET_SCREENSHOT_ACCEPT.includes(f.type as (typeof TICKET_SCREENSHOT_ACCEPT)[number])) {
+        setError('Only JPG, PNG, WebP, or GIF images are allowed.')
+        return
+      }
+      if (f.size > TICKET_SCREENSHOT_MAX_MB * 1024 * 1024) {
+        setError(`Each file must be ${TICKET_SCREENSHOT_MAX_MB} MB or smaller.`)
+        return
+      }
+    }
+
+    setError('')
+    let limitReachedMsg = ''
+
+    setDraftScreenshots((prev) => {
+      const room = Math.max(0, totalScreenshotLimit - prev.length)
+      if (room <= 0) {
+        limitReachedMsg = isEdit
+          ? `This ticket already has ${existingScreenshotCount} screenshot(s). Max is ${TICKET_SCREENSHOT_MAX_FILES}.`
+          : `You can attach at most ${TICKET_SCREENSHOT_MAX_FILES} screenshots.`
+        return prev
+      }
+      const toTake = candidates.slice(0, room)
+      if (candidates.length > room || toTake.length < candidates.length) {
+        limitReachedMsg = isEdit
+          ? `You can add ${room} more screenshot(s) (max ${TICKET_SCREENSHOT_MAX_FILES} total).`
+          : `You can attach at most ${TICKET_SCREENSHOT_MAX_FILES} screenshots.`
+      }
+      const rows: DraftRow[] = toTake.map((f, idx) => ({
+        id: `${Date.now()}_${idx}_${f.name}`,
+        file: f,
+        previewUrl: URL.createObjectURL(f),
+      }))
+      return [...prev, ...rows]
+    })
+
+    if (limitReachedMsg) setError(limitReachedMsg)
+    if (fileInputRef.current) fileInputRef.current.value = ''
+  }
+
+  function removeDraft(id: string) {
+    setDraftScreenshots((prev) => {
+      const row = prev.find((r) => r.id === id)
+      if (row) URL.revokeObjectURL(row.previewUrl)
+      return prev.filter((r) => r.id !== id)
+    })
+  }
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     setLoading(true)
     setError('')
     const form = e.currentTarget
-    const get = (name: string) => form.elements.namedItem(name) as HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement | null
+    const get = (name: string) =>
+      form.elements.namedItem(name) as HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement | null
     const slaRaw = get('sla_due_at')?.value
+
+    if (!ticket) {
+      const fd = new FormData()
+      fd.append('title', get('title')?.value.trim() ?? '')
+      const descNew = get('description')?.value.trim()
+      if (descNew) fd.append('description', descNew)
+      fd.append('category', get('category')?.value ?? '')
+      fd.append('priority', get('priority')?.value || 'medium')
+      draftScreenshots.forEach((r) => fd.append('screenshots', r.file))
+      const result = await createTicket(fd)
+      setLoading(false)
+      if (result.error) setError(result.error)
+      else {
+        setDraftScreenshots([])
+        onSuccess()
+      }
+      return
+    }
+
+    if (draftScreenshots.length > 0) {
+      const uploadFd = new FormData()
+      draftScreenshots.forEach((r) => uploadFd.append('screenshots', r.file))
+      const uploadResult = await addTicketScreenshots(ticket.id, uploadFd)
+      if (uploadResult.error) {
+        setLoading(false)
+        setError(uploadResult.error)
+        return
+      }
+      setDraftScreenshots([])
+    }
+
     const data = {
       title: get('title')?.value.trim() ?? '',
       description: get('description')?.value.trim() || undefined,
@@ -633,12 +943,10 @@ function TicketForm({
       sla_due_at: slaRaw ? ptDatetimeLocalToISO(slaRaw) : undefined,
       resolution_notes: get('resolution_notes')?.value.trim() || undefined,
     }
-    const result = ticket
-      ? await updateTicket(ticket.id, data)
-      : await createTicket(data)
+    const result = await updateTicket(ticket.id, data)
+    setLoading(false)
     if (result.error) setError(result.error)
     else onSuccess()
-    setLoading(false)
   }
 
   return (
@@ -646,61 +954,197 @@ function TicketForm({
       <h3 className="text-zinc-900 dark:text-white font-medium">{isEdit ? 'Edit Ticket' : 'New Ticket'}</h3>
       <div>
         <label className="block text-xs text-zinc-500 dark:text-gray-400 mb-1">Title *</label>
-        <input name="title" required defaultValue={ticket?.title ?? ''} className="w-full rounded bg-zinc-200 dark:bg-gray-900 border border-zinc-300 dark:border-gray-700 px-3 py-2 text-zinc-900 dark:text-white text-sm" />
+        <input
+          name="title"
+          required
+          defaultValue={ticket?.title ?? ''}
+          className="w-full rounded bg-zinc-200 dark:bg-gray-900 border border-zinc-300 dark:border-gray-700 px-3 py-2 text-zinc-900 dark:text-white text-sm"
+        />
       </div>
       <div>
         <label className="block text-xs text-zinc-500 dark:text-gray-400 mb-1">Description</label>
-        <textarea name="description" rows={2} defaultValue={ticket?.description ?? ''} className="w-full rounded bg-zinc-200 dark:bg-gray-900 border border-zinc-300 dark:border-gray-700 px-3 py-2 text-zinc-900 dark:text-white text-sm" />
+        <textarea
+          name="description"
+          rows={2}
+          defaultValue={ticket?.description ?? ''}
+          className="w-full rounded bg-zinc-200 dark:bg-gray-900 border border-zinc-300 dark:border-gray-700 px-3 py-2 text-zinc-900 dark:text-white text-sm"
+        />
       </div>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
         <div>
           <label className="block text-xs text-zinc-500 dark:text-gray-400 mb-1">Category</label>
-          <select name="category" required defaultValue={ticket?.category ?? ''} className="w-full rounded bg-zinc-200 dark:bg-gray-900 border border-zinc-300 dark:border-gray-700 px-3 py-2 text-zinc-900 dark:text-white text-sm">
-            {Object.entries(TICKET_CATEGORIES).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+          <select
+            name="category"
+            required
+            defaultValue={ticket?.category ?? ''}
+            className="w-full rounded bg-zinc-200 dark:bg-gray-900 border border-zinc-300 dark:border-gray-700 px-3 py-2 text-zinc-900 dark:text-white text-sm"
+          >
+            {Object.entries(TICKET_CATEGORIES).map(([v, l]) => (
+              <option key={v} value={v}>
+                {l}
+              </option>
+            ))}
           </select>
         </div>
         <div>
           <label className="block text-xs text-zinc-500 dark:text-gray-400 mb-1">Priority</label>
-          <select name="priority" defaultValue={ticket?.priority ?? 'medium'} className="w-full rounded bg-zinc-200 dark:bg-gray-900 border border-zinc-300 dark:border-gray-700 px-3 py-2 text-zinc-900 dark:text-white text-sm">
-            {Object.entries(PRIORITIES).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+          <select
+            name="priority"
+            defaultValue={ticket?.priority ?? 'medium'}
+            className="w-full rounded bg-zinc-200 dark:bg-gray-900 border border-zinc-300 dark:border-gray-700 px-3 py-2 text-zinc-900 dark:text-white text-sm"
+          >
+            {Object.entries(PRIORITIES).map(([v, l]) => (
+              <option key={v} value={v}>
+                {l}
+              </option>
+            ))}
           </select>
         </div>
         {isEdit && (
           <div>
             <label className="block text-xs text-zinc-500 dark:text-gray-400 mb-1">Status</label>
-            <select name="status" defaultValue={ticket?.status ?? 'open'} className="w-full rounded bg-zinc-200 dark:bg-gray-900 border border-zinc-300 dark:border-gray-700 px-3 py-2 text-zinc-900 dark:text-white text-sm">
-              {Object.entries(TICKET_STATUSES).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+            <select
+              name="status"
+              defaultValue={ticket?.status ?? 'open'}
+              className="w-full rounded bg-zinc-200 dark:bg-gray-900 border border-zinc-300 dark:border-gray-700 px-3 py-2 text-zinc-900 dark:text-white text-sm"
+            >
+              {Object.entries(TICKET_STATUSES).map(([v, l]) => (
+                <option key={v} value={v}>
+                  {l}
+                </option>
+              ))}
             </select>
           </div>
         )}
       </div>
+
+      {(!isEdit || totalScreenshotLimit > 0) && (
+        <div>
+          <label className="block text-xs text-zinc-500 dark:text-gray-400 mb-1">
+            Screenshots ({isEdit ? 'for closing / update' : 'optional'} · max {TICKET_SCREENSHOT_MAX_FILES} total · JPG/PNG/WebP/GIF · {TICKET_SCREENSHOT_MAX_MB} MB each · Google Drive required)
+          </label>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept={TICKET_SCREENSHOT_INPUT_ACCEPT}
+            multiple
+            className="hidden"
+            onChange={(ev) => addScreenshotFiles(ev.target.files)}
+          />
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              disabled={draftScreenshots.length >= totalScreenshotLimit}
+              onClick={() => fileInputRef.current?.click()}
+              className="rounded bg-zinc-200 px-3 py-1.5 text-sm text-zinc-900 hover:bg-zinc-300 disabled:opacity-50 dark:bg-white/10 dark:text-white dark:hover:bg-white/15"
+            >
+              Choose files
+            </button>
+            <span className="text-xs text-zinc-500 dark:text-gray-500">
+              {draftScreenshots.length}/{totalScreenshotLimit} selected
+            </span>
+          </div>
+          {draftScreenshots.length > 0 && (
+            <div className="mt-3 flex flex-wrap gap-3">
+              {draftScreenshots.map((row) => (
+                <div key={row.id} className="relative rounded border border-zinc-300 dark:border-gray-600 p-1">
+                  {/* eslint-disable-next-line @next/next/no-img-element -- local object URL preview */}
+                  <img src={row.previewUrl} alt="" className="h-20 w-auto max-w-[120px] object-contain rounded" />
+                  <button
+                    type="button"
+                    onClick={() => removeDraft(row.id)}
+                    className="absolute -right-2 -top-2 rounded-full bg-zinc-800 p-0.5 text-white hover:bg-red-600 dark:bg-black"
+                    title="Remove"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                  <div className="max-w-[120px] truncate text-[10px] text-zinc-500 dark:text-gray-400" title={row.file.name}>
+                    {row.file.name}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+      {isEdit && totalScreenshotLimit <= 0 && (
+        <p className="text-xs text-zinc-500 dark:text-gray-500">
+          Screenshot limit reached ({TICKET_SCREENSHOT_MAX_FILES}/{TICKET_SCREENSHOT_MAX_FILES}).
+        </p>
+      )}
+
+      {isEdit && ticket?.screenshots && ticket.screenshots.length > 0 && (
+        <div>
+          <span className="block text-xs text-zinc-500 dark:text-gray-400 mb-1">Screenshots</span>
+          <ul className="list-inside list-disc space-y-1 text-sm">
+            {ticket.screenshots.map((s) => (
+              <li key={s.fileId}>
+                <a
+                  href={driveScreenshotHref(s)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 text-[#C27E00] hover:underline"
+                >
+                  {s.name}
+                  <ExternalLink className="h-3.5 w-3.5" />
+                </a>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       {isEdit && (
         <>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div>
               <label className="block text-xs text-zinc-500 dark:text-gray-400 mb-1">Assigned To</label>
-              <select name="assigned_to" defaultValue={ticket?.assigned_to ?? ''} className="w-full rounded bg-zinc-200 dark:bg-gray-900 border border-zinc-300 dark:border-gray-700 px-3 py-2 text-zinc-900 dark:text-white text-sm">
+              <select
+                name="assigned_to"
+                defaultValue={ticket?.assigned_to ?? ''}
+                className="w-full rounded bg-zinc-200 dark:bg-gray-900 border border-zinc-300 dark:border-gray-700 px-3 py-2 text-zinc-900 dark:text-white text-sm"
+              >
                 <option value="">—</option>
-                {assignees.map((p) => <option key={p.id} value={p.id}>{p.full_name ?? p.id}</option>)}
+                {assignees.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.full_name ?? p.id}
+                  </option>
+                ))}
               </select>
             </div>
             <div>
               <label className="block text-xs text-zinc-500 dark:text-gray-400 mb-1">SLA Due (Pacific Time)</label>
-              <input name="sla_due_at" type="datetime-local" defaultValue={ticket?.sla_due_at ? formatInPT(ticket.sla_due_at, "yyyy-MM-dd'T'HH:mm") : ''} className="w-full rounded bg-zinc-200 dark:bg-gray-900 border border-zinc-300 dark:border-gray-700 px-3 py-2 text-zinc-900 dark:text-white text-sm" />
+              <input
+                name="sla_due_at"
+                type="datetime-local"
+                defaultValue={ticket?.sla_due_at ? formatInPT(ticket.sla_due_at, "yyyy-MM-dd'T'HH:mm") : ''}
+                className="w-full rounded bg-zinc-200 dark:bg-gray-900 border border-zinc-300 dark:border-gray-700 px-3 py-2 text-zinc-900 dark:text-white text-sm"
+              />
             </div>
           </div>
           <div>
             <label className="block text-xs text-zinc-500 dark:text-gray-400 mb-1">Resolution Notes</label>
-            <textarea name="resolution_notes" rows={2} defaultValue={ticket?.resolution_notes ?? ''} className="w-full rounded bg-zinc-200 dark:bg-gray-900 border border-zinc-300 dark:border-gray-700 px-3 py-2 text-zinc-900 dark:text-white text-sm" />
+            <textarea
+              name="resolution_notes"
+              rows={2}
+              defaultValue={ticket?.resolution_notes ?? ''}
+              className="w-full rounded bg-zinc-200 dark:bg-gray-900 border border-zinc-300 dark:border-gray-700 px-3 py-2 text-zinc-900 dark:text-white text-sm"
+            />
           </div>
         </>
       )}
       {error && <p className="text-red-400 text-sm">{error}</p>}
       <div className="flex gap-2">
         <button type="submit" disabled={loading} className="px-3 py-1.5 rounded bg-[#C27E00] text-white text-sm disabled:opacity-50">
-          {loading ? <Loader2 className="w-4 h-4 animate-spin inline" /> : (isEdit ? 'Save' : 'Create')}
+          {loading ? <Loader2 className="w-4 h-4 animate-spin inline" /> : isEdit ? 'Save' : 'Create'}
         </button>
-        <button type="button" onClick={onClose} className="px-3 py-1.5 rounded bg-zinc-200 dark:bg-white/10 text-zinc-500 dark:text-gray-400 text-sm">Cancel</button>
+        <button
+          type="button"
+          onClick={onClose}
+          className="px-3 py-1.5 rounded bg-zinc-200 dark:bg-white/10 text-zinc-500 dark:text-gray-400 text-sm"
+        >
+          Cancel
+        </button>
       </div>
     </form>
   )

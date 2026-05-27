@@ -72,7 +72,8 @@ export default async function InventoryPage() {
       <div>
         <h1 className="text-2xl font-semibold text-zinc-900 dark:text-white mb-2">Inventory</h1>
         <p className="text-zinc-500 dark:text-gray-400">
-          Dealer stock from movements; each completed demand consumes one unit when the camera maps to the catalog.
+          Dealer stock comes from ledger movements: each completed demand consumes one catalog-matched camera. Negative totals
+          mean consumption exceeded recorded receipts or adjustments—they are unrelated to dealer–camera assignment rows.
         </p>
       </div>
       <InventoryDashboard

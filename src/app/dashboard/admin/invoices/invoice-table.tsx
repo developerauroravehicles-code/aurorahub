@@ -7,8 +7,10 @@ import { formatInTimeZone } from 'date-fns-tz'
 import { SYSTEM_DEFAULT_TIMEZONE } from '@/lib/timezone-defaults'
 import { Download, Eye, X, Save, Plus, Trash2, HardDrive, ArrowUpDown, ChevronDown, ChevronsDown, ChevronsUp, Mail } from 'lucide-react'
 import { updateInvoiceFields, uploadInvoiceToDriveAction, recordInvoiceDownloadAction, updateInvoiceStatusAction, sendInvoicePdfEmailAction, sendBulkInvoicePdfEmailAction } from './actions'
-import { downloadInvoicePdf, getInvoicePdfBlobUrl } from '@/lib/generate-invoice-pdf'
+import { downloadInvoicePdf, getInvoicePdfBlobUrl, getInvoicePdfBase64 } from '@/lib/generate-invoice-pdf'
 import type { InvoiceRowData } from '@/lib/generate-invoice-pdf'
+import { EmailComposeModal } from '@/components/email-compose-modal'
+import type { EmailComposePayload } from '@/lib/email-compose'
 
 type DealerRow = { name: string; address?: string | null; phone?: string | null } | null
 
@@ -79,16 +81,15 @@ export function InvoiceTable({ invoices, logoDataUrl, canEdit = true }: InvoiceT
   const [previewPdfUrl, setPreviewPdfUrl] = useState<string | null>(null)
   const [driveUploading, setDriveUploading] = useState(false)
   const [driveMessage, setDriveMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
-  const [previewEmailTo, setPreviewEmailTo] = useState('')
-  const [previewEmailSending, setPreviewEmailSending] = useState(false)
+  const [emailSending, setEmailSending] = useState(false)
+  const [emailComposeOpen, setEmailComposeOpen] = useState(false)
+  const [emailComposeMode, setEmailComposeMode] = useState<'preview' | 'bulk'>('preview')
   const [sortBy, setSortBy] = useState<'id' | 'completeDate'>('completeDate')
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
   const [statusMenuOpen, setStatusMenuOpen] = useState<string | null>(null)
   const [tableExpanded, setTableExpanded] = useState(false)
   const [optimisticStatus, setOptimisticStatus] = useState<Record<string, { invoice_saved_at?: string | null; invoice_downloaded_at?: string | null; invoice_drive_uploaded_at?: string | null }>>({})
   const [selectedInvoiceIds, setSelectedInvoiceIds] = useState<Set<string>>(() => new Set())
-  const [bulkEmailTo, setBulkEmailTo] = useState('')
-  const [bulkEmailSending, setBulkEmailSending] = useState(false)
   const [bulkEmailMessage, setBulkEmailMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
   const selectAllCheckboxRef = useRef<HTMLInputElement>(null)
 
@@ -264,8 +265,8 @@ export function InvoiceTable({ invoices, logoDataUrl, canEdit = true }: InvoiceT
     setPreviewFinancialSummary({ gstEnabled: true, gstPercent: 5, pstEnabled: false, pstPercent: 7, salesTaxEnabled: false, salesTaxPercent: 0, otherEnabled: false, otherAmount: 0 })
     setPreviewPdfUrl(null)
     setDriveMessage(null)
-    setPreviewEmailTo('')
-    setPreviewEmailSending(false)
+    setEmailComposeOpen(false)
+    setEmailSending(false)
   }
 
   const handlePreviewSave = async () => {
@@ -307,15 +308,10 @@ export function InvoiceTable({ invoices, logoDataUrl, canEdit = true }: InvoiceT
     }
   }
 
-  const handlePreviewEmail = async () => {
-    const data = buildPreviewData()
-    if (!data) return
-    setPreviewEmailSending(true)
-    setDriveMessage(null)
-    const res = await sendInvoicePdfEmailAction(previewEmailTo, data)
-    setPreviewEmailSending(false)
-    if (res.error) setDriveMessage({ type: 'error', text: res.error })
-    else setDriveMessage({ type: 'success', text: 'Email sent successfully.' })
+  const handlePreviewEmail = () => {
+    if (!buildPreviewData()) return
+    setEmailComposeMode('preview')
+    setEmailComposeOpen(true)
   }
 
   const toggleInvoiceSelected = (id: string) => {
@@ -343,23 +339,85 @@ export function InvoiceTable({ invoices, logoDataUrl, canEdit = true }: InvoiceT
     setBulkEmailMessage(null)
   }
 
-  const handleBulkInvoiceEmail = async () => {
+  const handleBulkInvoiceEmail = () => {
     const ids = Array.from(selectedInvoiceIds)
     if (ids.length === 0) return
     if (ids.length > BULK_EMAIL_MAX) {
       setBulkEmailMessage({ type: 'error', text: `Select at most ${BULK_EMAIL_MAX} invoices per send.` })
       return
     }
-    setBulkEmailSending(true)
-    setBulkEmailMessage(null)
-    const res = await sendBulkInvoicePdfEmailAction(bulkEmailTo, ids)
-    setBulkEmailSending(false)
-    if (res.error) {
-      setBulkEmailMessage({ type: 'error', text: res.error })
-    } else {
-      setBulkEmailMessage({ type: 'success', text: `Sent ${ids.length} invoice PDFs in one email.` })
-      setSelectedInvoiceIds(new Set())
+    setEmailComposeMode('bulk')
+    setEmailComposeOpen(true)
+  }
+
+  const emailComposeDefaults = useMemo(() => {
+    if (emailComposeMode === 'preview') {
+      const data = buildPreviewData()
+      if (!data) {
+        return {
+          defaultSubject: 'Invoice — Aurora Vehicles',
+          defaultBodyHtml: '<p>Please find the attached invoice.</p>',
+          lockedAttachments: [] as { id: string; filename: string }[],
+        }
+      }
+      const invLabel = data.demand_number ? `#${data.demand_number}` : 'Invoice'
+      const { fileName } = getInvoicePdfBase64(data)
+      return {
+        defaultSubject: `Invoice ${invLabel} — Aurora Vehicles`,
+        defaultBodyHtml: `<p>Please find attached the invoice for ${data.customerName} (${invLabel}).</p>`,
+        lockedAttachments: [{ id: 'invoice-pdf', filename: fileName }],
+      }
     }
+
+    const ids = Array.from(selectedInvoiceIds)
+    const n = ids.length
+    const lockedAttachments: { id: string; filename: string }[] = []
+    for (const id of ids) {
+      const row = invoices.find((r) => r.id === id)
+      if (!row) continue
+      const { data: invData } = getInvoiceData(row)
+      const { fileName } = getInvoicePdfBase64(invData)
+      lockedAttachments.push({ id, filename: fileName })
+    }
+
+    return {
+      defaultSubject: n === 1 ? `Invoice — Aurora Vehicles` : `${n} invoices — Aurora Vehicles`,
+      defaultBodyHtml:
+        n === 1
+          ? '<p>Please find attached the invoice.</p>'
+          : `<p>Please find attached ${n} invoice PDFs for the selected completed demands.</p>`,
+      lockedAttachments,
+    }
+  }, [emailComposeMode, buildPreviewData, selectedInvoiceIds, invoices])
+
+  const handleInvoiceEmailSend = async (payload: EmailComposePayload) => {
+    if (emailComposeMode === 'preview') {
+      const data = buildPreviewData()
+      if (!data) return { error: 'Invoice preview is not ready' }
+      setEmailSending(true)
+      setDriveMessage(null)
+      const res = await sendInvoicePdfEmailAction(data, payload)
+      setEmailSending(false)
+      if (res.error) return { error: res.error }
+      setDriveMessage({ type: 'success', text: 'Email sent successfully.' })
+      setEmailComposeOpen(false)
+      return {}
+    }
+
+    const ids = Array.from(selectedInvoiceIds)
+    if (ids.length === 0) {
+      setEmailComposeOpen(false)
+      return { error: 'No invoices selected' }
+    }
+    setEmailSending(true)
+    setBulkEmailMessage(null)
+    const res = await sendBulkInvoicePdfEmailAction(ids, payload)
+    setEmailSending(false)
+    if (res.error) return { error: res.error }
+    setBulkEmailMessage({ type: 'success', text: `Sent ${ids.length} invoice PDFs in one email.` })
+    setSelectedInvoiceIds(new Set())
+    setEmailComposeOpen(false)
+    return {}
   }
 
   const handleCreateAndDownload = async (row: InvoiceRow) => {
@@ -417,29 +475,15 @@ export function InvoiceTable({ invoices, logoDataUrl, canEdit = true }: InvoiceT
           selected
           <span className="text-zinc-500 dark:text-gray-400"> · max {BULK_EMAIL_MAX} per email</span>
         </div>
-        <div className="flex flex-1 flex-col gap-1 min-w-[200px] max-w-md">
-          <label htmlFor="invoice-bulk-email" className="text-xs font-medium text-zinc-500 dark:text-gray-400">
-            One email — all selected PDFs attached
-          </label>
-          <input
-            id="invoice-bulk-email"
-            type="text"
-            value={bulkEmailTo}
-            onChange={(e) => setBulkEmailTo(e.target.value.toLowerCase())}
-            placeholder="recipient@example.com (comma-separated)"
-            autoComplete="email"
-            className="w-full border border-zinc-300 dark:border-gray-600 bg-white dark:bg-black/50 text-zinc-900 dark:text-white rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-[#C27E00]"
-          />
-        </div>
         <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
             onClick={handleBulkInvoiceEmail}
-            disabled={bulkEmailSending || !bulkEmailTo.trim() || selectedInvoiceIds.size > BULK_EMAIL_MAX}
+            disabled={emailSending || selectedInvoiceIds.size > BULK_EMAIL_MAX}
             className="inline-flex items-center gap-1.5 bg-[#C27E00] hover:bg-[#a06900] text-white px-3 py-1.5 rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
           >
             <Mail className="w-4 h-4 shrink-0" />
-            {bulkEmailSending ? 'Sending…' : 'Send bulk email'}
+            Send bulk email
           </button>
           <button
             type="button"
@@ -959,32 +1003,16 @@ export function InvoiceTable({ invoices, logoDataUrl, canEdit = true }: InvoiceT
             </div>
           )}
           <div className="flex flex-col gap-2 p-2 sm:p-3 border-t border-zinc-300 dark:border-gray-700 flex-shrink-0 bg-zinc-200 dark:bg-gray-900">
-            <div className="flex flex-wrap items-end gap-2">
-              <div className="flex-1 min-w-[200px] max-w-md">
-                <label htmlFor="invoice-preview-email" className="block text-xs font-medium text-zinc-500 dark:text-gray-400 mb-1">
-                  Send PDF by email
-                </label>
-                <input
-                  id="invoice-preview-email"
-                  type="text"
-                  value={previewEmailTo}
-                  onChange={e => setPreviewEmailTo(e.target.value.toLowerCase())}
-                  placeholder="recipient@example.com (comma-separated)"
-                  autoComplete="email"
-                  className="w-full border border-zinc-300 dark:border-gray-600 bg-white dark:bg-black/50 text-zinc-900 dark:text-white rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-[#C27E00]"
-                />
-              </div>
+            <div className="flex flex-wrap items-center justify-end gap-2">
               <button
                 type="button"
                 onClick={handlePreviewEmail}
-                disabled={previewEmailSending || !previewEmailTo.trim()}
-                className="inline-flex items-center gap-1.5 bg-gray-600 hover:bg-gray-500 text-white px-3 py-1.5 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 h-[34px] self-end"
+                disabled={emailSending}
+                className="inline-flex items-center gap-1.5 bg-gray-600 hover:bg-gray-500 text-white px-3 py-1.5 rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
               >
                 <Mail className="w-4 h-4 shrink-0" />
-                {previewEmailSending ? 'Sending…' : 'Send email'}
+                Send email
               </button>
-            </div>
-            <div className="flex flex-wrap items-center justify-end gap-2">
               {canEdit && (
                 <button
                   type="button"
@@ -1021,6 +1049,17 @@ export function InvoiceTable({ invoices, logoDataUrl, canEdit = true }: InvoiceT
         </div>
       </div>
     )}
+
+    <EmailComposeModal
+      isOpen={emailComposeOpen}
+      onClose={() => setEmailComposeOpen(false)}
+      onSend={handleInvoiceEmailSend}
+      sending={emailSending}
+      defaultSubject={emailComposeDefaults.defaultSubject}
+      defaultBodyHtml={emailComposeDefaults.defaultBodyHtml}
+      lockedAttachments={emailComposeDefaults.lockedAttachments}
+      title={emailComposeMode === 'preview' ? 'Send invoice' : 'Send bulk invoices'}
+    />
     </>
   )
 }

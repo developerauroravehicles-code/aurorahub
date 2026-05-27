@@ -13,6 +13,8 @@ export interface MailSettings {
 
 export interface SendEmailParams {
   to: string[]
+  cc?: string[]
+  bcc?: string[]
   subject: string
   html: string
   attachments?: Array<{ filename: string; content: Buffer | string }>
@@ -50,6 +52,8 @@ export async function sendEmailViaSMTP(
     const result = await transporter.sendMail({
       from: `"${settings.fromName}" <${settings.fromEmail}>`,
       to: params.to,
+      cc: params.cc?.length ? params.cc : undefined,
+      bcc: params.bcc?.length ? params.bcc : undefined,
       subject: params.subject,
       html: params.html,
       attachments: params.attachments?.map((a) => ({

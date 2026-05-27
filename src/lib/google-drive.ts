@@ -309,3 +309,108 @@ export async function uploadStatementToDrive(
     return { success: false, error: `Drive upload failed: ${msg}` }
   }
 }
+
+/** One image file payload for ticket screenshot upload */
+export type TicketDriveScreenshotFile = {
+  buffer: Buffer | Uint8Array
+  mimeType: string
+  fileName: string
+}
+
+/**
+ * Upload ticket screenshots under: rootFolder / ServiceDesk / Tickets / &lt;ticket folder&gt;.
+ * Folder name matches the ticket number (e.g. TKT-1040).
+ */
+export async function uploadTicketScreenshotsToDrive(
+  settings: GoogleDriveSettings,
+  ticketFolderName: string,
+  uploads: TicketDriveScreenshotFile[]
+): Promise<{ success: true; files: Array<{ fileId: string; webViewLink?: string; name: string }> } | { success: false; error: string }> {
+  if (!settings.enabled) {
+    return { success: false, error: 'Google Drive integration is disabled' }
+  }
+
+  const rootFolderId = settings.defaultFolderId?.trim()
+  if (!rootFolderId) {
+    return { success: false, error: 'Default Folder ID is required. Set it in System Management > API.' }
+  }
+
+  if (uploads.length === 0) {
+    return { success: true, files: [] }
+  }
+
+  const useOAuth = settings.useOAuth && settings.refreshToken && settings.clientId && settings.clientSecret
+
+  let auth
+  if (useOAuth) {
+    const oauth2 = new google.auth.OAuth2(settings.clientId, settings.clientSecret)
+    oauth2.setCredentials({ refresh_token: settings.refreshToken })
+    auth = oauth2
+  } else {
+    const email = settings.serviceAccountEmail || settings.clientEmail
+    const privateKey = settings.serviceAccountPrivateKey || settings.privateKey
+    if (!email || !privateKey) {
+      return { success: false, error: 'Google Drive not configured. Use OAuth (Connect to Google) or Service Account in System Management > API.' }
+    }
+    auth = new google.auth.GoogleAuth({
+      credentials: {
+        client_email: email,
+        private_key: privateKey.replace(/\\n/g, '\n'),
+      },
+      scopes: ['https://www.googleapis.com/auth/drive'],
+    })
+  }
+
+  try {
+    const drive = google.drive({ version: 'v3', auth })
+
+    const serviceDeskId = await findOrCreateFolder(drive, rootFolderId, 'ServiceDesk')
+    const ticketsParentId = await findOrCreateFolder(drive, serviceDeskId, 'Tickets')
+    const ticketFolderSafe = sanitizeFolderName(ticketFolderName) || 'Ticket'
+    const ticketFolderId = await findOrCreateFolder(drive, ticketsParentId, ticketFolderSafe)
+
+    const { Readable } = await import('stream')
+    const uploaded: Array<{ fileId: string; webViewLink?: string; name: string }> = []
+
+    for (let i = 0; i < uploads.length; i++) {
+      const u = uploads[i]
+      const stripped = u.fileName.replace(/\.[^.]+$/, '')
+      const base = sanitizeFolderName(stripped) || `screenshot_${i + 1}`
+      const extMatch = /\.([a-zA-Z0-9]+)$/.exec(u.fileName)
+      const extFromName = extMatch ? `.${extMatch[1].toLowerCase()}` : ''
+      const extFallback =
+        u.mimeType === 'image/jpeg' ? '.jpg'
+          : u.mimeType === 'image/png' ? '.png'
+            : u.mimeType === 'image/webp' ? '.webp'
+              : u.mimeType === 'image/gif' ? '.gif'
+                : '.png'
+      const extDot = extFromName || extFallback
+      const uniqueName = `${base}_${Date.now()}_${i}${extDot.startsWith('.') ? extDot : `.${extDot}`}`
+      const buffer = Buffer.isBuffer(u.buffer) ? u.buffer : Buffer.from(u.buffer)
+
+      const { data: file } = await drive.files.create({
+        requestBody: {
+          name: uniqueName.replace(/[<>:"/\\|?*]/g, '_'),
+          parents: [ticketFolderId],
+        },
+        media: {
+          mimeType: u.mimeType || 'application/octet-stream',
+          body: Readable.from(buffer),
+        },
+        fields: 'id, webViewLink, name',
+        supportsAllDrives: true,
+      })
+
+      uploaded.push({
+        fileId: file.id!,
+        webViewLink: file.webViewLink ?? undefined,
+        name: file.name ?? uniqueName,
+      })
+    }
+
+    return { success: true, files: uploaded }
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err)
+    return { success: false, error: `Drive upload failed: ${msg}` }
+  }
+}

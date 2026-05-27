@@ -52,6 +52,9 @@ const nextConfig: NextConfig = {
   // Experimental features for performance
   experimental: {
     optimizePackageImports: ['lucide-react', 'date-fns'],
+    serverActions: {
+      bodySizeLimit: '20mb',
+    },
   },
   
   // Bundle analyzer

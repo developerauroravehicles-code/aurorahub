@@ -124,6 +124,7 @@ export async function sendNewTicketEmailToIT(ticket: {
   description?: string | null
   category: string
   priority: string
+  screenshots?: Array<{ fileId: string; webViewLink?: string | null; name: string }>
 }): Promise<void> {
   try {
     const emails = await getITEmails()
@@ -150,6 +151,13 @@ export async function sendNewTicketEmailToIT(ticket: {
     }
     const subject = `AuroraHub: New Ticket - ${ticketNum}`
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || ''
+    const screenshotLinks = (ticket.screenshots ?? [])
+      .map((s) => {
+        const href = s.webViewLink?.trim() || `https://drive.google.com/file/d/${encodeURIComponent(s.fileId)}/view`
+        const label = String(s.name || s.fileId).replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        return `<li><a href="${href}">${label}</a></li>`
+      })
+      .join('')
     const html = `
       <div style="font-family: Arial, sans-serif;">
         <h2 style="color: #C27E00;">New Ticket Created</h2>
@@ -158,6 +166,7 @@ export async function sendNewTicketEmailToIT(ticket: {
         <p><strong>Category:</strong> ${categoryLabels[ticket.category] ?? ticket.category}</p>
         <p><strong>Priority:</strong> ${priorityLabels[ticket.priority] ?? ticket.priority}</p>
         ${ticket.description ? `<p><strong>Description:</strong></p><p style="white-space: pre-wrap; background: #f5f5f5; padding: 8px; border-radius: 4px;">${String(ticket.description).replace(/</g, '&lt;').replace(/>/g, '&gt;')}</p>` : ''}
+        ${screenshotLinks ? `<p><strong>Screenshots:</strong></p><ul>${screenshotLinks}</ul>` : ''}
         <p><a href="${appUrl}/dashboard/operations/service-desk?tab=tickets">View in Service Desk</a></p>
         <p style="margin-top: 16px; color: #666;">— AuroraHub</p>
       </div>
@@ -256,31 +265,66 @@ export async function sendNewCriticalTicketAlertIfEnabled(ticket: {
   }
 }
 
-/** Called when a ticket status is changed - sends email to Aurora Manager */
+/** Called when a ticket status is changed - sends email to IT and Aurora Manager */
 export async function sendTicketStatusChangeEmail(params: {
   ticketId: string
   ticketNumber: string | null
   title: string
   previousStatus: string
   newStatus: string
+  changedBy?: string
+  resolutionNotes?: string | null
+  durationMs?: number
+  screenshots?: Array<{ fileId: string; webViewLink?: string | null; name: string }>
 }): Promise<void> {
   try {
-    const emails = await getAuroraManagerEmails()
+    const emails = await getAlertRecipientEmails()
     if (emails.length === 0) return
 
     const mailSettings = await getMailSettingsWithPassword()
     if (!mailSettings && !process.env.RESEND_API_KEY) return
 
+    const statusLabels: Record<string, string> = {
+      open: 'Open',
+      in_progress: 'In Progress',
+      waiting: 'Waiting',
+      escalated: 'Escalated',
+      resolved: 'Resolved',
+      closed: 'Closed',
+    }
+    const formatDuration = (ms?: number) => {
+      if (!ms || !Number.isFinite(ms) || ms < 0) return '—'
+      const totalMinutes = Math.floor(ms / (1000 * 60))
+      const hours = Math.floor(totalMinutes / 60)
+      const minutes = totalMinutes % 60
+      const parts: string[] = []
+      if (hours > 0) parts.push(`${hours} Hour${hours === 1 ? '' : 's'}`)
+      parts.push(`${minutes} Minute${minutes === 1 ? '' : 's'}`)
+      return parts.join(' ')
+    }
+
     const ticketNum = params.ticketNumber ?? params.ticketId.slice(0, 8)
     const subject = `AuroraHub: Ticket Status Changed - ${ticketNum}`
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || ''
+    const isOpenToClose = params.previousStatus === 'open' && params.newStatus === 'closed'
+    const screenshotLinks = (params.screenshots ?? [])
+      .map((s) => {
+        const href = s.webViewLink?.trim() || `https://drive.google.com/file/d/${encodeURIComponent(s.fileId)}/view`
+        const label = String(s.name || s.fileId).replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        return `<li><a href="${href}">${label}</a></li>`
+      })
+      .join('')
     const html = `
       <div style="font-family: Arial, sans-serif;">
         <h2 style="color: #C27E00;">Ticket Status Updated</h2>
         <p><strong>Ticket:</strong> ${ticketNum}</p>
         <p><strong>Title:</strong> ${params.title}</p>
-        <p><strong>Previous Status:</strong> ${params.previousStatus}</p>
-        <p><strong>New Status:</strong> ${params.newStatus}</p>
+        <p><strong>Previous Status:</strong> ${statusLabels[params.previousStatus] ?? params.previousStatus}</p>
+        <p><strong>New Status:</strong> ${statusLabels[params.newStatus] ?? params.newStatus}</p>
+        ${params.changedBy ? `<p><strong>Changed By:</strong> ${params.changedBy}</p>` : ''}
+        ${isOpenToClose ? `<p><strong>Resolution Notes:</strong><br/>${params.resolutionNotes ? String(params.resolutionNotes).replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br/>') : '—'}</p>` : ''}
+        ${isOpenToClose ? `<p><strong>Total Duration:</strong> ${formatDuration(params.durationMs)}</p>` : ''}
+        ${screenshotLinks ? `<p><strong>Screenshots:</strong></p><ul>${screenshotLinks}</ul>` : ''}
         <p><a href="${appUrl}/dashboard/operations/service-desk?tab=tickets">View in Service Desk</a></p>
         <p style="margin-top: 16px; color: #666;">— AuroraHub</p>
       </div>

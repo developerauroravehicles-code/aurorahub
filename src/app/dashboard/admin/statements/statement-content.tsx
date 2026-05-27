@@ -2,6 +2,8 @@
 
 import { useState } from 'react'
 import { Download, HardDrive, Eye, Mail } from 'lucide-react'
+import { EmailComposeModal } from '@/components/email-compose-modal'
+import type { EmailComposePayload } from '@/lib/email-compose'
 import {
   getStatementDataAction,
   uploadStatementToDriveAction,
@@ -34,8 +36,8 @@ export function StatementContent({ dealers, logoDataUrl, hideDealerFilter, defau
   const [rows, setRows] = useState<StatementDemandRow[]>([])
   const [loading, setLoading] = useState(false)
   const [driveUploading, setDriveUploading] = useState(false)
-  const [emailTo, setEmailTo] = useState('')
   const [emailSending, setEmailSending] = useState(false)
+  const [emailComposeOpen, setEmailComposeOpen] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
 
   const handleApply = async () => {
@@ -128,17 +130,33 @@ export function StatementContent({ dealers, logoDataUrl, hideDealerFilter, defau
     }
   }
 
-  const handleSendEmail = async () => {
+  const statementPeriod =
+    effectiveDateFrom && effectiveDateTo
+      ? `${effectiveDateFrom} – ${effectiveDateTo}`
+      : 'selected period'
+  const defaultEmailSubject = `Statement — ${dealerName} (${statementPeriod})`
+  const defaultEmailBody = `<p>Please find attached the account statement for ${dealerName} covering ${statementPeriod}.</p>`
+  const statementPdfFileName = `Statement_${dealerName.replace(/[<>:"/\\|?*]/g, '_').trim() || 'Statement'}_${effectiveDateFrom}_${effectiveDateTo}.pdf`
+
+  const handleOpenEmailCompose = () => {
     if (rows.length === 0) {
       setMessage({ type: 'error', text: 'No data to send. Apply filters first.' })
       return
     }
+    setEmailComposeOpen(true)
+  }
+
+  const handleStatementEmailSend = async (payload: EmailComposePayload) => {
     setEmailSending(true)
     setMessage(null)
-    const result = await sendStatementPdfEmailAction(emailTo, statementData)
+    const result = await sendStatementPdfEmailAction(statementData, payload)
     setEmailSending(false)
-    if (result.error) setMessage({ type: 'error', text: result.error })
-    else setMessage({ type: 'success', text: 'Statement email sent successfully.' })
+    if (result.error) {
+      return { error: result.error }
+    }
+    setMessage({ type: 'success', text: 'Statement email sent successfully.' })
+    setEmailComposeOpen(false)
+    return {}
   }
 
   // invoice_total_amount is total (subtotal + tax). Extract subtotal and tax to avoid double-counting.
@@ -218,30 +236,15 @@ export function StatementContent({ dealers, logoDataUrl, hideDealerFilter, defau
         <div className="flex items-center justify-between p-4 border-b border-zinc-200 dark:border-gray-800">
           <h3 className="text-md font-semibold text-zinc-900 dark:text-white">Statement Preview</h3>
           {rows.length > 0 && (
-            <div className="flex flex-col items-end gap-2 w-full max-w-xl sm:max-w-none sm:flex-row sm:items-end sm:flex-wrap sm:justify-end">
-              <div className="w-full sm:w-auto sm:min-w-[220px] sm:flex-1 sm:max-w-md">
-                <label htmlFor="statement-email-to" className="block text-xs font-medium text-zinc-500 dark:text-gray-400 mb-1">
-                  Email PDF to
-                </label>
-                <input
-                  id="statement-email-to"
-                  type="text"
-                  value={emailTo}
-                  onChange={(e) => setEmailTo(e.target.value.toLowerCase())}
-                  placeholder="finance@dealer.com (comma-separated)"
-                  autoComplete="email"
-                  className="w-full border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 text-zinc-900 dark:text-white rounded px-3 py-2 text-sm focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]"
-                />
-              </div>
-              <div className="flex flex-wrap gap-2 justify-end">
+            <div className="flex flex-wrap gap-2 justify-end">
                 <button
                   type="button"
-                  onClick={handleSendEmail}
-                  disabled={emailSending || !emailTo.trim()}
+                  onClick={handleOpenEmailCompose}
+                  disabled={emailSending}
                   className="inline-flex items-center gap-2 bg-gray-600 hover:bg-gray-500 text-white px-4 py-2 rounded-md font-medium transition-colors disabled:opacity-50"
                 >
                   <Mail className="w-4 h-4" />
-                  {emailSending ? 'Sending…' : 'Send email'}
+                  Send email
                 </button>
                 <button
                   type="button"
@@ -270,7 +273,6 @@ export function StatementContent({ dealers, logoDataUrl, hideDealerFilter, defau
                     {driveUploading ? 'Uploading...' : 'Save to Drive'}
                   </button>
                 )}
-              </div>
             </div>
           )}
         </div>
@@ -334,6 +336,17 @@ export function StatementContent({ dealers, logoDataUrl, hideDealerFilter, defau
           )}
         </div>
       </div>
+
+      <EmailComposeModal
+        isOpen={emailComposeOpen}
+        onClose={() => setEmailComposeOpen(false)}
+        onSend={handleStatementEmailSend}
+        sending={emailSending}
+        defaultSubject={defaultEmailSubject}
+        defaultBodyHtml={defaultEmailBody}
+        lockedAttachments={[{ id: 'statement-pdf', filename: statementPdfFileName }]}
+        title="Send statement"
+      />
     </div>
   )
 }

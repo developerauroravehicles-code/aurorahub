@@ -108,7 +108,8 @@ export function CreateExternalDemandForm({ dealers, specialists, onSuccess, onCa
             className={inputClass}
           />
           <p className="text-xs text-zinc-500 dark:text-gray-500 mt-1">
-            Past dates allowed. The date is saved as noon in the dealer&apos;s region timezone (falls back to Pacific if none).
+            Past dates allowed. Saved as noon on that day in the dealer region (defaults to US Pacific if none). If you mark
+            complete on create, the completion timestamp matches this date so statements use the same month as the job.
           </p>
         </div>
 

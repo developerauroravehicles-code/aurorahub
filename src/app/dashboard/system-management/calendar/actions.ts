@@ -2,8 +2,10 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
-import { formatInTimeZone, fromZonedTime } from 'date-fns-tz'
+import { getISODay } from 'date-fns'
+import { formatInTimeZone, toDate } from 'date-fns-tz'
 import { SYSTEM_DEFAULT_TIMEZONE } from '@/lib/timezone-defaults'
+import { pad2 } from '@/lib/calendar-wall-date'
 import { getSlotMinutesFromConfig, CALENDAR_DEFAULTS } from '@/lib/calendar-defaults'
 
 export async function createCalendarSetting(formData: FormData) {
@@ -195,14 +197,14 @@ export async function getCalendarBlocksInRange(fromDate: string, toDate: string)
  */
 export async function getTakenSlots(dateStr: string): Promise<string[]> {
   const supabase = await createClient()
-  const match = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})/)
-  const y = match ? parseInt(match[1], 10) : 0
-  const m = match ? parseInt(match[2], 10) : 1
-  const d = match ? parseInt(match[3], 10) : 1
-  const startInPT = new Date(y, m - 1, d, 0, 0, 0)
-  const endInPT = new Date(y, m - 1, d, 23, 59, 59, 999)
-  const start = fromZonedTime(startInPT, SYSTEM_DEFAULT_TIMEZONE).toISOString()
-  const end = fromZonedTime(endInPT, SYSTEM_DEFAULT_TIMEZONE).toISOString()
+  const match = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})$/)
+  if (!match) return []
+  const y = parseInt(match[1], 10)
+  const m = parseInt(match[2], 10)
+  const d = parseInt(match[3], 10)
+  const isoDay = `${y}-${pad2(m)}-${pad2(d)}`
+  const start = toDate(`${isoDay}T00:00:00`, { timeZone: SYSTEM_DEFAULT_TIMEZONE }).toISOString()
+  const end = toDate(`${isoDay}T23:59:59.999`, { timeZone: SYSTEM_DEFAULT_TIMEZONE }).toISOString()
   const { data } = await supabase
     .from('demands')
     .select('appointment_date')
@@ -441,8 +443,12 @@ export async function getAvailableSlotsForEdit(
 ): Promise<{ slots: string[]; timezoneName: string | null }> {
   const supabase = await createClient()
   const [y, mo, d] = dateStr.split('-').map(Number)
-  const dayOfWeek = new Date(y, mo - 1, d).getDay()
-  const dayType: 'weekday' | 'saturday' | 'sunday' = dayOfWeek === 6 ? 'saturday' : dayOfWeek === 0 ? 'sunday' : 'weekday'
+  // Slots are generated in Pacific; weekday vs weekend follows that wall calendar
+  const ptTz = SYSTEM_DEFAULT_TIMEZONE
+  const isoDayStr = `${y}-${pad2(mo)}-${pad2(d)}`
+  const isoDow = getISODay(toDate(`${isoDayStr}T12:00:00`, { timeZone: ptTz }))
+  const dayType: 'weekday' | 'saturday' | 'sunday' =
+    isoDow === 7 ? 'sunday' : isoDow === 6 ? 'saturday' : 'weekday'
 
   const { data: dealer } = await supabase
     .from('dealers')
@@ -451,9 +457,6 @@ export async function getAvailableSlotsForEdit(
     .single()
   const { getTimezoneFromDealer } = await import('@/lib/dealer-timezone')
   const timezoneName = getTimezoneFromDealer(dealer as Parameters<typeof getTimezoneFromDealer>[0]) ?? null
-
-  // Appointments stored as Pacific Time (PT); slots generated in PT
-  const ptTz = SYSTEM_DEFAULT_TIMEZONE
 
   const { data: settings } = await supabase
     .from('dealer_calendar_settings')
@@ -473,11 +476,12 @@ export async function getAvailableSlotsForEdit(
   const duration = settings?.appointment_duration_minutes ?? CALENDAR_DEFAULTS.appointmentDurationMinutes
 
   const slots: string[] = []
+  const isoDay = `${y}-${pad2(mo)}-${pad2(d)}`
   for (const startMinutes of slotMinutes) {
     const h = Math.floor(startMinutes / 60)
-    const m = startMinutes % 60
-    const dateInPT = new Date(y, mo - 1, d, h, m, 0)
-    slots.push(fromZonedTime(dateInPT, ptTz).toISOString())
+    const mins = startMinutes % 60
+    const wall = `${isoDay}T${pad2(h)}:${pad2(mins)}:00`
+    slots.push(toDate(wall, { timeZone: ptTz }).toISOString())
   }
 
   const blocks = await getDealerBlocksForDate(dealerId, dateStr)
@@ -491,8 +495,8 @@ export async function getAvailableSlotsForEdit(
     return !inBlock
   })
 
-  const startOfDayISO = fromZonedTime(new Date(y, mo - 1, d, 0, 0, 0), ptTz).toISOString()
-  const endOfDayISO = fromZonedTime(new Date(y, mo - 1, d, 23, 59, 59, 999), ptTz).toISOString()
+  const startOfDayISO = toDate(`${isoDay}T00:00:00`, { timeZone: ptTz }).toISOString()
+  const endOfDayISO = toDate(`${isoDay}T23:59:59.999`, { timeZone: ptTz }).toISOString()
   let query = supabase
     .from('demands')
     .select('appointment_date')

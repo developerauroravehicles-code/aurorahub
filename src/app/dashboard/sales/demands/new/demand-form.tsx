@@ -4,13 +4,14 @@ import { useActionState, useState, useEffect } from 'react'
 import { createDemand, getTakenSlots } from './actions'
 import { getDealerBlocksForDate } from '@/app/dashboard/system-management/calendar/actions'
 import { getGlobalSlotMinutes, getSlotMinutesFromConfig, CALENDAR_DEFAULTS } from '@/lib/calendar-defaults'
-import { formatInTimeZone, fromZonedTime } from 'date-fns-tz'
+import { formatInTimeZone, fromZonedTime, toDate } from 'date-fns-tz'
 import { SYSTEM_DEFAULT_TIMEZONE } from '@/lib/timezone-defaults'
 import { useTimezone } from '@/contexts/timezone-context'
 import { useSystemTime } from '@/contexts/system-time-context'
 import { AppointmentCalendar } from '@/components/appointment-calendar'
 import { VEHICLE_MAKES_CA } from '@/lib/vehicle-makes'
 import { getModelsForMake, getTrimsForModel } from '@/lib/vehicle-models'
+import { getISODay } from 'date-fns'
 import { CanadianPhoneInput } from '@/components/canadian-phone-input'
 
 interface CameraModel {
@@ -361,15 +362,14 @@ export function DemandForm({ cameraModels, defaultAddress = '', timezoneName: pr
               setSelectedDate(dateStr)
               setSelectedSlot('')
             }}
-            selectedDate={selectedDate ? new Date(selectedDate + 'T00:00:00') : null}
+            selectedPacificYmd={selectedDate}
             getTakenSlots={(dateStr) => getTakenSlots(dateStr, dealerId ?? undefined, timezoneName ?? undefined)}
           />
         </div>
 
         {selectedDate && (() => {
-            const [y, mo, d] = selectedDate.split('-').map(Number)
-            const dayOfWeek = new Date(y, mo - 1, d).getDay()
-            const dayType = dayOfWeek === 6 ? 'saturday' : dayOfWeek === 0 ? 'sunday' : 'weekday'
+            const isoDow = getISODay(toDate(`${selectedDate}T12:00:00`, { timeZone: SYSTEM_DEFAULT_TIMEZONE }))
+            const dayType = isoDow === 7 ? 'sunday' : isoDow === 6 ? 'saturday' : 'weekday'
             const setting = calendarSettings?.[dayType]
             const appointmentDurationMinutes = setting?.appointment_duration_minutes ?? CALENDAR_DEFAULTS.appointmentDurationMinutes
             // Filter out blocked slots: past slots (today), existing appointments + dealer calendar blocks (closed days/slots)
