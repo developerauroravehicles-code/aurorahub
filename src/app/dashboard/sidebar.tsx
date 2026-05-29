@@ -9,6 +9,7 @@ import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { DealerClock } from '@/components/dealer-clock'
 import { ThemeToggle } from '@/components/theme-toggle'
+import { canAccessAdminCustomers, isInventoryManager, normalizeUserRole } from '@/lib/inventory-manager-access'
 
 interface Profile {
   role: string
@@ -58,10 +59,13 @@ export function Sidebar({
     setExpandedSections((prev) => ({ ...prev, [key]: !prev[key] }))
   }
 
-  const role = profile.role
+  const role = normalizeUserRole(profile.role)
   const links: NavLink[] = [
     { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   ]
+
+  const adminDemandsLink: NavLink = { name: 'Demands', href: '/dashboard/admin/demands', icon: FileText }
+  const adminCustomersLink: NavLink = { name: 'Customers', href: '/dashboard/admin/customers', icon: UserCircle }
 
   // IT Role: New structure
   const itSections: NavSection[] = [
@@ -148,12 +152,14 @@ export function Sidebar({
     links.push({ name: 'Analytics', href: '/dashboard/hr/analytics', icon: BarChart3 })
   } else if (role === 'it') {
     // IT: Platform + Dealers (handled in nav render below)
-  } else if (['aurora_manager', 'general_manager'].includes(role)) {
-    links.push({ name: 'Demands', href: '/dashboard/admin/demands', icon: FileText })
+  } else if (isInventoryManager(role)) {
+    links.push(adminDemandsLink, adminCustomersLink)
+  } else if (role === 'aurora_manager' || role === 'general_manager') {
+    links.push(adminDemandsLink)
     links.push({ name: 'Reports', href: '/dashboard/admin/reports', icon: FileText })
     if (role === 'aurora_manager') {
       links.push({ name: 'Employees', href: '/dashboard/admin/employees', icon: Users })
-      links.push({ name: 'Customers', href: '/dashboard/admin/customers', icon: UserCircle })
+      links.push(adminCustomersLink)
     }
     links.push({ name: 'Invoice', href: '/dashboard/admin/invoices', icon: Receipt })
     links.push({ name: 'Statement', href: '/dashboard/admin/statements', icon: FileText })
@@ -354,7 +360,13 @@ export function Sidebar({
         <div className="flex items-start justify-between gap-3 mb-6">
           <div className="min-w-0">
             <p className="text-sm font-medium text-zinc-900 dark:text-white">{profile.full_name || 'User'}</p>
-            <p className="text-xs font-medium text-zinc-500 dark:text-gray-500 capitalize">{role === 'specialist' ? 'Technical Support' : role?.replace('_', ' ')}</p>
+            <p className="text-xs font-medium text-zinc-500 dark:text-gray-500 capitalize">
+              {role === 'specialist'
+                ? 'Technical Support'
+                : role === 'inventory_manager'
+                  ? 'Inventory Manager'
+                  : role?.replace(/_/g, ' ')}
+            </p>
           </div>
           <ThemeToggle className="shrink-0" />
         </div>

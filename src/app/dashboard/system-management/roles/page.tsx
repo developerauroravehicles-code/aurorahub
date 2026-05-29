@@ -5,7 +5,7 @@ import { ShieldCheck } from 'lucide-react'
 
 export const dynamic = 'force-dynamic'
 
-const ROLES = ['aurora_manager', 'it', 'hr', 'sales', 'finance', 'specialist', 'general_manager'] as const
+const ROLES = ['aurora_manager', 'it', 'hr', 'sales', 'finance', 'specialist', 'general_manager', 'inventory_manager'] as const
 
 export default async function RolesPage() {
   const supabase = await createClient()

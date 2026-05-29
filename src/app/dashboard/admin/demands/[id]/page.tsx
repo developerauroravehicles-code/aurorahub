@@ -4,6 +4,7 @@ import { formatInTimeZone } from 'date-fns-tz'
 import { getEffectiveTimezone, formatInPT } from '@/lib/timezone-defaults'
 import { getTimezoneFromDealer } from '@/lib/dealer-timezone'
 import { checkCurrentUserPermission } from '@/lib/permissions'
+import { canEditDemandCoreFields } from '@/lib/inventory-manager-access'
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 import { DeleteDemandButton } from '../delete-demand-button'
@@ -100,11 +101,13 @@ export default async function DemandDetailsPage({
   }
 
   let isAuroraManager = false
+  let canEditCoreFields = false
   let canSendManualSms = false
   let installationNotes: InstallationNoteRow[] = []
   if (user) {
     const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
     isAuroraManager = profile?.role === 'aurora_manager'
+    canEditCoreFields = canEditDemandCoreFields(profile?.role)
     canSendManualSms = await checkCurrentUserPermission('comm.sms.send')
 
     if (isAuroraManager) {
@@ -165,14 +168,16 @@ export default async function DemandDetailsPage({
             <p className="text-zinc-500 dark:text-gray-400">View complete information and process history</p>
           </div>
         </div>
-        {isAuroraManager && (
+        {canEditCoreFields && (
           <div className="flex gap-2">
             <RescheduleDemandButton demand={demand} />
-            <DeleteDemandButton
-              demandId={id}
-              customerName={customerName}
-              appointmentDate={formattedAppointment}
-            />
+            {isAuroraManager && (
+              <DeleteDemandButton
+                demandId={id}
+                customerName={customerName}
+                appointmentDate={formattedAppointment}
+              />
+            )}
           </div>
         )}
       </div>
@@ -203,7 +208,7 @@ export default async function DemandDetailsPage({
             lastName={demand.customer_lastname ?? ''}
             phone={demand.customer_phone ?? ''}
             address={demand.customer_address}
-            isAuroraManager={isAuroraManager}
+            canEdit={canEditCoreFields}
           />
         </div>
 
@@ -224,7 +229,7 @@ export default async function DemandDetailsPage({
               <EditStockNumberForm
                 demandId={id}
                 stockNumber={demand.stock_number}
-                isAuroraManager={isAuroraManager}
+                canEdit={canEditCoreFields}
               />
             </div>
             <div>
@@ -232,7 +237,7 @@ export default async function DemandDetailsPage({
               <EditVinForm
                 demandId={id}
                 vinLast6={demand.vin_last6}
-                isAuroraManager={isAuroraManager}
+                canEdit={canEditCoreFields}
               />
             </div>
             <div>

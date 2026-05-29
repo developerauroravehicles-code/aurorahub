@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { formatInPT } from '@/lib/timezone-defaults'
+import { canAccessAdminCustomers, normalizeUserRole } from '@/lib/inventory-manager-access'
 import { getSmsSettings } from '@/lib/sms-resolver'
 import { CustomersListExcelButton } from './customers-excel-export'
 import { CustomersDirectoryList } from './customers-directory-list'
@@ -33,10 +34,10 @@ export default async function CustomersPage() {
   if (profile.role === 'it') {
     redirect('/dashboard/identity')
   }
-  if (profile.role === 'general_manager') {
+  if (normalizeUserRole(profile.role) === 'general_manager') {
     redirect('/dashboard')
   }
-  if (profile.role !== 'aurora_manager') {
+  if (!canAccessAdminCustomers(profile.role)) {
     redirect('/dashboard')
   }
 

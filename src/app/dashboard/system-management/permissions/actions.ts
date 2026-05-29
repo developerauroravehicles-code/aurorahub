@@ -3,7 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 
-const ROLES = ['aurora_manager', 'it', 'hr', 'sales', 'finance', 'specialist', 'general_manager'] as const
+const ROLES = ['aurora_manager', 'it', 'hr', 'sales', 'finance', 'specialist', 'general_manager', 'inventory_manager'] as const
 
 async function ensureCanManagePermissions() {
   const supabase = await createClient()

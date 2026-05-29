@@ -14,9 +14,11 @@ export default async function AdminDemandsPage({
     : { data: null }
   const canCreateExternal = profile?.role === 'aurora_manager'
   const isGM = profile?.role === 'general_manager'
+  const isInventoryManager = profile?.role === 'inventory_manager'
+  const isDealerScopedAdmin = (isGM || isInventoryManager) && profile?.dealer_id
 
   const params = await searchParams
-  const dealerId = isGM && profile?.dealer_id
+  const dealerId = isDealerScopedAdmin
     ? profile.dealer_id
     : params.dealer && params.dealer !== 'all'
       ? params.dealer
@@ -54,9 +56,9 @@ export default async function AdminDemandsPage({
           demands={demands || []}
           dealers={dealers || []}
           specialists={specialists || []}
-          selectedDealerId={isGM && profile?.dealer_id ? profile.dealer_id : (params.dealer ?? 'all')}
+          selectedDealerId={isDealerScopedAdmin ? profile.dealer_id : (params.dealer ?? 'all')}
           canCreateExternal={canCreateExternal}
-          hideDealerFilter={isGM}
+          hideDealerFilter={!!isDealerScopedAdmin}
           duplicateStockNumbers={duplicateStockNumbers}
         />
       </div>

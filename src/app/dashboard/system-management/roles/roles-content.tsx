@@ -10,6 +10,7 @@ const ROLE_LABELS: Record<string, string> = {
   finance: 'Finance',
   specialist: 'Technical Support',
   general_manager: 'General Manager',
+  inventory_manager: 'Inventory Manager',
 }
 
 const ROLE_DESCRIPTIONS: Record<string, string> = {
@@ -20,6 +21,7 @@ const ROLE_DESCRIPTIONS: Record<string, string> = {
   finance: 'Finance, demands and reports',
   specialist: 'Technical support, work list',
   general_manager: 'General management, demand approvals',
+  inventory_manager: 'Dealer inventory and customer data management',
 }
 
 export function RolesContent({

@@ -33,7 +33,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   // Sidebar clock: dealer TZ for Sales/GM, PT for HQ
   let displayTimezone: string = SYSTEM_DEFAULT_TIMEZONE
   let displayTimezoneName: string = 'Pacific Time (PT)'
-  if ((profile.role === 'sales' || profile.role === 'finance' || profile.role === 'general_manager') && profile.dealer_id) {
+  if ((profile.role === 'sales' || profile.role === 'finance' || profile.role === 'general_manager' || profile.role === 'inventory_manager') && profile.dealer_id) {
     const { data: dealer } = await supabase
       .from('dealers')
       .select('region_codes(timezone_id, timezones(name))')

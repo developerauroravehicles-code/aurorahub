@@ -1,3 +1,4 @@
+import { canAccessAdminCustomers, normalizeUserRole } from '@/lib/inventory-manager-access'
 import { createClient } from '@/lib/supabase/server'
 import { redirect, notFound } from 'next/navigation'
 import Link from 'next/link'
@@ -56,10 +57,10 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
   if (profile.role === 'it') {
     redirect('/dashboard/identity')
   }
-  if (profile.role === 'general_manager') {
+  if (normalizeUserRole(profile.role) === 'general_manager') {
     redirect('/dashboard')
   }
-  if (profile.role !== 'aurora_manager') {
+  if (!canAccessAdminCustomers(profile.role)) {
     redirect('/dashboard')
   }
 

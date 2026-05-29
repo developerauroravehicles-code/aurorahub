@@ -153,6 +153,44 @@ async function verifyAuroraManager() {
   }
 }
 
+type UserRole =
+  | 'sales'
+  | 'finance'
+  | 'specialist'
+  | 'aurora_manager'
+  | 'general_manager'
+  | 'inventory_manager'
+  | 'hr'
+  | 'it'
+
+async function validateInventoryManagerRoleAssignment(
+  role: string,
+  dealerId: string | null
+): Promise<{ error?: string }> {
+  if (role !== 'inventory_manager') return {}
+
+  const { createClient } = await import('@/lib/supabase/server')
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Unauthorized' }
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single()
+
+  if (profile?.role !== 'it') {
+    return { error: 'Only IT can assign the Inventory Manager role' }
+  }
+
+  if (!dealerId) {
+    return { error: 'Inventory Manager must be assigned to a dealer' }
+  }
+
+  return {}
+}
+
 type ActionState = { error?: string; success?: string } | null
 
 export async function createDealer(prevState: ActionState, formData: FormData) {
@@ -232,8 +270,13 @@ export async function createUser(prevState: ActionState, formData: FormData) {
     }
   }
 
+  const inventoryManagerValidation = await validateInventoryManagerRoleAssignment(role, dealerId)
+  if (inventoryManagerValidation.error) {
+    await supabaseAdmin.auth.admin.deleteUser(userData.user.id)
+    return { error: inventoryManagerValidation.error }
+  }
+
   // 3. Create Profile
-  type UserRole = 'sales' | 'finance' | 'specialist' | 'aurora_manager' | 'general_manager' | 'hr' | 'it'
   const { error: profileError } = await supabaseAdmin.from('profiles').insert({
     id: userData.user.id,
     role: role as UserRole,
@@ -320,7 +363,6 @@ export async function createLoginForPersonnel(personnelId: string, email: string
     ? personnel.platform_role
     : 'it'
 
-  type UserRole = 'sales' | 'finance' | 'specialist' | 'aurora_manager' | 'general_manager' | 'hr' | 'it'
   const { error: profileError } = await supabaseAdmin.from('profiles').insert({
     id: userData.user.id,
     role: role as UserRole,
@@ -404,6 +446,11 @@ export async function updateUser(prevState: ActionState, formData: FormData) {
     else return { error: 'Dealer code not found.' }
   }
 
+  const inventoryManagerValidation = await validateInventoryManagerRoleAssignment(role, dealerId)
+  if (inventoryManagerValidation.error) {
+    return { error: inventoryManagerValidation.error }
+  }
+
   const email = normalizeEmail(emailRaw)
   if (email) {
     const { data: existingUser } = await supabaseAdmin.auth.admin.getUserById(userId)
@@ -416,7 +463,6 @@ export async function updateUser(prevState: ActionState, formData: FormData) {
     }
   }
 
-  type UserRole = 'sales' | 'finance' | 'specialist' | 'aurora_manager' | 'general_manager' | 'hr' | 'it'
   const updateData = {
     full_name: fullName.trim(),
     phone: phone?.trim() || null,

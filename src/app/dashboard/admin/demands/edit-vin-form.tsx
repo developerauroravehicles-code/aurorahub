@@ -9,13 +9,13 @@ const inputClass = 'w-full border border-zinc-300 dark:border-gray-700 bg-zinc-2
 interface EditVinFormProps {
   demandId: string
   vinLast6: string | null
-  isAuroraManager: boolean
+  canEdit: boolean
 }
 
 export function EditVinForm({
   demandId,
   vinLast6,
-  isAuroraManager,
+  canEdit,
 }: EditVinFormProps) {
   const router = useRouter()
   const [value, setValue] = useState(vinLast6 ?? '')
@@ -44,7 +44,7 @@ export function EditVinForm({
     }
   }
 
-  if (!isAuroraManager) {
+  if (!canEdit) {
     return (
       <p className="text-zinc-900 dark:text-white">{vinLast6 ? vinLast6.toUpperCase() : '—'}</p>
     )

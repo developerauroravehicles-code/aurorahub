@@ -4,7 +4,7 @@ import React, { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { setRolePermission, grantRoleAllCategory, revokeRoleAllCategory } from './actions'
 
-const ROLES = ['aurora_manager', 'it', 'hr', 'sales', 'finance', 'specialist', 'general_manager'] as const
+const ROLES = ['aurora_manager', 'it', 'hr', 'sales', 'finance', 'specialist', 'general_manager', 'inventory_manager'] as const
 import { Loader2, Check, Minus, CheckSquare, Square } from 'lucide-react'
 
 const ROLE_LABELS: Record<string, string> = {
@@ -15,6 +15,7 @@ const ROLE_LABELS: Record<string, string> = {
   finance: 'Finance',
   specialist: 'Technical Support',
   general_manager: 'General Manager',
+  inventory_manager: 'Inventory Manager',
 }
 
 const CATEGORY_ORDER = ['Organization', 'System', 'Communication', 'Dealers', 'Service Desk', 'Logs', 'Permissions']

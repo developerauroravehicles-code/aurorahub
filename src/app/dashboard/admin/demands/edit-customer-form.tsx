@@ -13,7 +13,7 @@ interface EditCustomerFormProps {
   lastName: string
   phone: string
   address: string | null
-  isAuroraManager: boolean
+  canEdit: boolean
 }
 
 export function EditCustomerForm({
@@ -22,7 +22,7 @@ export function EditCustomerForm({
   lastName,
   phone,
   address,
-  isAuroraManager,
+  canEdit,
 }: EditCustomerFormProps) {
   const router = useRouter()
   const [firstNameVal, setFirstNameVal] = useState(firstName ?? '')
@@ -61,7 +61,7 @@ export function EditCustomerForm({
     }
   }
 
-  if (!isAuroraManager) {
+  if (!canEdit) {
     return (
       <div className="space-y-3">
         <div>

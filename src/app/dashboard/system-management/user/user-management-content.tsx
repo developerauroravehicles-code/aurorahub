@@ -10,7 +10,7 @@ import type { Dealer } from '@/types/system-management'
 import { EmailInput } from '@/components/email-input'
 import { normalizeEmail } from '@/lib/email-normalize'
 
-function UserForm({ dealers }: { dealers: Dealer[] }) {
+function UserForm({ dealers, currentUserRole }: { dealers: Dealer[]; currentUserRole?: string }) {
   const [state, formAction, isPending] = useActionState(createUser, null)
   const [dealerCode, setDealerCode] = useState('')
 
@@ -83,6 +83,9 @@ function UserForm({ dealers }: { dealers: Dealer[] }) {
             <option value="general_manager" className="bg-zinc-50 dark:bg-black text-zinc-900 dark:text-white">General Manager</option>
             <option value="hr" className="bg-zinc-50 dark:bg-black text-zinc-900 dark:text-white">HR</option>
             <option value="it" className="bg-zinc-50 dark:bg-black text-zinc-900 dark:text-white">IT</option>
+            {currentUserRole === 'it' && (
+              <option value="inventory_manager" className="bg-zinc-50 dark:bg-black text-zinc-900 dark:text-white">Inventory Manager</option>
+            )}
           </select>
         </div>
 
@@ -118,11 +121,13 @@ function UserForm({ dealers }: { dealers: Dealer[] }) {
 function EditUserModal({
   userId,
   dealers,
+  currentUserRole,
   onClose,
   onSuccess
 }: {
   userId: string
   dealers: Dealer[]
+  currentUserRole?: string
   onClose: () => void
   onSuccess: () => void
 }) {
@@ -218,6 +223,9 @@ function EditUserModal({
                 <option value="general_manager" className="bg-zinc-50 dark:bg-black">General Manager</option>
                 <option value="hr" className="bg-zinc-50 dark:bg-black">HR</option>
                 <option value="it" className="bg-zinc-50 dark:bg-black">IT</option>
+                {(currentUserRole === 'it' || profile.role === 'inventory_manager') && (
+                  <option value="inventory_manager" className="bg-zinc-50 dark:bg-black">Inventory Manager</option>
+                )}
               </select>
             </div>
             <div>
@@ -456,11 +464,13 @@ function UserList({
   profiles,
   errors,
   dealers,
+  currentUserRole,
   onRefresh
 }: {
   profiles: any[]
   errors: any
   dealers: Dealer[]
+  currentUserRole?: string
   onRefresh: () => void
 }) {
   const [editingUserId, setEditingUserId] = useState<string | null>(null)
@@ -560,6 +570,7 @@ function UserList({
         <EditUserModal
           userId={editingUserId}
           dealers={dealers}
+          currentUserRole={currentUserRole}
           onClose={() => setEditingUserId(null)}
           onSuccess={onRefresh}
         />
@@ -571,11 +582,13 @@ function UserList({
 export function UserManagementContent({
   profiles,
   errors,
-  dealers
+  dealers,
+  currentUserRole
 }: {
   profiles: any[]
   errors: any
   dealers: Dealer[]
+  currentUserRole?: string
 }) {
   const router = useRouter()
   return (
@@ -583,12 +596,13 @@ export function UserManagementContent({
       <div>
         <h3 className="text-lg font-semibold text-zinc-900 dark:text-white mb-2">Create New User</h3>
         <p className="text-sm text-zinc-500 dark:text-gray-400 mb-4">Add a new user to the system</p>
-        <UserForm dealers={dealers} />
+        <UserForm dealers={dealers} currentUserRole={currentUserRole} />
       </div>
       <UserList
         profiles={profiles}
         errors={errors || {}}
         dealers={dealers}
+        currentUserRole={currentUserRole}
         onRefresh={() => router.refresh()}
       />
     </div>

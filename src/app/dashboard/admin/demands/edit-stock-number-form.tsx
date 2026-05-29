@@ -9,13 +9,13 @@ const inputClass = 'w-full border border-zinc-300 dark:border-gray-700 bg-zinc-2
 interface EditStockNumberFormProps {
   demandId: string
   stockNumber: string | null
-  isAuroraManager: boolean
+  canEdit: boolean
 }
 
 export function EditStockNumberForm({
   demandId,
   stockNumber,
-  isAuroraManager,
+  canEdit,
 }: EditStockNumberFormProps) {
   const router = useRouter()
   const [value, setValue] = useState(stockNumber ?? '')
@@ -39,7 +39,7 @@ export function EditStockNumberForm({
     }
   }
 
-  if (!isAuroraManager) {
+  if (!canEdit) {
     return (
       <p className="text-zinc-900 dark:text-white">{stockNumber || '—'}</p>
     )

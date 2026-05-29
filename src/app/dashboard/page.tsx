@@ -936,6 +936,119 @@ export default async function DashboardPage({
     )
   }
 
+  // If inventory_manager user, fetch dealer-specific overview
+  if (profile.role === 'inventory_manager') {
+    if (!profile.dealer_id) {
+      return (
+        <div className="space-y-10">
+          <WelcomeBanner
+            title="Inventory Manager Dashboard"
+            subtitle="Demands and customer directory"
+            userName={(profile as { full_name?: string })?.full_name?.split(' ')[0]}
+            timezone={SYSTEM_DEFAULT_TIMEZONE}
+          />
+          <div className="rounded-lg border border-amber-800/60 bg-amber-900/20 px-4 py-3 text-sm text-amber-200">
+            No dealer is assigned to your account. Contact IT to link you to a dealer before viewing or editing demands.
+          </div>
+          <QuickActions
+            actions={[
+              { label: 'Demands', href: '/dashboard/admin/demands' },
+              { label: 'Customers', href: '/dashboard/admin/customers' },
+            ]}
+          />
+        </div>
+      )
+    }
+
+    const { data: dealer } = await supabase
+      .from('dealers')
+      .select('name, code, region_codes(timezone_id, timezones(name))')
+      .eq('id', profile.dealer_id)
+      .single()
+    const imTimezoneName: string | null = (dealer?.region_codes as { timezones?: { name: string } } | null)?.timezones?.name ?? null
+
+    const { data: allDemands } = await supabase
+      .from('demands')
+      .select('id, status, created_at, customer_firstname, customer_lastname, vehicle_make, vehicle_model, vehicle_year, camera_model, appointment_date, demand_number')
+      .eq('dealer_id', profile.dealer_id)
+      .order('created_at', { ascending: false })
+
+    const totalDemands = allDemands?.length || 0
+    const pendingFinance = allDemands?.filter(d => d.status === 'pending_finance').length || 0
+    const approved = allDemands?.filter(d => d.status === 'approved').length || 0
+    const completed = allDemands?.filter(d => d.status === 'completed').length || 0
+    const recentDemands = allDemands?.slice(0, 10) || []
+
+    return (
+      <div className="space-y-10">
+        <WelcomeBanner
+          title="Inventory Manager Dashboard"
+          subtitle={dealer ? `Demands and customers for ${dealer.name} (${dealer.code})` : 'Dealer overview'}
+          userName={(profile as { full_name?: string })?.full_name?.split(' ')[0]}
+          timezone={imTimezoneName}
+        />
+
+        <QuickActions
+          actions={[
+            { label: 'Demands', href: '/dashboard/admin/demands' },
+            { label: 'Customers', href: '/dashboard/admin/customers' },
+          ]}
+        />
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <StatCard title="Total Demands" value={totalDemands} subtitle="All time demands" icon={FileText} accentColor="blue" />
+          <StatCard title="Pending Finance" value={pendingFinance} subtitle="Awaiting finance review" icon={Clock} accentColor="orange" />
+          <StatCard title="Approved" value={approved} subtitle="Ready for installation" icon={AlertCircle} accentColor="white" />
+          <StatCard title="Completed" value={completed} subtitle={totalDemands > 0 ? `${Math.round((completed / totalDemands) * 100)}% completion rate` : undefined} icon={CheckCircle} accentColor="green" />
+        </div>
+
+        <DataCard title="Recent Demands" action={{ label: 'View All', href: '/dashboard/admin/demands' }}>
+          {recentDemands.length === 0 ? (
+            <div className="py-12 text-center">
+              <p className="text-zinc-500 dark:text-gray-400">No demands found for your dealer.</p>
+            </div>
+          ) : (
+            <ul className="divide-y divide-zinc-200 dark:divide-gray-800/80">
+              {recentDemands.map(demand => {
+                const statusColors = {
+                  pending_finance: 'bg-yellow-900/50 text-yellow-300 border-yellow-800',
+                  approved: 'bg-blue-900/50 text-blue-300 border-blue-800',
+                  completed: 'bg-green-900/50 text-green-300 border-green-800',
+                  cancelled: 'bg-red-900/50 text-red-300 border-red-800'
+                }
+                return (
+                  <li key={demand.id} className="px-6 py-4 hover:bg-white/[0.03] transition-colors">
+                    <Link href={`/dashboard/admin/demands/${demand.id}`} className="flex justify-between items-start">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-3 mb-2">
+                          <p className="font-semibold text-zinc-900 dark:text-white">
+                            {demand.customer_firstname} {demand.customer_lastname}
+                          </p>
+                          {(demand as { demand_number?: number }).demand_number != null && (
+                            <span className="text-xs font-medium text-zinc-500 dark:text-gray-500">#{(demand as { demand_number?: number }).demand_number}</span>
+                          )}
+                          <span className={`px-2 py-1 rounded text-xs font-medium border ${statusColors[demand.status as keyof typeof statusColors] || 'bg-zinc-200/80 dark:bg-gray-900/50 text-zinc-600 dark:text-gray-300 border-zinc-200 dark:border-gray-800'}`}>
+                            {demand.status.replace('_', ' ').toUpperCase()}
+                          </span>
+                        </div>
+                        <p className="text-sm text-zinc-500 dark:text-gray-400">
+                          {demand.vehicle_year} {demand.vehicle_make} {demand.vehicle_model}
+                        </p>
+                        <p className="text-sm text-zinc-500 dark:text-gray-400">
+                          Camera: {demand.camera_model}
+                        </p>
+                      </div>
+                    </Link>
+                  </li>
+                )
+              })}
+            </ul>
+          )}
+        </DataCard>
+      </div>
+    )
+  }
+
   // If general_manager user, fetch dealer-specific statistics
   if (profile.role === 'general_manager' && profile.dealer_id) {
     // Get dealer information and timezone for appointment display

@@ -13,6 +13,28 @@ import { getTimezoneFromDealer } from '@/lib/dealer-timezone'
 import { toDate } from 'date-fns-tz'
 import { SYSTEM_DEFAULT_TIMEZONE } from '@/lib/timezone-defaults'
 import { lookupCameraModelId } from '@/lib/camera-model-resolve'
+import { assertDealerDemandAccess, canEditDemandCoreFields } from '@/lib/inventory-manager-access'
+
+type DemandEditProfile = {
+  role: string
+  dealer_id?: string | null
+}
+
+function authorizeCoreDemandEdit(
+  profile: DemandEditProfile | null | undefined,
+  demandDealerId?: string | null
+): { error: string } | null {
+  if (!profile || !canEditDemandCoreFields(profile.role)) {
+    return { error: 'You do not have permission to edit this demand' }
+  }
+
+  if (demandDealerId !== undefined) {
+    const access = assertDealerDemandAccess(profile, demandDealerId)
+    if (!access.ok) return { error: access.error }
+  }
+
+  return null
+}
 
 export async function updateAssignedSpecialist(
   demandId: string,
@@ -114,13 +136,18 @@ export async function updateCustomerInfo(
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('role')
+    .select('role, dealer_id')
     .eq('id', user.id)
     .single()
 
-  if (!profile || profile.role !== 'aurora_manager') {
-    return { success: false, error: 'Only Aurora Manager can update customer info' }
-  }
+  const { data: demand } = await supabase
+    .from('demands')
+    .select('status, dealer_id')
+    .eq('id', demandId)
+    .single()
+
+  const authError = authorizeCoreDemandEdit(profile, demand?.dealer_id)
+  if (authError) return { success: false, error: authError.error }
 
   const firstName = (data.firstName || '').trim().toUpperCase()
   const lastName = (data.lastName || '').trim().toUpperCase()
@@ -128,12 +155,6 @@ export async function updateCustomerInfo(
   if (!firstName || !lastName || !phone) {
     return { success: false, error: 'First name, last name and phone are required' }
   }
-
-  const { data: demand } = await supabase
-    .from('demands')
-    .select('status')
-    .eq('id', demandId)
-    .single()
 
   const { error } = await supabase
     .from('demands')
@@ -171,13 +192,9 @@ export async function updateVinLast6(
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('role')
+    .select('role, dealer_id')
     .eq('id', user.id)
     .single()
-
-  if (!profile || profile.role !== 'aurora_manager') {
-    return { success: false, error: 'Only Aurora Manager can update VIN' }
-  }
 
   const normalized = (vinLast6 || '').trim().replace(/\s/g, '').slice(-6).toUpperCase()
   if (normalized.length < 6) {
@@ -186,9 +203,12 @@ export async function updateVinLast6(
 
   const { data: demand } = await supabase
     .from('demands')
-    .select('status')
+    .select('status, dealer_id')
     .eq('id', demandId)
     .single()
+
+  const authError = authorizeCoreDemandEdit(profile, demand?.dealer_id)
+  if (authError) return { success: false, error: authError.error }
 
   const { error } = await supabase
     .from('demands')
@@ -221,13 +241,9 @@ export async function updateStockNumber(
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('role')
+    .select('role, dealer_id')
     .eq('id', user.id)
     .single()
-
-  if (!profile || profile.role !== 'aurora_manager') {
-    return { success: false, error: 'Only Aurora Manager can update stock number' }
-  }
 
   const trimmed = (stockNumber || '').trim().toUpperCase()
 
@@ -240,9 +256,12 @@ export async function updateStockNumber(
 
   const { data: demand } = await supabase
     .from('demands')
-    .select('status')
+    .select('status, dealer_id')
     .eq('id', demandId)
     .single()
+
+  const authError = authorizeCoreDemandEdit(profile, demand?.dealer_id)
+  if (authError) return { success: false, error: authError.error }
 
   const { error } = await supabase
     .from('demands')
@@ -274,10 +293,7 @@ export async function updateDemandByAuroraManager(
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Unauthorized' }
 
-  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
-  if (!profile || profile.role !== 'aurora_manager') {
-    return { error: 'Only Aurora Managers can update demands' }
-  }
+  const { data: profile } = await supabase.from('profiles').select('role, dealer_id').eq('id', user.id).single()
 
   const { data: demand } = await supabase
     .from('demands')
@@ -286,6 +302,10 @@ export async function updateDemandByAuroraManager(
     .single()
 
   if (!demand) return { error: 'Demand not found' }
+
+  const authError = authorizeCoreDemandEdit(profile, demand.dealer_id)
+  if (authError) return { error: authError.error }
+
   if (demand.status === 'cancelled') return { error: 'Cannot update a cancelled demand' }
 
   const customerFirstname = ((formData.get('customer_firstname') as string) ?? '').trim().toUpperCase()
