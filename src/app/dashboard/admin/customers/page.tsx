@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { formatInPT } from '@/lib/timezone-defaults'
-import { canAccessAdminCustomers, normalizeUserRole } from '@/lib/inventory-manager-access'
+import { canAccessAdminCustomers, canUseSmsFeatures, getInventoryManagerDealerId, isInventoryManager, normalizeUserRole } from '@/lib/inventory-manager-access'
 import { getSmsSettings } from '@/lib/sms-resolver'
 import { CustomersListExcelButton } from './customers-excel-export'
 import { CustomersDirectoryList } from './customers-directory-list'
@@ -28,7 +28,7 @@ export default async function CustomersPage() {
   } = await supabase.auth.getUser()
   if (!user) return null
 
-  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+  const { data: profile } = await supabase.from('profiles').select('role, dealer_id').eq('id', user.id).single()
   if (!profile) return <div className="text-zinc-900 dark:text-white">Access denied</div>
 
   if (profile.role === 'it') {
@@ -40,10 +40,16 @@ export default async function CustomersPage() {
   if (!canAccessAdminCustomers(profile.role)) {
     redirect('/dashboard')
   }
+  if (isInventoryManager(profile.role) && !getInventoryManagerDealerId(profile)) {
+    redirect('/dashboard')
+  }
+
+  const imDealerId = getInventoryManagerDealerId(profile)
+  const canSendSms = canUseSmsFeatures(profile.role)
 
   const [{ data: rows, error }, smsSettings] = await Promise.all([
     supabase.rpc('customer_directory_summaries'),
-    getSmsSettings(supabase),
+    canSendSms ? getSmsSettings(supabase) : Promise.resolve({ signature: '' }),
   ])
 
   const summaries = (rows ?? []) as CustomerSummaryRow[]
@@ -70,7 +76,9 @@ export default async function CustomersPage() {
           <CustomersListExcelButton rows={excelRows} />
         </div>
         <p className="mb-4 text-sm text-zinc-600 dark:text-gray-400">
-          Customers are grouped by phone number across all demands.
+          {imDealerId
+            ? 'Customers grouped by phone number for your dealer only.'
+            : 'Customers are grouped by phone number across all demands.'}
         </p>
         {error && (
           <p className="mb-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200">
@@ -80,7 +88,7 @@ export default async function CustomersPage() {
         {summaries.length === 0 && !error ? (
           <p className="px-4 py-8 text-center text-sm text-zinc-500 dark:text-gray-400">No customers found.</p>
         ) : summaries.length > 0 ? (
-          <CustomersDirectoryList rows={summaries} signaturePreview={signaturePreview} />
+          <CustomersDirectoryList rows={summaries} signaturePreview={signaturePreview} canSendSms={canSendSms} />
         ) : null}
       </div>
     </div>

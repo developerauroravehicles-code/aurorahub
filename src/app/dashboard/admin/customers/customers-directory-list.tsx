@@ -29,9 +29,11 @@ function rowDisplayName(row: CustomerDirectoryRow): string {
 export function CustomersDirectoryList({
   rows,
   signaturePreview,
+  canSendSms = true,
 }: {
   rows: CustomerDirectoryRow[]
   signaturePreview: string
+  canSendSms?: boolean
 }) {
   const [search, setSearch] = useState('')
   const [onlyLast90Days, setOnlyLast90Days] = useState(false)
@@ -216,51 +218,57 @@ export function CustomersDirectoryList({
           <span className="text-sm text-zinc-600 dark:text-gray-400">
             Showing {filtered.length} of {rows.length} customers
           </span>
-          <button
-            type="button"
-            onClick={selectAllFiltered}
-            className="rounded-md border border-zinc-300 px-3 py-1.5 text-sm text-zinc-800 hover:bg-zinc-100 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-white/10"
-          >
-            Select filtered
-          </button>
-          <button
-            type="button"
-            onClick={clearSelection}
-            className="rounded-md border border-zinc-300 px-3 py-1.5 text-sm text-zinc-800 hover:bg-zinc-100 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-white/10"
-          >
-            Clear selection
-          </button>
-          <button
-            type="button"
-            onClick={openBulkModal}
-            disabled={selectedKeys.size === 0}
-            className="inline-flex items-center gap-2 rounded-md bg-[#C27E00]/90 px-3 py-1.5 text-sm font-medium text-white hover:bg-[#a06900] disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            <MessageSquare className="h-4 w-4" />
-            Send SMS to selected ({selectedKeys.size})
-          </button>
+          {canSendSms && (
+            <>
+              <button
+                type="button"
+                onClick={selectAllFiltered}
+                className="rounded-md border border-zinc-300 px-3 py-1.5 text-sm text-zinc-800 hover:bg-zinc-100 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-white/10"
+              >
+                Select filtered
+              </button>
+              <button
+                type="button"
+                onClick={clearSelection}
+                className="rounded-md border border-zinc-300 px-3 py-1.5 text-sm text-zinc-800 hover:bg-zinc-100 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-white/10"
+              >
+                Clear selection
+              </button>
+              <button
+                type="button"
+                onClick={openBulkModal}
+                disabled={selectedKeys.size === 0}
+                className="inline-flex items-center gap-2 rounded-md bg-[#C27E00]/90 px-3 py-1.5 text-sm font-medium text-white hover:bg-[#a06900] disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <MessageSquare className="h-4 w-4" />
+                Send SMS to selected ({selectedKeys.size})
+              </button>
+            </>
+          )}
         </div>
       </div>
 
       <div className="overflow-hidden rounded-lg border border-zinc-200 bg-zinc-200/50 shadow dark:border-gray-800 dark:bg-white/5">
         <div className="hidden border-b border-zinc-300 bg-zinc-200/70 px-4 py-2 text-xs font-medium uppercase tracking-wide text-zinc-500 dark:border-gray-800 dark:bg-white/10 dark:text-gray-400 sm:block">
           <div className="flex items-center gap-4">
-            <div className="flex w-8 shrink-0 items-center justify-center">
-              <input
-                ref={headerSelectAllRef}
-                type="checkbox"
-                checked={allFilteredSelected}
-                disabled={filtered.length === 0}
-                onChange={toggleSelectAllFiltered}
-                aria-label="Select all customers in this list"
-                title="Select all / clear filtered rows"
-                className="h-4 w-4 rounded border-zinc-400 text-[#C27E00] disabled:opacity-40"
-              />
-            </div>
+            {canSendSms && (
+              <div className="flex w-8 shrink-0 items-center justify-center">
+                <input
+                  ref={headerSelectAllRef}
+                  type="checkbox"
+                  checked={allFilteredSelected}
+                  disabled={filtered.length === 0}
+                  onChange={toggleSelectAllFiltered}
+                  aria-label="Select all customers in this list"
+                  title="Select all / clear filtered rows"
+                  className="h-4 w-4 rounded border-zinc-400 text-[#C27E00] disabled:opacity-40"
+                />
+              </div>
+            )}
             <span className="min-w-0 flex-1">Customer</span>
             <span className="hidden w-36 shrink-0 text-right md:block">Activity</span>
             <span className="w-20 shrink-0 text-right">Demands</span>
-            <span className="w-28 shrink-0 text-right">Actions</span>
+            {canSendSms && <span className="w-28 shrink-0 text-right">Actions</span>}
           </div>
         </div>
         {filtered.length === 0 ? (
@@ -276,13 +284,15 @@ export function CustomersDirectoryList({
               return (
                 <li key={row.phone_key} className="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center">
                   <div className="flex items-start gap-3 sm:w-full sm:items-center">
-                    <input
-                      type="checkbox"
-                      checked={checked}
-                      onChange={() => toggleKey(row.phone_key)}
-                      aria-label={`Select ${name}`}
-                      className="mt-1 h-4 w-4 shrink-0 rounded border-zinc-400 text-[#C27E00] sm:mt-0"
-                    />
+                    {canSendSms && (
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={() => toggleKey(row.phone_key)}
+                        aria-label={`Select ${name}`}
+                        className="mt-1 h-4 w-4 shrink-0 rounded border-zinc-400 text-[#C27E00] sm:mt-0"
+                      />
+                    )}
                     <div className="min-w-0 flex-1">
                       <Link
                         href={`/dashboard/admin/customers/${routeKey}`}
@@ -298,7 +308,7 @@ export function CustomersDirectoryList({
                       )}
                     </div>
                   </div>
-                  <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 pl-7 sm:flex-nowrap sm:justify-end sm:pl-0">
+                  <div className={`flex shrink-0 flex-wrap items-center justify-between gap-2 sm:flex-nowrap sm:justify-end${canSendSms ? ' pl-7 sm:pl-0' : ''}`}>
                     <p className="text-right text-xs text-zinc-500 dark:text-gray-500 sm:hidden">
                       Last {formatInPT(row.last_activity, 'd MMM yyyy')}
                       <span className="text-zinc-400"> · </span>
@@ -310,14 +320,16 @@ export function CustomersDirectoryList({
                     <p className="hidden w-20 shrink-0 text-right text-sm text-zinc-600 dark:text-gray-400 sm:block">
                       <span className="text-[#C27E00]">{row.demand_count}</span>
                     </p>
-                    <button
-                      type="button"
-                      onClick={() => openModalWithRows([row])}
-                      className="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-zinc-400 px-2.5 py-1.5 text-xs font-medium text-zinc-800 hover:bg-zinc-100 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-white/10"
-                    >
-                      <MessageSquare className="h-3.5 w-3.5" />
-                      SMS
-                    </button>
+                    {canSendSms && (
+                      <button
+                        type="button"
+                        onClick={() => openModalWithRows([row])}
+                        className="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-zinc-400 px-2.5 py-1.5 text-xs font-medium text-zinc-800 hover:bg-zinc-100 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-white/10"
+                      >
+                        <MessageSquare className="h-3.5 w-3.5" />
+                        SMS
+                      </button>
+                    )}
                   </div>
                 </li>
               )
@@ -326,7 +338,7 @@ export function CustomersDirectoryList({
         )}
       </div>
 
-      {reallyOpen && (
+      {canSendSms && reallyOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true">
           <button type="button" className="absolute inset-0 bg-black/40" aria-label="Close modal" onClick={closeModal} />
           <div className="relative max-h-[90vh] w-full max-w-lg overflow-auto rounded-xl border border-zinc-300 bg-white p-5 shadow-xl dark:border-gray-700 dark:bg-zinc-900">

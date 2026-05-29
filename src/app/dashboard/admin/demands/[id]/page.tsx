@@ -4,8 +4,9 @@ import { formatInTimeZone } from 'date-fns-tz'
 import { getEffectiveTimezone, formatInPT } from '@/lib/timezone-defaults'
 import { getTimezoneFromDealer } from '@/lib/dealer-timezone'
 import { checkCurrentUserPermission } from '@/lib/permissions'
-import { canEditDemandCoreFields } from '@/lib/inventory-manager-access'
+import { assertDealerDemandAccess, canEditDemandCoreFields, canUseSmsFeatures, getInventoryManagerDealerId, isInventoryManager } from '@/lib/inventory-manager-access'
 import Link from 'next/link'
+import { redirect } from 'next/navigation'
 import { ArrowLeft } from 'lucide-react'
 import { DeleteDemandButton } from '../delete-demand-button'
 import { ChangeSpecialistForm } from '../change-specialist-form'
@@ -43,6 +44,14 @@ export default async function DemandDetailsPage({
   const backToDemandsHref = demandsListHrefFromDetailSearch(searchParams)
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
+
+  const { data: profile } = user
+    ? await supabase.from('profiles').select('role, dealer_id').eq('id', user.id).single()
+    : { data: null }
+
+  if (isInventoryManager(profile?.role) && !getInventoryManagerDealerId(profile)) {
+    redirect('/dashboard')
+  }
   
   // Fetch demand with all related data (dealers timezone for appointment display)
   const { data: demand } = await supabase
@@ -58,6 +67,18 @@ export default async function DemandDetailsPage({
     .single()
 
   if (!demand) {
+    return (
+      <div className="space-y-8">
+        <div className="text-zinc-900 dark:text-white">Demand not found</div>
+        <Link href={backToDemandsHref} className="text-[#C27E00] hover:text-[#a06900]">
+          ← Back to Demands
+        </Link>
+      </div>
+    )
+  }
+
+  const dealerAccess = assertDealerDemandAccess(profile, demand.dealer_id)
+  if (!dealerAccess.ok) {
     return (
       <div className="space-y-8">
         <div className="text-zinc-900 dark:text-white">Demand not found</div>
@@ -104,11 +125,12 @@ export default async function DemandDetailsPage({
   let canEditCoreFields = false
   let canSendManualSms = false
   let installationNotes: InstallationNoteRow[] = []
-  if (user) {
-    const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
-    isAuroraManager = profile?.role === 'aurora_manager'
-    canEditCoreFields = canEditDemandCoreFields(profile?.role)
-    canSendManualSms = await checkCurrentUserPermission('comm.sms.send')
+  if (user && profile) {
+    isAuroraManager = profile.role === 'aurora_manager'
+    canEditCoreFields = canEditDemandCoreFields(profile.role)
+    canSendManualSms =
+      canUseSmsFeatures(profile.role) &&
+      (await checkCurrentUserPermission('comm.sms.send'))
 
     if (isAuroraManager) {
       const { data: notesRows } = await supabase
@@ -168,16 +190,14 @@ export default async function DemandDetailsPage({
             <p className="text-zinc-500 dark:text-gray-400">View complete information and process history</p>
           </div>
         </div>
-        {canEditCoreFields && (
+        {isAuroraManager && (
           <div className="flex gap-2">
             <RescheduleDemandButton demand={demand} />
-            {isAuroraManager && (
-              <DeleteDemandButton
-                demandId={id}
-                customerName={customerName}
-                appointmentDate={formattedAppointment}
-              />
-            )}
+            <DeleteDemandButton
+              demandId={id}
+              customerName={customerName}
+              appointmentDate={formattedAppointment}
+            />
           </div>
         )}
       </div>

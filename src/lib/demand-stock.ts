@@ -3,14 +3,21 @@ import { createClient } from '@/lib/supabase/server'
 /**
  * Returns stock numbers that appear in 2+ non-cancelled demands (case-insensitive).
  * Used to show "(Duplicate Stock No)" badge next to demands.
+ * Optional dealerId scopes duplicates to a single dealer (Inventory Manager).
  */
-export async function getDuplicateStockNumbers(): Promise<Set<string>> {
+export async function getDuplicateStockNumbers(dealerId?: string | null): Promise<Set<string>> {
   const supabase = await createClient()
-  const { data } = await supabase
+  let query = supabase
     .from('demands')
     .select('stock_number')
     .neq('status', 'cancelled')
     .not('stock_number', 'is', null)
+
+  if (dealerId) {
+    query = query.eq('dealer_id', dealerId)
+  }
+
+  const { data } = await query
 
   const byStock = new Map<string, number>()
   for (const row of data ?? []) {
@@ -31,7 +38,8 @@ export async function getDuplicateStockNumbers(): Promise<Set<string>> {
  */
 export async function isStockNumberDuplicate(
   stockNumber: string,
-  excludeDemandId?: string | null
+  excludeDemandId?: string | null,
+  dealerId?: string | null
 ): Promise<{ duplicate: boolean; existingDemandId?: string }> {
   const supabase = await createClient()
   const normalized = (stockNumber || '').trim().toUpperCase()
@@ -42,6 +50,10 @@ export async function isStockNumberDuplicate(
     .select('id')
     .neq('status', 'cancelled')
     .ilike('stock_number', normalized)
+
+  if (dealerId) {
+    query = query.eq('dealer_id', dealerId)
+  }
 
   if (excludeDemandId) {
     query = query.neq('id', excludeDemandId)

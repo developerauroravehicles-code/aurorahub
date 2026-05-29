@@ -30,10 +30,19 @@ export function canEditDemandCoreFields(role: string | null | undefined): boolea
   return isAuroraManager(role) || isInventoryManager(role)
 }
 
+/** Inventory Manager has no SMS send UI or actions. */
+export function canUseSmsFeatures(role: string | null | undefined): boolean {
+  return !isInventoryManager(role)
+}
+
 export function assertDealerDemandAccess(
-  profile: ProfileForDemandAccess,
+  profile: ProfileForDemandAccess | null | undefined,
   demandDealerId: string | null | undefined
 ): { ok: true } | { ok: false; error: string } {
+  if (!profile) {
+    return { ok: false, error: 'Unauthorized' }
+  }
+
   if (!isInventoryManager(profile.role)) {
     return { ok: true }
   }
@@ -43,8 +52,24 @@ export function assertDealerDemandAccess(
   }
 
   if (!demandDealerId || demandDealerId !== profile.dealer_id) {
-    return { ok: false, error: 'You can only edit demands for your dealer' }
+    return { ok: false, error: 'You can only access demands for your dealer' }
   }
 
   return { ok: true }
+}
+
+/** Inventory Manager pages require a dealer assignment. */
+export function getInventoryManagerDealerId(
+  profile: ProfileForDemandAccess | null | undefined
+): string | null {
+  if (!isInventoryManager(profile?.role) || !profile?.dealer_id) {
+    return null
+  }
+  return profile.dealer_id
+}
+
+export function inventoryManagerMustHaveDealer(
+  profile: ProfileForDemandAccess | null | undefined
+): boolean {
+  return isInventoryManager(profile?.role) && !!profile?.dealer_id
 }

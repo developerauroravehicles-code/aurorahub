@@ -13,7 +13,7 @@ import { getTimezoneFromDealer } from '@/lib/dealer-timezone'
 import { toDate } from 'date-fns-tz'
 import { SYSTEM_DEFAULT_TIMEZONE } from '@/lib/timezone-defaults'
 import { lookupCameraModelId } from '@/lib/camera-model-resolve'
-import { assertDealerDemandAccess, canEditDemandCoreFields } from '@/lib/inventory-manager-access'
+import { assertDealerDemandAccess, canEditDemandCoreFields, getInventoryManagerDealerId } from '@/lib/inventory-manager-access'
 
 type DemandEditProfile = {
   role: string
@@ -247,13 +247,6 @@ export async function updateStockNumber(
 
   const trimmed = (stockNumber || '').trim().toUpperCase()
 
-  if (trimmed) {
-    const { duplicate } = await isStockNumberDuplicate(trimmed, demandId)
-    if (duplicate) {
-      return { success: false, error: `A demand with stock number "${trimmed}" already exists. Please verify the stock number.` }
-    }
-  }
-
   const { data: demand } = await supabase
     .from('demands')
     .select('status, dealer_id')
@@ -262,6 +255,14 @@ export async function updateStockNumber(
 
   const authError = authorizeCoreDemandEdit(profile, demand?.dealer_id)
   if (authError) return { success: false, error: authError.error }
+
+  if (trimmed) {
+    const dealerScope = getInventoryManagerDealerId(profile) ?? undefined
+    const { duplicate } = await isStockNumberDuplicate(trimmed, demandId, dealerScope)
+    if (duplicate) {
+      return { success: false, error: `A demand with stock number "${trimmed}" already exists. Please verify the stock number.` }
+    }
+  }
 
   const { error } = await supabase
     .from('demands')
@@ -340,7 +341,8 @@ export async function updateDemandByAuroraManager(
   if (!appointmentDate) return { error: 'Appointment date is required' }
 
   if (stockNumber) {
-    const { duplicate } = await isStockNumberDuplicate(stockNumber, demandId)
+    const dealerScope = getInventoryManagerDealerId(profile) ?? undefined
+    const { duplicate } = await isStockNumberDuplicate(stockNumber, demandId, dealerScope)
     if (duplicate) {
       return { error: `A demand with stock number "${stockNumber}" already exists. Please verify the stock number.` }
     }

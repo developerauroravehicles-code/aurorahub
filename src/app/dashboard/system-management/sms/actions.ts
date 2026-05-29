@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { requirePermission } from '@/lib/permissions'
+import { canUseSmsFeatures } from '@/lib/inventory-manager-access'
 import type { SMSSettings } from '@/lib/sms-settings'
 import { sendSMS } from '@/lib/twilio'
 import { logSmsSent } from '@/lib/sms-logger'
@@ -160,6 +161,11 @@ export async function sendManualSms(
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { success: false, error: 'Unauthorized' }
+
+  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+  if (!canUseSmsFeatures(profile?.role)) {
+    return { success: false, error: 'You do not have permission to send SMS' }
+  }
 
   const perm = await requirePermission('comm.sms.send')
   if (perm !== true) return { success: false, error: perm.error }

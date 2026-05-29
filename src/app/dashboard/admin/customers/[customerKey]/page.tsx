@@ -1,4 +1,4 @@
-import { canAccessAdminCustomers, normalizeUserRole } from '@/lib/inventory-manager-access'
+import { canAccessAdminCustomers, getInventoryManagerDealerId, isInventoryManager, normalizeUserRole } from '@/lib/inventory-manager-access'
 import { createClient } from '@/lib/supabase/server'
 import { redirect, notFound } from 'next/navigation'
 import Link from 'next/link'
@@ -51,7 +51,7 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
   } = await supabase.auth.getUser()
   if (!user) return null
 
-  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+  const { data: profile } = await supabase.from('profiles').select('role, dealer_id').eq('id', user.id).single()
   if (!profile) return <div className="text-zinc-900 dark:text-white">Access denied</div>
 
   if (profile.role === 'it') {
@@ -63,6 +63,11 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
   if (!canAccessAdminCustomers(profile.role)) {
     redirect('/dashboard')
   }
+  if (isInventoryManager(profile.role) && !getInventoryManagerDealerId(profile)) {
+    redirect('/dashboard')
+  }
+
+  const imDealerId = getInventoryManagerDealerId(profile)
 
   const { data: demandRows, error } = await supabase.rpc('customer_directory_demands', {
     p_phone_key: phoneKey,
@@ -85,7 +90,9 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
     )
   }
 
-  const demands = (demandRows ?? []) as DemandRow[]
+  const demands = ((demandRows ?? []) as DemandRow[]).filter(
+    (d) => !imDealerId || d.dealer_id === imDealerId
+  )
   if (demands.length === 0) {
     notFound()
   }
