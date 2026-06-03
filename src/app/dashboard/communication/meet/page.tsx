@@ -1,15 +1,19 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { MeetListContent } from '@/components/communication/meet/meet-list-content'
-import { getMeetRoomsAction } from '@/app/dashboard/communication/actions'
+import { getMeetRoomsAction, getMessageableProfilesAction } from '@/app/dashboard/communication/actions'
 
 export default async function MeetPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const res = await getMeetRoomsAction()
-  const rooms = 'rooms' in res ? res.rooms ?? [] : []
+  const [roomsRes, profilesRes] = await Promise.all([
+    getMeetRoomsAction(),
+    getMessageableProfilesAction(),
+  ])
+  const rooms = 'rooms' in roomsRes ? roomsRes.rooms ?? [] : []
+  const profiles = 'profiles' in profilesRes ? profilesRes.profiles ?? [] : []
 
-  return <MeetListContent initialRooms={rooms} />
+  return <MeetListContent initialRooms={rooms} profiles={profiles} />
 }

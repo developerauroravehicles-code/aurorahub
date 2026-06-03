@@ -91,6 +91,9 @@ export function subscribeToMeetSignaling(
   userId: string,
   onSignal: (event: MeetSignalEvent) => void
 ) {
+  let subscribed = false
+  const pendingOutbound: MeetSignalEvent[] = []
+
   const channel = supabase
     .channel(`meet-signal:${roomId}`, { config: { broadcast: { self: false } } })
     .on('broadcast', { event: 'signal' }, (payload) => {
@@ -103,9 +106,22 @@ export function subscribeToMeetSignaling(
       if (event.to !== userId) return
       if (event.from !== userId) onSignal(event)
     })
-    .subscribe()
+    .subscribe((status) => {
+      if (status === 'SUBSCRIBED') {
+        subscribed = true
+        const queue = [...pendingOutbound]
+        pendingOutbound.length = 0
+        for (const event of queue) {
+          void channel.send({ type: 'broadcast', event: 'signal', payload: event })
+        }
+      }
+    })
 
   const sendSignal = async (event: MeetSignalEvent) => {
+    if (!subscribed) {
+      pendingOutbound.push(event)
+      return
+    }
     await channel.send({
       type: 'broadcast',
       event: 'signal',
@@ -113,7 +129,25 @@ export function subscribeToMeetSignaling(
     })
   }
 
-  return { sendSignal, cleanup: () => supabase.removeChannel(channel) }
+  const whenReady = () =>
+    new Promise<void>((resolve) => {
+      if (subscribed) {
+        resolve()
+        return
+      }
+      const interval = setInterval(() => {
+        if (subscribed) {
+          clearInterval(interval)
+          resolve()
+        }
+      }, 50)
+      setTimeout(() => {
+        clearInterval(interval)
+        resolve()
+      }, 5000)
+    })
+
+  return { sendSignal, whenReady, cleanup: () => supabase.removeChannel(channel) }
 }
 
 export type MeetPresenceEvent =

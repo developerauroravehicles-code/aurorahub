@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
-import { Paperclip, Send, Loader2, Hand, MonitorUp } from 'lucide-react'
+import { Paperclip, Send, Hand, MonitorUp } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import {
   subscribeToMeetMessages,
@@ -10,8 +10,8 @@ import {
   subscribeToMeetPresence,
   type MeetParticipantPresence,
 } from '@/lib/communication/realtime'
-import { MeetMeshManager } from '@/lib/communication/webrtc'
-import type { CommAttachment, CommMeetMessage, CommMeetParticipant, CommMeetRoom } from '@/lib/communication/types'
+import { MeetMeshManager, type ScreenShareCursorMode } from '@/lib/communication/webrtc'
+import type { CommAttachment, CommMeetMessage, CommMeetParticipant, CommMeetRoom, CommUserProfile } from '@/lib/communication/types'
 import {
   endMeetAction,
   leaveMeetAction,
@@ -21,6 +21,7 @@ import {
 import { useRouter } from 'next/navigation'
 import { MeetControlBar, type SidePanel } from '@/components/communication/meet/meet-control-bar'
 import { MeetParticipantsPanel } from '@/components/communication/meet/meet-participants-panel'
+import { getStoredCursorMode } from '@/components/communication/meet/meet-screen-share-settings'
 import { clsx } from 'clsx'
 
 type Props = {
@@ -29,6 +30,7 @@ type Props = {
   initialMessages: CommMeetMessage[]
   currentUserId: string
   isHost: boolean
+  inviteProfiles: CommUserProfile[]
 }
 
 const defaultPresence = (): MeetParticipantPresence => ({
@@ -37,12 +39,51 @@ const defaultPresence = (): MeetParticipantPresence => ({
   screenSharing: false,
 })
 
+function RemoteVideo({ stream, objectFit = 'contain' }: { stream: MediaStream; objectFit?: 'contain' | 'cover' }) {
+  const ref = useRef<HTMLVideoElement>(null)
+
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+
+    el.srcObject = stream
+    void el.play().catch(() => {})
+
+    const refresh = () => {
+      el.srcObject = stream
+      void el.play().catch(() => {})
+    }
+
+    stream.addEventListener('addtrack', refresh)
+    stream.addEventListener('removetrack', refresh)
+    return () => {
+      stream.removeEventListener('addtrack', refresh)
+      stream.removeEventListener('removetrack', refresh)
+    }
+  }, [stream])
+
+  return (
+    <video
+      ref={ref}
+      autoPlay
+      playsInline
+      className={clsx(
+        'absolute inset-0 h-full w-full bg-black',
+        objectFit === 'contain' ? 'object-contain' : 'object-cover'
+      )}
+    />
+  )
+}
+
+type TileVariant = 'grid' | 'stage' | 'thumb'
+
 export function MeetRoomContent({
   room,
   participants: initialParticipants,
   initialMessages,
   currentUserId,
   isHost,
+  inviteProfiles,
 }: Props) {
   const router = useRouter()
   const [participants, setParticipants] = useState(initialParticipants)
@@ -57,12 +98,15 @@ export function MeetRoomContent({
   const [audioError, setAudioError] = useState<string | null>(null)
   const [remoteSpeakingIds, setRemoteSpeakingIds] = useState<string[]>([])
   const [presence, setPresence] = useState<Record<string, MeetParticipantPresence>>({})
+  const [remoteStreams, setRemoteStreams] = useState<Record<string, MediaStream>>({})
+  const [audioInputId, setAudioInputId] = useState<string | null>(null)
+  const [audioOutputId, setAudioOutputId] = useState<string | null>(null)
+  const [cursorMode, setCursorMode] = useState<ScreenShareCursorMode>(() => getStoredCursorMode())
 
   const meshRef = useRef<MeetMeshManager | null>(null)
   const presenceRef = useRef<{ broadcast: (e: import('@/lib/communication/realtime').MeetPresenceEvent) => Promise<void> } | null>(null)
   const audioContainerRef = useRef<HTMLDivElement>(null)
   const localVideoRef = useRef<HTMLVideoElement>(null)
-  const remoteVideosRef = useRef<Map<string, HTMLVideoElement>>(new Map())
   const fileRef = useRef<HTMLInputElement>(null)
   const knownPeersRef = useRef<Set<string>>(new Set())
 
@@ -82,27 +126,7 @@ export function MeetRoomContent({
   )
 
   const attachRemoteStream = useCallback((peerId: string, stream: MediaStream) => {
-    if (!audioContainerRef.current) return
-    const hasVideo = stream.getVideoTracks().length > 0
-    if (hasVideo) {
-      let videoEl = remoteVideosRef.current.get(peerId)
-      if (!videoEl) {
-        videoEl = document.createElement('video')
-        videoEl.autoplay = true
-        videoEl.playsInline = true
-        videoEl.className = 'h-full w-full object-cover'
-        remoteVideosRef.current.set(peerId, videoEl)
-      }
-      videoEl.srcObject = stream
-    }
-    let audioEl = document.getElementById(`audio-${peerId}`) as HTMLAudioElement | null
-    if (!audioEl) {
-      audioEl = document.createElement('audio')
-      audioEl.id = `audio-${peerId}`
-      audioEl.autoplay = true
-      audioContainerRef.current.appendChild(audioEl)
-    }
-    audioEl.srcObject = stream
+    setRemoteStreams((prev) => ({ ...prev, [peerId]: stream }))
     setRemoteSpeakingIds((prev) => (prev.includes(peerId) ? prev : [...prev, peerId]))
   }, [])
 
@@ -115,7 +139,7 @@ export function MeetRoomContent({
 
     const setup = async () => {
       try {
-        const { sendSignal, cleanup } = subscribeToMeetSignaling(
+        const { sendSignal, whenReady, cleanup } = subscribeToMeetSignaling(
           supabase,
           room.id,
           currentUserId,
@@ -124,11 +148,17 @@ export function MeetRoomContent({
             if (event.type === 'participant-left') {
               meshRef.current?.removePeer(event.from)
               setRemoteSpeakingIds((prev) => prev.filter((id) => id !== event.from))
-              remoteVideosRef.current.delete(event.from)
+              setRemoteStreams((prev) => {
+                const next = { ...prev }
+                delete next[event.from]
+                return next
+              })
             }
           }
         )
         signalingCleanup = cleanup
+
+        await whenReady()
 
         const presenceSub = subscribeToMeetPresence(supabase, room.id, currentUserId, (userId, state) => {
           setPresence((prev) => ({
@@ -146,8 +176,14 @@ export function MeetRoomContent({
             onRemoteStream: attachRemoteStream,
             onPeerDisconnected: (peerId) => {
               setRemoteSpeakingIds((prev) => prev.filter((id) => id !== peerId))
-              document.getElementById(`audio-${peerId}`)?.remove()
-              remoteVideosRef.current.delete(peerId)
+              setRemoteStreams((prev) => {
+                const next = { ...prev }
+                delete next[peerId]
+                return next
+              })
+            },
+            onRemoteAudioElement: (peerId, el) => {
+              audioContainerRef.current?.appendChild(el)
             },
           },
           {
@@ -157,11 +193,13 @@ export function MeetRoomContent({
               updateLocalPresence({ screenSharing: false, cameraEnabled: false })
               void presenceRef.current?.broadcast({ type: 'screen', userId: currentUserId, active: false })
             },
+            screenShareCursorMode: cursorMode,
           }
         )
         meshRef.current = mesh
 
         await mesh.startLocalAudio()
+        setAudioInputId(mesh.getAudioInputDeviceId())
 
         for (const p of initialParticipants) {
           if (p.user_id !== currentUserId && !p.left_at) {
@@ -213,11 +251,11 @@ export function MeetRoomContent({
       msgCleanup()
       supabase.removeChannel(partChannel)
     }
-  }, [room.id, room.status, currentUserId, attachRemoteStream, initialParticipants])
+  }, [room.id, room.status, currentUserId, attachRemoteStream, initialParticipants, updateLocalPresence])
 
   useEffect(() => {
     const stream = meshRef.current?.getLocalStream()
-    if (localVideoRef.current && stream && cameraOn) {
+    if (localVideoRef.current && stream && (cameraOn || screenSharing)) {
       localVideoRef.current.srcObject = stream
     }
   }, [cameraOn, screenSharing])
@@ -229,7 +267,18 @@ export function MeetRoomContent({
     })
   }
 
+  const handleAudioInputChange = async (deviceId: string) => {
+    const ok = await meshRef.current?.setAudioInputDevice(deviceId)
+    if (ok) setAudioInputId(deviceId)
+  }
+
+  const handleAudioOutputChange = (deviceId: string) => {
+    meshRef.current?.setAudioOutputDevice(deviceId)
+    setAudioOutputId(deviceId)
+  }
+
   const toggleCamera = async () => {
+    if (screenSharing) return
     if (cameraOn) {
       meshRef.current?.removeCamera()
       setCameraOn(false)
@@ -254,16 +303,16 @@ export function MeetRoomContent({
     })
   }
 
-  const toggleScreenShare = async () => {
+  const handleCursorModeChange = (mode: ScreenShareCursorMode) => {
+    setCursorMode(mode)
+    meshRef.current?.setScreenShareCursorMode(mode)
     if (screenSharing) {
-      meshRef.current?.stopScreenShare()
-      setScreenSharing(false)
-      setCameraOn(false)
-      updateLocalPresence({ screenSharing: false, cameraEnabled: false })
-      void presenceRef.current?.broadcast({ type: 'screen', userId: currentUserId, active: false })
-      return
+      void meshRef.current?.applyScreenShareCursorMode(mode)
     }
-    const stream = await meshRef.current?.startScreenShare()
+  }
+
+  const startScreenShare = async () => {
+    const stream = await meshRef.current?.startScreenShare(cursorMode)
     if (stream) {
       setScreenSharing(true)
       setCameraOn(true)
@@ -271,6 +320,14 @@ export function MeetRoomContent({
       void presenceRef.current?.broadcast({ type: 'screen', userId: currentUserId, active: true })
       if (localVideoRef.current) localVideoRef.current.srcObject = stream
     }
+  }
+
+  const stopScreenShare = () => {
+    meshRef.current?.stopScreenShare()
+    setScreenSharing(false)
+    setCameraOn(false)
+    updateLocalPresence({ screenSharing: false, cameraEnabled: false })
+    void presenceRef.current?.broadcast({ type: 'screen', userId: currentUserId, active: false })
   }
 
   const handleLeave = async () => {
@@ -312,6 +369,22 @@ export function MeetRoomContent({
   const activeParticipants = participants.filter((p) => !p.left_at)
   const chatOpen = sidePanel === 'chat'
 
+  const presenterId =
+    screenSharing
+      ? currentUserId
+      : activeParticipants.find((p) => presence[p.user_id]?.screenSharing)?.user_id ??
+        activeParticipants.find((p) =>
+          remoteStreams[p.user_id]?.getVideoTracks().some((t) => t.readyState === 'live')
+        )?.user_id ??
+        null
+
+  const inPresentation = presenterId !== null
+
+  const spotlightUserId =
+    !layoutGrid && !inPresentation
+      ? activeParticipants.find((p) => remoteStreams[p.user_id]?.getVideoTracks().length)?.user_id
+      : null
+
   if (room.status === 'ended') {
     return (
       <div className="flex flex-col items-center justify-center gap-4 py-16">
@@ -323,11 +396,93 @@ export function MeetRoomContent({
     )
   }
 
+  const renderTile = (p: CommMeetParticipant, variant: TileVariant = 'grid') => {
+    const prof = p.profile as { full_name?: string | null } | undefined
+    const isSelf = p.user_id === currentUserId
+    const pState = presence[p.user_id] ?? defaultPresence()
+    const isSpeaking = !isSelf && remoteSpeakingIds.includes(p.user_id)
+    const remoteStream = remoteStreams[p.user_id]
+    const hasRemoteVideo = !isSelf && !!remoteStream?.getVideoTracks().some((t) => t.enabled && t.readyState === 'live')
+    const showLocalVideo = isSelf && (cameraOn || screenSharing)
+    const showVideo = showLocalVideo || hasRemoteVideo || (!isSelf && (pState.cameraEnabled || pState.screenSharing))
+    const isScreenContent = (isSelf && screenSharing) || pState.screenSharing
+    const videoObjectFit = isScreenContent || variant === 'stage' ? 'contain' : 'cover'
+
+    return (
+      <div
+        key={p.user_id}
+        className={clsx(
+          'relative flex flex-col items-center justify-center overflow-hidden bg-[#3c4043]',
+          variant === 'stage' && 'min-h-0 flex-1 rounded-xl bg-black',
+          variant === 'thumb' && 'aspect-video w-28 shrink-0 rounded-lg sm:w-36',
+          variant === 'grid' && 'aspect-video w-full max-w-[280px] rounded-xl sm:max-w-xs',
+          layoutGrid && variant === 'grid' && 'flex-shrink-0',
+          isSpeaking && variant !== 'stage' && 'ring-2 ring-[#C27E00]',
+          pState.handRaised && variant !== 'stage' && 'ring-2 ring-yellow-500'
+        )}
+      >
+        {showLocalVideo ? (
+          <video
+            ref={isSelf ? localVideoRef : undefined}
+            autoPlay
+            playsInline
+            muted
+            className={clsx(
+              'absolute inset-0 h-full w-full bg-black',
+              videoObjectFit === 'contain' ? 'object-contain' : 'object-cover'
+            )}
+          />
+        ) : hasRemoteVideo && remoteStream ? (
+          <RemoteVideo stream={remoteStream} objectFit={videoObjectFit} />
+        ) : showVideo && !hasRemoteVideo && !isSelf ? (
+          <div className="absolute inset-0 flex items-center justify-center bg-black/40 text-xs text-zinc-400">
+            Connecting video…
+          </div>
+        ) : (
+          <div className="flex h-full w-full flex-col items-center justify-center">
+            <div
+              className={clsx(
+                'flex items-center justify-center rounded-full bg-[#5f6368] font-semibold text-white',
+                variant === 'stage' ? 'h-24 w-24 text-3xl' : variant === 'thumb' ? 'h-10 w-10 text-sm' : 'h-20 w-20 text-2xl'
+              )}
+            >
+              {(prof?.full_name ?? '?').slice(0, 1).toUpperCase()}
+            </div>
+          </div>
+        )}
+
+        <div className="absolute bottom-2 left-2 flex items-center gap-1.5">
+          <span className="rounded bg-black/60 px-2 py-0.5 text-xs text-white">
+            {prof?.full_name ?? 'User'}
+            {isSelf && ' (You)'}
+          </span>
+          {pState.handRaised && (
+            <span className="rounded bg-yellow-600/90 p-1" title="Hand raised">
+              <Hand className="h-3 w-3 text-white" />
+            </span>
+          )}
+          {pState.screenSharing && (
+            <span className="rounded bg-blue-600/90 p-1" title="Presenting">
+              <MonitorUp className="h-3 w-3 text-white" />
+            </span>
+          )}
+          {isSelf && muted && (
+            <span className="rounded bg-red-600/90 px-1.5 py-0.5 text-[10px] text-white">Muted</span>
+          )}
+        </div>
+      </div>
+    )
+  }
+
+  const presenter = presenterId ? activeParticipants.find((p) => p.user_id === presenterId) : null
+  const nonPresenters = presenterId
+    ? activeParticipants.filter((p) => p.user_id !== presenterId)
+    : activeParticipants
+
   return (
     <div className="flex h-[calc(100vh-6rem)] min-h-0 flex-col overflow-hidden rounded-xl bg-[#202124]">
       <div ref={audioContainerRef} className="hidden" aria-hidden />
 
-      {/* Top bar */}
       <div className="flex shrink-0 items-center justify-between border-b border-zinc-800 px-4 py-2">
         <div>
           <p className="text-sm font-medium text-white">{room.title}</p>
@@ -340,70 +495,47 @@ export function MeetRoomContent({
       )}
 
       <div className="flex min-h-0 flex-1">
-        {/* Main stage */}
-        <div className="flex min-w-0 flex-1 flex-col">
-          <div
-            className={clsx(
-              'flex flex-1 gap-3 overflow-y-auto p-4',
-              layoutGrid ? 'flex-wrap content-center justify-center' : 'flex-col items-center justify-center'
-            )}
-          >
-            {activeParticipants.map((p) => {
-              const prof = p.profile as { full_name?: string | null } | undefined
-              const isSelf = p.user_id === currentUserId
-              const pState = presence[p.user_id] ?? defaultPresence()
-              const isSpeaking = !isSelf && remoteSpeakingIds.includes(p.user_id)
-              const showVideo = isSelf ? cameraOn : pState.cameraEnabled
-
-              return (
-                <div
-                  key={p.user_id}
-                  className={clsx(
-                    'relative flex flex-col items-center justify-center overflow-hidden rounded-xl bg-[#3c4043]',
-                    layoutGrid ? 'aspect-video w-full max-w-[280px] sm:max-w-xs' : 'aspect-video w-full max-w-3xl',
-                    isSpeaking && 'ring-2 ring-[#C27E00]',
-                    pState.handRaised && 'ring-2 ring-yellow-500'
-                  )}
-                >
-                  {showVideo && isSelf ? (
-                    <video
-                      ref={localVideoRef}
-                      autoPlay
-                      playsInline
-                      muted
-                      className="absolute inset-0 h-full w-full object-cover"
-                    />
-                  ) : (
-                    <div className="flex h-full w-full flex-col items-center justify-center">
-                      <div className="flex h-20 w-20 items-center justify-center rounded-full bg-[#5f6368] text-2xl font-semibold text-white">
-                        {(prof?.full_name ?? '?').slice(0, 1).toUpperCase()}
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="absolute bottom-2 left-2 flex items-center gap-1.5">
-                    <span className="rounded bg-black/60 px-2 py-0.5 text-xs text-white">
-                      {prof?.full_name ?? 'User'}
-                      {isSelf && ' (You)'}
-                    </span>
-                    {pState.handRaised && (
-                      <span className="rounded bg-yellow-600/90 p-1" title="Hand raised">
-                        <Hand className="h-3 w-3 text-white" />
-                      </span>
-                    )}
-                    {pState.screenSharing && (
-                      <span className="rounded bg-blue-600/90 p-1" title="Presenting">
-                        <MonitorUp className="h-3 w-3 text-white" />
-                      </span>
-                    )}
-                    {isSelf && muted && (
-                      <span className="rounded bg-red-600/90 px-1.5 py-0.5 text-[10px] text-white">Muted</span>
-                    )}
-                  </div>
+        <div className="flex min-w-0 flex-1 flex-col min-h-0">
+          {inPresentation && presenter ? (
+            <div className="flex min-h-0 flex-1 flex-col gap-3 p-4">
+              {renderTile(presenter, 'stage')}
+              {nonPresenters.length > 0 && (
+                <div className="flex shrink-0 justify-end gap-2">
+                  {nonPresenters.map((p) => renderTile(p, 'thumb'))}
                 </div>
-              )
-            })}
-          </div>
+              )}
+            </div>
+          ) : (
+            <div
+              className={clsx(
+                'flex min-h-0 flex-1 gap-3 p-4',
+                layoutGrid
+                  ? 'flex-wrap content-center justify-center overflow-y-auto'
+                  : 'flex-col'
+              )}
+            >
+              {layoutGrid
+                ? activeParticipants.map((p) => renderTile(p))
+                : spotlightUserId
+                  ? (() => {
+                      const main = activeParticipants.find((p) => p.user_id === spotlightUserId)
+                      const rest = activeParticipants.filter((p) => p.user_id !== spotlightUserId)
+                      return main ? (
+                        <>
+                          {renderTile(main, 'stage')}
+                          {rest.length > 0 && (
+                            <div className="flex shrink-0 justify-center gap-2">
+                              {rest.map((p) => renderTile(p, 'thumb'))}
+                            </div>
+                          )}
+                        </>
+                      ) : (
+                        activeParticipants.map((p) => renderTile(p))
+                      )
+                    })()
+                  : activeParticipants.map((p) => renderTile(p))}
+            </div>
+          )}
 
           <MeetControlBar
             muted={muted}
@@ -414,11 +546,21 @@ export function MeetRoomContent({
             participantCount={activeParticipants.length}
             layoutGrid={layoutGrid}
             joinUrl={joinUrl}
+            roomId={room.id}
+            inviteProfiles={inviteProfiles}
+            participantIds={activeParticipants.map((p) => p.user_id)}
             isHost={isHost}
+            audioInputId={audioInputId}
+            audioOutputId={audioOutputId}
+            cursorMode={cursorMode}
+            onCursorModeChange={handleCursorModeChange}
+            onStartScreenShare={() => void startScreenShare()}
+            onStopScreenShare={stopScreenShare}
             onToggleMute={toggleMute}
+            onAudioInputChange={(id) => void handleAudioInputChange(id)}
+            onAudioOutputChange={handleAudioOutputChange}
             onToggleCamera={() => void toggleCamera()}
             onToggleHand={toggleHand}
-            onToggleScreenShare={() => void toggleScreenShare()}
             onToggleChat={() => setSidePanel((p) => (p === 'chat' ? 'none' : 'chat'))}
             onToggleParticipants={() => setSidePanel((p) => (p === 'participants' ? 'none' : 'participants'))}
             onToggleLayout={() => setLayoutGrid((g) => !g)}
@@ -427,7 +569,6 @@ export function MeetRoomContent({
           />
         </div>
 
-        {/* Side panel: chat or participants */}
         {sidePanel !== 'none' && (
           <div className="flex w-full max-w-sm shrink-0 flex-col border-l border-zinc-800 bg-[#292a2d]">
             {sidePanel === 'participants' && (

@@ -2,11 +2,8 @@
 
 import { clsx } from 'clsx'
 import {
-  Mic,
-  MicOff,
   Video,
   VideoOff,
-  MonitorUp,
   MessageSquare,
   Hand,
   Users,
@@ -16,9 +13,13 @@ import {
   PhoneOff,
   Copy,
   Check,
-  X,
 } from 'lucide-react'
 import { useState } from 'react'
+import { MeetAudioSettings } from '@/components/communication/meet/meet-audio-settings'
+import { MeetScreenShareSettings } from '@/components/communication/meet/meet-screen-share-settings'
+import { MeetInvitePanel } from '@/components/communication/meet/meet-invite-panel'
+import type { ScreenShareCursorMode } from '@/lib/communication/webrtc'
+import type { CommUserProfile } from '@/lib/communication/types'
 
 type SidePanel = 'none' | 'chat' | 'participants'
 
@@ -31,11 +32,21 @@ type Props = {
   participantCount: number
   layoutGrid: boolean
   joinUrl: string
+  roomId: string
+  inviteProfiles: CommUserProfile[]
+  participantIds: string[]
   isHost: boolean
+  audioInputId: string | null
+  audioOutputId: string | null
+  cursorMode: ScreenShareCursorMode
+  onCursorModeChange: (mode: ScreenShareCursorMode) => void
+  onStartScreenShare: () => void
+  onStopScreenShare: () => void
   onToggleMute: () => void
+  onAudioInputChange: (deviceId: string) => void
+  onAudioOutputChange: (deviceId: string) => void
   onToggleCamera: () => void
   onToggleHand: () => void
-  onToggleScreenShare: () => void
   onToggleChat: () => void
   onToggleParticipants: () => void
   onToggleLayout: () => void
@@ -52,11 +63,21 @@ export function MeetControlBar({
   participantCount,
   layoutGrid,
   joinUrl,
+  roomId,
+  inviteProfiles,
+  participantIds,
   isHost,
+  audioInputId,
+  audioOutputId,
+  cursorMode,
+  onCursorModeChange,
+  onStartScreenShare,
+  onStopScreenShare,
   onToggleMute,
+  onAudioInputChange,
+  onAudioOutputChange,
   onToggleCamera,
   onToggleHand,
-  onToggleScreenShare,
   onToggleChat,
   onToggleParticipants,
   onToggleLayout,
@@ -76,12 +97,13 @@ export function MeetControlBar({
   return (
     <div className="relative flex shrink-0 items-center justify-center border-t border-zinc-800 bg-[#202124] px-2 py-3 dark:border-zinc-800">
       <div className="flex flex-wrap items-center justify-center gap-1 sm:gap-2">
-        <ControlButton
-          label={muted ? 'Unmute' : 'Mute'}
-          active={!muted}
-          danger={muted}
-          onClick={onToggleMute}
-          icon={muted ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
+        <MeetAudioSettings
+          muted={muted}
+          audioInputId={audioInputId}
+          audioOutputId={audioOutputId}
+          onToggleMute={onToggleMute}
+          onInputChange={onAudioInputChange}
+          onOutputChange={onAudioOutputChange}
         />
 
         <ControlButton
@@ -92,11 +114,12 @@ export function MeetControlBar({
           icon={cameraOn ? <Video className="h-5 w-5" /> : <VideoOff className="h-5 w-5" />}
         />
 
-        <ControlButton
-          label={screenSharing ? 'Stop presenting' : 'Present now'}
-          active={screenSharing}
-          onClick={onToggleScreenShare}
-          icon={<MonitorUp className="h-5 w-5" />}
+        <MeetScreenShareSettings
+          screenSharing={screenSharing}
+          cursorMode={cursorMode}
+          onCursorModeChange={onCursorModeChange}
+          onStartShare={onStartScreenShare}
+          onStopShare={onStopScreenShare}
         />
 
         <ControlButton
@@ -188,30 +211,13 @@ export function MeetControlBar({
       </div>
 
       {showInvite && (
-        <div className="absolute bottom-full left-1/2 z-50 mb-3 w-[min(90vw,360px)] -translate-x-1/2 rounded-xl border border-zinc-700 bg-[#3c4043] p-4 shadow-xl">
-          <div className="mb-2 flex items-center justify-between">
-            <p className="text-sm font-medium text-white">Add people</p>
-            <button type="button" onClick={() => setShowInvite(false)} className="text-zinc-400 hover:text-white">
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-          <p className="mb-3 text-xs text-zinc-400">Share this link so others can join the meet.</p>
-          <div className="flex gap-2">
-            <input
-              readOnly
-              value={joinUrl}
-              className="min-w-0 flex-1 truncate rounded-md border border-zinc-600 bg-[#202124] px-2 py-1.5 text-xs text-zinc-200"
-            />
-            <button
-              type="button"
-              onClick={copyLink}
-              className="inline-flex items-center gap-1 rounded-md bg-[#C27E00] px-3 py-1.5 text-xs font-medium text-white"
-            >
-              {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
-              {copied ? 'Copied' : 'Copy'}
-            </button>
-          </div>
-        </div>
+        <MeetInvitePanel
+          roomId={roomId}
+          joinUrl={joinUrl}
+          profiles={inviteProfiles}
+          participantIds={participantIds}
+          onClose={() => setShowInvite(false)}
+        />
       )}
     </div>
   )

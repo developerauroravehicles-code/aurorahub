@@ -98,8 +98,78 @@ function getCommDb() {
   return createAdminClient()
 }
 
-function canAccessMeetRoom(profile: CommUserProfile, room: { dealer_id: string | null; host_id: string }) {
-  return canAccessDealerScope(profile, room.dealer_id) || room.host_id === profile.id
+async function canAccessMeetRoom(
+  db: ReturnType<typeof getCommDb>,
+  profile: CommUserProfile,
+  roomId: string,
+  room?: { host_id: string }
+) {
+  if (room?.host_id === profile.id) return true
+
+  const { data: hostRow } = room
+    ? { data: room }
+    : await db.from('comm_meet_rooms').select('host_id').eq('id', roomId).single()
+
+  if (hostRow?.host_id === profile.id) return true
+
+  const { data: invite } = await db
+    .from('comm_meet_invites')
+    .select('user_id')
+    .eq('room_id', roomId)
+    .eq('user_id', profile.id)
+    .maybeSingle()
+
+  if (invite) return true
+
+  const { data: participant } = await db
+    .from('comm_meet_participants')
+    .select('user_id')
+    .eq('room_id', roomId)
+    .eq('user_id', profile.id)
+    .maybeSingle()
+
+  return !!participant
+}
+
+async function inviteUsersToMeet(
+  db: ReturnType<typeof getCommDb>,
+  profile: CommUserProfile,
+  roomId: string,
+  room: { title: string; host_id: string; join_token: string },
+  userIds: string[]
+) {
+  const uniqueIds = [...new Set(userIds.filter((id) => id !== profile.id))]
+  if (uniqueIds.length === 0) return
+
+  const { data: profiles } = await db
+    .from('profiles')
+    .select('id, full_name, avatar_url, dealer_id, role')
+    .in('id', uniqueIds)
+
+  const allowed = filterMessageableProfiles(profile, (profiles ?? []) as CommUserProfile[])
+  if (allowed.length === 0) return
+
+  await db.from('comm_meet_invites').upsert(
+    allowed.map((p) => ({
+      room_id: roomId,
+      user_id: p.id,
+      invited_by: profile.id,
+    })),
+    { onConflict: 'room_id,user_id' }
+  )
+
+  await db.from('comm_notifications').insert(
+    allowed.map((p) => ({
+      user_id: p.id,
+      type: 'meet_invite' as const,
+      payload: {
+        roomId,
+        roomTitle: room.title,
+        hostId: room.host_id,
+        joinToken: room.join_token,
+      },
+    }))
+  )
 }
 
 export async function getMessageableProfilesAction() {
@@ -414,19 +484,35 @@ export async function getMeetRoomsAction() {
   const { profile } = auth as Exclude<AuthResult, { error: string }>
 
   const db = getCommDb()
+
+  const [{ data: hosted }, { data: invited }, { data: joined }] = await Promise.all([
+    db.from('comm_meet_rooms').select('id').eq('host_id', profile.id),
+    db.from('comm_meet_invites').select('room_id').eq('user_id', profile.id),
+    db.from('comm_meet_participants').select('room_id').eq('user_id', profile.id),
+  ])
+
+  const roomIds = [
+    ...new Set([
+      ...(hosted ?? []).map((r) => r.id),
+      ...(invited ?? []).map((r) => r.room_id),
+      ...(joined ?? []).map((r) => r.room_id),
+    ]),
+  ]
+
+  if (roomIds.length === 0) return { rooms: [] }
+
   const { data, error } = await db
     .from('comm_meet_rooms')
     .select('*, host:profiles!host_id(id, full_name)')
+    .in('id', roomIds)
     .order('started_at', { ascending: false })
     .limit(50)
 
   if (error) return { error: error.message }
-
-  const rooms = (data ?? []).filter((r) => canAccessMeetRoom(profile, r))
-  return { rooms }
+  return { rooms: data ?? [] }
 }
 
-export async function createMeetRoomAction(title: string) {
+export async function createMeetRoomAction(title: string, inviteUserIds: string[] = []) {
   const auth = await getAuth()
   if ('error' in auth && auth.error) return { error: auth.error }
   const { profile } = auth as Exclude<AuthResult, { error: string }>
@@ -461,6 +547,10 @@ export async function createMeetRoomAction(title: string) {
     { onConflict: 'room_id,user_id' }
   )
 
+  if (inviteUserIds.length > 0) {
+    await inviteUsersToMeet(db, profile, room.id, room, inviteUserIds)
+  }
+
   const settings = await getDriveSettings()
   if (settings?.enabled) {
     void appendCommunicationLogToDrive(settings, {
@@ -473,6 +563,38 @@ export async function createMeetRoomAction(title: string) {
 
   revalidatePath(`${COMM_PATH}/meet`)
   return { room }
+}
+
+export async function inviteMeetUsersAction(roomId: string, userIds: string[]) {
+  const auth = await getAuth()
+  if ('error' in auth && auth.error) return { error: auth.error }
+  const { profile } = auth as Exclude<AuthResult, { error: string }>
+
+  const db = getCommDb()
+  const { data: room, error } = await db
+    .from('comm_meet_rooms')
+    .select('id, title, host_id, join_token, status')
+    .eq('id', roomId)
+    .single()
+
+  if (error || !room) return { error: 'Meet not found' }
+  if (room.status !== 'active') return { error: 'Meet not active' }
+  if (!(await canAccessMeetRoom(db, profile, roomId, room))) return { error: 'Access denied' }
+
+  const { data: activeParticipant } = await db
+    .from('comm_meet_participants')
+    .select('user_id')
+    .eq('room_id', roomId)
+    .eq('user_id', profile.id)
+    .is('left_at', null)
+    .maybeSingle()
+
+  if (!activeParticipant) return { error: 'You must be in the meet to invite others' }
+
+  await inviteUsersToMeet(db, profile, roomId, room, userIds)
+  revalidatePath(`${COMM_PATH}/meet/${roomId}`)
+  revalidatePath(`${COMM_PATH}/meet`)
+  return { success: true }
 }
 
 export async function joinMeetByTokenAction(token: string) {
@@ -489,7 +611,15 @@ export async function joinMeetByTokenAction(token: string) {
     .single()
 
   if (error || !room) return { error: 'Meet not found or ended' }
-  if (!canAccessMeetRoom(profile, room)) return { error: 'Access denied' }
+
+  await db.from('comm_meet_invites').upsert(
+    {
+      room_id: room.id,
+      user_id: profile.id,
+      invited_by: room.host_id,
+    },
+    { onConflict: 'room_id,user_id' }
+  )
 
   await db.from('comm_meet_participants').upsert(
     {
@@ -517,7 +647,7 @@ export async function getMeetRoomAction(roomId: string) {
     .single()
 
   if (error || !room) return { error: 'Meet not found' }
-  if (!canAccessMeetRoom(profile, room)) return { error: 'Access denied' }
+  if (!(await canAccessMeetRoom(db, profile, roomId, room))) return { error: 'Access denied' }
 
   if (room.status === 'active') {
     await db.from('comm_meet_participants').upsert(
@@ -552,7 +682,7 @@ export async function getMeetMessagesAction(roomId: string) {
     .eq('id', roomId)
     .single()
 
-  if (!room || !canAccessMeetRoom(profile, room)) return { error: 'Meet not found' }
+  if (!room || !(await canAccessMeetRoom(db, profile, roomId, room))) return { error: 'Meet not found' }
 
   const { data, error } = await db
     .from('comm_meet_messages')
@@ -573,7 +703,7 @@ export async function sendMeetMessageAction(roomId: string, body: string, attach
 
   const db = getCommDb()
   const { data: room } = await db.from('comm_meet_rooms').select('status, dealer_id, host_id').eq('id', roomId).single()
-  if (!room || room.status !== 'active' || !canAccessMeetRoom(profile, room)) {
+  if (!room || room.status !== 'active' || !(await canAccessMeetRoom(db, profile, roomId, room))) {
     return { error: 'Meet not active' }
   }
 
@@ -599,7 +729,7 @@ export async function uploadMeetAttachmentAction(roomId: string, formData: FormD
 
   const db = getCommDb()
   const { data: room } = await db.from('comm_meet_rooms').select('status, dealer_id, host_id').eq('id', roomId).single()
-  if (!room || room.status !== 'active' || !canAccessMeetRoom(profile, room)) {
+  if (!room || room.status !== 'active' || !(await canAccessMeetRoom(db, profile, roomId, room))) {
     return { error: 'Meet not active' }
   }
 
@@ -645,7 +775,7 @@ export async function leaveMeetAction(roomId: string) {
 
   const db = getCommDb()
   const { data: room } = await db.from('comm_meet_rooms').select('dealer_id, host_id').eq('id', roomId).single()
-  if (!room || !canAccessMeetRoom(profile, room)) return { error: 'Access denied' }
+  if (!room || !(await canAccessMeetRoom(db, profile, roomId, room))) return { error: 'Access denied' }
 
   await db
     .from('comm_meet_participants')
