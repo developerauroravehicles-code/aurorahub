@@ -1,4 +1,4 @@
-import { redirect, notFound } from 'next/navigation'
+import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { MeetRoomContent } from '@/components/communication/meet/meet-room-content'
 import { getMeetRoomAction, getMeetMessagesAction } from '@/app/dashboard/communication/actions'
@@ -18,7 +18,9 @@ export default async function MeetRoomPage({
     getMeetMessagesAction(roomId),
   ])
 
-  if ('error' in roomRes && roomRes.error) notFound()
+  if ('error' in roomRes && roomRes.error) {
+    redirect('/dashboard/communication/meet')
+  }
 
   const room = roomRes.room!
   const participants = roomRes.participants ?? []

@@ -1,7 +1,8 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { Video, Copy, Check } from 'lucide-react'
 import type { CommMeetRoom } from '@/lib/communication/types'
 import { createMeetRoomAction } from '@/app/dashboard/communication/actions'
@@ -11,18 +12,28 @@ type Props = {
 }
 
 export function MeetListContent({ initialRooms }: Props) {
+  const router = useRouter()
   const [rooms, setRooms] = useState(initialRooms)
   const [creating, setCreating] = useState(false)
   const [title, setTitle] = useState('')
   const [copiedToken, setCopiedToken] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
 
   const handleCreate = async () => {
     setCreating(true)
+    setError(null)
     const res = await createMeetRoomAction(title)
     setCreating(false)
+    if ('error' in res && res.error) {
+      setError(res.error)
+      return
+    }
     if ('room' in res && res.room) {
-      setRooms((prev) => [res.room as CommMeetRoom, ...prev])
+      const room = res.room as CommMeetRoom
+      setRooms((prev) => [room, ...prev.filter((r) => r.id !== room.id)])
       setTitle('')
+      router.push(`/dashboard/communication/meet/${room.id}`)
+      router.refresh()
     }
   }
 
@@ -63,6 +74,7 @@ export function MeetListContent({ initialRooms }: Props) {
             {creating ? 'Creating...' : 'Create Meet'}
           </button>
         </div>
+        {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
       </div>
 
       {active.length > 0 && (

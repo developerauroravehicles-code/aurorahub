@@ -115,3 +115,55 @@ export function subscribeToMeetSignaling(
 
   return { sendSignal, cleanup: () => supabase.removeChannel(channel) }
 }
+
+export type MeetPresenceEvent =
+  | { type: 'hand'; userId: string; raised: boolean }
+  | { type: 'camera'; userId: string; enabled: boolean }
+  | { type: 'screen'; userId: string; active: boolean }
+
+export type MeetParticipantPresence = {
+  handRaised: boolean
+  cameraEnabled: boolean
+  screenSharing: boolean
+}
+
+export function subscribeToMeetPresence(
+  supabase: SupabaseClient,
+  roomId: string,
+  userId: string,
+  onUpdate: (userId: string, state: Partial<MeetParticipantPresence>) => void
+) {
+  const channel = supabase.channel(`meet-presence:${roomId}`, {
+    config: { broadcast: { self: false } },
+  })
+
+  channel
+    .on('broadcast', { event: 'presence' }, (payload) => {
+      const event = payload.payload as MeetPresenceEvent
+      if (!event?.userId) return
+      switch (event.type) {
+        case 'hand':
+          onUpdate(event.userId, { handRaised: event.raised })
+          break
+        case 'camera':
+          onUpdate(event.userId, { cameraEnabled: event.enabled })
+          break
+        case 'screen':
+          onUpdate(event.userId, { screenSharing: event.active })
+          break
+      }
+    })
+    .subscribe()
+
+  const broadcast = async (event: MeetPresenceEvent) => {
+    await channel.send({ type: 'broadcast', event: 'presence', payload: event })
+  }
+
+  const announce = async (state: MeetParticipantPresence) => {
+    await broadcast({ type: 'hand', userId, raised: state.handRaised })
+    await broadcast({ type: 'camera', userId, enabled: state.cameraEnabled })
+    await broadcast({ type: 'screen', userId, active: state.screenSharing })
+  }
+
+  return { broadcast, announce, cleanup: () => supabase.removeChannel(channel) }
+}

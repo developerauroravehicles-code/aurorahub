@@ -42,20 +42,104 @@ export class MeetMeshManager {
   private userId: string
   private callbacks: MeshPeerCallbacks
   private makingOffer = new Set<string>()
+  private onScreenShareEnd?: () => void
 
   constructor(
     userId: string,
     sendSignal: (event: import('./realtime').MeetSignalEvent) => Promise<void>,
-    callbacks: MeshPeerCallbacks
+    callbacks: MeshPeerCallbacks,
+    options?: { onScreenShareEnd?: () => void }
   ) {
     this.userId = userId
     this.sendSignal = sendSignal
     this.callbacks = callbacks
+    this.onScreenShareEnd = options?.onScreenShareEnd
   }
 
   async startLocalAudio(): Promise<MediaStream> {
     this.localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false })
     return this.localStream
+  }
+
+  async enableCamera(): Promise<boolean> {
+    if (!this.localStream) return false
+    if (this.localStream.getVideoTracks().length > 0) {
+      this.localStream.getVideoTracks().forEach((t) => { t.enabled = true })
+      return true
+    }
+    try {
+      const video = await navigator.mediaDevices.getUserMedia({ video: true })
+      const track = video.getVideoTracks()[0]
+      this.localStream.addTrack(track)
+      await this.renegotiateAllPeers()
+      return true
+    } catch {
+      return false
+    }
+  }
+
+  disableCamera() {
+    this.localStream?.getVideoTracks().forEach((t) => {
+      t.enabled = false
+    })
+  }
+
+  removeCamera() {
+    this.localStream?.getVideoTracks().forEach((t) => {
+      t.stop()
+      this.localStream?.removeTrack(t)
+    })
+    void this.renegotiateAllPeers()
+  }
+
+  async startScreenShare(): Promise<MediaStream | null> {
+    try {
+      const display = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false })
+      const track = display.getVideoTracks()[0]
+      track.onended = () => {
+        this.stopScreenShare()
+        this.onScreenShareEnd?.()
+      }
+      if (this.localStream) {
+        this.localStream.getVideoTracks().forEach((t) => {
+          t.stop()
+          this.localStream?.removeTrack(t)
+        })
+        this.localStream.addTrack(track)
+        await this.renegotiateAllPeers()
+      }
+      return display
+    } catch {
+      return null
+    }
+  }
+
+  stopScreenShare() {
+    this.localStream?.getVideoTracks().forEach((t) => {
+      if (t.label.includes('screen') || t.label.includes('Screen') || t.label.includes('display')) {
+        t.stop()
+        this.localStream?.removeTrack(t)
+      }
+    })
+    void this.renegotiateAllPeers()
+  }
+
+  private async renegotiateAllPeers() {
+    for (const [peerId, pc] of this.peers) {
+      if (!this.localStream) continue
+      const senders = pc.getSenders()
+      for (const track of this.localStream.getTracks()) {
+        const existing = senders.find((s) => s.track?.kind === track.kind)
+        if (existing) {
+          await existing.replaceTrack(track)
+        } else {
+          pc.addTrack(track, this.localStream)
+        }
+      }
+      const offer = await pc.createOffer()
+      await pc.setLocalDescription(offer)
+      await this.sendSignal({ type: 'offer', from: this.userId, to: peerId, sdp: offer })
+    }
   }
 
   getLocalStream(): MediaStream | null {

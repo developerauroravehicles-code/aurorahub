@@ -93,6 +93,15 @@ function generateToken(): string {
   return randomBytes(16).toString('hex')
 }
 
+/** Admin DB for comm writes/reads after auth + scope checks in application code */
+function getCommDb() {
+  return createAdminClient()
+}
+
+function canAccessMeetRoom(profile: CommUserProfile, room: { dealer_id: string | null; host_id: string }) {
+  return canAccessDealerScope(profile, room.dealer_id) || room.host_id === profile.id
+}
+
 export async function getMessageableProfilesAction() {
   const auth = await getAuth()
   if ('error' in auth && auth.error) return { error: auth.error }
@@ -152,7 +161,7 @@ export async function getConversationsAction() {
 
   const { data: allMembers } = await supabase
     .from('comm_conversation_members')
-    .select('conversation_id, user_id, last_read_at, profile:profiles(id, full_name, avatar_url, dealer_id, role)')
+    .select('conversation_id, user_id, last_read_at, profile:profiles!user_id(id, full_name, avatar_url, dealer_id, role)')
     .in('conversation_id', ids)
 
   const { data: lastMessages } = await supabase
@@ -204,7 +213,7 @@ export async function getConversationMessagesAction(conversationId: string) {
 
   const { data: messages, error } = await supabase
     .from('comm_messages')
-    .select('*, sender:profiles(id, full_name, avatar_url)')
+    .select('*, sender:profiles!sender_id(id, full_name, avatar_url)')
     .eq('conversation_id', conversationId)
     .is('deleted_at', null)
     .order('created_at', { ascending: true })
@@ -331,7 +340,7 @@ export async function sendMessageAction(conversationId: string, body: string, at
       body: body.trim(),
       attachments,
     })
-    .select('*, sender:profiles(id, full_name, avatar_url)')
+    .select('*, sender:profiles!sender_id(id, full_name, avatar_url)')
     .single()
 
   if (error) return { error: error.message }
@@ -402,35 +411,32 @@ export async function uploadChatAttachmentAction(conversationId: string, formDat
 export async function getMeetRoomsAction() {
   const auth = await getAuth()
   if ('error' in auth && auth.error) return { error: auth.error }
-  const { profile, supabase } = auth as Exclude<AuthResult, { error: string }>
+  const { profile } = auth as Exclude<AuthResult, { error: string }>
 
-  let query = supabase
+  const db = getCommDb()
+  const { data, error } = await db
     .from('comm_meet_rooms')
-    .select('*, host:profiles(id, full_name)')
+    .select('*, host:profiles!host_id(id, full_name)')
     .order('started_at', { ascending: false })
     .limit(50)
 
-  if (!isPlatformUser(profile)) {
-    query = query.or(`dealer_id.eq.${profile.dealer_id},dealer_id.is.null`)
-  }
-
-  const { data, error } = await query
   if (error) return { error: error.message }
 
-  const rooms = (data ?? []).filter((r) => canAccessDealerScope(profile, r.dealer_id))
+  const rooms = (data ?? []).filter((r) => canAccessMeetRoom(profile, r))
   return { rooms }
 }
 
 export async function createMeetRoomAction(title: string) {
   const auth = await getAuth()
   if ('error' in auth && auth.error) return { error: auth.error }
-  const { profile, supabase } = auth as Exclude<AuthResult, { error: string }>
+  const { profile } = auth as Exclude<AuthResult, { error: string }>
 
   const roomTitle = title.trim() || `${profile.full_name ?? 'User'}'s Meet`
   const slug = `${slugify(roomTitle)}-${randomBytes(4).toString('hex')}`
   const joinToken = generateToken()
 
-  const { data: room, error } = await supabase
+  const db = getCommDb()
+  const { data: room, error } = await db
     .from('comm_meet_rooms')
     .insert({
       slug,
@@ -440,12 +446,12 @@ export async function createMeetRoomAction(title: string) {
       dealer_id: profile.dealer_id,
       status: 'active',
     })
-    .select('*')
+    .select('*, host:profiles!host_id(id, full_name)')
     .single()
 
   if (error || !room) return { error: error?.message ?? 'Failed to create meet' }
 
-  await supabase.from('comm_meet_participants').upsert(
+  await db.from('comm_meet_participants').upsert(
     {
       room_id: room.id,
       user_id: profile.id,
@@ -472,9 +478,10 @@ export async function createMeetRoomAction(title: string) {
 export async function joinMeetByTokenAction(token: string) {
   const auth = await getAuth()
   if ('error' in auth && auth.error) return { error: auth.error }
-  const { profile, supabase } = auth as Exclude<AuthResult, { error: string }>
+  const { profile } = auth as Exclude<AuthResult, { error: string }>
 
-  const { data: room, error } = await supabase
+  const db = getCommDb()
+  const { data: room, error } = await db
     .from('comm_meet_rooms')
     .select('*')
     .eq('join_token', token)
@@ -482,9 +489,9 @@ export async function joinMeetByTokenAction(token: string) {
     .single()
 
   if (error || !room) return { error: 'Meet not found or ended' }
-  if (!canAccessDealerScope(profile, room.dealer_id)) return { error: 'Access denied' }
+  if (!canAccessMeetRoom(profile, room)) return { error: 'Access denied' }
 
-  await supabase.from('comm_meet_participants').upsert(
+  await db.from('comm_meet_participants').upsert(
     {
       room_id: room.id,
       user_id: profile.id,
@@ -500,19 +507,20 @@ export async function joinMeetByTokenAction(token: string) {
 export async function getMeetRoomAction(roomId: string) {
   const auth = await getAuth()
   if ('error' in auth && auth.error) return { error: auth.error }
-  const { profile, supabase } = auth as Exclude<AuthResult, { error: string }>
+  const { profile } = auth as Exclude<AuthResult, { error: string }>
 
-  const { data: room, error } = await supabase
+  const db = getCommDb()
+  const { data: room, error } = await db
     .from('comm_meet_rooms')
-    .select('*, host:profiles(id, full_name)')
+    .select('*, host:profiles!host_id(id, full_name)')
     .eq('id', roomId)
     .single()
 
   if (error || !room) return { error: 'Meet not found' }
-  if (!canAccessDealerScope(profile, room.dealer_id)) return { error: 'Access denied' }
+  if (!canAccessMeetRoom(profile, room)) return { error: 'Access denied' }
 
   if (room.status === 'active') {
-    await supabase.from('comm_meet_participants').upsert(
+    await db.from('comm_meet_participants').upsert(
       {
         room_id: roomId,
         user_id: profile.id,
@@ -523,9 +531,9 @@ export async function getMeetRoomAction(roomId: string) {
     )
   }
 
-  const { data: participants } = await supabase
+  const { data: participants } = await db
     .from('comm_meet_participants')
-    .select('*, profile:profiles(id, full_name, avatar_url)')
+    .select('*, profile:profiles!user_id(id, full_name, avatar_url)')
     .eq('room_id', roomId)
     .is('left_at', null)
 
@@ -535,11 +543,20 @@ export async function getMeetRoomAction(roomId: string) {
 export async function getMeetMessagesAction(roomId: string) {
   const auth = await getAuth()
   if ('error' in auth && auth.error) return { error: auth.error }
-  const { supabase } = auth as Exclude<AuthResult, { error: string }>
+  const { profile } = auth as Exclude<AuthResult, { error: string }>
 
-  const { data, error } = await supabase
+  const db = getCommDb()
+  const { data: room } = await db
+    .from('comm_meet_rooms')
+    .select('dealer_id, host_id')
+    .eq('id', roomId)
+    .single()
+
+  if (!room || !canAccessMeetRoom(profile, room)) return { error: 'Meet not found' }
+
+  const { data, error } = await db
     .from('comm_meet_messages')
-    .select('*, sender:profiles(id, full_name, avatar_url)')
+    .select('*, sender:profiles!sender_id(id, full_name, avatar_url)')
     .eq('room_id', roomId)
     .order('created_at', { ascending: true })
 
@@ -550,16 +567,17 @@ export async function getMeetMessagesAction(roomId: string) {
 export async function sendMeetMessageAction(roomId: string, body: string, attachments: CommAttachment[] = []) {
   const auth = await getAuth()
   if ('error' in auth && auth.error) return { error: auth.error }
-  const { profile, supabase } = auth as Exclude<AuthResult, { error: string }>
+  const { profile } = auth as Exclude<AuthResult, { error: string }>
 
   if (!body.trim() && attachments.length === 0) return { error: 'Empty message' }
 
-  const { data: room } = await supabase.from('comm_meet_rooms').select('status, dealer_id').eq('id', roomId).single()
-  if (!room || room.status !== 'active' || !canAccessDealerScope(profile, room.dealer_id)) {
+  const db = getCommDb()
+  const { data: room } = await db.from('comm_meet_rooms').select('status, dealer_id, host_id').eq('id', roomId).single()
+  if (!room || room.status !== 'active' || !canAccessMeetRoom(profile, room)) {
     return { error: 'Meet not active' }
   }
 
-  const { data: msg, error } = await supabase
+  const { data: msg, error } = await db
     .from('comm_meet_messages')
     .insert({
       room_id: roomId,
@@ -567,7 +585,7 @@ export async function sendMeetMessageAction(roomId: string, body: string, attach
       body: body.trim(),
       attachments,
     })
-    .select('*, sender:profiles(id, full_name, avatar_url)')
+    .select('*, sender:profiles!sender_id(id, full_name, avatar_url)')
     .single()
 
   if (error) return { error: error.message }
@@ -577,10 +595,11 @@ export async function sendMeetMessageAction(roomId: string, body: string, attach
 export async function uploadMeetAttachmentAction(roomId: string, formData: FormData) {
   const auth = await getAuth()
   if ('error' in auth && auth.error) return { error: auth.error }
-  const { profile, supabase } = auth as Exclude<AuthResult, { error: string }>
+  const { profile } = auth as Exclude<AuthResult, { error: string }>
 
-  const { data: room } = await supabase.from('comm_meet_rooms').select('status, dealer_id').eq('id', roomId).single()
-  if (!room || room.status !== 'active' || !canAccessDealerScope(profile, room.dealer_id)) {
+  const db = getCommDb()
+  const { data: room } = await db.from('comm_meet_rooms').select('status, dealer_id, host_id').eq('id', roomId).single()
+  if (!room || room.status !== 'active' || !canAccessMeetRoom(profile, room)) {
     return { error: 'Meet not active' }
   }
 
@@ -622,9 +641,13 @@ export async function uploadMeetAttachmentAction(roomId: string, formData: FormD
 export async function leaveMeetAction(roomId: string) {
   const auth = await getAuth()
   if ('error' in auth && auth.error) return { error: auth.error }
-  const { profile, supabase } = auth as Exclude<AuthResult, { error: string }>
+  const { profile } = auth as Exclude<AuthResult, { error: string }>
 
-  await supabase
+  const db = getCommDb()
+  const { data: room } = await db.from('comm_meet_rooms').select('dealer_id, host_id').eq('id', roomId).single()
+  if (!room || !canAccessMeetRoom(profile, room)) return { error: 'Access denied' }
+
+  await db
     .from('comm_meet_participants')
     .update({ left_at: new Date().toISOString() })
     .eq('room_id', roomId)
@@ -636,12 +659,13 @@ export async function leaveMeetAction(roomId: string) {
 export async function endMeetAction(roomId: string) {
   const auth = await getAuth()
   if ('error' in auth && auth.error) return { error: auth.error }
-  const { profile, supabase } = auth as Exclude<AuthResult, { error: string }>
+  const { profile } = auth as Exclude<AuthResult, { error: string }>
 
-  const { data: room } = await supabase.from('comm_meet_rooms').select('host_id').eq('id', roomId).single()
+  const db = getCommDb()
+  const { data: room } = await db.from('comm_meet_rooms').select('host_id, dealer_id').eq('id', roomId).single()
   if (!room || room.host_id !== profile.id) return { error: 'Only host can end meet' }
 
-  await supabase
+  await db
     .from('comm_meet_rooms')
     .update({ status: 'ended', ended_at: new Date().toISOString() })
     .eq('id', roomId)
