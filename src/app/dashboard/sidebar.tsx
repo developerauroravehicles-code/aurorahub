@@ -3,15 +3,17 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { clsx } from 'clsx'
-import { LogOut, LayoutDashboard, FileText, Users, Settings, Receipt, CalendarDays, Briefcase, ClipboardList, Wrench, GraduationCap, Clock, DollarSign, Shield, ShieldCheck, TrendingUp, Package, BarChart3, UserCircle, Cpu, MapPin, Building2, Camera, Database, Mail, Zap, Image, BookOpen, MessageSquare, Ticket, ChevronDown, ChevronRight, UserCog, Webhook, Globe, Plug, Activity, Bell, ListTodo, History, UsersRound } from 'lucide-react'
+import { LogOut, LayoutDashboard, FileText, Users, Settings, Receipt, CalendarDays, Briefcase, ClipboardList, Wrench, GraduationCap, Clock, DollarSign, Shield, ShieldCheck, TrendingUp, Package, BarChart3, UserCircle, Cpu, MapPin, Building2, Camera, Database, Mail, Zap, Image, BookOpen, MessageSquare, Ticket, ChevronDown, ChevronRight, UserCog, Webhook, Globe, Plug, Activity, Bell, ListTodo, History, UsersRound, MessageCircle, Video } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { DealerClock } from '@/components/dealer-clock'
 import { ThemeToggle } from '@/components/theme-toggle'
 import { canAccessAdminCustomers, isInventoryManager, normalizeUserRole } from '@/lib/inventory-manager-access'
+import { useUnreadNotificationCount } from '@/components/communication/use-unread-notifications'
 
 interface Profile {
+  id: string
   role: string
   full_name?: string | null
   dealer_id?: string | null
@@ -48,7 +50,9 @@ export function Sidebar({
     operations: true,
     configuration: true,
     platform: true,
+    communication: true,
   })
+  const unreadCount = useUnreadNotificationCount(profile.id)
 
   const handleSignOut = async () => {
     await supabase.auth.signOut()
@@ -186,6 +190,55 @@ export function Sidebar({
     },
   ]
 
+  const communicationLinks: NavLink[] = [
+    { name: 'Chat', href: '/dashboard/communication/chat', icon: MessageCircle },
+    { name: 'Meet', href: '/dashboard/communication/meet', icon: Video },
+    { name: 'Notifications', href: '/dashboard/communication/notifications', icon: Bell },
+  ]
+
+  const renderCommunicationSection = () => {
+    const sectionKey = 'communication'
+    const isExpanded = expandedSections[sectionKey] ?? true
+    return (
+      <div className="pt-2 mt-2 border-t border-zinc-200 dark:border-gray-800">
+        <button
+          onClick={() => toggleSection(sectionKey)}
+          className="flex items-center w-full px-3 py-2 text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-gray-500 hover:text-zinc-600 dark:text-gray-300"
+        >
+          {isExpanded ? <ChevronDown className="w-4 h-4 mr-1" /> : <ChevronRight className="w-4 h-4 mr-1" />}
+          COMMUNICATION
+        </button>
+        {isExpanded && (
+          <div className="mt-1 space-y-0.5">
+            {communicationLinks.map((link) => {
+              const Icon = link.icon
+              const isActive = pathname.startsWith(link.href.split('?')[0])
+              const showBadge = link.name === 'Notifications' && unreadCount > 0
+              return (
+                <Link
+                  key={link.name}
+                  href={link.href}
+                  className={clsx(
+                    isActive ? 'bg-zinc-200 dark:bg-white/10 text-zinc-900 dark:text-white' : 'text-zinc-500 dark:text-gray-400 hover:bg-zinc-200/50 dark:bg-white/5 hover:text-zinc-900 dark:text-white',
+                    'group flex items-center rounded-md px-3 py-2 text-sm font-medium transition-colors ml-1'
+                  )}
+                >
+                  <Icon className={clsx("mr-2 h-4 w-4 flex-shrink-0", isActive ? "text-[#C27E00]" : "text-zinc-500 dark:text-gray-500 group-hover:text-zinc-600 dark:text-gray-300")} />
+                  <span className="flex-1">{link.name}</span>
+                  {showBadge && (
+                    <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-[#C27E00] px-1.5 text-[10px] font-bold text-white">
+                      {unreadCount > 99 ? '99+' : unreadCount}
+                    </span>
+                  )}
+                </Link>
+              )
+            })}
+          </div>
+        )}
+      </div>
+    )
+  }
+
   return (
     <div className="flex h-full w-64 shrink-0 flex-col border-r border-zinc-200 bg-zinc-50 text-zinc-900 dark:border-gray-800 dark:bg-black dark:text-white">
       <div className="flex flex-1 flex-col overflow-y-auto">
@@ -256,6 +309,7 @@ export function Sidebar({
                   </div>
                 )
               })}
+              {renderCommunicationSection()}
             </>
           ) : role === 'aurora_manager' ? (
             <>
@@ -316,9 +370,11 @@ export function Sidebar({
                   </div>
                 )
               })}
+              {renderCommunicationSection()}
             </>
           ) : (
-            links.map((link) => {
+            <>
+            {links.map((link) => {
               const Icon = link.icon
               return (
                 <Link
@@ -338,7 +394,9 @@ export function Sidebar({
                   {link.name}
                 </Link>
               )
-            })
+            })}
+            {renderCommunicationSection()}
+            </>
           )}
         </nav>
       </div>

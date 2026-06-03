@@ -414,3 +414,181 @@ export async function uploadTicketScreenshotsToDrive(
     return { success: false, error: `Drive upload failed: ${msg}` }
   }
 }
+
+/** Communication module file payload */
+export type CommunicationDriveFile = {
+  buffer: Buffer | Uint8Array
+  mimeType: string
+  fileName: string
+}
+
+export type CommunicationAttachmentResult = {
+  fileId: string
+  webViewLink?: string
+  name: string
+  mimeType: string
+  size: number
+}
+
+async function getDriveClient(settings: GoogleDriveSettings): Promise<
+  | { error: string; drive?: undefined; rootFolderId?: undefined }
+  | { drive: ReturnType<typeof google.drive>; rootFolderId: string; error?: undefined }
+> {
+  if (!settings.enabled) {
+    return { error: 'Google Drive integration is disabled' as const }
+  }
+  const rootFolderId = settings.defaultFolderId?.trim()
+  if (!rootFolderId) {
+    return { error: 'Default Folder ID is required. Set it in System Management > API.' as const }
+  }
+
+  const useOAuth = settings.useOAuth && settings.refreshToken && settings.clientId && settings.clientSecret
+  let auth
+  if (useOAuth) {
+    const oauth2 = new google.auth.OAuth2(settings.clientId, settings.clientSecret)
+    oauth2.setCredentials({ refresh_token: settings.refreshToken })
+    auth = oauth2
+  } else {
+    const email = settings.serviceAccountEmail || settings.clientEmail
+    const privateKey = settings.serviceAccountPrivateKey || settings.privateKey
+    if (!email || !privateKey) {
+      return { error: 'Google Drive not configured.' as const }
+    }
+    auth = new google.auth.GoogleAuth({
+      credentials: {
+        client_email: email,
+        private_key: privateKey.replace(/\\n/g, '\n'),
+      },
+      scopes: ['https://www.googleapis.com/auth/drive'],
+    })
+  }
+
+  const drive = google.drive({ version: 'v3', auth })
+  return { drive, rootFolderId }
+}
+
+/**
+ * Upload communication files under: rootFolder / Communication / Chat|Meet / scopeId /
+ */
+export async function uploadCommunicationFileToDrive(
+  settings: GoogleDriveSettings,
+  scope: 'chat' | 'meet',
+  scopeId: string,
+  file: CommunicationDriveFile
+): Promise<{ success: true; file: CommunicationAttachmentResult } | { success: false; error: string }> {
+  const client = await getDriveClient(settings)
+  if (!client.drive || !client.rootFolderId) {
+    return { success: false, error: client.error ?? 'Google Drive not available' }
+  }
+
+  const { drive, rootFolderId } = client
+  const scopeFolder = scope === 'chat' ? 'Chat' : 'Meet'
+
+  try {
+    const commRootId = await findOrCreateFolder(drive, rootFolderId, 'Communication')
+    const typeFolderId = await findOrCreateFolder(drive, commRootId, scopeFolder)
+    const targetFolderId = await findOrCreateFolder(drive, typeFolderId, sanitizeFolderName(scopeId) || scopeId)
+
+    const { Readable } = await import('stream')
+    const buffer = Buffer.isBuffer(file.buffer) ? file.buffer : Buffer.from(file.buffer)
+    const base = sanitizeFolderName(file.fileName.replace(/\.[^.]+$/, '')) || 'file'
+    const extMatch = /\.([a-zA-Z0-9]+)$/.exec(file.fileName)
+    const ext = extMatch ? `.${extMatch[1].toLowerCase()}` : ''
+    const uniqueName = `${base}_${Date.now()}${ext}`.replace(/[<>:"/\\|?*]/g, '_')
+
+    const { data: uploaded } = await drive.files.create({
+      requestBody: {
+        name: uniqueName,
+        parents: [targetFolderId],
+      },
+      media: {
+        mimeType: file.mimeType || 'application/octet-stream',
+        body: Readable.from(buffer),
+      },
+      fields: 'id, webViewLink, name',
+      supportsAllDrives: true,
+    })
+
+    return {
+      success: true,
+      file: {
+        fileId: uploaded.id!,
+        webViewLink: uploaded.webViewLink ?? undefined,
+        name: uploaded.name ?? uniqueName,
+        mimeType: file.mimeType,
+        size: buffer.length,
+      },
+    }
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err)
+    return { success: false, error: `Drive upload failed: ${msg}` }
+  }
+}
+
+/** Append audit log line under Communication/Logs/{YYYY-MM-DD}/events.jsonl */
+export async function appendCommunicationLogToDrive(
+  settings: GoogleDriveSettings,
+  event: Record<string, unknown>
+): Promise<{ success: true } | { success: false; error: string }> {
+  const client = await getDriveClient(settings)
+  if (!client.drive || !client.rootFolderId) {
+    return { success: false, error: client.error ?? 'Google Drive not available' }
+  }
+
+  const { drive, rootFolderId } = client
+  const dateStr = new Date().toISOString().slice(0, 10)
+
+  try {
+    const commRootId = await findOrCreateFolder(drive, rootFolderId, 'Communication')
+    const logsFolderId = await findOrCreateFolder(drive, commRootId, 'Logs')
+    const dayFolderId = await findOrCreateFolder(drive, logsFolderId, dateStr)
+    const logFileName = 'events.jsonl'
+
+    const escapedName = logFileName.replace(/\\/g, '\\\\').replace(/'/g, "\\'")
+    const { data: list } = await drive.files.list({
+      q: `name='${escapedName}' and '${dayFolderId}' in parents and trashed=false`,
+      fields: 'files(id)',
+      supportsAllDrives: true,
+      includeItemsFromAllDrives: true,
+    })
+
+    const line = JSON.stringify({ ...event, ts: new Date().toISOString() }) + '\n'
+    const { Readable } = await import('stream')
+
+    if (list.files?.length && list.files[0].id) {
+      const fileId = list.files[0].id
+      const { data: existing } = await drive.files.get({
+        fileId,
+        alt: 'media',
+        supportsAllDrives: true,
+      })
+      const prev = typeof existing === 'string' ? existing : ''
+      const combined = Buffer.from(prev + line)
+      await drive.files.update({
+        fileId,
+        media: {
+          mimeType: 'application/x-ndjson',
+          body: Readable.from(combined),
+        },
+        supportsAllDrives: true,
+      })
+    } else {
+      await drive.files.create({
+        requestBody: {
+          name: logFileName,
+          parents: [dayFolderId],
+        },
+        media: {
+          mimeType: 'application/x-ndjson',
+          body: Readable.from(Buffer.from(line)),
+        },
+        supportsAllDrives: true,
+      })
+    }
+
+    return { success: true }
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err)
+    return { success: false, error: `Drive log append failed: ${msg}` }
+  }
+}

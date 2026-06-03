@@ -9,6 +9,7 @@ import { BackgroundLogo } from '@/components/background-logo'
 import { TimezoneProvider } from '@/contexts/timezone-context'
 
 interface Profile {
+  id: string
   role: string
   full_name?: string | null
   dealer_id?: string | null

@@ -1,0 +1,36 @@
+import { redirect, notFound } from 'next/navigation'
+import { createClient } from '@/lib/supabase/server'
+import { MeetRoomContent } from '@/components/communication/meet/meet-room-content'
+import { getMeetRoomAction, getMeetMessagesAction } from '@/app/dashboard/communication/actions'
+
+export default async function MeetRoomPage({
+  params,
+}: {
+  params: Promise<{ roomId: string }>
+}) {
+  const { roomId } = await params
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/login')
+
+  const [roomRes, msgRes] = await Promise.all([
+    getMeetRoomAction(roomId),
+    getMeetMessagesAction(roomId),
+  ])
+
+  if ('error' in roomRes && roomRes.error) notFound()
+
+  const room = roomRes.room!
+  const participants = roomRes.participants ?? []
+  const messages = 'messages' in msgRes ? msgRes.messages ?? [] : []
+
+  return (
+    <MeetRoomContent
+      room={room}
+      participants={participants}
+      initialMessages={messages}
+      currentUserId={user.id}
+      isHost={room.host_id === user.id}
+    />
+  )
+}
