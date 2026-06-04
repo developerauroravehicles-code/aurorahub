@@ -366,9 +366,9 @@ export async function validateAppointmentSlot(
   const duration = CALENDAR_DEFAULTS.appointmentDurationMinutes
   const endMinutes = startMinutes + duration
 
-  const [y, mo, d] = dateStr.split('-').map(Number)
-  const dayOfWeek = new Date(y, mo - 1, d).getDay()
-  const dayType: 'weekday' | 'saturday' | 'sunday' = dayOfWeek === 6 ? 'saturday' : dayOfWeek === 0 ? 'sunday' : 'weekday'
+  const isoDow = getISODay(toDate(`${dateStr}T12:00:00`, { timeZone: SYSTEM_DEFAULT_TIMEZONE }))
+  const dayType: 'weekday' | 'saturday' | 'sunday' =
+    isoDow === 7 ? 'sunday' : isoDow === 6 ? 'saturday' : 'weekday'
 
   const { data: settings } = await supabase
     .from('dealer_calendar_settings')

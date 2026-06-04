@@ -1,6 +1,6 @@
 /**
  * Single global calendar for the system.
- * All dealers use this calendar in real time. Times are applied in each dealer's timezone.
+ * All dealers share one Pacific (PT) slot grid; dealer timezone is used for display only.
  *
  * Default: 09:00 - 16:30, 90 min interval between slots, 75 min appointment duration.
  * Slots: 09:00, 10:30, 12:00, 13:30, 15:00 (last slot ends 16:15).

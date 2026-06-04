@@ -4,8 +4,9 @@ import { useActionState, useState, useEffect } from 'react'
 import { createDemand, getTakenSlots } from './actions'
 import { getDealerBlocksForDate } from '@/app/dashboard/system-management/calendar/actions'
 import { getGlobalSlotMinutes, getSlotMinutesFromConfig, CALENDAR_DEFAULTS } from '@/lib/calendar-defaults'
-import { formatInTimeZone, fromZonedTime, toDate } from 'date-fns-tz'
+import { formatInTimeZone, toDate } from 'date-fns-tz'
 import { SYSTEM_DEFAULT_TIMEZONE } from '@/lib/timezone-defaults'
+import { pad2 } from '@/lib/calendar-wall-date'
 import { useTimezone } from '@/contexts/timezone-context'
 import { useSystemTime } from '@/contexts/system-time-context'
 import { AppointmentCalendar } from '@/components/appointment-calendar'
@@ -81,10 +82,10 @@ export function DemandForm({ cameraModels, defaultAddress = '', timezoneName: pr
 
   useEffect(() => {
     if (!selectedDate) return
-    const dateStr = selectedDate
-    const [y, mo, d] = dateStr.split('-').map(Number)
-    const dayOfWeek = new Date(y, mo - 1, d).getDay()
-    const dayType = dayOfWeek === 6 ? 'saturday' : dayOfWeek === 0 ? 'sunday' : 'weekday'
+    const ptTz = SYSTEM_DEFAULT_TIMEZONE
+    const isoDay = selectedDate
+    const isoDow = getISODay(toDate(`${isoDay}T12:00:00`, { timeZone: ptTz }))
+    const dayType = isoDow === 7 ? 'sunday' : isoDow === 6 ? 'saturday' : 'weekday'
     const setting = calendarSettings?.[dayType]
     const slotMinutes = setting
       ? getSlotMinutesFromConfig({
@@ -94,21 +95,20 @@ export function DemandForm({ cameraModels, defaultAddress = '', timezoneName: pr
           appointmentDurationMinutes: setting.appointment_duration_minutes,
         })
       : getGlobalSlotMinutes()
-    const tz = timezoneName ?? SYSTEM_DEFAULT_TIMEZONE
-    const nowInTz = systemNow
+    const nowMs = systemNow.getTime()
     const slots: string[] = []
     for (const startMinutes of slotMinutes) {
       const h = Math.floor(startMinutes / 60)
       const m = startMinutes % 60
-      const dateInPT = new Date(y, mo - 1, d, h, m, 0)
-      const utcMoment = fromZonedTime(dateInPT, tz)
-      // calendar_past_slots_lock: exclude slots that are already in the past (dealer timezone)
-      if (utcMoment.getTime() > nowInTz.getTime()) {
+      const wall = `${isoDay}T${pad2(h)}:${pad2(m)}:00`
+      const utcMoment = toDate(wall, { timeZone: ptTz })
+      // calendar_past_slots_lock: exclude slots that are already in the past (Pacific)
+      if (utcMoment.getTime() > nowMs) {
         slots.push(utcMoment.toISOString())
       }
     }
     setAvailableSlots(slots)
-  }, [selectedDate, timezoneName, calendarSettings, systemNow])
+  }, [selectedDate, calendarSettings, systemNow])
 
   return (
     <form action={formAction} className="space-y-6 max-w-4xl bg-zinc-200/50 dark:bg-white/5 p-6 sm:p-8 rounded-lg shadow border border-zinc-200 dark:border-gray-800 text-base">
