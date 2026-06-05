@@ -104,6 +104,8 @@ export function MeetRoomContent({
   const [cursorMode, setCursorMode] = useState<ScreenShareCursorMode>(() => getStoredCursorMode())
 
   const meshRef = useRef<MeetMeshManager | null>(null)
+  const cameraTogglingRef = useRef(false)
+  const hasLeftRef = useRef(false)
   const presenceRef = useRef<{ broadcast: (e: import('@/lib/communication/realtime').MeetPresenceEvent) => Promise<void> } | null>(null)
   const audioContainerRef = useRef<HTMLDivElement>(null)
   const localVideoRef = useRef<HTMLVideoElement>(null)
@@ -224,6 +226,13 @@ export function MeetRoomContent({
           if (!row?.user_id || row.user_id === currentUserId) return
           if (row.left_at) {
             meshRef.current?.removePeer(row.user_id)
+            setParticipants((prev) => prev.filter((p) => p.user_id !== row.user_id))
+            setRemoteStreams((prev) => {
+              const next = { ...prev }
+              delete next[row.user_id]
+              return next
+            })
+            setRemoteSpeakingIds((prev) => prev.filter((id) => id !== row.user_id))
             return
           }
           if (!knownPeersRef.current.has(row.user_id)) {
@@ -244,6 +253,15 @@ export function MeetRoomContent({
     })
 
     return () => {
+      if (!hasLeftRef.current) {
+        hasLeftRef.current = true
+        // Fire-and-forget DB leave on unmount (navigation away, not tab close)
+        void fetch('/api/meet/leave', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ roomId: room.id }),
+        })
+      }
       void meshRef.current?.leave()
       meshRef.current = null
       signalingCleanup?.()
@@ -259,6 +277,23 @@ export function MeetRoomContent({
       localVideoRef.current.srcObject = stream
     }
   }, [cameraOn, screenSharing])
+
+  // Tab/browser close: keepalive fetch survives page unload
+  useEffect(() => {
+    if (room.status !== 'active') return
+    const handleBeforeUnload = () => {
+      if (hasLeftRef.current) return
+      hasLeftRef.current = true
+      fetch('/api/meet/leave', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ roomId: room.id }),
+        keepalive: true,
+      })
+    }
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload)
+  }, [room.id, room.status])
 
   const toggleMute = () => {
     setMuted((m) => {
@@ -279,18 +314,24 @@ export function MeetRoomContent({
 
   const toggleCamera = async () => {
     if (screenSharing) return
-    if (cameraOn) {
-      meshRef.current?.removeCamera()
-      setCameraOn(false)
-      updateLocalPresence({ cameraEnabled: false })
-      void presenceRef.current?.broadcast({ type: 'camera', userId: currentUserId, enabled: false })
-      return
-    }
-    const ok = await meshRef.current?.enableCamera()
-    if (ok) {
-      setCameraOn(true)
-      updateLocalPresence({ cameraEnabled: true })
-      void presenceRef.current?.broadcast({ type: 'camera', userId: currentUserId, enabled: true })
+    if (cameraTogglingRef.current) return
+    cameraTogglingRef.current = true
+    try {
+      if (cameraOn) {
+        await meshRef.current?.removeCamera()
+        setCameraOn(false)
+        updateLocalPresence({ cameraEnabled: false })
+        void presenceRef.current?.broadcast({ type: 'camera', userId: currentUserId, enabled: false })
+        return
+      }
+      const ok = await meshRef.current?.enableCamera()
+      if (ok) {
+        setCameraOn(true)
+        updateLocalPresence({ cameraEnabled: true })
+        void presenceRef.current?.broadcast({ type: 'camera', userId: currentUserId, enabled: true })
+      }
+    } finally {
+      cameraTogglingRef.current = false
     }
   }
 
@@ -323,7 +364,7 @@ export function MeetRoomContent({
   }
 
   const stopScreenShare = () => {
-    meshRef.current?.stopScreenShare()
+    void meshRef.current?.stopScreenShare()
     setScreenSharing(false)
     setCameraOn(false)
     updateLocalPresence({ screenSharing: false, cameraEnabled: false })
@@ -331,14 +372,21 @@ export function MeetRoomContent({
   }
 
   const handleLeave = async () => {
+    if (hasLeftRef.current) return
+    hasLeftRef.current = true
     await leaveMeetAction(room.id)
     await meshRef.current?.leave()
+    // Close the meet tab; if blocked (tab not script-opened), navigate as fallback
+    window.close()
     router.push('/dashboard/communication/meet')
   }
 
   const handleEnd = async () => {
+    if (hasLeftRef.current) return
+    hasLeftRef.current = true
     await endMeetAction(room.id)
     await meshRef.current?.leave()
+    window.close()
     router.push('/dashboard/communication/meet')
   }
 
@@ -389,9 +437,16 @@ export function MeetRoomContent({
     return (
       <div className="flex flex-col items-center justify-center gap-4 py-16">
         <p className="text-lg font-medium">This meet has ended</p>
-        <Link href="/dashboard/communication/meet" className="text-[#C27E00] underline">
+        <button
+          type="button"
+          className="text-[#C27E00] underline"
+          onClick={() => {
+            window.close()
+            router.push('/dashboard/communication/meet')
+          }}
+        >
           Back to meets
-        </Link>
+        </button>
       </div>
     )
   }

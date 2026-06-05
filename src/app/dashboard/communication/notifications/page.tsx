@@ -11,5 +11,5 @@ export default async function NotificationsPage() {
   const res = await getNotificationsAction(false)
   const notifications = 'notifications' in res ? res.notifications ?? [] : []
 
-  return <NotificationsContent initialNotifications={notifications} />
+  return <NotificationsContent initialNotifications={notifications} currentUserId={user.id} />
 }

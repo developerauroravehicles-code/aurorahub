@@ -23,9 +23,12 @@ export function useUnreadNotificationCount(userId: string | null) {
 
     void fetchCount()
 
-    const cleanup = subscribeToNotifications(supabase, userId, () => {
-      void fetchCount()
-    })
+    const cleanup = subscribeToNotifications(
+      supabase,
+      userId,
+      () => { void fetchCount() },
+      () => { void fetchCount() }
+    )
 
     return cleanup
   }, [userId])

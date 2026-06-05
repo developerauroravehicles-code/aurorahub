@@ -46,7 +46,7 @@ export function MeetListContent({ initialRooms, profiles }: Props) {
       setTitle('')
       setSelectedInvites([])
       setShowInvitePicker(false)
-      router.push(`/dashboard/communication/meet/${room.id}`)
+      window.open(`/dashboard/communication/meet/${room.id}`, '_blank', 'noopener,noreferrer')
       router.refresh()
     }
   }
@@ -203,6 +203,8 @@ function MeetCard({
         {!ended && (
           <Link
             href={`/dashboard/communication/meet/${room.id}`}
+            target="_blank"
+            rel="noopener noreferrer"
             className="flex-1 rounded-md bg-[#C27E00] py-2 text-center text-sm font-medium text-white"
           >
             Join

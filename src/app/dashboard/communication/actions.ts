@@ -281,15 +281,21 @@ export async function getConversationMessagesAction(conversationId: string) {
   const { data: conv } = await supabase.from('comm_conversations').select('*').eq('id', conversationId).single()
   if (!conv || !canAccessDealerScope(profile, conv.dealer_id)) return { error: 'Conversation not found' }
 
-  const { data: messages, error } = await supabase
-    .from('comm_messages')
-    .select('*, sender:profiles!sender_id(id, full_name, avatar_url)')
-    .eq('conversation_id', conversationId)
-    .is('deleted_at', null)
-    .order('created_at', { ascending: true })
+  const [{ data: messages, error }, { data: members }] = await Promise.all([
+    supabase
+      .from('comm_messages')
+      .select('*, sender:profiles!sender_id(id, full_name, avatar_url)')
+      .eq('conversation_id', conversationId)
+      .is('deleted_at', null)
+      .order('created_at', { ascending: true }),
+    supabase
+      .from('comm_conversation_members')
+      .select('user_id, last_read_at, profile:profiles!user_id(id, full_name)')
+      .eq('conversation_id', conversationId),
+  ])
 
   if (error) return { error: error.message }
-  return { messages: messages ?? [], conversation: conv }
+  return { messages: messages ?? [], members: members ?? [], conversation: conv }
 }
 
 export async function createDirectConversationAction(targetUserId: string) {
@@ -783,6 +789,8 @@ export async function leaveMeetAction(roomId: string) {
     .eq('room_id', roomId)
     .eq('user_id', profile.id)
 
+  revalidatePath(`${COMM_PATH}/meet`)
+  revalidatePath(`${COMM_PATH}/meet/${roomId}`)
   return { success: true }
 }
 
@@ -875,6 +883,33 @@ export async function markAllNotificationsReadAction() {
     .is('read_at', null)
 
   revalidatePath(`${COMM_PATH}/notifications`)
+  return { success: true }
+}
+
+export async function deleteNotificationAction(notificationId: string) {
+  const auth = await getAuth()
+  if ('error' in auth && auth.error) return { error: auth.error }
+  const { profile, supabase } = auth as Exclude<AuthResult, { error: string }>
+
+  await supabase
+    .from('comm_notifications')
+    .delete()
+    .eq('id', notificationId)
+    .eq('user_id', profile.id)
+
+  return { success: true }
+}
+
+export async function deleteAllNotificationsAction() {
+  const auth = await getAuth()
+  if ('error' in auth && auth.error) return { error: auth.error }
+  const { profile, supabase } = auth as Exclude<AuthResult, { error: string }>
+
+  await supabase
+    .from('comm_notifications')
+    .delete()
+    .eq('user_id', profile.id)
+
   return { success: true }
 }
 

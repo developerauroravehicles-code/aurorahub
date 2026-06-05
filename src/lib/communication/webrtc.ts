@@ -193,14 +193,15 @@ export class MeetMeshManager {
     })
   }
 
-  removeCamera() {
+  async removeCamera(): Promise<void> {
     this.localStream?.getVideoTracks().forEach((t) => {
       if (!this.isScreenTrack(t)) {
         t.stop()
         this.localStream?.removeTrack(t)
       }
     })
-    void this.syncLocalTracksToAllPeers().then(() => this.renegotiateAllPeers())
+    await this.syncLocalTracksToAllPeers()
+    await this.renegotiateAllPeers()
   }
 
   async startScreenShare(cursorMode?: ScreenShareCursorMode): Promise<MediaStream | null> {
@@ -214,8 +215,7 @@ export class MeetMeshManager {
       })
       const track = display.getVideoTracks()[0]
       track.onended = () => {
-        this.stopScreenShare()
-        this.onScreenShareEnd?.()
+        void this.stopScreenShare().then(() => this.onScreenShareEnd?.())
       }
 
       if (!this.localStream) {
@@ -236,14 +236,15 @@ export class MeetMeshManager {
     }
   }
 
-  stopScreenShare() {
+  async stopScreenShare(): Promise<void> {
     this.localStream?.getVideoTracks().forEach((t) => {
       if (this.isScreenTrack(t)) {
         t.stop()
         this.localStream?.removeTrack(t)
       }
     })
-    void this.syncLocalTracksToAllPeers().then(() => this.renegotiateAllPeers())
+    await this.syncLocalTracksToAllPeers()
+    await this.renegotiateAllPeers()
   }
 
   private isScreenTrack(track: MediaStreamTrack) {

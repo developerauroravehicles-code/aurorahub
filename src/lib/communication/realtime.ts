@@ -56,7 +56,8 @@ export function subscribeToMeetMessages(
 export function subscribeToNotifications(
   supabase: SupabaseClient,
   userId: string,
-  onNotification: (notification: CommNotification) => void
+  onNotification: (notification: CommNotification) => void,
+  onDeleted?: (id: string) => void
 ) {
   const channel = supabase
     .channel(`notif:${userId}`)
@@ -70,6 +71,55 @@ export function subscribeToNotifications(
       },
       (payload) => {
         onNotification(payload.new as CommNotification)
+      }
+    )
+    .on(
+      'postgres_changes',
+      {
+        event: 'DELETE',
+        schema: 'public',
+        table: 'comm_notifications',
+        filter: `user_id=eq.${userId}`,
+      },
+      (payload) => {
+        const old = payload.old as { id?: string }
+        if (old?.id) onDeleted?.(old.id)
+      }
+    )
+    .subscribe()
+
+  return () => {
+    supabase.removeChannel(channel)
+  }
+}
+
+export type MemberReadUpdate = {
+  user_id: string
+  last_read_at: string | null
+}
+
+/**
+ * Subscribe to last_read_at changes on comm_conversation_members for a given conversation.
+ * Fires whenever any member marks the conversation as read (görüldü / seen).
+ */
+export function subscribeToConversationMembers(
+  supabase: SupabaseClient,
+  conversationId: string,
+  onUpdate: (update: MemberReadUpdate) => void
+) {
+  const channel = supabase
+    .channel(`conv-members:${conversationId}`)
+    .on(
+      'postgres_changes',
+      {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'comm_conversation_members',
+        filter: `conversation_id=eq.${conversationId}`,
+      },
+      (payload) => {
+        const row = payload.new as { user_id: string; last_read_at: string | null }
+        onUpdate({ user_id: row.user_id, last_read_at: row.last_read_at })
       }
     )
     .subscribe()

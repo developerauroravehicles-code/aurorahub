@@ -1,8 +1,9 @@
 'use client'
 
 import { useRef, useState } from 'react'
-import { Paperclip, Send, Loader2 } from 'lucide-react'
+import { Paperclip, Send, Loader2, CheckCheck } from 'lucide-react'
 import type { CommAttachment, CommMessage } from '@/lib/communication/types'
+import type { MemberReadMap } from '@/components/communication/chat/chat-content'
 import {
   sendMessageAction,
   uploadChatAttachmentAction,
@@ -97,19 +98,43 @@ export function MessageComposer({ conversationId, messages, currentUserId, onMes
 export function MessageThread({
   messages,
   currentUserId,
+  memberReadMap,
 }: {
   messages: CommMessage[]
   currentUserId: string
+  memberReadMap?: MemberReadMap
 }) {
+  // For each own message, compute which OTHER members have seen it
+  // A member is considered to have seen a message if their last_read_at >= message.created_at
+  const seenByMap = new Map<string, string[]>()
+  if (memberReadMap) {
+    for (const msg of messages) {
+      if (msg.sender_id !== currentUserId) continue
+      const readers: string[] = []
+      for (const [uid, { lastReadAt, fullName }] of memberReadMap.entries()) {
+        if (uid === currentUserId) continue
+        if (lastReadAt && new Date(lastReadAt) >= new Date(msg.created_at)) {
+          readers.push(fullName ?? 'Someone')
+        }
+      }
+      if (readers.length > 0) seenByMap.set(msg.id, readers)
+    }
+  }
+
+  // Only show the "Görüldü" indicator on the LAST own message that has been seen
+  const ownMessages = messages.filter((m) => m.sender_id === currentUserId)
+  const lastSeenOwnMsgId = [...ownMessages].reverse().find((m) => seenByMap.has(m.id))?.id ?? null
+
   return (
     <div className="flex-1 overflow-y-auto p-4 space-y-4">
       {messages.map((msg) => {
         const isOwn = msg.sender_id === currentUserId
         const sender = msg.sender as { full_name?: string | null } | undefined
         const attachments = (msg.attachments ?? []) as CommAttachment[]
+        const showSeen = isOwn && msg.id === lastSeenOwnMsgId
 
         return (
-          <div key={msg.id} className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}>
+          <div key={msg.id} className={`flex flex-col ${isOwn ? 'items-end' : 'items-start'}`}>
             <div
               className={`max-w-[75%] rounded-lg px-4 py-2 ${
                 isOwn
@@ -136,6 +161,19 @@ export function MessageThread({
                 {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
               </p>
             </div>
+
+            {/* Görüldü indicator — only on the last seen own message */}
+            {showSeen && (
+              <div className="mt-0.5 flex items-center gap-1 text-[10px] text-zinc-400 dark:text-gray-500">
+                <CheckCheck className="h-3 w-3 text-[#C27E00]" />
+                <span>
+                  Seen
+                  {(seenByMap.get(msg.id)?.length ?? 0) > 1
+                    ? ` by ${seenByMap.get(msg.id)!.join(', ')}`
+                    : ''}
+                </span>
+              </div>
+            )}
           </div>
         )
       })}

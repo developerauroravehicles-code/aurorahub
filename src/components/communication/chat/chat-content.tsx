@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { Plus } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
-import { subscribeToConversation } from '@/lib/communication/realtime'
+import { subscribeToConversation, subscribeToConversationMembers } from '@/lib/communication/realtime'
 import type { CommMessage, CommUserProfile, CommConversation } from '@/lib/communication/types'
 import { ConversationList } from '@/components/communication/chat/conversation-list'
 import { MessageThread, MessageComposer } from '@/components/communication/chat/message-composer'
@@ -15,6 +15,9 @@ import {
   getMessageableProfilesAction,
   markConversationReadAction,
 } from '@/app/dashboard/communication/actions'
+
+/** userId → { lastReadAt, fullName } */
+export type MemberReadMap = Map<string, { lastReadAt: string | null; fullName: string | null }>
 
 export type ConversationListItem = CommConversation & {
   members: Array<{
@@ -42,6 +45,7 @@ export function ChatContent({ currentUserId, initialConversations, initialProfil
     conversationFromUrl ?? initialConversations[0]?.id ?? null
   )
   const [messages, setMessages] = useState<CommMessage[]>([])
+  const [memberReadMap, setMemberReadMap] = useState<MemberReadMap>(new Map())
   const [showNew, setShowNew] = useState(false)
   const [loadingMessages, setLoadingMessages] = useState(false)
 
@@ -56,6 +60,13 @@ export function ChatContent({ currentUserId, initialConversations, initialProfil
     if ('messages' in res && res.messages) {
       setMessages(res.messages as CommMessage[])
     }
+    if ('members' in res && res.members) {
+      const map: MemberReadMap = new Map()
+      for (const m of res.members as Array<{ user_id: string; last_read_at: string | null; profile?: { full_name?: string | null } | null }>) {
+        map.set(m.user_id, { lastReadAt: m.last_read_at, fullName: m.profile?.full_name ?? null })
+      }
+      setMemberReadMap(map)
+    }
     void markConversationReadAction(conversationId)
     setConversations((prev) =>
       prev.map((c) => (c.id === conversationId ? { ...c, unread: false } : c))
@@ -66,6 +77,7 @@ export function ChatContent({ currentUserId, initialConversations, initialProfil
     if (activeId) void loadMessages(activeId)
   }, [activeId, loadMessages])
 
+  // Subscribe to incoming messages
   useEffect(() => {
     if (!activeId) return
     const supabase = createClient()
@@ -76,6 +88,26 @@ export function ChatContent({ currentUserId, initialConversations, initialProfil
       })
       if (msg.sender_id !== currentUserId) {
         void markConversationReadAction(activeId)
+      }
+    })
+  }, [activeId, currentUserId])
+
+  // Subscribe to member read-time changes (görüldü / seen receipt updates)
+  useEffect(() => {
+    if (!activeId) return
+    const supabase = createClient()
+    return subscribeToConversationMembers(supabase, activeId, ({ user_id, last_read_at }) => {
+      setMemberReadMap((prev) => {
+        const next = new Map(prev)
+        const existing = next.get(user_id)
+        next.set(user_id, { lastReadAt: last_read_at, fullName: existing?.fullName ?? null })
+        return next
+      })
+      // Also refresh unread state in conversation list
+      if (user_id === currentUserId) {
+        setConversations((prev) =>
+          prev.map((c) => (c.id === activeId ? { ...c, unread: false } : c))
+        )
       }
     })
   }, [activeId, currentUserId])
@@ -146,7 +178,7 @@ export function ChatContent({ currentUserId, initialConversations, initialProfil
                   Loading messages...
                 </div>
               ) : (
-                <MessageThread messages={messages} currentUserId={currentUserId} />
+                <MessageThread messages={messages} currentUserId={currentUserId} memberReadMap={memberReadMap} />
               )}
               <MessageComposer
                 conversationId={activeId}
