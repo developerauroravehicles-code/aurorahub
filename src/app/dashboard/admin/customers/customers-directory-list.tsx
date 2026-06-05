@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useTransition, useCallback, useRef, useEffect } from 'react'
 import Link from 'next/link'
-import { subDays } from 'date-fns'
+import { subDays, formatDistanceToNowStrict } from 'date-fns'
 import { formatInPT } from '@/lib/timezone-defaults'
 import { phoneKeyToCustomerRouteKey } from '@/lib/customer-key'
 import { sendCustomerDirectorySms } from './sms-actions'
@@ -18,6 +18,8 @@ export type CustomerDirectoryRow = {
   latest_camera_model: string | null
   latest_dealer_name: string | null
   latest_warranty_end: string | null
+  last_sms_at: string | null
+  last_sms_body: string | null
 }
 
 const SMS_MAX_CHARS = 1600
@@ -249,10 +251,11 @@ export function CustomersDirectoryList({
       </div>
 
       <div className="overflow-hidden rounded-lg border border-zinc-200 bg-zinc-200/50 shadow dark:border-gray-800 dark:bg-white/5">
-        <div className="hidden border-b border-zinc-300 bg-zinc-200/70 px-4 py-2 text-xs font-medium uppercase tracking-wide text-zinc-500 dark:border-gray-800 dark:bg-white/10 dark:text-gray-400 sm:block">
-          <div className="flex items-center gap-4">
+        {/* Header */}
+        <div className="hidden border-b border-zinc-300 bg-zinc-100 px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:border-gray-700 dark:bg-zinc-800/60 dark:text-gray-400 sm:block">
+          <div className="flex items-center gap-3">
             {canSendSms && (
-              <div className="flex w-8 shrink-0 items-center justify-center">
+              <div className="flex w-7 shrink-0 items-center justify-center">
                 <input
                   ref={headerSelectAllRef}
                   type="checkbox"
@@ -266,31 +269,47 @@ export function CustomersDirectoryList({
               </div>
             )}
             <span className="min-w-0 flex-1">Customer</span>
-            <span className="hidden w-36 shrink-0 text-right md:block">Activity</span>
+            <span className="hidden w-56 shrink-0 lg:block">Last SMS Activity</span>
+            <span className="hidden w-32 shrink-0 text-right md:block">Activity</span>
             <span className="w-20 shrink-0 text-right">Demands</span>
-            {canSendSms && <span className="w-28 shrink-0 text-right">Actions</span>}
+            {canSendSms && <span className="w-24 shrink-0 text-right">Actions</span>}
           </div>
         </div>
+
         {filtered.length === 0 ? (
           <p className="px-4 py-8 text-center text-sm text-zinc-500 dark:text-gray-400">
             No customers match your filters.
           </p>
         ) : (
-          <ul className="divide-y divide-zinc-200 dark:divide-gray-800">
-            {filtered.map((row) => {
+          <ul>
+            {filtered.map((row, idx) => {
               const name = rowDisplayName(row)
               const routeKey = phoneKeyToCustomerRouteKey(row.phone_key)
               const checked = selectedKeys.has(row.phone_key)
+              const hasSms = !!row.last_sms_at
+              const smsDate = hasSms ? formatInPT(row.last_sms_at!, 'd MMM yyyy') : null
+              const smsRelative = hasSms
+                ? formatDistanceToNowStrict(new Date(row.last_sms_at!), { addSuffix: true })
+                : null
+              const smsTruncated =
+                row.last_sms_body && row.last_sms_body.trim().length > 0
+                  ? row.last_sms_body.trim().slice(0, 72) + (row.last_sms_body.trim().length > 72 ? '…' : '')
+                  : null
+
               return (
-                <li key={row.phone_key} className="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center">
-                  <div className="flex items-start gap-3 sm:w-full sm:items-center">
+                <li
+                  key={row.phone_key}
+                  className={`flex flex-col gap-3 px-4 py-3.5 sm:flex-row sm:items-center${idx > 0 ? ' border-t border-zinc-200 dark:border-gray-800' : ''}`}
+                >
+                  {/* Customer column */}
+                  <div className="flex min-w-0 flex-1 items-start gap-3 sm:items-center">
                     {canSendSms && (
                       <input
                         type="checkbox"
                         checked={checked}
                         onChange={() => toggleKey(row.phone_key)}
                         aria-label={`Select ${name}`}
-                        className="mt-1 h-4 w-4 shrink-0 rounded border-zinc-400 text-[#C27E00] sm:mt-0"
+                        className="mt-0.5 h-4 w-4 shrink-0 rounded border-zinc-400 text-[#C27E00] sm:mt-0"
                       />
                     )}
                     <div className="min-w-0 flex-1">
@@ -302,33 +321,69 @@ export function CustomersDirectoryList({
                       </Link>
                       <p className="truncate text-sm text-zinc-500 dark:text-gray-400">{row.customer_phone}</p>
                       {(row.latest_dealer_name || row.latest_camera_model) && (
-                        <p className="truncate text-xs text-zinc-500 dark:text-gray-500">
-                          {[row.latest_dealer_name, row.latest_camera_model].filter(Boolean).join(' · ')}
+                        <p className="truncate text-xs text-zinc-400 dark:text-gray-500">
+                          {[row.latest_dealer_name, row.latest_camera_model].filter(Boolean).join(' / ')}
                         </p>
                       )}
                     </div>
                   </div>
+
+                  {/* Last SMS Activity column — desktop */}
+                  <div className="hidden w-56 shrink-0 lg:block">
+                    {hasSms ? (
+                      <div>
+                        <p className="text-xs font-medium text-zinc-700 dark:text-gray-300">
+                          {smsDate}
+                          <span className="ml-1 font-normal text-zinc-400 dark:text-gray-500">({smsRelative})</span>
+                        </p>
+                        {smsTruncated && (
+                          <p
+                            className="mt-0.5 truncate text-xs text-zinc-500 dark:text-gray-400"
+                            title={row.last_sms_body ?? undefined}
+                          >
+                            {smsTruncated}
+                          </p>
+                        )}
+                      </div>
+                    ) : (
+                      <span className="text-xs text-zinc-400 dark:text-gray-600">—</span>
+                    )}
+                  </div>
+
+                  {/* Right-side columns */}
                   <div className={`flex shrink-0 flex-wrap items-center justify-between gap-2 sm:flex-nowrap sm:justify-end${canSendSms ? ' pl-7 sm:pl-0' : ''}`}>
-                    <p className="text-right text-xs text-zinc-500 dark:text-gray-500 sm:hidden">
-                      Last {formatInPT(row.last_activity, 'd MMM yyyy')}
-                      <span className="text-zinc-400"> · </span>
+                    {/* Mobile summary */}
+                    <div className="text-right text-xs text-zinc-500 dark:text-gray-500 sm:hidden">
+                      <span>Last {formatInPT(row.last_activity, 'd MMM yyyy')}</span>
+                      <span className="mx-1 text-zinc-400">·</span>
                       <span className="text-[#C27E00]">{row.demand_count}</span>
-                    </p>
-                    <p className="hidden w-36 shrink-0 text-right text-xs text-zinc-500 dark:text-gray-400 md:block">
+                      {hasSms && (
+                        <p className="mt-0.5 text-zinc-400">SMS: {smsDate}</p>
+                      )}
+                    </div>
+
+                    {/* Activity */}
+                    <p className="hidden w-32 shrink-0 text-right text-xs text-zinc-500 dark:text-gray-400 md:block">
                       {formatInPT(row.last_activity, 'd MMM yyyy')}
                     </p>
+
+                    {/* Demand count */}
                     <p className="hidden w-20 shrink-0 text-right text-sm text-zinc-600 dark:text-gray-400 sm:block">
-                      <span className="text-[#C27E00]">{row.demand_count}</span>
+                      <span className="text-[#C27E00] font-semibold">{row.demand_count}</span>
                     </p>
+
+                    {/* Actions */}
                     {canSendSms && (
-                      <button
-                        type="button"
-                        onClick={() => openModalWithRows([row])}
-                        className="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-zinc-400 px-2.5 py-1.5 text-xs font-medium text-zinc-800 hover:bg-zinc-100 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-white/10"
-                      >
-                        <MessageSquare className="h-3.5 w-3.5" />
-                        SMS
-                      </button>
+                      <div className="flex w-24 shrink-0 justify-end">
+                        <button
+                          type="button"
+                          onClick={() => openModalWithRows([row])}
+                          className="inline-flex items-center gap-1.5 rounded-md border border-zinc-300 bg-white px-2.5 py-1.5 text-xs font-medium text-zinc-700 shadow-sm hover:bg-zinc-50 dark:border-gray-600 dark:bg-zinc-800 dark:text-gray-200 dark:hover:bg-zinc-700"
+                        >
+                          <MessageSquare className="h-3.5 w-3.5" />
+                          SMS
+                        </button>
+                      </div>
                     )}
                   </div>
                 </li>

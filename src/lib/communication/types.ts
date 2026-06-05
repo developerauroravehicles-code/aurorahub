@@ -91,7 +91,7 @@ export type CommMeetMessage = {
   }
 }
 
-export type CommNotificationType = 'chat_message' | 'meet_invite' | 'meet_started' | 'mention'
+export type CommNotificationType = 'chat_message' | 'meet_invite' | 'meet_started' | 'mention' | 'sms_pending'
 
 export type CommNotification = {
   id: string

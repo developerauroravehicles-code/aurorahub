@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { requirePermission } from '@/lib/permissions'
 import { canUseSmsFeatures } from '@/lib/inventory-manager-access'
 import type { SMSSettings } from '@/lib/sms-settings'
@@ -16,6 +17,36 @@ import { getTimezoneFromDealer } from '@/lib/dealer-timezone'
 import { formatInTimeZone } from 'date-fns-tz'
 import { SYSTEM_DEFAULT_TIMEZONE } from '@/lib/timezone-defaults'
 import type { SMSTriggerType } from '@/lib/sms-settings'
+
+const ALL_TRIGGER_TYPES: SMSTriggerType[] = [
+  'appointment_created',
+  'cancellation_notice',
+  'rescheduling_notice',
+  'four_hour_reminder',
+  'twenty_four_hour_reminder',
+]
+
+/** Returns the set of SMSTriggerTypes already sent for a demand (to-customer only). */
+export async function getSmsLogsForDemand(demandId: string): Promise<{ sentTypes: SMSTriggerType[]; error?: string }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { sentTypes: [], error: 'Unauthorized' }
+
+  const perm = await requirePermission('comm.sms.send')
+  if (perm !== true) return { sentTypes: [], error: perm.error }
+
+  const admin = createAdminClient()
+  const { data, error } = await admin
+    .from('sms_logs')
+    .select('message_type')
+    .eq('demand_id', demandId)
+    .eq('recipient_type', 'customer')
+    .order('sent_at', { ascending: false })
+
+  if (error) return { sentTypes: [], error: error.message }
+  const types = [...new Set((data ?? []).map((r: { message_type: string }) => r.message_type))] as SMSTriggerType[]
+  return { sentTypes: types }
+}
 
 export interface DemandOption {
   id: string
@@ -273,7 +304,59 @@ export async function sendManualSms(
       triggeredBy: 'manual',
       messageContent: message,
     }).catch(() => {})
+
+    // Notify all Aurora Managers if any templates remain unsent for this demand (customer)
+    notifyAuroraManagersIfSmsPending(demandId, messageType).catch(() => {})
+
     return { success: true }
   }
   return { success: false, error: (result as { error?: unknown }).error?.toString?.() ?? 'Failed to send SMS' }
+}
+
+/**
+ * After any manual SMS send, check which templates are still unsent for this demand.
+ * If any remain, create a sms_pending comm_notification for every aurora_manager.
+ * Fire-and-forget: caller should .catch(() => {}).
+ */
+async function notifyAuroraManagersIfSmsPending(
+  demandId: string,
+  justSentType: SMSTriggerType
+): Promise<void> {
+  const admin = createAdminClient()
+
+  // Fetch all customer SMS logs for this demand (including the one just logged)
+  const { data: logs } = await admin
+    .from('sms_logs')
+    .select('message_type')
+    .eq('demand_id', demandId)
+    .eq('recipient_type', 'customer')
+
+  const sentSet = new Set((logs ?? []).map((r: { message_type: string }) => r.message_type))
+  // Mark the just-sent type as sent (may not be committed yet)
+  sentSet.add(justSentType)
+
+  const unsentTypes = ALL_TRIGGER_TYPES.filter((t) => !sentSet.has(t))
+  if (unsentTypes.length === 0) return
+
+  // Fetch all aurora_manager user IDs
+  const { data: managers } = await admin
+    .from('profiles')
+    .select('id')
+    .eq('role', 'aurora_manager')
+
+  if (!managers?.length) return
+
+  const payload = {
+    demandId,
+    unsentTypes,
+    sentTypes: [...sentSet],
+  }
+
+  await admin.from('comm_notifications').insert(
+    managers.map((m: { id: string }) => ({
+      user_id: m.id,
+      type: 'sms_pending' as const,
+      payload,
+    }))
+  )
 }

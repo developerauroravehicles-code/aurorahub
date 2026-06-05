@@ -1,5 +1,6 @@
 'use server'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { revalidatePath } from 'next/cache'
 import { logDemandChange } from '@/lib/demand-logger'
 import { dispatchWebhooks } from '@/lib/webhook-dispatch'
@@ -10,6 +11,7 @@ import { resolveAppointmentCreatedTemplate, resolveCancellationTemplate, resolve
 import { validateAppointmentSlot } from '@/app/dashboard/system-management/calendar/actions'
 import { getTimezoneFromDealer } from '@/lib/dealer-timezone'
 import { lookupCameraModelId } from '@/lib/camera-model-resolve'
+import { notifyAuroraManagersSmsFailed } from '@/lib/notify-sms-failed'
 
 export async function assignDemandToMe(demandId: string) {
   const supabase = await createClient()
@@ -171,6 +173,7 @@ export async function approveDemand(demandId: string, sendSMSToCustomer: boolean
   const ac = smsSettings.appointment_created
 
   // Send SMS to customer if requested and enabled in settings
+  const adminForSms = createAdminClient()
   if (ac.enabled && ac.sendToCustomer && sendSMSToCustomer && demand.customer_phone) {
     try {
       const { data: dealer } = await supabase
@@ -198,10 +201,16 @@ export async function approveDemand(demandId: string, sendSMSToCustomer: boolean
           triggeredBy: 'system',
           messageContent: message,
         }).catch(() => {})
+      } else {
+        notifyAuroraManagersSmsFailed(adminForSms, demandId, 'appointment_created', 'Send failed').catch(() => {})
       }
     } catch (smsError) {
       console.error('Failed to send SMS notification:', smsError)
+      notifyAuroraManagersSmsFailed(adminForSms, demandId, 'appointment_created', 'Send error').catch(() => {})
     }
+  } else if (sendSMSToCustomer && demand.customer_phone && (!ac.enabled || !ac.sendToCustomer)) {
+    // Customer was expected to receive SMS but settings disabled it
+    notifyAuroraManagersSmsFailed(adminForSms, demandId, 'appointment_created', 'Disabled in SMS settings').catch(() => {})
   }
 
   // Send SMS to assigned specialist if requested and enabled in settings

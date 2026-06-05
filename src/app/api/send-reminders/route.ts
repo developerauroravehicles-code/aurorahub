@@ -7,6 +7,7 @@ import { resolveReminderTemplate } from '@/lib/sms-resolver'
 import { getTimezoneFromDealer } from '@/lib/dealer-timezone'
 import { logSmsSent } from '@/lib/sms-logger'
 import { getReminderAutomationConfig, getReminder24hAutomationConfig } from '@/lib/automation-settings'
+import { notifyAuroraManagersSmsFailed } from '@/lib/notify-sms-failed'
 
 const DEMAND_SELECT = 'id, appointment_date, customer_phone, customer_firstname, customer_lastname, customer_address, status, dealer_id, assigned_specialist_id, reminder_sent_at, reminder_24h_sent_at, dealers(region_codes(timezone_id, timezones(name)))'
 
@@ -125,9 +126,13 @@ export async function GET(request: Request) {
                   },
                   supabase
                 ).catch(() => {})
-              } else errorCount++
+              } else {
+                errorCount++
+                notifyAuroraManagersSmsFailed(supabase, demand.id, 'twenty_four_hour_reminder', 'Send failed').catch(() => {})
+              }
             } catch {
               errorCount++
+              notifyAuroraManagersSmsFailed(supabase, demand.id, 'twenty_four_hour_reminder', 'Send error').catch(() => {})
             }
           }
 
@@ -216,8 +221,14 @@ export async function GET(request: Request) {
                   triggeredBy: 'system',
                   messageContent: message,
                 }, supabase).catch(() => {})
-              } else errorCount++
-            } catch { errorCount++ }
+              } else {
+                errorCount++
+                notifyAuroraManagersSmsFailed(supabase, demand.id, 'four_hour_reminder', 'Send failed').catch(() => {})
+              }
+            } catch {
+              errorCount++
+              notifyAuroraManagersSmsFailed(supabase, demand.id, 'four_hour_reminder', 'Send error').catch(() => {})
+            }
           }
 
           if (reminderConfig.sendToSpecialist && (demand as { assigned_specialist_id?: string }).assigned_specialist_id) {

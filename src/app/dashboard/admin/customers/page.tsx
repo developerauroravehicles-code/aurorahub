@@ -19,6 +19,8 @@ type CustomerSummaryRow = {
   latest_camera_model: string | null
   latest_dealer_name: string | null
   latest_warranty_end: string | null
+  last_sms_at: string | null
+  last_sms_body: string | null
 }
 
 export default async function CustomersPage() {

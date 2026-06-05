@@ -16,6 +16,7 @@ import { EditVinForm } from '../edit-vin-form'
 import { EditStockNumberForm } from '../edit-stock-number-form'
 import { RescheduleDemandButton } from '../reschedule-demand-button'
 import { DemandManualSmsPanel } from '../demand-manual-sms-panel'
+import type { SMSTriggerType } from '@/lib/sms-settings'
 import { DemandInstallationNotesSection, type InstallationNoteRow } from '../demand-installation-notes-section'
 import { AlignDemandCompletionDateButton } from '../align-demand-completion-button'
 
@@ -124,6 +125,7 @@ export default async function DemandDetailsPage({
   let isAuroraManager = false
   let canEditCoreFields = false
   let canSendManualSms = false
+  let initialSentSmsTypes: SMSTriggerType[] = []
   let installationNotes: InstallationNoteRow[] = []
   if (user && profile) {
     isAuroraManager = profile.role === 'aurora_manager'
@@ -131,6 +133,20 @@ export default async function DemandDetailsPage({
     canSendManualSms =
       canUseSmsFeatures(profile.role) &&
       (await checkCurrentUserPermission('comm.sms.send'))
+
+    if (canSendManualSms) {
+      // Use admin client (already initialised above) to bypass sms_logs RLS
+      const { data: smsLogRows } = await admin
+        .from('sms_logs')
+        .select('message_type')
+        .eq('demand_id', id)
+        .eq('recipient_type', 'customer')
+      initialSentSmsTypes = [
+        ...new Set(
+          (smsLogRows ?? []).map((r: { message_type: string }) => r.message_type as SMSTriggerType)
+        ),
+      ]
+    }
 
     if (isAuroraManager) {
       const { data: notesRows } = await supabase
@@ -274,6 +290,7 @@ export default async function DemandDetailsPage({
             demandId={id}
             assignedSpecialistId={demand.assigned_specialist_id}
             customerPhone={demand.customer_phone}
+            initialSentTypes={initialSentSmsTypes}
           />
         )}
 
