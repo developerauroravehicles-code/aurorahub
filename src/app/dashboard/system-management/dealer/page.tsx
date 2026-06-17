@@ -3,7 +3,7 @@ import { SystemManagementTabs } from '../system-management-tabs'
 import { SystemManagementTitle } from '../system-management-title'
 import { DealerManagementContent } from './dealer-management-content-new'
 import { updateDealerRegionCode, addCameraToDealer, removeCameraFromDealer } from '../region/actions'
-import type { Dealer } from '@/types/system-management'
+import type { Dealer, DealerInvoiceEmail } from '@/types/system-management'
 
 export const dynamic = 'force-dynamic'
 
@@ -35,6 +35,21 @@ export default async function DealerManagementPage() {
     .eq('is_active', true)
     .order('name')
 
+  const { data: invoiceEmails } = await supabase
+    .from('dealer_invoice_emails')
+    .select('id, dealer_id, email, label, created_at')
+    .order('email')
+
+  const emailsByDealer = (invoiceEmails ?? []).reduce(
+    (acc, row) => {
+      const did = row.dealer_id as string
+      if (!acc[did]) acc[did] = []
+      acc[did].push(row as DealerInvoiceEmail)
+      return acc
+    },
+    {} as Record<string, DealerInvoiceEmail[]>
+  )
+
   // Merge region codes with dealers manually (in case join doesn't work)
   const dealersWithRegionCodes: Dealer[] = dealers?.map(dealer => {
     // Transform dealer_cameras to match DealerCamera type
@@ -47,14 +62,14 @@ export default async function DealerManagementPage() {
     
     // First try to use the joined region_codes
     if (dealer.region_codes && Array.isArray(dealer.region_codes) && dealer.region_codes.length > 0) {
-      return { ...dealer, region_codes: dealer.region_codes[0], dealer_cameras: transformedDealerCameras } as Dealer
+      return { ...dealer, region_codes: dealer.region_codes[0], dealer_cameras: transformedDealerCameras, dealer_invoice_emails: emailsByDealer[dealer.id] ?? [] } as Dealer
     }
     // If join didn't work, manually find it
     if (dealer.region_code_id) {
       const regionCode = regionCodes?.find(rc => rc.id === dealer.region_code_id)
-      return { ...dealer, region_codes: regionCode || null, dealer_cameras: transformedDealerCameras } as Dealer
+      return { ...dealer, region_codes: regionCode || null, dealer_cameras: transformedDealerCameras, dealer_invoice_emails: emailsByDealer[dealer.id] ?? [] } as Dealer
     }
-    return { ...dealer, region_codes: null, dealer_cameras: transformedDealerCameras } as Dealer
+    return { ...dealer, region_codes: null, dealer_cameras: transformedDealerCameras, dealer_invoice_emails: emailsByDealer[dealer.id] ?? [] } as Dealer
   }) || []
 
   return (

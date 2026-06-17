@@ -292,3 +292,52 @@ export async function deleteDealer(dealerId: string): Promise<{ success: boolean
   }
 }
 
+export async function addDealerInvoiceEmail(
+  dealerId: string,
+  email: string,
+  label?: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    await verifyAuroraManager()
+    const supabase = await createClient()
+    const normalized = email.trim().toLowerCase()
+    if (!normalized || !normalized.includes('@')) {
+      return { success: false, error: 'Valid email is required' }
+    }
+
+    const { error } = await supabase.from('dealer_invoice_emails').insert({
+      dealer_id: dealerId,
+      email: normalized,
+      label: label?.trim() || null,
+    })
+
+    if (error) return { success: false, error: error.message }
+    revalidatePath('/dashboard/configuration/dealers')
+    revalidatePath('/dashboard/admin/daily-invoices')
+    return { success: true }
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to add email',
+    }
+  }
+}
+
+export async function removeDealerInvoiceEmail(emailId: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    await verifyAuroraManager()
+    const supabase = await createClient()
+
+    const { error } = await supabase.from('dealer_invoice_emails').delete().eq('id', emailId)
+    if (error) return { success: false, error: error.message }
+    revalidatePath('/dashboard/configuration/dealers')
+    revalidatePath('/dashboard/admin/daily-invoices')
+    return { success: true }
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to remove email',
+    }
+  }
+}
+

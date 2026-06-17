@@ -39,7 +39,7 @@ export default async function InventoryPage() {
     redirect('/dashboard')
   }
 
-  const [dealersRes, camerasRes, balancesRes, movementsRes, inventoryAlertsRes] = await Promise.all([
+  const [dealersRes, camerasRes, balancesRes, movementsRes, pricingRes, inventoryAlertsRes] = await Promise.all([
     supabase
       .from('dealers')
       .select('id, name, region_code_id, region_codes(code, name)')
@@ -53,6 +53,7 @@ export default async function InventoryPage() {
       )
       .order('created_at', { ascending: false })
       .limit(250),
+    supabase.from('dealer_camera_pricing').select('dealer_id, camera_model_id, price_cad'),
     fetchInventoryStockAlerts(supabase),
   ])
 
@@ -60,6 +61,11 @@ export default async function InventoryPage() {
   const cameras = (camerasRes.data ?? []) as CameraRow[]
   const balances = (balancesRes.data ?? []) as BalanceRow[]
   const movements = (movementsRes.data ?? []) as unknown as MovementRow[]
+  const pricing = (pricingRes.data ?? []).map((p) => ({
+    dealer_id: p.dealer_id as string,
+    camera_model_id: p.camera_model_id as string,
+    price_cad: Number(p.price_cad),
+  }))
   const {
     alerts: suggestions,
     consumption30ByKey,
@@ -90,6 +96,7 @@ export default async function InventoryPage() {
         consumption30ByKey={consumption30ByKey}
         suggestions={suggestions}
         overallByModel={overallByModel}
+        pricing={pricing}
       />
     </div>
   )

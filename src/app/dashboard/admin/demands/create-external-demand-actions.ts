@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { logDemandChange } from '@/lib/demand-logger'
 import { dispatchWebhooks } from '@/lib/webhook-dispatch'
 import { revalidatePath } from 'next/cache'
@@ -9,6 +10,12 @@ import { toDate } from 'date-fns-tz'
 import { SYSTEM_DEFAULT_TIMEZONE } from '@/lib/timezone-defaults'
 import { getTimezoneFromDealer } from '@/lib/dealer-timezone'
 import { lookupCameraModelId } from '@/lib/camera-model-resolve'
+import {
+  calculateDemandInvoiceAmount,
+  DemandServiceType,
+  isDemandServiceType,
+} from '@/lib/demand-pricing'
+import { addDemandToDailyBatch } from '@/lib/daily-dealer-invoices'
 
 const schema = z.object({
   dealerId: z.string().min(1, 'Dealer is required'),
@@ -83,8 +90,27 @@ export async function createExternalDemand(prevState: CreateExternalDemandState,
   const appointmentDateISO = atLocalNoon.toISOString()
 
   const completeOnCreate = formData.get('completeOnCreate') === 'true'
+  const serviceTypeRaw = completeOnCreate ? String(formData.get('serviceType') ?? '').trim() : ''
+  if (completeOnCreate && !isDemandServiceType(serviceTypeRaw)) {
+    return { error: 'Service type is required when marking as completed on creation.' }
+  }
+  const serviceType = completeOnCreate ? (serviceTypeRaw as DemandServiceType) : null
 
   const cameraModelId = await lookupCameraModelId(supabase, data.cameraModel)
+
+  let invoiceTotalAmount: number | undefined
+  if (completeOnCreate && serviceType) {
+    const pricingResult = await calculateDemandInvoiceAmount(supabase, {
+      dealerId: data.dealerId,
+      cameraModelId,
+      cameraModelName: data.cameraModel,
+      serviceType,
+    })
+    if ('error' in pricingResult) {
+      return { error: pricingResult.error }
+    }
+    invoiceTotalAmount = pricingResult.amount
+  }
 
   const insertData = {
     created_by: profile.id,
@@ -104,6 +130,8 @@ export async function createExternalDemand(prevState: CreateExternalDemandState,
     status: completeOnCreate ? 'completed' : 'pending_finance',
     // Statement / reporting use completed_at for month filters — must match the retroactive job date, not "now"
     ...(completeOnCreate && { completed_at: appointmentDateISO }),
+    ...(completeOnCreate && serviceType && { service_type: serviceType }),
+    ...(completeOnCreate && invoiceTotalAmount != null && { invoice_total_amount: invoiceTotalAmount }),
     is_external: true,
     ...(data.comment?.trim() && { comment: data.comment.trim() }),
     ...(data.assignedSpecialistId && { assigned_specialist_id: data.assignedSpecialistId }),
@@ -114,6 +142,11 @@ export async function createExternalDemand(prevState: CreateExternalDemandState,
   if (error) {
     console.error('External demand creation error:', error)
     return { error: error.message || 'Failed to create demand.' }
+  }
+
+  if (completeOnCreate) {
+    const admin = createAdminClient()
+    addDemandToDailyBatch(admin, demand.id).catch(() => {})
   }
 
   logDemandChange({
@@ -137,5 +170,7 @@ export async function createExternalDemand(prevState: CreateExternalDemandState,
   }).catch(() => {})
 
   revalidatePath('/dashboard/admin/demands')
+  revalidatePath('/dashboard/admin/invoices')
+  revalidatePath('/dashboard/admin/daily-invoices')
   return { success: true }
 }

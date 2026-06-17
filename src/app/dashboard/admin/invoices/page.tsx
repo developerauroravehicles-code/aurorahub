@@ -59,6 +59,7 @@ export default async function InvoicesPage({
       camera_model,
       updated_at,
       completed_at,
+      service_type,
       invoice_total_amount,
       invoice_comments,
       invoice_extra_rows,

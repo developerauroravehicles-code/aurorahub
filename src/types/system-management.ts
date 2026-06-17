@@ -1,5 +1,13 @@
 // Type definitions for System Management
 
+export interface DealerInvoiceEmail {
+  id: string
+  dealer_id: string
+  email: string
+  label?: string | null
+  created_at?: string
+}
+
 export interface Dealer {
   id: string
   name: string
@@ -10,6 +18,7 @@ export interface Dealer {
   created_at?: string
   region_codes?: RegionCode | null
   dealer_cameras?: DealerCamera[]
+  dealer_invoice_emails?: DealerInvoiceEmail[]
 }
 
 export interface RegionCode {
@@ -36,6 +45,15 @@ export interface DealerCamera {
   camera_model_id: string
   camera_models?: CameraModel
   dealers?: Dealer
+}
+
+export type DemandServiceType = 'installation' | 'transfer' | 'removal'
+
+export interface DealerCameraPricing {
+  dealer_id: string
+  camera_model_id: string
+  price_cad: number
+  updated_at?: string
 }
 
 export interface Profile {

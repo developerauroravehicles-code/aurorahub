@@ -11,6 +11,7 @@ import { downloadInvoicePdf, getInvoicePdfBlobUrl, getInvoicePdfBase64 } from '@
 import type { InvoiceRowData } from '@/lib/generate-invoice-pdf'
 import { EmailComposeModal } from '@/components/email-compose-modal'
 import type { EmailComposePayload } from '@/lib/email-compose'
+import { SERVICE_TYPE_LABELS, DemandServiceType } from '@/lib/demand-pricing'
 
 type DealerRow = { name: string; address?: string | null; phone?: string | null } | null
 
@@ -30,6 +31,7 @@ interface InvoiceRow {
   camera_model: string
   updated_at: string
   completed_at: string | null
+  service_type?: DemandServiceType | null
   invoice_total_amount: number | null
   invoice_comments: string | null
   invoice_extra_rows?: { col1: string; col2: string }[] | null
@@ -535,6 +537,7 @@ export function InvoiceTable({ invoices, logoDataUrl, canEdit = true }: InvoiceT
             <th className="px-3 py-2.5 text-left text-xs font-medium text-zinc-500 dark:text-gray-400 uppercase tracking-wider">Customer Address</th>
             <th className="px-3 py-2.5 text-left text-xs font-medium text-zinc-500 dark:text-gray-400 uppercase tracking-wider">Vehicle & Stock</th>
             <th className="px-3 py-2.5 text-left text-xs font-medium text-zinc-500 dark:text-gray-400 uppercase tracking-wider">Product Model</th>
+            <th className="px-3 py-2.5 text-left text-xs font-medium text-zinc-500 dark:text-gray-400 uppercase tracking-wider">Service</th>
             <th className="px-3 py-2.5 text-left text-xs font-medium text-zinc-500 dark:text-gray-400 uppercase tracking-wider">Complete Date</th>
             <th className="px-3 py-2.5 text-left text-xs font-medium text-zinc-500 dark:text-gray-400 uppercase tracking-wider">Warranty End</th>
             <th className="px-3 py-2.5 text-left text-xs font-medium text-zinc-500 dark:text-gray-400 uppercase tracking-wider">Total Amount</th>
@@ -586,6 +589,9 @@ export function InvoiceTable({ invoices, logoDataUrl, canEdit = true }: InvoiceT
                 </td>
                 <td className="px-3 py-2.5 text-sm text-zinc-600 dark:text-gray-300">
                   {row.camera_model}
+                </td>
+                <td className="px-3 py-2.5 text-sm text-zinc-600 dark:text-gray-300 whitespace-nowrap">
+                  {row.service_type ? SERVICE_TYPE_LABELS[row.service_type] : '—'}
                 </td>
                 <td className="px-3 py-2.5 text-sm text-zinc-600 dark:text-gray-300 whitespace-nowrap">
                   {formatInTimeZone(completionDate, SYSTEM_DEFAULT_TIMEZONE, 'd MMMM yyyy')}

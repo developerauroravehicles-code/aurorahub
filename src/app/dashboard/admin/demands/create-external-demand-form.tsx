@@ -6,6 +6,12 @@ import { getCameraModelsForDealer } from './get-cameras-for-dealer'
 import { VEHICLE_MAKES_CA } from '@/lib/vehicle-makes'
 import { getModelsForMake, getTrimsForModel } from '@/lib/vehicle-models'
 import { CanadianPhoneInput } from '@/components/canadian-phone-input'
+import {
+  DemandServiceType,
+  REMOVAL_FEE_CAD,
+  SERVICE_TYPE_LABELS,
+  TRANSFER_FEE_CAD,
+} from '@/lib/demand-pricing'
 
 interface Dealer {
   id: string
@@ -52,6 +58,7 @@ export function CreateExternalDemandForm({ dealers, specialists, onSuccess, onCa
   const [customCamera, setCustomCamera] = useState('')
   const [isFutureCustomer, setIsFutureCustomer] = useState(false)
   const [completeOnCreate, setCompleteOnCreate] = useState(false)
+  const [serviceType, setServiceType] = useState<DemandServiceType>('installation')
 
   useEffect(() => {
     if (selectedDealerId) {
@@ -157,6 +164,42 @@ export function CreateExternalDemandForm({ dealers, specialists, onSuccess, onCa
           <span className="text-xs text-zinc-500 dark:text-gray-500">— When checked, demand is created directly as completed</span>
         </div>
         {completeOnCreate && <input type="hidden" name="completeOnCreate" value="true" />}
+        {completeOnCreate && (
+          <div className="sm:col-span-2 space-y-2">
+            <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300">Service type *</label>
+            <div className="grid gap-2 sm:grid-cols-3">
+              {(
+                [
+                  { value: 'installation' as const, hint: 'Dealer camera price' },
+                  { value: 'transfer' as const, hint: `Transfer fee — $${TRANSFER_FEE_CAD} CAD` },
+                  { value: 'removal' as const, hint: `Removal fee — $${REMOVAL_FEE_CAD} CAD` },
+                ] as const
+              ).map((opt) => (
+                <label
+                  key={opt.value}
+                  className={`flex items-start gap-2 rounded-md border px-3 py-2 cursor-pointer text-sm ${
+                    serviceType === opt.value
+                      ? 'border-[#C27E00]/60 bg-[#C27E00]/10'
+                      : 'border-zinc-300 dark:border-gray-700'
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="serviceType"
+                    value={opt.value}
+                    checked={serviceType === opt.value}
+                    onChange={() => setServiceType(opt.value)}
+                    className="mt-0.5 text-[#C27E00] focus:ring-[#C27E00]"
+                  />
+                  <span>
+                    <span className="block font-medium text-zinc-900 dark:text-white">{SERVICE_TYPE_LABELS[opt.value]}</span>
+                    <span className="block text-xs text-zinc-500 dark:text-gray-500">{opt.hint}</span>
+                  </span>
+                </label>
+              ))}
+            </div>
+          </div>
+        )}
         <div>
           <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300">First Name *</label>
           <input

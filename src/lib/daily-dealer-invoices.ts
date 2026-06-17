@@ -1,0 +1,240 @@
+import type { SupabaseClient } from '@supabase/supabase-js'
+import { formatInTimeZone } from 'date-fns-tz'
+import { SYSTEM_DEFAULT_TIMEZONE, getDateRangeInTimezone } from '@/lib/timezone-defaults'
+import {
+  calculateDemandInvoiceAmount,
+  type DemandServiceType,
+  isDemandServiceType,
+} from '@/lib/demand-pricing'
+
+/** Pacific calendar date (yyyy-MM-dd) from an ISO timestamp. */
+export function ptDateFromIso(iso: string | Date): string {
+  const d = typeof iso === 'string' ? new Date(iso) : iso
+  return formatInTimeZone(d, SYSTEM_DEFAULT_TIMEZONE, 'yyyy-MM-dd')
+}
+
+export function ptTodayDate(): string {
+  return formatInTimeZone(new Date(), SYSTEM_DEFAULT_TIMEZONE, 'yyyy-MM-dd')
+}
+
+export async function getOrCreateDailyBatch(
+  supabase: SupabaseClient,
+  dealerId: string,
+  batchDate: string
+): Promise<{ batchId: string } | { error: string }> {
+  const { data: existing } = await supabase
+    .from('dealer_daily_invoice_batches')
+    .select('id')
+    .eq('dealer_id', dealerId)
+    .eq('batch_date', batchDate)
+    .maybeSingle()
+
+  if (existing?.id) {
+    return { batchId: existing.id }
+  }
+
+  const { data: created, error } = await supabase
+    .from('dealer_daily_invoice_batches')
+    .insert({ dealer_id: dealerId, batch_date: batchDate, status: 'open' })
+    .select('id')
+    .single()
+
+  if (error) {
+    if (error.code === '23505') {
+      const { data: retry } = await supabase
+        .from('dealer_daily_invoice_batches')
+        .select('id')
+        .eq('dealer_id', dealerId)
+        .eq('batch_date', batchDate)
+        .maybeSingle()
+      if (retry?.id) return { batchId: retry.id }
+    }
+    return { error: error.message }
+  }
+
+  return { batchId: created.id }
+}
+
+/**
+ * Idempotently attach a completed demand to its dealer's PT daily batch.
+ * Uses admin client (bypasses RLS) — call from server actions after completion.
+ */
+export async function addDemandToDailyBatch(
+  supabase: SupabaseClient,
+  demandId: string
+): Promise<{ ok: true } | { error: string }> {
+  const { data: demand, error: demandError } = await supabase
+    .from('demands')
+    .select('id, dealer_id, status, completed_at, updated_at')
+    .eq('id', demandId)
+    .single()
+
+  if (demandError || !demand) {
+    return { error: demandError?.message ?? 'Demand not found' }
+  }
+  if (demand.status !== 'completed') {
+    return { ok: true }
+  }
+  if (!demand.dealer_id) {
+    return { ok: true }
+  }
+
+  const completedIso = demand.completed_at ?? demand.updated_at
+  if (!completedIso) {
+    return { error: 'Completed demand has no completion timestamp' }
+  }
+
+  const batchDate = ptDateFromIso(completedIso)
+  const batchResult = await getOrCreateDailyBatch(supabase, demand.dealer_id, batchDate)
+  if ('error' in batchResult) {
+    return { error: batchResult.error }
+  }
+
+  const { count } = await supabase
+    .from('dealer_daily_invoice_batch_items')
+    .select('demand_id', { count: 'exact', head: true })
+    .eq('batch_id', batchResult.batchId)
+
+  const sortOrder = count ?? 0
+
+  const { error: itemError } = await supabase.from('dealer_daily_invoice_batch_items').insert({
+    batch_id: batchResult.batchId,
+    demand_id: demandId,
+    included: true,
+    sort_order: sortOrder,
+  })
+
+  if (itemError) {
+    if (itemError.code === '23505') {
+      return { ok: true }
+    }
+    return { error: itemError.message }
+  }
+
+  return { ok: true }
+}
+
+/** Backfill service_type and invoice_total_amount for historical completed demands. */
+async function backfillDemandInvoiceFields(
+  supabase: SupabaseClient,
+  demandId: string
+): Promise<void> {
+  const { data: demand } = await supabase
+    .from('demands')
+    .select(
+      'id, status, dealer_id, service_type, invoice_total_amount, camera_model, camera_model_id'
+    )
+    .eq('id', demandId)
+    .maybeSingle()
+
+  if (!demand || demand.status !== 'completed' || !demand.dealer_id) return
+
+  const serviceType: DemandServiceType =
+    demand.service_type && isDemandServiceType(demand.service_type)
+      ? demand.service_type
+      : 'installation'
+
+  const updates: Record<string, unknown> = {}
+  if (!demand.service_type) updates.service_type = serviceType
+
+  if (demand.invoice_total_amount == null) {
+    const pricing = await calculateDemandInvoiceAmount(supabase, {
+      dealerId: demand.dealer_id as string,
+      cameraModelId: (demand.camera_model_id as string | null) ?? null,
+      cameraModelName: (demand.camera_model as string | null) ?? null,
+      serviceType,
+    })
+    if ('amount' in pricing) updates.invoice_total_amount = pricing.amount
+  }
+
+  if (Object.keys(updates).length === 0) return
+
+  await supabase.from('demands').update(updates).eq('id', demandId)
+}
+
+async function cleanupEmptyBatchesForDate(
+  supabase: SupabaseClient,
+  batchDate: string
+): Promise<void> {
+  const { data: batches } = await supabase
+    .from('dealer_daily_invoice_batches')
+    .select('id')
+    .eq('batch_date', batchDate)
+
+  for (const batch of batches ?? []) {
+    const { count } = await supabase
+      .from('dealer_daily_invoice_batch_items')
+      .select('demand_id', { count: 'exact', head: true })
+      .eq('batch_id', batch.id as string)
+
+    if ((count ?? 0) === 0) {
+      await supabase.from('dealer_daily_invoice_batches').delete().eq('id', batch.id as string)
+    }
+  }
+}
+
+/**
+ * Ensure all completed demands for a PT calendar day have batch rows.
+ * Backfills historical completions that pre-date the daily-invoices feature or missed hooks.
+ */
+export async function syncDailyBatchesForPtDate(
+  supabase: SupabaseClient,
+  batchDate: string
+): Promise<{ synced: number; errors: number }> {
+  const { start, end } = getDateRangeInTimezone(batchDate, batchDate, SYSTEM_DEFAULT_TIMEZONE)
+
+  const demandIdSet = new Set<string>()
+
+  const [withCompletedAt, withoutCompletedAt, batchedRows] = await Promise.all([
+    supabase
+      .from('demands')
+      .select('id')
+      .eq('status', 'completed')
+      .not('dealer_id', 'is', null)
+      .gte('completed_at', start)
+      .lte('completed_at', end),
+    supabase
+      .from('demands')
+      .select('id')
+      .eq('status', 'completed')
+      .not('dealer_id', 'is', null)
+      .is('completed_at', null)
+      .gte('updated_at', start)
+      .lte('updated_at', end),
+    supabase.from('dealer_daily_invoice_batch_items').select('demand_id'),
+  ])
+
+  for (const d of withCompletedAt.data ?? []) demandIdSet.add(d.id as string)
+  for (const d of withoutCompletedAt.data ?? []) demandIdSet.add(d.id as string)
+
+  const batchedIds = new Set((batchedRows.data ?? []).map((r) => r.demand_id as string))
+
+  // Catch historical completions not yet linked to a batch (pre-feature or missed hooks).
+  const { data: unbatchedCompleted } = await supabase
+    .from('demands')
+    .select('id, completed_at, updated_at')
+    .eq('status', 'completed')
+    .not('dealer_id', 'is', null)
+
+  for (const d of unbatchedCompleted ?? []) {
+    if (batchedIds.has(d.id as string)) continue
+    const iso = (d.completed_at ?? d.updated_at) as string | null
+    if (!iso) continue
+    if (ptDateFromIso(iso) === batchDate) {
+      demandIdSet.add(d.id as string)
+    }
+  }
+
+  let synced = 0
+  let errors = 0
+  for (const demandId of demandIdSet) {
+    await backfillDemandInvoiceFields(supabase, demandId)
+    const result = await addDemandToDailyBatch(supabase, demandId)
+    if ('error' in result) errors += 1
+    else synced += 1
+  }
+
+  await cleanupEmptyBatchesForDate(supabase, batchDate)
+
+  return { synced, errors }
+}

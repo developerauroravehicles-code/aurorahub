@@ -19,6 +19,7 @@ import { DemandManualSmsPanel } from '../demand-manual-sms-panel'
 import type { SMSTriggerType } from '@/lib/sms-settings'
 import { DemandInstallationNotesSection, type InstallationNoteRow } from '../demand-installation-notes-section'
 import { AlignDemandCompletionDateButton } from '../align-demand-completion-button'
+import { SERVICE_TYPE_LABELS, DemandServiceType } from '@/lib/demand-pricing'
 
 /** List filters (date, status, dealer) are passed on the detail URL so "Back" can restore them. */
 function demandsListHrefFromDetailSearch(
@@ -378,6 +379,23 @@ export default async function DemandDetailsPage({
                 )}
               </div>
             )}
+            {demand.status === 'completed' && (demand as { service_type?: DemandServiceType | null }).service_type && (
+              <div>
+                <p className="text-sm text-zinc-500 dark:text-gray-400">Service type</p>
+                <p className="text-zinc-900 dark:text-white">
+                  {SERVICE_TYPE_LABELS[(demand as { service_type: DemandServiceType }).service_type]}
+                </p>
+              </div>
+            )}
+            {demand.status === 'completed' &&
+              (demand as { invoice_total_amount?: number | null }).invoice_total_amount != null && (
+                <div>
+                  <p className="text-sm text-zinc-500 dark:text-gray-400">Invoice total (CAD)</p>
+                  <p className="text-zinc-900 dark:text-white tabular-nums">
+                    ${Number((demand as { invoice_total_amount: number }).invoice_total_amount).toFixed(2)}
+                  </p>
+                </div>
+              )}
             {isAuroraManager && demand.status === 'completed' && !(demand as { completed_at?: string | null }).completed_at && (
               <div>
                 <p className="text-sm text-zinc-500 dark:text-gray-400">Completed At</p>

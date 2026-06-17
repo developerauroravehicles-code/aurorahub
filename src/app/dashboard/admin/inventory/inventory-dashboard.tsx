@@ -32,8 +32,10 @@ import {
   BarChart3,
   ClipboardList,
   Loader2,
+  DollarSign,
 } from 'lucide-react'
 import { SYSTEM_DEFAULT_TIMEZONE, formatInPT } from '@/lib/timezone-defaults'
+import { InventoryPricingTab } from './inventory-pricing-tab'
 
 type DealerRow = {
   id: string
@@ -60,6 +62,8 @@ type MovementRow = {
 }
 
 type ThresholdRow = { dealer_id: string; camera_model_id: string; min_qty: number }
+
+type PricingRow = { dealer_id: string; camera_model_id: string; price_cad: number }
 
 type Suggestion = { title: string; detail: string; level: 'info' | 'warning' }
 
@@ -161,6 +165,7 @@ type Props = {
   consumption30ByKey: Record<string, number>
   suggestions: Suggestion[]
   overallByModel: Record<string, number>
+  pricing: PricingRow[]
 }
 
 export function InventoryDashboard({
@@ -172,9 +177,10 @@ export function InventoryDashboard({
   consumption30ByKey,
   suggestions,
   overallByModel,
+  pricing,
 }: Props) {
   const router = useRouter()
-  const [tab, setTab] = useState<'overview' | 'dealers' | 'regions' | 'movements' | 'manual'>('overview')
+  const [tab, setTab] = useState<'overview' | 'dealers' | 'regions' | 'movements' | 'manual' | 'pricing'>('overview')
   const [msg, setMsg] = useState<{ type: 'ok' | 'err'; text: string } | null>(null)
   const [hqSavingId, setHqSavingId] = useState<string | null>(null)
   const [camCreateState, createCamAction, createCamPending] = useActionState(createCameraModel, null)
@@ -1161,6 +1167,7 @@ export function InventoryDashboard({
     { id: 'dealers' as const, label: 'By dealer', icon: Package },
     { id: 'regions' as const, label: 'By region', icon: Activity },
     { id: 'movements' as const, label: 'Movements', icon: TrendingDown },
+    { id: 'pricing' as const, label: 'Pricing', icon: DollarSign },
     { id: 'manual' as const, label: 'Receipt / adjust', icon: Package },
   ]
 
@@ -2360,6 +2367,10 @@ export function InventoryDashboard({
             </table>
           </div>
         </div>
+      )}
+
+      {tab === 'pricing' && (
+        <InventoryPricingTab dealers={dealers} cameras={cameras} pricing={pricing} />
       )}
 
       {tab === 'manual' && (

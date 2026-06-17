@@ -92,6 +92,41 @@ export async function upsertInventoryThreshold(formData: FormData): Promise<{ er
   return { success: true }
 }
 
+export async function upsertDealerCameraPricing(formData: FormData): Promise<{ error?: string; success?: boolean }> {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { error: 'Unauthorized' }
+
+  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+  if (!profile || profile.role !== 'aurora_manager') {
+    return { error: 'Only Aurora Manager can manage inventory pricing' }
+  }
+
+  const dealerId = (formData.get('dealer_id') as string)?.trim()
+  const cameraModelId = (formData.get('camera_model_id') as string)?.trim()
+  const priceRaw = String(formData.get('price_cad') ?? '').trim()
+  const price = parseFloat(priceRaw)
+
+  if (!dealerId || !cameraModelId) return { error: 'Dealer and camera model are required' }
+  if (!Number.isFinite(price) || price < 0) return { error: 'Price must be 0 or greater' }
+
+  const { error: upError } = await supabase.from('dealer_camera_pricing').upsert(
+    {
+      dealer_id: dealerId,
+      camera_model_id: cameraModelId,
+      price_cad: price,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: 'dealer_id,camera_model_id' }
+  )
+
+  if (upError) return { error: upError.message }
+  revalidatePath('/dashboard/admin/inventory')
+  return { success: true }
+}
+
 export async function resetInventoryStockData(): Promise<{
   error?: string
   success?: string

@@ -4,7 +4,8 @@ import { useState, memo } from 'react'
 import { useRouter } from 'next/navigation'
 import { DealerRegionCodeAssignment } from '../region/dealer-region-code-assignment'
 import { DealerCameraManagement } from '../region/dealer-camera-management'
-import { Edit2, Trash2, MapPin } from 'lucide-react'
+import { DealerInvoiceEmailsManagement } from './dealer-invoice-emails-management'
+import { Edit2, Trash2, MapPin, Mail } from 'lucide-react'
 import { updateDealer, deleteDealer } from '../region/actions'
 import type { DealerCamera, Dealer, RegionCode } from '@/types/system-management'
 
@@ -75,6 +76,7 @@ export const DealerManagementContent = memo(function DealerManagementContent({
                   <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500 dark:text-gray-400 uppercase tracking-wider">Code</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500 dark:text-gray-400 uppercase tracking-wider">Region</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500 dark:text-gray-400 uppercase tracking-wider">Phone</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500 dark:text-gray-400 uppercase tracking-wider">Invoice emails</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500 dark:text-gray-400 uppercase tracking-wider">Address</th>
                   <th className="px-4 py-3 text-right text-xs font-medium text-zinc-500 dark:text-gray-400 uppercase tracking-wider">Actions</th>
                 </tr>
@@ -92,7 +94,7 @@ export const DealerManagementContent = memo(function DealerManagementContent({
               if (isEditing) {
                 return (
                   <tr key={d.id} className="bg-zinc-200/50 dark:bg-white/5">
-                    <td colSpan={6} className="px-4 py-4">
+                    <td colSpan={7} className="px-4 py-4">
                       <form onSubmit={handleUpdateDealer} className="space-y-4">
                         <input type="hidden" name="dealerId" value={d.id} />
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -193,6 +195,27 @@ export const DealerManagementContent = memo(function DealerManagementContent({
                   <td className="px-4 py-3 whitespace-nowrap">
                     <div className="text-sm text-zinc-500 dark:text-gray-400">{d.phone || '-'}</div>
                   </td>
+                  <td className="px-4 py-3 min-w-[160px] max-w-[240px]">
+                    {(d.dealer_invoice_emails ?? []).length === 0 ? (
+                      <span className="text-sm text-zinc-500 dark:text-gray-500">—</span>
+                    ) : (
+                      <ul className="space-y-1">
+                        {(d.dealer_invoice_emails ?? []).map((row) => (
+                          <li key={row.id} className="flex items-start gap-1.5 text-sm min-w-0">
+                            <Mail className="w-3.5 h-3.5 shrink-0 mt-0.5 text-zinc-500 dark:text-gray-500" aria-hidden />
+                            <span className="min-w-0">
+                              <span className="text-zinc-700 dark:text-gray-300 break-all">{row.email}</span>
+                              {row.label ? (
+                                <span className="block text-xs text-zinc-500 dark:text-gray-500 truncate">
+                                  {row.label}
+                                </span>
+                              ) : null}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </td>
                   <td className="px-4 py-3">
                     <div className="text-sm text-zinc-500 dark:text-gray-400">{d.address || '-'}</div>
                   </td>
@@ -222,6 +245,11 @@ export const DealerManagementContent = memo(function DealerManagementContent({
                         allCameras={cameraModels}
                         addCameraToDealer={addCameraToDealer}
                         removeCameraFromDealer={removeCameraFromDealer}
+                      />
+                      <DealerInvoiceEmailsManagement
+                        dealerId={d.id}
+                        dealerName={d.name}
+                        emails={d.dealer_invoice_emails ?? []}
                       />
                       <button
                         onClick={() => handleDeleteDealer(d.id, d.name)}
