@@ -418,10 +418,21 @@ export async function sendBulkInvoicesPdfEmail(params: {
   optionalMessage?: string
   attachments: BulkInvoicePdfAttachment[]
   senderId?: string
+  mailType?: string
   compose?: EmailDeliveryOptions
 }): Promise<{ success: boolean; error?: string }> {
-  const { to, subject: defaultSubject, documentTitle, bodyIntro, bodyHtmlExtra, optionalMessage, attachments, senderId, compose } =
-    params
+  const {
+    to,
+    subject: defaultSubject,
+    documentTitle,
+    bodyIntro,
+    bodyHtmlExtra,
+    optionalMessage,
+    attachments,
+    senderId,
+    mailType = 'invoice_bulk',
+    compose,
+  } = params
   const n = attachments.length
 
   if (to.length === 0) {
@@ -455,7 +466,7 @@ export async function sendBulkInvoicesPdfEmail(params: {
     logMailSent({
       recipientEmails: to,
       subject,
-      mailType: 'invoice_bulk',
+      mailType,
       reportTitle: documentTitle,
       senderId,
       success,

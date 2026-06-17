@@ -52,9 +52,27 @@ type Props = {
   batches: DealerBatch[]
   totalDealers: number
   withInvoiceCount: number
+  totalCompletedCount: number
 }
 
 type SendStep = 'confirm_extra' | 'extra_input' | 'sending'
+
+function getBatchSendStatus(batch: DealerBatch, isEmpty: boolean): { label: string; tone: 'muted' | 'amber' | 'green' } {
+  if (isEmpty) return { label: 'No activity', tone: 'muted' }
+  if (batch.status === 'sent') return { label: 'Sent', tone: 'green' }
+
+  const total = batch.items.length
+  const approved = batch.items.filter((i) => i.demand.invoice_approved_at).length
+  if (approved === total) return { label: 'Ready to send', tone: 'green' }
+  if (approved > 0) return { label: `${approved}/${total} approved`, tone: 'amber' }
+  return { label: 'Awaiting review', tone: 'amber' }
+}
+
+function batchStatusClass(tone: 'muted' | 'amber' | 'green'): string {
+  if (tone === 'green') return 'text-green-600 dark:text-green-400'
+  if (tone === 'amber') return 'text-amber-600 dark:text-amber-400'
+  return 'text-zinc-500 dark:text-gray-500'
+}
 
 function normalizeEmail(value: string): string {
   return value.trim().toLowerCase()
@@ -76,6 +94,7 @@ export function DailyInvoicesContent({
   batches: initialBatches,
   totalDealers,
   withInvoiceCount,
+  totalCompletedCount,
 }: Props) {
   const router = useRouter()
   const [batches, setBatches] = useState(initialBatches)
@@ -256,7 +275,9 @@ export function DailyInvoicesContent({
           {' · '}
           {totalDealers} dealer{totalDealers !== 1 ? 's' : ''}
           {' · '}
-          {withInvoiceCount} with invoice{withInvoiceCount !== 1 ? 's' : ''}
+          {totalCompletedCount} completed job{totalCompletedCount !== 1 ? 's' : ''}
+          {' · '}
+          {withInvoiceCount} dealer{withInvoiceCount !== 1 ? 's' : ''} with invoices
         </p>
       </div>
 
@@ -269,6 +290,7 @@ export function DailyInvoicesContent({
           const includedCount = batch.items.filter((i) => i.included).length
           const canSend = batch.recipientEmails.length > 0 && includedCount > 0 && batch.id != null
           const isEmpty = batch.items.length === 0
+          const sendStatus = getBatchSendStatus(batch, isEmpty)
           return (
             <section
               key={batch.dealerId}
@@ -290,16 +312,8 @@ export function DailyInvoicesContent({
                     {batch.items.length} invoice{batch.items.length !== 1 ? 's' : ''}
                     {' · '}
                     Status:{' '}
-                    <span
-                      className={
-                        batch.status === 'sent'
-                          ? 'text-green-600 dark:text-green-400'
-                          : isEmpty
-                            ? 'text-zinc-500 dark:text-gray-500'
-                            : 'text-amber-600 dark:text-amber-400'
-                      }
-                    >
-                      {batch.status === 'sent' ? 'Sent' : isEmpty ? 'No activity' : 'Open'}
+                    <span className={batchStatusClass(sendStatus.tone)}>
+                      {sendStatus.label}
                     </span>
                     {batch.sentAt && (
                       <>

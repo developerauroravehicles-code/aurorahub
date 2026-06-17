@@ -158,7 +158,8 @@ export default async function DailyInvoicesPage({ searchParams }: PageProps) {
 
   const admin = createAdminClient()
 
-  await syncDailyBatchesForPtDate(admin, batchDate)
+  const syncResult = await syncDailyBatchesForPtDate(admin, batchDate)
+  const totalCompletedCount = syncResult.completedCount
 
 
 
@@ -459,6 +460,8 @@ export default async function DailyInvoicesPage({ searchParams }: PageProps) {
         totalDealers={dealerRows.length}
 
         withInvoiceCount={withInvoiceCount}
+
+        totalCompletedCount={totalCompletedCount}
 
       />
 

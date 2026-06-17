@@ -1,6 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { formatInTimeZone } from 'date-fns-tz'
-import { SYSTEM_DEFAULT_TIMEZONE, getDateRangeInTimezone } from '@/lib/timezone-defaults'
+import { SYSTEM_DEFAULT_TIMEZONE } from '@/lib/timezone-defaults'
 import {
   calculateDemandInvoiceAmount,
   type DemandServiceType,
@@ -114,6 +114,72 @@ export async function addDemandToDailyBatch(
   return { ok: true }
 }
 
+/** All completed demand ids whose completion falls on the given PT calendar date. */
+export async function getCompletedDemandIdsForPtDate(
+  supabase: SupabaseClient,
+  batchDate: string
+): Promise<string[]> {
+  const { data } = await supabase
+    .from('demands')
+    .select('id, completed_at, updated_at')
+    .eq('status', 'completed')
+    .not('dealer_id', 'is', null)
+
+  const ids: string[] = []
+  for (const row of data ?? []) {
+    const iso = (row.completed_at ?? row.updated_at) as string | null
+    if (!iso) continue
+    if (ptDateFromIso(iso) === batchDate) ids.push(row.id as string)
+  }
+  return ids
+}
+
+/** Ensure demand is linked to the batch for its PT completion date (moves if on wrong day). */
+async function ensureDemandOnDailyBatchForDate(
+  supabase: SupabaseClient,
+  demandId: string,
+  batchDate: string
+): Promise<{ ok: true } | { error: string }> {
+  const { data: demand, error: demandError } = await supabase
+    .from('demands')
+    .select('id, dealer_id, status, completed_at, updated_at')
+    .eq('id', demandId)
+    .single()
+
+  if (demandError || !demand) {
+    return { error: demandError?.message ?? 'Demand not found' }
+  }
+  if (demand.status !== 'completed' || !demand.dealer_id) {
+    return { ok: true }
+  }
+
+  const completedIso = demand.completed_at ?? demand.updated_at
+  if (!completedIso) {
+    return { error: 'Completed demand has no completion timestamp' }
+  }
+  if (ptDateFromIso(completedIso) !== batchDate) {
+    return { ok: true }
+  }
+
+  const { data: existingItem } = await supabase
+    .from('dealer_daily_invoice_batch_items')
+    .select('batch_id, dealer_daily_invoice_batches(batch_date)')
+    .eq('demand_id', demandId)
+    .maybeSingle()
+
+  if (existingItem) {
+    const batchRaw = existingItem.dealer_daily_invoice_batches
+    const batchMeta = Array.isArray(batchRaw) ? batchRaw[0] : batchRaw
+    const existingDate = (batchMeta as { batch_date?: string } | null)?.batch_date
+    if (existingDate === batchDate) {
+      return { ok: true }
+    }
+    await supabase.from('dealer_daily_invoice_batch_items').delete().eq('demand_id', demandId)
+  }
+
+  return addDemandToDailyBatch(supabase, demandId)
+}
+
 /** Backfill service_type and invoice_total_amount for historical completed demands. */
 async function backfillDemandInvoiceFields(
   supabase: SupabaseClient,
@@ -180,61 +246,19 @@ async function cleanupEmptyBatchesForDate(
 export async function syncDailyBatchesForPtDate(
   supabase: SupabaseClient,
   batchDate: string
-): Promise<{ synced: number; errors: number }> {
-  const { start, end } = getDateRangeInTimezone(batchDate, batchDate, SYSTEM_DEFAULT_TIMEZONE)
-
-  const demandIdSet = new Set<string>()
-
-  const [withCompletedAt, withoutCompletedAt, batchedRows] = await Promise.all([
-    supabase
-      .from('demands')
-      .select('id')
-      .eq('status', 'completed')
-      .not('dealer_id', 'is', null)
-      .gte('completed_at', start)
-      .lte('completed_at', end),
-    supabase
-      .from('demands')
-      .select('id')
-      .eq('status', 'completed')
-      .not('dealer_id', 'is', null)
-      .is('completed_at', null)
-      .gte('updated_at', start)
-      .lte('updated_at', end),
-    supabase.from('dealer_daily_invoice_batch_items').select('demand_id'),
-  ])
-
-  for (const d of withCompletedAt.data ?? []) demandIdSet.add(d.id as string)
-  for (const d of withoutCompletedAt.data ?? []) demandIdSet.add(d.id as string)
-
-  const batchedIds = new Set((batchedRows.data ?? []).map((r) => r.demand_id as string))
-
-  // Catch historical completions not yet linked to a batch (pre-feature or missed hooks).
-  const { data: unbatchedCompleted } = await supabase
-    .from('demands')
-    .select('id, completed_at, updated_at')
-    .eq('status', 'completed')
-    .not('dealer_id', 'is', null)
-
-  for (const d of unbatchedCompleted ?? []) {
-    if (batchedIds.has(d.id as string)) continue
-    const iso = (d.completed_at ?? d.updated_at) as string | null
-    if (!iso) continue
-    if (ptDateFromIso(iso) === batchDate) {
-      demandIdSet.add(d.id as string)
-    }
-  }
+): Promise<{ synced: number; errors: number; completedCount: number }> {
+  const demandIds = await getCompletedDemandIdsForPtDate(supabase, batchDate)
 
   let synced = 0
   let errors = 0
-  for (const demandId of demandIdSet) {
+  for (const demandId of demandIds) {
     await backfillDemandInvoiceFields(supabase, demandId)
-    const result = await addDemandToDailyBatch(supabase, demandId)
+    const result = await ensureDemandOnDailyBatchForDate(supabase, demandId, batchDate)
     if ('error' in result) errors += 1
     else synced += 1
   }
 
   await cleanupEmptyBatchesForDate(supabase, batchDate)
 
-  return { synced, errors }
+  return { synced, errors, completedCount: demandIds.length }
 }

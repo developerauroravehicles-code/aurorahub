@@ -47,7 +47,13 @@ export async function updateSession(request: NextRequest) {
   // issues with users being randomly logged out.
 
   // Cron API routes use CRON_SECRET; skip auth entirely - return immediately
-  const cronPaths = ['/api/send-reminders', '/api/send-scheduled-reports', '/api/check-low-stock', '/api/daily-invoice-review-notify']
+  const cronPaths = [
+    '/api/send-reminders',
+    '/api/send-scheduled-reports',
+    '/api/check-low-stock',
+    '/api/daily-invoice-review-notify',
+    '/api/daily-invoice-auto-send',
+  ]
   const isCronApi = cronPaths.some((p) =>
     request.nextUrl.pathname === p || request.nextUrl.pathname.startsWith(p + '/')
   )

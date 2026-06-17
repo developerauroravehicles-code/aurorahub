@@ -12,6 +12,7 @@ import {
   Bell,
   X,
   ExternalLink,
+  Mail,
   ClipboardList,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
@@ -82,6 +83,13 @@ const TYPE_CONFIG: Record<CommNotificationType, TypeConfig> = {
     iconColor: 'text-amber-700 dark:text-amber-300',
     borderColor: 'border-l-amber-500',
   },
+  daily_invoice_send_failed: {
+    label: 'Daily invoices not delivered',
+    icon: Mail,
+    iconBg: 'bg-red-100 dark:bg-red-900/40',
+    iconColor: 'text-red-600 dark:text-red-400',
+    borderColor: 'border-l-red-500',
+  },
 }
 
 const DEFAULT_CONFIG: TypeConfig = {
@@ -101,6 +109,7 @@ function getConfig(type: CommNotificationType): TypeConfig {
 function notificationLink(n: CommNotification): string {
   const p = n.payload as Record<string, string>
   if (n.type === 'daily_invoice_review' && p.link) return p.link
+  if (n.type === 'daily_invoice_send_failed' && p.link) return p.link
   if (p.context === 'meet' && p.room_id) return `/dashboard/communication/meet/${p.room_id}`
   if (p.conversation_id) return `/dashboard/communication/chat?c=${p.conversation_id}`
   if (p.room_id) return `/dashboard/communication/meet/${p.room_id}`
@@ -137,6 +146,8 @@ function getSubtitle(n: CommNotification): string | null {
     }
     case 'daily_invoice_review':
       return (p.message as string) || `${p.dealerCount ?? 0} dealer list(s) ready for review`
+    case 'daily_invoice_send_failed':
+      return (p.message as string) || `${p.dealerName ?? 'Dealer'} daily invoices not delivered`
     default:
       return null
   }

@@ -334,6 +334,8 @@ export function LogsContent({ initialType }: { initialType: LogType }) {
                 <option value="">All</option>
                 <option value="report">Report</option>
                 <option value="scheduled_report">Scheduled Report</option>
+                <option value="invoice_bulk">Invoice Bulk (Manual)</option>
+                <option value="daily_dealer_invoices_auto">Daily Dealer Invoices (Auto)</option>
               </select>
             </div>
             <div>

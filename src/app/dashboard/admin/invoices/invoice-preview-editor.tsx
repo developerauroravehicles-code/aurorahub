@@ -23,6 +23,10 @@ import {
   type InvoiceFinancialSummary,
   type InvoicePreviewRecord,
 } from './invoice-types'
+import {
+  calculateInvoiceTotalFromExtras,
+  resolveInvoiceExtraRows,
+} from '@/lib/invoice-line-items'
 
 type Props = {
   invoice: InvoicePreviewRecord
@@ -32,11 +36,11 @@ type Props = {
 }
 
 function parseInitialExtraRows(invoice: InvoicePreviewRecord) {
-  const saved = invoice.invoice_extra_rows
-  if (Array.isArray(saved) && saved.length > 0) {
-    return saved.map((r) => ({ col1: String(r?.col1 ?? ''), col2: String(r?.col2 ?? '') }))
-  }
-  return [{ col1: '', col2: '' }]
+  return resolveInvoiceExtraRows(invoice.invoice_extra_rows, {
+    service_type: invoice.service_type,
+    camera_model: invoice.camera_model,
+    invoice_total_amount: invoice.invoice_total_amount,
+  })
 }
 
 function parseInitialFinancialSummary(invoice: InvoicePreviewRecord): InvoiceFinancialSummary {
@@ -74,17 +78,7 @@ export function InvoicePreviewEditor({ invoice, logoDataUrl, canEdit = true, onC
   }, [invoice])
 
   const getCalculatedTotal = useCallback(() => {
-    const subtotal = extraRows.reduce(
-      (sum, r) => sum + (parseFloat((r.col2 || '0').replace(/[^0-9.-]/g, '')) || 0),
-      0
-    )
-    const taxRate =
-      (financialSummary.gstEnabled ? financialSummary.gstPercent : 0) +
-      (financialSummary.pstEnabled ? financialSummary.pstPercent : 0) +
-      (financialSummary.salesTaxEnabled ? financialSummary.salesTaxPercent : 0)
-    const taxes = subtotal * (taxRate / 100)
-    const other = financialSummary.otherEnabled ? financialSummary.otherAmount : 0
-    return subtotal + taxes + other
+    return calculateInvoiceTotalFromExtras(extraRows, financialSummary)
   }, [extraRows, financialSummary])
 
   const buildPreviewData = useCallback((): InvoiceRowData => {
