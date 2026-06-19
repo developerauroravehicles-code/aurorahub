@@ -130,7 +130,9 @@ export async function completeDemand(demandId: string, options: CompleteDemandOp
       .eq('id', demandId)
   }
 
-  const pricingResult = await calculateDemandInvoiceAmount(supabase, {
+  // Pricing table is manager-only in RLS; use service role so completion can resolve invoice amount.
+  const admin = createAdminClient()
+  const pricingResult = await calculateDemandInvoiceAmount(admin, {
     dealerId: demand.dealer_id,
     cameraModelId: demand.camera_model_id,
     cameraModelName: demand.camera_model,
@@ -161,7 +163,6 @@ export async function completeDemand(demandId: string, options: CompleteDemandOp
   
   if (error) return { error: error.message }
 
-  const admin = createAdminClient()
   addDemandToDailyBatch(admin, demandId).catch(() => {})
 
   logDemandChange({

@@ -3,19 +3,10 @@
 import { assignWorkToMe, completeDemand } from './actions'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import {
-  DemandServiceType,
-  REMOVAL_FEE_CAD,
-  SERVICE_TYPE_LABELS,
-  TRANSFER_FEE_CAD,
-} from '@/lib/demand-pricing'
+import { DemandServiceType, SERVICE_TYPE_LABELS } from '@/lib/demand-pricing'
 import { Loader2, X } from 'lucide-react'
 
-const SERVICE_OPTIONS: { value: DemandServiceType; hint: string }[] = [
-  { value: 'installation', hint: 'Dealer camera price' },
-  { value: 'transfer', hint: `Transfer fee — $${TRANSFER_FEE_CAD} CAD` },
-  { value: 'removal', hint: `Removal fee — $${REMOVAL_FEE_CAD} CAD` },
-]
+const SERVICE_OPTIONS: DemandServiceType[] = ['installation', 'transfer', 'removal']
 
 export function WorkActions({
   demandId,
@@ -152,9 +143,9 @@ export function WorkActions({
                 <div className="space-y-2">
                   {SERVICE_OPTIONS.map((opt) => (
                     <label
-                      key={opt.value}
-                      className={`flex items-start gap-3 rounded-lg border px-3 py-2 cursor-pointer ${
-                        serviceType === opt.value
+                      key={opt}
+                      className={`flex items-center gap-3 rounded-lg border px-3 py-2 cursor-pointer ${
+                        serviceType === opt
                           ? 'border-[#C27E00]/60 bg-[#C27E00]/10'
                           : 'border-zinc-200 dark:border-gray-700 hover:bg-zinc-50 dark:hover:bg-white/5'
                       }`}
@@ -162,16 +153,13 @@ export function WorkActions({
                       <input
                         type="radio"
                         name="serviceType"
-                        value={opt.value}
-                        checked={serviceType === opt.value}
-                        onChange={() => setServiceType(opt.value)}
-                        className="mt-1 text-[#C27E00] focus:ring-[#C27E00]"
+                        value={opt}
+                        checked={serviceType === opt}
+                        onChange={() => setServiceType(opt)}
+                        className="text-[#C27E00] focus:ring-[#C27E00]"
                       />
-                      <span>
-                        <span className="block text-sm font-medium text-zinc-900 dark:text-white">
-                          {SERVICE_TYPE_LABELS[opt.value]}
-                        </span>
-                        <span className="block text-xs text-zinc-500 dark:text-gray-400">{opt.hint}</span>
+                      <span className="text-sm font-medium text-zinc-900 dark:text-white">
+                        {SERVICE_TYPE_LABELS[opt]}
                       </span>
                     </label>
                   ))}
