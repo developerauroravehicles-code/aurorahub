@@ -1,4 +1,3 @@
-import { addYears } from 'date-fns'
 import { formatInTimeZone } from 'date-fns-tz'
 import { SYSTEM_DEFAULT_TIMEZONE } from '@/lib/timezone-defaults'
 import type { InvoiceRowData } from '@/lib/generate-invoice-pdf'
@@ -7,6 +6,7 @@ import {
   hasMeaningfulInvoiceExtraRows,
   resolveInvoiceExtraRows,
 } from '@/lib/invoice-line-items'
+import { warrantyEndFromCompletion } from '@/lib/warranty-period'
 
 const DEFAULT_FINANCIAL_SUMMARY: NonNullable<InvoiceRowData['financialSummary']> = {
   gstEnabled: true,
@@ -45,7 +45,7 @@ export function demandRecordToInvoiceRowData(
 ): InvoiceRowData {
   const dealer: DealerLite = Array.isArray(row.dealers) ? row.dealers[0] ?? null : row.dealers
   const completionDate = new Date(row.completed_at ?? row.updated_at)
-  const warrantyEnd = addYears(completionDate, 3)
+  const warrantyEnd = warrantyEndFromCompletion(completionDate, dealer?.name)
 
   const parsedExtra = resolveInvoiceExtraRows(row.invoice_extra_rows, {
     service_type: row.service_type,

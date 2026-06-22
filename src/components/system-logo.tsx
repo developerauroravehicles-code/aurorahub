@@ -1,4 +1,4 @@
-import { getSystemLogo } from '@/app/dashboard/system-management/logo/actions'
+import { getSystemLogo } from '@/lib/get-system-logo'
 
 export async function SystemLogo() {
   const logoUrl = await getSystemLogo()

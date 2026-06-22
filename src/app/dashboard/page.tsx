@@ -75,6 +75,7 @@ export default async function DashboardPage({
           subtitle="Overview of your demands"
           userName={(profile as { full_name?: string })?.full_name?.split(' ')[0]}
           timezone={salesTimezoneName}
+          userId={user.id}
         />
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
@@ -201,6 +202,7 @@ export default async function DashboardPage({
           subtitle="Overview of demands and assignments"
           userName={(profile as { full_name?: string })?.full_name?.split(' ')[0]}
           timezone={financeTimezoneName ?? SYSTEM_DEFAULT_TIMEZONE}
+          userId={user.id}
         />
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -396,6 +398,7 @@ export default async function DashboardPage({
           subtitle="Work assignments, job pool, appointments, and performance overview for your dealers"
           userName={(profile as { full_name?: string })?.full_name?.split(' ')[0]}
           timezone={SYSTEM_DEFAULT_TIMEZONE}
+          userId={user.id}
         />
 
         <QuickActions
@@ -644,6 +647,7 @@ export default async function DashboardPage({
           subtitle="Employee management, leave, recruitment, and onboarding overview"
           userName={(profile as { full_name?: string })?.full_name?.split(' ')[0]}
           timezone={SYSTEM_DEFAULT_TIMEZONE}
+          userId={user.id}
         />
 
         <QuickActions
@@ -699,6 +703,7 @@ export default async function DashboardPage({
           subtitle="Service desk, incidents, system health, and observability overview"
           userName={(profile as { full_name?: string })?.full_name?.split(' ')[0]}
           timezone={SYSTEM_DEFAULT_TIMEZONE}
+          userId={user.id}
         />
 
         <QuickActions
@@ -867,6 +872,7 @@ export default async function DashboardPage({
           subtitle="Demands, finance, employees, dealer alerts, and inventory stock alerts"
           userName={(profile as { full_name?: string })?.full_name?.split(' ')[0]}
           timezone={SYSTEM_DEFAULT_TIMEZONE}
+          userId={user.id}
         />
 
         <QuickActions
@@ -946,6 +952,7 @@ export default async function DashboardPage({
             subtitle="Demands and customer directory"
             userName={(profile as { full_name?: string })?.full_name?.split(' ')[0]}
             timezone={SYSTEM_DEFAULT_TIMEZONE}
+            userId={user.id}
           />
           <div className="rounded-lg border border-amber-800/60 bg-amber-900/20 px-4 py-3 text-sm text-amber-200">
             No dealer is assigned to your account. Contact IT to link you to a dealer before viewing or editing demands.
@@ -986,6 +993,7 @@ export default async function DashboardPage({
           subtitle={dealer ? `Demands and customers for ${dealer.name} (${dealer.code})` : 'Dealer overview'}
           userName={(profile as { full_name?: string })?.full_name?.split(' ')[0]}
           timezone={imTimezoneName}
+          userId={user.id}
         />
 
         <QuickActions
@@ -1131,6 +1139,7 @@ export default async function DashboardPage({
           subtitle={dealer ? `Overview for ${dealer.name} (${dealer.code})` : 'Dealer overview'}
           userName={(profile as { full_name?: string })?.full_name?.split(' ')[0]}
           timezone={gmTimezoneName}
+          userId={user.id}
         />
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
@@ -1272,7 +1281,7 @@ export default async function DashboardPage({
   // For other roles, show default dashboard
   return (
     <div className="space-y-10">
-      <WelcomeBanner title="Dashboard" subtitle="Select an option from the sidebar to get started" timezone={SYSTEM_DEFAULT_TIMEZONE} />
+      <WelcomeBanner title="Dashboard" subtitle="Select an option from the sidebar to get started" timezone={SYSTEM_DEFAULT_TIMEZONE} userId={user.id} />
     </div>
   )
 }

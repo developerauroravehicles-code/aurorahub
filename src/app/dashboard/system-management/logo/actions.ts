@@ -64,15 +64,3 @@ export async function uploadLogo(prevState: ActionState, formData: FormData) {
   return { success: 'Logo uploaded successfully!' }
 }
 
-export async function getSystemLogo() {
-  const supabaseAdmin = createAdminClient()
-  
-  const { data } = await supabaseAdmin
-    .from('system_settings')
-    .select('value')
-    .eq('key', 'system_logo')
-    .single()
-
-  return data?.value || null
-}
-

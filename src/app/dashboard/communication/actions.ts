@@ -891,12 +891,16 @@ export async function deleteNotificationAction(notificationId: string) {
   if ('error' in auth && auth.error) return { error: auth.error }
   const { profile, supabase } = auth as Exclude<AuthResult, { error: string }>
 
-  await supabase
+  const { error, count } = await supabase
     .from('comm_notifications')
-    .delete()
+    .delete({ count: 'exact' })
     .eq('id', notificationId)
     .eq('user_id', profile.id)
 
+  if (error) return { error: error.message }
+  if (!count) return { error: 'Notification could not be deleted' }
+
+  revalidatePath(`${COMM_PATH}/notifications`)
   return { success: true }
 }
 
@@ -905,11 +909,14 @@ export async function deleteAllNotificationsAction() {
   if ('error' in auth && auth.error) return { error: auth.error }
   const { profile, supabase } = auth as Exclude<AuthResult, { error: string }>
 
-  await supabase
+  const { error } = await supabase
     .from('comm_notifications')
     .delete()
     .eq('user_id', profile.id)
 
+  if (error) return { error: error.message }
+
+  revalidatePath(`${COMM_PATH}/notifications`)
   return { success: true }
 }
 

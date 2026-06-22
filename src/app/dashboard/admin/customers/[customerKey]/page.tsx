@@ -3,8 +3,8 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect, notFound } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
-import { addYears } from 'date-fns'
 import { formatInPT } from '@/lib/timezone-defaults'
+import { warrantyEndFromCompletion } from '@/lib/warranty-period'
 import { customerRouteKeyToPhoneKey } from '@/lib/customer-key'
 import { CustomerDemandsExcelButton } from '../customers-excel-export'
 
@@ -30,11 +30,16 @@ function pickLatestDemand(demands: DemandRow[]): DemandRow {
   })
 }
 
-function warrantyEndLabel(status: string, completedAt: string | null, updatedAt: string | null): string {
+function warrantyEndLabel(
+  status: string,
+  completedAt: string | null,
+  updatedAt: string | null,
+  dealerName: string | null
+): string {
   if (status !== 'completed') return '—'
   const basis = completedAt ?? updatedAt
   if (!basis) return '—'
-  const warrantyEnd = addYears(new Date(basis), 3)
+  const warrantyEnd = warrantyEndFromCompletion(new Date(basis), dealerName)
   return formatInPT(warrantyEnd, 'd MMMM yyyy')
 }
 
@@ -105,7 +110,7 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
     demandNumber: d.demand_number ?? d.id.slice(0, 8),
     camera: d.camera_model ?? '',
     dealer: d.dealer_name ?? '—',
-    warrantyEnds: warrantyEndLabel(d.status, d.completed_at, d.updated_at),
+    warrantyEnds: warrantyEndLabel(d.status, d.completed_at, d.updated_at, d.dealer_name),
     status: d.status.replace(/_/g, ' '),
   }))
 
@@ -161,7 +166,7 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
                   </td>
                   <td className="px-4 py-3">{d.camera_model}</td>
                   <td className="px-4 py-3">{d.dealer_name ?? '—'}</td>
-                  <td className="whitespace-nowrap px-4 py-3">{warrantyEndLabel(d.status, d.completed_at, d.updated_at)}</td>
+                  <td className="whitespace-nowrap px-4 py-3">{warrantyEndLabel(d.status, d.completed_at, d.updated_at, d.dealer_name)}</td>
                   <td className="px-4 py-3 capitalize">{d.status.replace('_', ' ')}</td>
                 </tr>
               ))}
@@ -169,7 +174,7 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
           </table>
         </div>
         <p className="mt-2 text-xs text-zinc-500 dark:text-gray-500">
-          Warranty end is three years after completion date (same rule as invoices).
+          Warranty end follows each dealer&apos;s policy (three years by default; one year for Aurora Vehicles HQ).
         </p>
       </div>
     </div>

@@ -2,10 +2,11 @@
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { addYears } from 'date-fns'
+import { warrantyEndFromCompletion } from '@/lib/warranty-period'
 import { formatInTimeZone } from 'date-fns-tz'
 import { SYSTEM_DEFAULT_TIMEZONE } from '@/lib/timezone-defaults'
 import { Download, Eye, X, Save, Plus, Trash2, HardDrive, ArrowUpDown, ChevronDown, ChevronsDown, ChevronsUp, Mail } from 'lucide-react'
+import { createClient } from '@/lib/supabase/client'
 import { updateInvoiceFields, uploadInvoiceToDriveAction, recordInvoiceDownloadAction, updateInvoiceStatusAction, sendInvoicePdfEmailAction, sendBulkInvoicePdfEmailAction } from './actions'
 import { downloadInvoicePdf, getInvoicePdfBlobUrl, getInvoicePdfBase64 } from '@/lib/generate-invoice-pdf'
 import type { InvoiceRowData } from '@/lib/generate-invoice-pdf'
@@ -121,6 +122,28 @@ export function InvoiceTable({ invoices, logoDataUrl, canEdit = true }: InvoiceT
     el.indeterminate = selectedOnList > 0 && selectedOnList < n
   }, [canEdit, sortedInvoices, selectedInvoiceIds])
 
+  useEffect(() => {
+    setOptimisticStatus({})
+  }, [invoices])
+
+  useEffect(() => {
+    const supabase = createClient()
+    const channel = supabase
+      .channel('invoice-demands-sync')
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'demands' },
+        () => {
+          router.refresh()
+        }
+      )
+      .subscribe()
+
+    return () => {
+      void supabase.removeChannel(channel)
+    }
+  }, [router])
+
   const getRowWithOptimisticStatus = useCallback((row: InvoiceRow) => {
     const opt = optimisticStatus[row.id]
     if (!opt) return row
@@ -160,7 +183,7 @@ export function InvoiceTable({ invoices, logoDataUrl, canEdit = true }: InvoiceT
     const currentComments = v?.comments ?? (row.invoice_comments ?? '')
     const dealer = getDealer(row)
     const completionDate = new Date(row.completed_at ?? row.updated_at)
-    const warrantyEnd = addYears(completionDate, 3)
+    const warrantyEnd = warrantyEndFromCompletion(completionDate, dealer?.name)
     const phone = dealer?.phone ?? row.customer_phone ?? ''
     return {
       data: {
@@ -201,7 +224,7 @@ export function InvoiceTable({ invoices, logoDataUrl, canEdit = true }: InvoiceT
     if (!previewRow) return null
     const dealer = getDealer(previewRow)
     const completionDate = new Date(previewRow.completed_at ?? previewRow.updated_at)
-    const warrantyEnd = addYears(completionDate, 3)
+    const warrantyEnd = warrantyEndFromCompletion(completionDate, dealer?.name)
     const totalNum = getCalculatedTotal()
     const totalAmount = `$${totalNum.toFixed(2)}`
     return {
@@ -551,7 +574,7 @@ export function InvoiceTable({ invoices, logoDataUrl, canEdit = true }: InvoiceT
             const displayRow = getRowWithOptimisticStatus(row)
             const dealer = getDealer(displayRow)
             const completionDate = new Date(row.completed_at ?? row.updated_at)
-            const warrantyEnd = addYears(completionDate, 3)
+            const warrantyEnd = warrantyEndFromCompletion(completionDate, dealer?.name)
             const isEditingAmount = editing?.id === row.id && editing?.field === 'amount'
             const isEditingComments = editing?.id === row.id && editing?.field === 'comments'
             const v = values[row.id] ?? { amount: displayRow.invoice_total_amount != null ? String(displayRow.invoice_total_amount) : '', comments: displayRow.invoice_comments ?? '' }

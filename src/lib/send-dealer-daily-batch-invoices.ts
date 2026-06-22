@@ -2,7 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { getInvoicePdfBase64 } from '@/lib/generate-invoice-pdf'
 import { sendBulkInvoicesPdfEmail, buildBulkInvoicesSummaryHtml } from '@/lib/email'
 import { demandRecordToInvoiceRowData } from '@/lib/invoice-row-pdf-data'
-import { getSystemLogo } from '@/app/dashboard/system-management/logo/actions'
+import { getSystemLogo } from '@/lib/get-system-logo'
 import type { InvoiceRowData } from '@/lib/generate-invoice-pdf'
 
 const BULK_INVOICE_EMAIL_MAX = 25
@@ -154,7 +154,7 @@ export async function sendDealerDailyBatchInvoices(
   const n = summaryItems.length
   const subject = `Daily invoices — ${dealerName} — ${batchDate} (${n} file${n !== 1 ? 's' : ''})`
   const documentTitle = `Daily invoices — ${dealerName}`
-  const bodyIntro = `<p>Daily invoice package for <strong>${dealerName}</strong> (${batchDate} PT).</p>`
+  const bodyIntro = `Daily invoice package for ${dealerName} (${batchDate} PT).`
   const bodyHtmlExtra = buildBulkInvoicesSummaryHtml(summaryItems)
 
   const result = await sendBulkInvoicesPdfEmail({

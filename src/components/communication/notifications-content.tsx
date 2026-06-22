@@ -4,20 +4,21 @@ import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { formatDistanceToNowStrict } from 'date-fns'
 import {
-  MessageCircle,
-  Video,
-  AtSign,
-  MessageSquareX,
   Trash2,
   Bell,
   X,
   ExternalLink,
-  Mail,
-  ClipboardList,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import type { CommNotification, CommNotificationType } from '@/lib/communication/types'
 import { subscribeToNotifications } from '@/lib/communication/realtime'
+import {
+  getNotificationSubtitle,
+  getNotificationTypeConfig,
+  isMeetNotification,
+  notificationLink,
+  type NotificationTypeConfig,
+} from '@/lib/communication/notification-display'
 import {
   deleteNotificationAction,
   deleteAllNotificationsAction,
@@ -30,128 +31,11 @@ type Props = {
 
 type FilterTab = 'all' | 'unread' | 'chat' | 'meet' | 'sms'
 
-// ─── type config ─────────────────────────────────────────────────────────────
-
-type TypeConfig = {
-  label: string
-  icon: React.ElementType
-  iconBg: string
-  iconColor: string
-  borderColor: string
-}
-
-const TYPE_CONFIG: Record<CommNotificationType, TypeConfig> = {
-  chat_message: {
-    label: 'New message',
-    icon: MessageCircle,
-    iconBg: 'bg-blue-100 dark:bg-blue-900/40',
-    iconColor: 'text-blue-600 dark:text-blue-400',
-    borderColor: 'border-l-blue-500',
-  },
-  mention: {
-    label: 'You were mentioned',
-    icon: AtSign,
-    iconBg: 'bg-orange-100 dark:bg-orange-900/40',
-    iconColor: 'text-orange-600 dark:text-orange-400',
-    borderColor: 'border-l-orange-500',
-  },
-  meet_invite: {
-    label: 'Meet invitation',
-    icon: Video,
-    iconBg: 'bg-purple-100 dark:bg-purple-900/40',
-    iconColor: 'text-purple-600 dark:text-purple-400',
-    borderColor: 'border-l-purple-500',
-  },
-  meet_started: {
-    label: 'Meet started',
-    icon: Video,
-    iconBg: 'bg-green-100 dark:bg-green-900/40',
-    iconColor: 'text-green-600 dark:text-green-400',
-    borderColor: 'border-l-green-500',
-  },
-  sms_pending: {
-    label: 'SMS not sent',
-    icon: MessageSquareX,
-    iconBg: 'bg-red-100 dark:bg-red-900/40',
-    iconColor: 'text-red-600 dark:text-red-400',
-    borderColor: 'border-l-red-500',
-  },
-  daily_invoice_review: {
-    label: 'Daily invoices ready',
-    icon: ClipboardList,
-    iconBg: 'bg-amber-100 dark:bg-amber-900/40',
-    iconColor: 'text-amber-700 dark:text-amber-300',
-    borderColor: 'border-l-amber-500',
-  },
-  daily_invoice_send_failed: {
-    label: 'Daily invoices not delivered',
-    icon: Mail,
-    iconBg: 'bg-red-100 dark:bg-red-900/40',
-    iconColor: 'text-red-600 dark:text-red-400',
-    borderColor: 'border-l-red-500',
-  },
-}
-
-const DEFAULT_CONFIG: TypeConfig = {
-  label: 'Notification',
-  icon: Bell,
-  iconBg: 'bg-zinc-100 dark:bg-zinc-800',
-  iconColor: 'text-zinc-500',
-  borderColor: 'border-l-zinc-400',
+function getConfig(type: CommNotificationType): NotificationTypeConfig {
+  return getNotificationTypeConfig(type)
 }
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
-
-function getConfig(type: CommNotificationType): TypeConfig {
-  return TYPE_CONFIG[type] ?? DEFAULT_CONFIG
-}
-
-function notificationLink(n: CommNotification): string {
-  const p = n.payload as Record<string, string>
-  if (n.type === 'daily_invoice_review' && p.link) return p.link
-  if (n.type === 'daily_invoice_send_failed' && p.link) return p.link
-  if (p.context === 'meet' && p.room_id) return `/dashboard/communication/meet/${p.room_id}`
-  if (p.conversation_id) return `/dashboard/communication/chat?c=${p.conversation_id}`
-  if (p.room_id) return `/dashboard/communication/meet/${p.room_id}`
-  return '/dashboard/communication/notifications'
-}
-
-function isMeet(n: CommNotification) {
-  return n.type === 'meet_invite' || n.type === 'meet_started'
-}
-
-function getSubtitle(n: CommNotification): string | null {
-  const p = n.payload as Record<string, string>
-  switch (n.type) {
-    case 'chat_message':
-    case 'mention':
-      if (p.sender_name && p.preview) return `${p.sender_name}: ${p.preview}`
-      if (p.preview) return p.preview
-      if (p.sender_name) return `From ${p.sender_name}`
-      return null
-    case 'meet_invite':
-      if (p.room_title && p.inviter_name) return `${p.inviter_name} invited you to "${p.room_title}"`
-      if (p.room_title) return `"${p.room_title}"`
-      return null
-    case 'meet_started':
-      if (p.room_title && p.host_name) return `${p.host_name} started "${p.room_title}"`
-      if (p.room_title) return `"${p.room_title}"`
-      return null
-    case 'sms_pending': {
-      const parts: string[] = []
-      if (p.messageType) parts.push(p.messageType.replace(/_/g, ' '))
-      if (p.reason) parts.push(p.reason)
-      if (p.demandId) parts.push(`Demand #${p.demandId.slice(0, 8)}`)
-      return parts.join(' · ') || null
-    }
-    case 'daily_invoice_review':
-      return (p.message as string) || `${p.dealerCount ?? 0} dealer list(s) ready for review`
-    case 'daily_invoice_send_failed':
-      return (p.message as string) || `${p.dealerName ?? 'Dealer'} daily invoices not delivered`
-    default:
-      return null
-  }
-}
 
 function groupByDate(notifications: CommNotification[]): { label: string; items: CommNotification[] }[] {
   const now = new Date()
@@ -245,14 +129,16 @@ export function NotificationsContent({ initialNotifications, currentUserId }: Pr
 
   const handleClick = (n: CommNotification) => {
     animateRemove(n.id, () => {
-      setNotifications((prev) => prev.filter((x) => x.id !== n.id))
-      void deleteNotificationAction(n.id)
-      const link = notificationLink(n)
-      if (isMeet(n)) {
-        window.open(link, '_blank', 'noopener,noreferrer')
-      } else {
-        router.push(link)
-      }
+      void (async () => {
+        setNotifications((prev) => prev.filter((x) => x.id !== n.id))
+        await deleteNotificationAction(n.id)
+        const link = notificationLink(n)
+        if (isMeetNotification(n)) {
+          window.open(link, '_blank', 'noopener,noreferrer')
+        } else {
+          router.push(link)
+        }
+      })()
     })
   }
 
@@ -356,9 +242,9 @@ export function NotificationsContent({ initialNotifications, currentUserId }: Pr
                 {items.map((n, idx) => {
                   const cfg = getConfig(n.type)
                   const Icon = cfg.icon
-                  const subtitle = getSubtitle(n)
+                  const subtitle = getNotificationSubtitle(n)
                   const isRemoving = removing.has(n.id)
-                  const isMeetType = isMeet(n)
+                  const isMeetType = isMeetNotification(n)
 
                   return (
                     <li

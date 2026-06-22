@@ -24,7 +24,7 @@ import type { EmailDeliveryOptions } from '@/lib/email'
 import { parseEmailComposePayload, type EmailComposePayload } from '@/lib/email-compose'
 import type { InvoiceRowData } from '@/lib/generate-invoice-pdf'
 import { demandRecordToInvoiceRowData } from '@/lib/invoice-row-pdf-data'
-import { getSystemLogo } from '@/app/dashboard/system-management/logo/actions'
+import { getSystemLogo } from '@/lib/get-system-logo'
 
 const BULK_INVOICE_EMAIL_MAX = 25
 

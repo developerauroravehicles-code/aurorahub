@@ -3,7 +3,7 @@ import { redirect, notFound } from 'next/navigation'
 import type { Metadata } from 'next'
 import { ArrowLeft } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
-import { getSystemLogo } from '@/app/dashboard/system-management/logo/actions'
+import { getSystemLogo } from '@/lib/get-system-logo'
 import { InvoicePreviewEditor } from '../invoice-preview-editor'
 import type { InvoicePreviewRecord } from '../invoice-types'
 
@@ -79,10 +79,11 @@ export default async function InvoiceDetailPage({ params, searchParams }: PagePr
   if (!demand) notFound()
 
   const logoUrl = await getSystemLogo()
-  const backHref =
+  const returnHref =
     typeof sp.return === 'string' && sp.return.startsWith('/dashboard/admin/')
       ? sp.return
-      : '/dashboard/admin/invoices'
+      : undefined
+  const backHref = returnHref ?? '/dashboard/admin/invoices'
 
   return (
     <div className="space-y-6 pb-12">
@@ -104,6 +105,7 @@ export default async function InvoiceDetailPage({ params, searchParams }: PagePr
         invoice={demand as InvoicePreviewRecord}
         logoDataUrl={logoUrl}
         canEdit={isAuroraManager}
+        returnHref={backHref}
       />
     </div>
   )

@@ -1,5 +1,5 @@
 import { LogoUploadForm } from './logo-upload-form'
-import { getSystemLogo } from './actions'
+import { getSystemLogo } from '@/lib/get-system-logo'
 import { SystemManagementTabs } from '../system-management-tabs'
 import { SystemManagementTitle } from '../system-management-title'
 

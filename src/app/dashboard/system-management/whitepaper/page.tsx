@@ -1,4 +1,4 @@
-import { getSystemLogo } from '../logo/actions'
+import { getSystemLogo } from '@/lib/get-system-logo'
 import { WhitepaperDownload } from './whitepaper-download'
 import { PitchDeckDownload } from './pitch-deck-download'
 

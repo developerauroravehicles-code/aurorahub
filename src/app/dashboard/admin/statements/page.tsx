@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { getSystemLogo } from '@/app/dashboard/system-management/logo/actions'
+import { getSystemLogo } from '@/lib/get-system-logo'
 import { StatementContent } from './statement-content'
 
 export default async function StatementsPage() {

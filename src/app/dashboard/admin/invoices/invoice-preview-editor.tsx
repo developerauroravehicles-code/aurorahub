@@ -1,10 +1,10 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { addYears } from 'date-fns'
+import { warrantyEndFromCompletion } from '@/lib/warranty-period'
 import { formatInTimeZone } from 'date-fns-tz'
-import { Download, HardDrive, CheckCircle2, Mail, Plus, Save, Trash2, X } from 'lucide-react'
+import { Download, CheckCircle2, Mail, MoreVertical, Plus, Trash2, X } from 'lucide-react'
 import { EmailComposeModal } from '@/components/email-compose-modal'
 import type { EmailComposePayload } from '@/lib/email-compose'
 import { downloadInvoicePdf, getInvoicePdfBlobUrl, getInvoicePdfBase64 } from '@/lib/generate-invoice-pdf'
@@ -33,6 +33,7 @@ type Props = {
   logoDataUrl: string | null
   canEdit?: boolean
   onClose?: () => void
+  returnHref?: string
 }
 
 function parseInitialExtraRows(invoice: InvoicePreviewRecord) {
@@ -51,8 +52,15 @@ function parseInitialFinancialSummary(invoice: InvoicePreviewRecord): InvoiceFin
   return { ...DEFAULT_INVOICE_FINANCIAL_SUMMARY }
 }
 
-export function InvoicePreviewEditor({ invoice, logoDataUrl, canEdit = true, onClose }: Props) {
+export function InvoicePreviewEditor({
+  invoice,
+  logoDataUrl,
+  canEdit = true,
+  onClose,
+  returnHref,
+}: Props) {
   const router = useRouter()
+  const menuRef = useRef<HTMLDivElement>(null)
   const [comments, setComments] = useState(invoice.invoice_comments ?? '')
   const [extraRows, setExtraRows] = useState(parseInitialExtraRows(invoice))
   const [financialSummary, setFinancialSummary] = useState<InvoiceFinancialSummary>(
@@ -68,6 +76,7 @@ export function InvoicePreviewEditor({ invoice, logoDataUrl, canEdit = true, onC
   const [emailComposeOpen, setEmailComposeOpen] = useState(false)
   const [approvedAt, setApprovedAt] = useState<string | null>(invoice.invoice_approved_at ?? null)
   const [approving, setApproving] = useState(false)
+  const [menuOpen, setMenuOpen] = useState(false)
 
   useEffect(() => {
     setComments(invoice.invoice_comments ?? '')
@@ -75,7 +84,19 @@ export function InvoicePreviewEditor({ invoice, logoDataUrl, canEdit = true, onC
     setFinancialSummary(parseInitialFinancialSummary(invoice))
     setDriveMessage(null)
     setApprovedAt(invoice.invoice_approved_at ?? null)
+    setMenuOpen(false)
   }, [invoice])
+
+  useEffect(() => {
+    if (!menuOpen) return
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setMenuOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [menuOpen])
 
   const getCalculatedTotal = useCallback(() => {
     return calculateInvoiceTotalFromExtras(extraRows, financialSummary)
@@ -84,7 +105,7 @@ export function InvoicePreviewEditor({ invoice, logoDataUrl, canEdit = true, onC
   const buildPreviewData = useCallback((): InvoiceRowData => {
     const dealer = getInvoiceDealer(invoice)
     const completionDate = new Date(invoice.completed_at ?? invoice.updated_at)
-    const warrantyEnd = addYears(completionDate, 3)
+    const warrantyEnd = warrantyEndFromCompletion(completionDate, dealer?.name)
     const totalNum = getCalculatedTotal()
     return {
       demand_number: invoice.demand_number,
@@ -112,10 +133,10 @@ export function InvoicePreviewEditor({ invoice, logoDataUrl, canEdit = true, onC
     return () => URL.revokeObjectURL(url)
   }, [buildPreviewData])
 
-  const handleSave = async () => {
+  const saveInvoice = async () => {
     const calculatedTotal = getCalculatedTotal()
     setPending(true)
-    await updateInvoiceFields(
+    const result = await updateInvoiceFields(
       invoice.id,
       String(calculatedTotal) || null,
       comments || null,
@@ -123,31 +144,13 @@ export function InvoicePreviewEditor({ invoice, logoDataUrl, canEdit = true, onC
       financialSummary
     )
     setPending(false)
-    router.refresh()
+    return result
   }
 
   const handleDownload = async () => {
     downloadInvoicePdf(buildPreviewData())
     await recordInvoiceDownloadAction(invoice.id)
     router.refresh()
-  }
-
-  const handleDrive = async () => {
-    const data = buildPreviewData()
-    const dealerName = getInvoiceDealer(invoice)?.name ?? 'Unknown Dealer'
-    setDriveUploading(true)
-    setDriveMessage(null)
-    const result = await uploadInvoiceToDriveAction(data, dealerName, invoice.id)
-    setDriveUploading(false)
-    if (result.success) {
-      setDriveMessage({
-        type: 'success',
-        text: result.webViewLink ? 'Uploaded! Open in Drive' : 'Uploaded to Drive successfully',
-      })
-      if (result.webViewLink) window.open(result.webViewLink, '_blank')
-    } else {
-      setDriveMessage({ type: 'error', text: result.error ?? 'Upload failed' })
-    }
   }
 
   const emailComposeDefaults = useMemo(() => {
@@ -173,16 +176,56 @@ export function InvoicePreviewEditor({ invoice, logoDataUrl, canEdit = true, onC
   }
 
   const handleApprove = async () => {
-    const nextApproved = !approvedAt
-    setApproving(true)
-    setDriveMessage(null)
-    const res = await approveInvoiceAction(invoice.id, nextApproved)
-    setApproving(false)
-    if (res.error) {
-      setDriveMessage({ type: 'error', text: res.error })
+    if (approvedAt) {
+      setApproving(true)
+      setDriveMessage(null)
+      const res = await approveInvoiceAction(invoice.id, false)
+      setApproving(false)
+      if (res.error) {
+        setDriveMessage({ type: 'error', text: res.error })
+        return
+      }
+      setApprovedAt(null)
+      router.refresh()
       return
     }
-    setApprovedAt(nextApproved ? new Date().toISOString() : null)
+
+    setApproving(true)
+    setDriveMessage(null)
+
+    const saveResult = await saveInvoice()
+    if (saveResult.error) {
+      setApproving(false)
+      setDriveMessage({ type: 'error', text: saveResult.error })
+      return
+    }
+
+    const approveResult = await approveInvoiceAction(invoice.id, true)
+    if (approveResult.error) {
+      setApproving(false)
+      setDriveMessage({ type: 'error', text: approveResult.error })
+      return
+    }
+    setApprovedAt(new Date().toISOString())
+
+    const data = buildPreviewData()
+    const dealerName = getInvoiceDealer(invoice)?.name ?? 'Unknown Dealer'
+    setDriveUploading(true)
+    const driveResult = await uploadInvoiceToDriveAction(data, dealerName, invoice.id)
+    setDriveUploading(false)
+    setApproving(false)
+
+    if (!driveResult.success) {
+      setDriveMessage({ type: 'error', text: driveResult.error ?? 'Upload failed' })
+      router.refresh()
+      return
+    }
+
+    if (returnHref) {
+      router.push(returnHref)
+      return
+    }
+
     router.refresh()
   }
 
@@ -403,7 +446,7 @@ export function InvoicePreviewEditor({ invoice, logoDataUrl, canEdit = true, onC
             <button
               type="button"
               onClick={handleApprove}
-              disabled={approving}
+              disabled={approving || pending || driveUploading}
               className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium disabled:opacity-50 ${
                 approvedAt
                   ? 'bg-green-700 hover:bg-green-600 text-white'
@@ -411,48 +454,56 @@ export function InvoicePreviewEditor({ invoice, logoDataUrl, canEdit = true, onC
               }`}
             >
               <CheckCircle2 className="w-4 h-4 shrink-0" />
-              {approving ? 'Updating…' : approvedAt ? 'Approved' : 'Approve'}
+              {approving
+                ? driveUploading
+                  ? 'Uploading…'
+                  : pending
+                    ? 'Saving…'
+                    : 'Approving…'
+                : approvedAt
+                  ? 'Approved'
+                  : 'Approve'}
             </button>
           )}
-          <button
-            type="button"
-            onClick={() => setEmailComposeOpen(true)}
-            disabled={emailSending}
-            className="inline-flex items-center gap-1.5 bg-gray-600 hover:bg-gray-500 text-white px-3 py-1.5 rounded-lg text-sm font-medium disabled:opacity-50"
-          >
-            <Mail className="w-4 h-4 shrink-0" />
-            Send email
-          </button>
-          {canEdit && (
+          <div className="relative" ref={menuRef}>
             <button
               type="button"
-              onClick={handleSave}
-              disabled={pending}
-              className="inline-flex items-center gap-1.5 bg-gray-600 hover:bg-gray-500 text-white px-3 py-1.5 rounded-lg text-sm font-medium disabled:opacity-50"
+              onClick={() => setMenuOpen((open) => !open)}
+              disabled={emailSending}
+              className="inline-flex items-center justify-center bg-gray-600 hover:bg-gray-500 text-white p-1.5 rounded-lg text-sm font-medium disabled:opacity-50"
+              aria-label="More actions"
+              aria-expanded={menuOpen}
             >
-              <Save className="w-4 h-4 shrink-0" />
-              Save
+              <MoreVertical className="w-4 h-4 shrink-0" />
             </button>
-          )}
-          <button
-            type="button"
-            onClick={handleDownload}
-            className="inline-flex items-center gap-1.5 bg-[#C27E00] hover:bg-[#a06900] text-white px-3 py-1.5 rounded-lg text-sm font-medium"
-          >
-            <Download className="w-4 h-4 shrink-0" />
-            Download PDF
-          </button>
-          {canEdit && (
-            <button
-              type="button"
-              onClick={handleDrive}
-              disabled={driveUploading}
-              className="inline-flex items-center gap-1.5 bg-gray-600 hover:bg-gray-500 text-white px-3 py-1.5 rounded-lg text-sm font-medium disabled:opacity-50"
-            >
-              <HardDrive className="w-4 h-4 shrink-0" />
-              {driveUploading ? 'Uploading…' : 'Drive'}
-            </button>
-          )}
+            {menuOpen && (
+              <div className="absolute bottom-full right-0 mb-1 z-10 min-w-[160px] rounded-lg border border-zinc-300 dark:border-gray-600 bg-white dark:bg-zinc-900 shadow-lg py-1 text-sm">
+                <button
+                  type="button"
+                  className="w-full inline-flex items-center gap-2 px-3 py-2 text-left text-zinc-800 dark:text-gray-200 hover:bg-zinc-100 dark:hover:bg-white/5 disabled:opacity-50"
+                  disabled={emailSending}
+                  onClick={() => {
+                    setMenuOpen(false)
+                    setEmailComposeOpen(true)
+                  }}
+                >
+                  <Mail className="w-4 h-4 shrink-0" />
+                  E-mail
+                </button>
+                <button
+                  type="button"
+                  className="w-full inline-flex items-center gap-2 px-3 py-2 text-left text-zinc-800 dark:text-gray-200 hover:bg-zinc-100 dark:hover:bg-white/5"
+                  onClick={() => {
+                    setMenuOpen(false)
+                    void handleDownload()
+                  }}
+                >
+                  <Download className="w-4 h-4 shrink-0" />
+                  Download
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 

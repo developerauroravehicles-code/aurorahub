@@ -122,6 +122,13 @@ export function DailyInvoicesContent({
           router.refresh()
         }
       )
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'demands' },
+        () => {
+          router.refresh()
+        }
+      )
       .subscribe()
 
     return () => {
@@ -413,7 +420,11 @@ export function DailyInvoicesContent({
                             </span>
                           </td>
                           <td className="px-3 py-2 whitespace-nowrap">
-                            {d.invoice_approved_at ? (
+                            {batch.status === 'sent' ? (
+                              <span className="text-green-600 dark:text-green-400 font-medium">
+                                Sent
+                              </span>
+                            ) : d.invoice_approved_at ? (
                               <span className="text-green-600 dark:text-green-400 font-medium">
                                 Approved
                               </span>
