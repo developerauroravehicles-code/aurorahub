@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { isStockNumberDuplicate } from '@/lib/demand-stock'
 import { revalidatePath } from 'next/cache'
 import { logDemandChange, type DemandStatus } from '@/lib/demand-logger'
@@ -11,8 +12,9 @@ import { resolveCancellationTemplate } from '@/lib/sms-resolver'
 import { validateAppointmentSlot } from '@/app/dashboard/system-management/calendar/actions'
 import { getTimezoneFromDealer } from '@/lib/dealer-timezone'
 import { toDate } from 'date-fns-tz'
-import { SYSTEM_DEFAULT_TIMEZONE } from '@/lib/timezone-defaults'
+import { ptDatetimeLocalToISO, SYSTEM_DEFAULT_TIMEZONE } from '@/lib/timezone-defaults'
 import { lookupCameraModelId } from '@/lib/camera-model-resolve'
+import { addDemandToDailyBatch, ptDateFromIso } from '@/lib/daily-dealer-invoices'
 import { assertDealerDemandAccess, canEditDemandCoreFields, getInventoryManagerDealerId } from '@/lib/inventory-manager-access'
 
 type DemandEditProfile = {
@@ -285,6 +287,60 @@ export async function updateStockNumber(
   return { success: true }
 }
 
+export async function updateCameraModel(
+  demandId: string,
+  cameraModel: string
+): Promise<{ success: boolean; error?: string }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { success: false, error: 'Unauthorized' }
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role, dealer_id')
+    .eq('id', user.id)
+    .single()
+
+  const trimmed = (cameraModel || '').trim()
+  if (!trimmed) {
+    return { success: false, error: 'Camera model is required' }
+  }
+
+  const { data: demand } = await supabase
+    .from('demands')
+    .select('status, dealer_id')
+    .eq('id', demandId)
+    .single()
+
+  const authError = authorizeCoreDemandEdit(profile, demand?.dealer_id)
+  if (authError) return { success: false, error: authError.error }
+
+  const cameraModelId = await lookupCameraModelId(supabase, trimmed)
+
+  const { error } = await supabase
+    .from('demands')
+    .update({
+      camera_model: trimmed,
+      camera_model_id: cameraModelId,
+    })
+    .eq('id', demandId)
+
+  if (error) return { success: false, error: error.message }
+
+  const status: DemandStatus = (demand?.status ?? 'pending_finance') as DemandStatus
+  logDemandChange({
+    demandId,
+    actorId: user.id,
+    previousStatus: status,
+    newStatus: status,
+    notes: 'Camera model updated',
+  }).catch(() => {})
+
+  revalidatePath('/dashboard/admin/demands')
+  revalidatePath(`/dashboard/admin/demands/${demandId}`)
+  return { success: true }
+}
+
 export async function updateDemandByAuroraManager(
   demandId: string,
   formData: FormData,
@@ -473,6 +529,81 @@ export async function deleteDemand(demandId: string): Promise<{ error?: string }
 
   revalidatePath('/dashboard/admin/demands')
   return {}
+}
+
+export async function updateCompletedAt(
+  demandId: string,
+  datetimeLocal: string
+): Promise<{ success: boolean; error?: string }> {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { success: false, error: 'Unauthorized' }
+
+  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+  if (profile?.role !== 'aurora_manager') {
+    return { success: false, error: 'Only Aurora Manager can update completion date' }
+  }
+
+  const trimmed = datetimeLocal.trim()
+  if (!trimmed) {
+    return { success: false, error: 'Completion date is required' }
+  }
+
+  let completedAtIso: string
+  try {
+    completedAtIso = ptDatetimeLocalToISO(trimmed)
+    if (Number.isNaN(new Date(completedAtIso).getTime())) {
+      return { success: false, error: 'Invalid completion date' }
+    }
+  } catch {
+    return { success: false, error: 'Invalid completion date' }
+  }
+
+  const { data: row } = await supabase
+    .from('demands')
+    .select('status, completed_at, dealer_id')
+    .eq('id', demandId)
+    .single()
+
+  if (!row || row.status !== 'completed') {
+    return { success: false, error: 'Only completed demands can have a completion date updated' }
+  }
+
+  const oldPtDate = row.completed_at ? ptDateFromIso(row.completed_at) : null
+  const newPtDate = ptDateFromIso(completedAtIso)
+
+  const { error } = await supabase
+    .from('demands')
+    .update({ completed_at: completedAtIso })
+    .eq('id', demandId)
+
+  if (error) return { success: false, error: error.message }
+
+  if (row.dealer_id) {
+    const admin = createAdminClient()
+    await admin.from('dealer_daily_invoice_batch_items').delete().eq('demand_id', demandId)
+    addDemandToDailyBatch(admin, demandId).catch(() => {})
+  }
+
+  logDemandChange({
+    demandId,
+    actorId: user.id,
+    previousStatus: 'completed',
+    newStatus: 'completed',
+    notes:
+      oldPtDate && oldPtDate !== newPtDate
+        ? `Completion date updated (${oldPtDate} → ${newPtDate} PT)`
+        : 'Completion date updated',
+  }).catch(() => {})
+
+  revalidatePath('/dashboard/admin/demands')
+  revalidatePath(`/dashboard/admin/demands/${demandId}`)
+  revalidatePath('/dashboard/admin/statements')
+  revalidatePath('/dashboard/admin/invoices')
+  revalidatePath('/dashboard/admin/daily-invoices')
+  return { success: true }
 }
 
 /**

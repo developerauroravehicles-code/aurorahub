@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { formatInTimeZone } from 'date-fns-tz'
-import { getEffectiveTimezone, formatInPT } from '@/lib/timezone-defaults'
+import { getEffectiveTimezone } from '@/lib/timezone-defaults'
 import { getTimezoneFromDealer } from '@/lib/dealer-timezone'
 import { checkCurrentUserPermission } from '@/lib/permissions'
 import { assertDealerDemandAccess, canEditDemandCoreFields, canUseSmsFeatures, getInventoryManagerDealerId, isInventoryManager } from '@/lib/inventory-manager-access'
@@ -14,11 +14,13 @@ import { ChangeFinanceForm } from '../change-finance-form'
 import { EditCustomerForm } from '../edit-customer-form'
 import { EditVinForm } from '../edit-vin-form'
 import { EditStockNumberForm } from '../edit-stock-number-form'
+import { EditCameraModelForm } from '../edit-camera-model-form'
+import { EditCompletedAtForm } from '../edit-completed-at-form'
+import { getCameraModelsForDealer } from '../get-cameras-for-dealer'
 import { RescheduleDemandButton } from '../reschedule-demand-button'
 import { DemandManualSmsPanel } from '../demand-manual-sms-panel'
 import type { SMSTriggerType } from '@/lib/sms-settings'
 import { DemandInstallationNotesSection, type InstallationNoteRow } from '../demand-installation-notes-section'
-import { AlignDemandCompletionDateButton } from '../align-demand-completion-button'
 import { SERVICE_TYPE_LABELS, DemandServiceType } from '@/lib/demand-pricing'
 
 /** List filters (date, status, dealer) are passed on the detail URL so "Back" can restore them. */
@@ -94,6 +96,8 @@ export default async function DemandDetailsPage({
   const displayTzForDemand = getEffectiveTimezone(
     getTimezoneFromDealer(demand.dealers as Parameters<typeof getTimezoneFromDealer>[0])
   )
+
+  const cameraModels = await getCameraModelsForDealer(demand.dealer_id ?? '')
 
   // Fetch demand logs (admin client - user already verified access via demand fetch)
   const admin = createAdminClient()
@@ -258,8 +262,13 @@ export default async function DemandDetailsPage({
               <p className="text-zinc-900 dark:text-white font-medium">{demand.vehicle_year} {demand.vehicle_make} {demand.vehicle_model}</p>
             </div>
             <div>
-              <p className="text-sm text-zinc-500 dark:text-gray-400">Camera Model</p>
-              <p className="text-zinc-900 dark:text-white">{demand.camera_model}</p>
+              <p className="text-sm text-zinc-500 dark:text-gray-400 mb-1">Camera Model</p>
+              <EditCameraModelForm
+                demandId={id}
+                cameraModel={demand.camera_model}
+                cameraModels={cameraModels}
+                canEdit={canEditCoreFields}
+              />
             </div>
             <div>
               <p className="text-sm text-zinc-500 dark:text-gray-400 mb-1">Stock Number</p>
@@ -368,15 +377,17 @@ export default async function DemandDetailsPage({
               <p className="text-sm text-zinc-500 dark:text-gray-400">Last Updated</p>
               <p className="text-zinc-900 dark:text-white">{formatInTimeZone(new Date(demand.updated_at || demand.created_at), getEffectiveTimezone((demand.dealers as { region_codes?: { timezones?: { name: string } } } | null)?.region_codes?.timezones?.name ?? null), 'PPP h:mm a')}</p>
             </div>
-            {(demand as { completed_at?: string | null }).completed_at && (
+            {demand.status === 'completed' && (
               <div>
-                <p className="text-sm text-zinc-500 dark:text-gray-400">Completed At (Pacific — statements / invoices)</p>
-                <p className="text-zinc-900 dark:text-white">
-                  {formatInPT((demand as { completed_at: string }).completed_at, 'PPP h:mm a')}
+                <p className="text-sm text-zinc-500 dark:text-gray-400 mb-1">
+                  Completed At (Pacific — statements / invoices)
                 </p>
-                {isAuroraManager && demand.status === 'completed' && (
-                  <AlignDemandCompletionDateButton demandId={id} />
-                )}
+                <EditCompletedAtForm
+                  demandId={id}
+                  completedAt={(demand as { completed_at?: string | null }).completed_at ?? null}
+                  appointmentDate={demand.appointment_date}
+                  canEdit={isAuroraManager}
+                />
               </div>
             )}
             {demand.status === 'completed' && (demand as { service_type?: DemandServiceType | null }).service_type && (
@@ -396,13 +407,6 @@ export default async function DemandDetailsPage({
                   </p>
                 </div>
               )}
-            {isAuroraManager && demand.status === 'completed' && !(demand as { completed_at?: string | null }).completed_at && (
-              <div>
-                <p className="text-sm text-zinc-500 dark:text-gray-400">Completed At</p>
-                <p className="text-zinc-500 dark:text-gray-500 text-sm">Not set — use align to match appointment for reporting.</p>
-                <AlignDemandCompletionDateButton demandId={id} />
-              </div>
-            )}
           </div>
         </div>
 
