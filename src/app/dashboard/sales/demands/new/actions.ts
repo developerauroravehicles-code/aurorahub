@@ -9,8 +9,8 @@ import { fromZonedTime, formatInTimeZone } from 'date-fns-tz'
 import { validateAppointmentSlot } from '@/app/dashboard/system-management/calendar/actions'
 import { getTimezoneFromDealer } from '@/lib/dealer-timezone'
 import { SYSTEM_DEFAULT_TIMEZONE } from '@/lib/timezone-defaults'
-import { isStockNumberDuplicate } from '@/lib/demand-stock'
 import { lookupCameraModelId } from '@/lib/camera-model-resolve'
+import { notifyAuroraManagersIfDuplicateStock } from '@/lib/notify-duplicate-stock'
 
 async function getDealerTimezone(dealerId: string | null): Promise<string | null> {
   if (!dealerId) return null
@@ -92,11 +92,6 @@ export async function createDemand(prevState: ActionState, formData: FormData) {
       return { error: 'This time slot is already booked. Please select another time.' }
   }
 
-  const { duplicate: stockDuplicate } = await isStockNumberDuplicate(data.stockNumber)
-  if (stockDuplicate) {
-    return { error: `A demand with stock number "${data.stockNumber}" already exists. Please verify the stock number.` }
-  }
-
   const cameraModelId = await lookupCameraModelId(supabase, data.cameraModel)
 
   const insertData = {
@@ -148,6 +143,12 @@ export async function createDemand(prevState: ActionState, formData: FormData) {
     vehicle_model: demand.vehicle_model,
     appointment_date: demand.appointment_date,
     dealer_id: demand.dealer_id,
+  }).catch(() => {})
+
+  notifyAuroraManagersIfDuplicateStock({
+    demandId: demand.id,
+    demandNumber: demand.demand_number,
+    stockNumber: data.stockNumber,
   }).catch(() => {})
 
   // SMS will be sent when finance approves the demand

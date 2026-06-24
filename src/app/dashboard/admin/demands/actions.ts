@@ -2,7 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { isStockNumberDuplicate } from '@/lib/demand-stock'
+import { notifyAuroraManagersIfDuplicateStock } from '@/lib/notify-duplicate-stock'
 import { revalidatePath } from 'next/cache'
 import { logDemandChange, type DemandStatus } from '@/lib/demand-logger'
 import { sendSMS } from '@/lib/twilio'
@@ -251,20 +251,12 @@ export async function updateStockNumber(
 
   const { data: demand } = await supabase
     .from('demands')
-    .select('status, dealer_id')
+    .select('status, dealer_id, demand_number')
     .eq('id', demandId)
     .single()
 
   const authError = authorizeCoreDemandEdit(profile, demand?.dealer_id)
   if (authError) return { success: false, error: authError.error }
-
-  if (trimmed) {
-    const dealerScope = getInventoryManagerDealerId(profile) ?? undefined
-    const { duplicate } = await isStockNumberDuplicate(trimmed, demandId, dealerScope)
-    if (duplicate) {
-      return { success: false, error: `A demand with stock number "${trimmed}" already exists. Please verify the stock number.` }
-    }
-  }
 
   const { error } = await supabase
     .from('demands')
@@ -281,6 +273,16 @@ export async function updateStockNumber(
     newStatus: status,
     notes: 'Stock number updated',
   }).catch(() => {})
+
+  if (trimmed) {
+    const dealerScope = getInventoryManagerDealerId(profile) ?? demand?.dealer_id ?? undefined
+    notifyAuroraManagersIfDuplicateStock({
+      demandId,
+      demandNumber: demand?.demand_number,
+      stockNumber: trimmed,
+      dealerId: dealerScope,
+    }).catch(() => {})
+  }
 
   revalidatePath('/dashboard/admin/demands')
   revalidatePath(`/dashboard/admin/demands/${demandId}`)
@@ -354,7 +356,7 @@ export async function updateDemandByAuroraManager(
 
   const { data: demand } = await supabase
     .from('demands')
-    .select('dealer_id, status, appointment_date, customer_phone, customer_firstname, customer_lastname, assigned_specialist_id, is_external, dealers(region_codes(timezone_id, timezones(name)))')
+    .select('dealer_id, status, appointment_date, customer_phone, customer_firstname, customer_lastname, assigned_specialist_id, is_external, demand_number, dealers(region_codes(timezone_id, timezones(name)))')
     .eq('id', demandId)
     .single()
 
@@ -395,14 +397,6 @@ export async function updateDemandByAuroraManager(
   }
 
   if (!appointmentDate) return { error: 'Appointment date is required' }
-
-  if (stockNumber) {
-    const dealerScope = getInventoryManagerDealerId(profile) ?? undefined
-    const { duplicate } = await isStockNumberDuplicate(stockNumber, demandId, dealerScope)
-    if (duplicate) {
-      return { error: `A demand with stock number "${stockNumber}" already exists. Please verify the stock number.` }
-    }
-  }
 
   if (demand.dealer_id && !isExternal) {
     const validation = await validateAppointmentSlot(demand.dealer_id, appointmentDate)
@@ -501,6 +495,16 @@ export async function updateDemandByAuroraManager(
         }
       }
     }
+  }
+
+  if (stockNumber) {
+    const dealerScope = getInventoryManagerDealerId(profile) ?? demand.dealer_id ?? undefined
+    notifyAuroraManagersIfDuplicateStock({
+      demandId,
+      demandNumber: demand.demand_number,
+      stockNumber,
+      dealerId: dealerScope,
+    }).catch(() => {})
   }
 
   revalidatePath('/dashboard/admin/demands')

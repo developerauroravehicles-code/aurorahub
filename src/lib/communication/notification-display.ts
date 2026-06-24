@@ -2,6 +2,7 @@ import {
   AtSign,
   Bell,
   ClipboardList,
+  Copy,
   Mail,
   MessageCircle,
   MessageSquareX,
@@ -76,6 +77,13 @@ const TYPE_CONFIG: Record<CommNotificationType, NotificationTypeConfig> = {
     iconColor: 'text-amber-700 dark:text-amber-300',
     borderColor: 'border-l-amber-500',
   },
+  duplicate_stock_number: {
+    label: 'Duplicate stock number',
+    icon: Copy,
+    iconBg: 'bg-amber-100 dark:bg-amber-900/40',
+    iconColor: 'text-amber-700 dark:text-amber-300',
+    borderColor: 'border-l-amber-500',
+  },
 }
 
 const DEFAULT_CONFIG: NotificationTypeConfig = {
@@ -95,6 +103,7 @@ export function notificationLink(n: CommNotification): string {
   if (n.type === 'daily_invoice_review' && p.link) return p.link
   if (n.type === 'daily_invoice_send_failed' && p.link) return p.link
   if (n.type === 'service_record_pending' && p.link) return p.link
+  if (n.type === 'duplicate_stock_number' && p.link) return p.link
   if (p.context === 'meet' && p.room_id) return `/dashboard/communication/meet/${p.room_id}`
   if (p.conversation_id) return `/dashboard/communication/chat?c=${p.conversation_id}`
   if (p.room_id) return `/dashboard/communication/meet/${p.room_id}`
@@ -143,6 +152,12 @@ export function getNotificationSubtitle(n: CommNotification): string | null {
       if (diagnosis) parts.push(diagnosis)
       if (p.customerFirstname) parts.push(String(p.customerFirstname))
       return parts.join(' · ') || (p.message as string) || 'New customer service record pending approval'
+    }
+    case 'duplicate_stock_number': {
+      const parts: string[] = []
+      if (p.stockNumber) parts.push(String(p.stockNumber))
+      if (p.demandNumber) parts.push(`Demand #${p.demandNumber}`)
+      return parts.join(' · ') || (p.message as string) || 'Duplicate stock number detected'
     }
     default:
       return null

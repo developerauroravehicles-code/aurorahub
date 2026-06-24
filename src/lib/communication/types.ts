@@ -100,6 +100,7 @@ export type CommNotificationType =
   | 'daily_invoice_review'
   | 'daily_invoice_send_failed'
   | 'service_record_pending'
+  | 'duplicate_stock_number'
 
 export type CommNotification = {
   id: string

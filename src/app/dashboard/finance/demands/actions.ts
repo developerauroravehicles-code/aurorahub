@@ -12,6 +12,7 @@ import { validateAppointmentSlot } from '@/app/dashboard/system-management/calen
 import { getTimezoneFromDealer } from '@/lib/dealer-timezone'
 import { lookupCameraModelId } from '@/lib/camera-model-resolve'
 import { notifyAuroraManagersSmsFailed } from '@/lib/notify-sms-failed'
+import { notifyAuroraManagersIfDuplicateStock } from '@/lib/notify-duplicate-stock'
 
 export async function assignDemandToMe(demandId: string) {
   const supabase = await createClient()
@@ -430,7 +431,7 @@ export async function updateDemand(demandId: string, formData: FormData) {
   // Check if demand is assigned to current user
   const { data: demand } = await supabase
     .from('demands')
-    .select('assigned_finance_id, status, appointment_date, customer_phone, customer_firstname, customer_lastname, dealer_id, assigned_specialist_id, dealers(region_codes(timezone_id, timezones(name)))')
+    .select('assigned_finance_id, status, appointment_date, customer_phone, customer_firstname, customer_lastname, dealer_id, assigned_specialist_id, demand_number, dealers(region_codes(timezone_id, timezones(name)))')
     .eq('id', demandId)
     .single()
 
@@ -500,6 +501,15 @@ export async function updateDemand(demandId: string, formData: FormData) {
     .eq('id', demandId)
 
   if (updateError) return { error: updateError.message }
+
+  if (stockNumber) {
+    notifyAuroraManagersIfDuplicateStock({
+      demandId,
+      demandNumber: demand.demand_number,
+      stockNumber,
+      dealerId: demand.dealer_id,
+    }).catch(() => {})
+  }
 
   if (appointmentDateChanged) {
     logDemandChange({

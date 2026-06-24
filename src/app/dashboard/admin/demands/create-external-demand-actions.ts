@@ -16,6 +16,7 @@ import {
   isDemandServiceType,
 } from '@/lib/demand-pricing'
 import { addDemandToDailyBatch } from '@/lib/daily-dealer-invoices'
+import { notifyAuroraManagersIfDuplicateStock } from '@/lib/notify-duplicate-stock'
 
 const schema = z.object({
   dealerId: z.string().min(1, 'Dealer is required'),
@@ -167,6 +168,13 @@ export async function createExternalDemand(prevState: CreateExternalDemandState,
     vehicle_model: demand.vehicle_model,
     appointment_date: demand.appointment_date,
     dealer_id: demand.dealer_id,
+  }).catch(() => {})
+
+  notifyAuroraManagersIfDuplicateStock({
+    demandId: demand.id,
+    demandNumber: demand.demand_number,
+    stockNumber: data.stockNumber,
+    dealerId: data.dealerId,
   }).catch(() => {})
 
   revalidatePath('/dashboard/admin/demands')
