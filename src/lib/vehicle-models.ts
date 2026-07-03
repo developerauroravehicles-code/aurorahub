@@ -51,7 +51,7 @@ export const VEHICLE_MODELS_BY_MAKE_CA: VehicleModelsMap = {
   Suzuki: ['Swift', 'Baleno', 'Jimny', 'Vitara', 'S-Cross'],
   Toyota: ['Yaris', 'Corolla', 'Corolla Cross', 'Camry', 'Crown', 'Prius', 'GR86', 'GR Supra', 'GR Corolla', 'bZ4X', 'C-HR', 'RAV4', 'Highlander', 'Sequoia', '4Runner', 'Land Cruiser', 'Sienna', 'Tacoma', 'Tundra'],
   VinFast: ['VF 8', 'VF 9', 'VF 7'],
-  Volkswagen: ['Golf', 'Golf GTI', 'Golf R', 'Jetta', 'Passat', 'Arteon', 'Taos', 'Tiguan', 'Atlas', 'Atlas Cross Sport', 'ID.4'],
+  Volkswagen: ['Golf', 'Golf GTI', 'Golf R', 'Jetta', 'Passat', 'Arteon', 'Taos', 'Tiguan', 'Atlas', 'Atlas Cross Sport', 'ID.4', 'ID Buzz'],
   Volvo: ['S60', 'S90', 'V60', 'V90', 'XC40', 'XC60', 'XC90', 'C40', 'EX30', 'EX90'],
 }
 
