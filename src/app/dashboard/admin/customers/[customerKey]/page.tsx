@@ -17,6 +17,7 @@ type DemandRow = {
   updated_at: string | null
   dealer_id: string | null
   dealer_name: string | null
+  dealer_warranty_years: number | null
   customer_firstname: string
   customer_lastname: string
   customer_phone: string
@@ -34,12 +35,16 @@ function warrantyEndLabel(
   status: string,
   completedAt: string | null,
   updatedAt: string | null,
-  dealerName: string | null
+  dealerName: string | null,
+  dealerWarrantyYears: number | null
 ): string {
   if (status !== 'completed') return '—'
   const basis = completedAt ?? updatedAt
   if (!basis) return '—'
-  const warrantyEnd = warrantyEndFromCompletion(new Date(basis), dealerName)
+  const warrantyEnd = warrantyEndFromCompletion(new Date(basis), {
+    name: dealerName,
+    warranty_years: dealerWarrantyYears,
+  })
   return formatInPT(warrantyEnd, 'd MMMM yyyy')
 }
 
@@ -110,7 +115,7 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
     demandNumber: d.demand_number ?? d.id.slice(0, 8),
     camera: d.camera_model ?? '',
     dealer: d.dealer_name ?? '—',
-    warrantyEnds: warrantyEndLabel(d.status, d.completed_at, d.updated_at, d.dealer_name),
+    warrantyEnds: warrantyEndLabel(d.status, d.completed_at, d.updated_at, d.dealer_name, d.dealer_warranty_years),
     status: d.status.replace(/_/g, ' '),
   }))
 
@@ -166,7 +171,7 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
                   </td>
                   <td className="px-4 py-3">{d.camera_model}</td>
                   <td className="px-4 py-3">{d.dealer_name ?? '—'}</td>
-                  <td className="whitespace-nowrap px-4 py-3">{warrantyEndLabel(d.status, d.completed_at, d.updated_at, d.dealer_name)}</td>
+                  <td className="whitespace-nowrap px-4 py-3">{warrantyEndLabel(d.status, d.completed_at, d.updated_at, d.dealer_name, d.dealer_warranty_years)}</td>
                   <td className="px-4 py-3 capitalize">{d.status.replace('_', ' ')}</td>
                 </tr>
               ))}
@@ -174,7 +179,7 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
           </table>
         </div>
         <p className="mt-2 text-xs text-zinc-500 dark:text-gray-500">
-          Warranty end follows each dealer&apos;s policy (three years by default; one year for Aurora Vehicles HQ).
+          Warranty end is based on each dealer&apos;s configured invoice warranty period (1–5 years; default 3).
         </p>
       </div>
     </div>

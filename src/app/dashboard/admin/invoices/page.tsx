@@ -67,7 +67,7 @@ export default async function InvoicesPage({
       invoice_saved_at,
       invoice_downloaded_at,
       invoice_drive_uploaded_at,
-      dealers(name, address, phone)
+      dealers(name, address, phone, warranty_years)
     `)
     .eq('status', 'completed')
     .order('updated_at', { ascending: false })

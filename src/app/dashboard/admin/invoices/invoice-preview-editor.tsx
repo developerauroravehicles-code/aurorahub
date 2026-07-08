@@ -105,7 +105,7 @@ export function InvoicePreviewEditor({
   const buildPreviewData = useCallback((): InvoiceRowData => {
     const dealer = getInvoiceDealer(invoice)
     const completionDate = new Date(invoice.completed_at ?? invoice.updated_at)
-    const warrantyEnd = warrantyEndFromCompletion(completionDate, dealer?.name)
+    const warrantyEnd = warrantyEndFromCompletion(completionDate, dealer)
     const totalNum = getCalculatedTotal()
     return {
       demand_number: invoice.demand_number,

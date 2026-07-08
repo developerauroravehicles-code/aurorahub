@@ -40,7 +40,7 @@ export function WarrantyPanel({ row }: Props) {
 
       <ul className="text-xs text-zinc-500 dark:text-gray-500 space-y-1 list-disc pl-4">
         <li>Covers workmanship related to your dashcam installation.</li>
-        <li>Standard coverage period is {warrantyPeriodDescription(row.dealer_name)} from completion date.</li>
+        <li>Standard coverage period is {warrantyPeriodDescription({ name: row.dealer_name, warranty_years: row.dealer_warranty_years })} from completion date.</li>
         <li>Contact your dealer for warranty service or questions.</li>
       </ul>
     </section>

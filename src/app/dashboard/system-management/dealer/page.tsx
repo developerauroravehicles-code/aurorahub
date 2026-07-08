@@ -20,7 +20,7 @@ export default async function DealerManagementPage() {
   const { data: dealers } = await supabase
     .from('dealers')
     .select(`
-      id, name, code, address, phone, region_code_id, created_at,
+      id, name, code, address, phone, warranty_years, region_code_id, created_at,
       region_codes(id, code, name, description),
       dealer_cameras(
         camera_model_id,

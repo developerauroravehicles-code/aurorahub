@@ -256,7 +256,7 @@ export function buildCustomerPortalSummaryPdf(data: CustomerPortalSummaryPdfData
   doc.setFont('helvetica', 'bold')
   doc.setFontSize(9)
   doc.setTextColor(...WHITE)
-  doc.text(warrantyBadgeLabel(row.dealer_name), margin + 8, y + 10.2, { align: 'center' })
+  doc.text(warrantyBadgeLabel({ name: row.dealer_name, warranty_years: row.dealer_warranty_years }), margin + 8, y + 10.2, { align: 'center' })
 
   doc.setFont('helvetica', 'bold')
   doc.setFontSize(10)
@@ -269,7 +269,7 @@ export function buildCustomerPortalSummaryPdf(data: CustomerPortalSummaryPdfData
   const warrantyNote =
     row.warranty_end && row.status.toLowerCase() === 'completed'
       ? `Workmanship warranty is active through ${warranty}. Contact your dealer for service claims.`
-      : `Standard ${warrantyPeriodDescription(row.dealer_name)} workmanship warranty begins when your installation is marked completed.`
+      : `Standard ${warrantyPeriodDescription({ name: row.dealer_name, warranty_years: row.dealer_warranty_years })} workmanship warranty begins when your installation is marked completed.`
   doc.text(warrantyNote, margin + 16, y + 13.5, { maxWidth: contentWidth - 22 })
 
   y += warrantyBoxH + 10

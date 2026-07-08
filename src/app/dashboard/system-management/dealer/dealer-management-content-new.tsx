@@ -7,6 +7,7 @@ import { DealerCameraManagement } from '../region/dealer-camera-management'
 import { DealerInvoiceEmailsManagement } from './dealer-invoice-emails-management'
 import { Edit2, Trash2, MapPin, Mail } from 'lucide-react'
 import { updateDealer, deleteDealer } from '../region/actions'
+import { WARRANTY_YEAR_OPTIONS } from '@/lib/warranty-period'
 import type { DealerCamera, Dealer, RegionCode } from '@/types/system-management'
 
 interface CameraModel {
@@ -145,6 +146,20 @@ export const DealerManagementContent = memo(function DealerManagementContent({
                               {regionCodes.map(rc => (
                                 <option key={rc.id} value={rc.id} className="bg-zinc-50 dark:bg-black text-zinc-900 dark:text-white">
                                   {rc.code} - {rc.name}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300 mb-1">Invoice Warranty</label>
+                            <select
+                              name="warranty_years"
+                              defaultValue={String(d.warranty_years ?? 3)}
+                              className="border border-zinc-300 dark:border-gray-700 bg-zinc-200/50 dark:bg-white/5 p-2 w-full rounded text-zinc-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00] text-sm"
+                            >
+                              {WARRANTY_YEAR_OPTIONS.map((years) => (
+                                <option key={years} value={years} className="bg-zinc-50 dark:bg-black text-zinc-900 dark:text-white">
+                                  {years} {years === 1 ? 'year' : 'years'}
                                 </option>
                               ))}
                             </select>
@@ -308,6 +323,20 @@ export const DealerManagementContent = memo(function DealerManagementContent({
               {regionCodes.map(rc => (
                 <option key={rc.id} value={rc.id} className="bg-zinc-50 dark:bg-black text-zinc-900 dark:text-white">
                   {rc.code} - {rc.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300">Invoice Warranty</label>
+            <select
+              name="warranty_years"
+              defaultValue="3"
+              className="border border-zinc-300 dark:border-gray-700 bg-zinc-200/50 dark:bg-white/5 p-2 w-full rounded text-zinc-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]"
+            >
+              {WARRANTY_YEAR_OPTIONS.map((years) => (
+                <option key={years} value={years} className="bg-zinc-50 dark:bg-black text-zinc-900 dark:text-white">
+                  {years} {years === 1 ? 'year' : 'years'}
                 </option>
               ))}
             </select>

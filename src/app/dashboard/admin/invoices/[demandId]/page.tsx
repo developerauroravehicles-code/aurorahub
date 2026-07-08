@@ -38,7 +38,7 @@ const DEMAND_SELECT = `
   invoice_drive_uploaded_at,
   invoice_approved_at,
   invoice_approved_by,
-  dealers(name, address, phone)
+  dealers(name, address, phone, warranty_years)
 `
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {

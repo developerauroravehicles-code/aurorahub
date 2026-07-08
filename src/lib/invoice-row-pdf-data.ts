@@ -19,7 +19,7 @@ const DEFAULT_FINANCIAL_SUMMARY: NonNullable<InvoiceRowData['financialSummary']>
   otherAmount: 0,
 }
 
-type DealerLite = { name?: string; address?: string | null; phone?: string | null } | null
+type DealerLite = { name?: string; address?: string | null; phone?: string | null; warranty_years?: number | null } | null
 
 /** Normalize demand row from DB (invoices list / bulk send) into `InvoiceRowData` for PDF generation. */
 export function demandRecordToInvoiceRowData(
@@ -45,7 +45,7 @@ export function demandRecordToInvoiceRowData(
 ): InvoiceRowData {
   const dealer: DealerLite = Array.isArray(row.dealers) ? row.dealers[0] ?? null : row.dealers
   const completionDate = new Date(row.completed_at ?? row.updated_at)
-  const warrantyEnd = warrantyEndFromCompletion(completionDate, dealer?.name)
+  const warrantyEnd = warrantyEndFromCompletion(completionDate, dealer)
 
   const parsedExtra = resolveInvoiceExtraRows(row.invoice_extra_rows, {
     service_type: row.service_type,

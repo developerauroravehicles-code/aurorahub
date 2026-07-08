@@ -1,6 +1,11 @@
 import type { DemandServiceType } from '@/lib/demand-pricing'
 
-export type InvoiceDealerRow = { name: string; address?: string | null; phone?: string | null } | null
+export type InvoiceDealerRow = {
+  name: string
+  address?: string | null
+  phone?: string | null
+  warranty_years?: number | null
+} | null
 
 export type InvoicePreviewRecord = {
   id: string

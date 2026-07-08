@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { createClient } from '@supabase/supabase-js'
 import type { SystemData, Profile } from '@/types/system-management'
 import { normalizeEmail } from '@/lib/email-normalize'
+import { parseWarrantyYearsFromForm } from '@/lib/warranty-period'
 
 // Helper to get a fresh admin client every time with explicit schema
 function getAdminClient() {
@@ -210,7 +211,8 @@ export async function createDealer(prevState: ActionState, formData: FormData) {
     name,
     code,
     address: address || null,
-    phone: phone?.trim() || null
+    phone: phone?.trim() || null,
+    warranty_years: parseWarrantyYearsFromForm(formData.get('warranty_years')),
   })
 
   if (error) return { error: error.message }

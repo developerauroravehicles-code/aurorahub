@@ -1,6 +1,7 @@
 'use server'
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
+import { parseWarrantyYearsFromForm } from '@/lib/warranty-period'
 
 async function verifyAuroraManager() {
   const supabase = await createClient()
@@ -35,7 +36,20 @@ export async function createDealer(formData: FormData): Promise<{ success: boole
       return { success: false, error: 'Missing fields' }
     }
 
-    const dealerData: { name: string; code: string; address?: string; phone?: string; region_code_id?: string } = { name, code, address: address || undefined, phone: phone?.trim() || undefined }
+    const dealerData: {
+      name: string
+      code: string
+      address?: string
+      phone?: string
+      region_code_id?: string
+      warranty_years: number
+    } = {
+      name,
+      code,
+      address: address || undefined,
+      phone: phone?.trim() || undefined,
+      warranty_years: parseWarrantyYearsFromForm(formData.get('warranty_years')),
+    }
     if (regionCodeId && regionCodeId !== 'none') {
       dealerData.region_code_id = regionCodeId
     }
@@ -237,12 +251,20 @@ export async function updateDealer(formData: FormData): Promise<{ success: boole
       return { success: false, error: 'Missing required fields' }
     }
 
-    const updateData: { name: string; code: string; address: string | null; phone: string | null; region_code_id: string | null } = { 
-      name, 
-      code, 
+    const updateData: {
+      name: string
+      code: string
+      address: string | null
+      phone: string | null
+      region_code_id: string | null
+      warranty_years: number
+    } = {
+      name,
+      code,
       address: address || null,
       phone: phone?.trim() || null,
-      region_code_id: null
+      region_code_id: null,
+      warranty_years: parseWarrantyYearsFromForm(formData.get('warranty_years')),
     }
     if (regionCodeId && regionCodeId !== 'none') {
       updateData.region_code_id = regionCodeId

@@ -29,7 +29,7 @@ const DEMAND_SELECT = `
   invoice_extra_rows,
   invoice_financial_summary,
   invoice_approved_at,
-  dealers(name, address, phone)
+  dealers(name, address, phone, warranty_years)
 ` as const
 
 function parseExtraEmails(raw: string | undefined): string[] {

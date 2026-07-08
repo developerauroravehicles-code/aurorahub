@@ -18,7 +18,7 @@ const FAQ_ITEMS = [
   },
   {
     q: 'When does my warranty start?',
-    a: 'Installation warranty coverage begins when your job is marked completed. Most dealers offer three years from that date; Aurora Vehicles HQ installations include one year of coverage.',
+    a: 'Installation warranty coverage begins when your job is marked completed. The coverage period is set by your dealer (typically 1–5 years from completion).',
   },
   {
     q: 'Can I get an invoice here?',

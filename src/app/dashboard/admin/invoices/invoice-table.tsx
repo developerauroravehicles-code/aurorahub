@@ -14,7 +14,7 @@ import { EmailComposeModal } from '@/components/email-compose-modal'
 import type { EmailComposePayload } from '@/lib/email-compose'
 import { SERVICE_TYPE_LABELS, DemandServiceType } from '@/lib/demand-pricing'
 
-type DealerRow = { name: string; address?: string | null; phone?: string | null } | null
+type DealerRow = { name: string; address?: string | null; phone?: string | null; warranty_years?: number | null } | null
 
 interface InvoiceRow {
   id: string
@@ -183,7 +183,7 @@ export function InvoiceTable({ invoices, logoDataUrl, canEdit = true }: InvoiceT
     const currentComments = v?.comments ?? (row.invoice_comments ?? '')
     const dealer = getDealer(row)
     const completionDate = new Date(row.completed_at ?? row.updated_at)
-    const warrantyEnd = warrantyEndFromCompletion(completionDate, dealer?.name)
+    const warrantyEnd = warrantyEndFromCompletion(completionDate, dealer)
     const phone = dealer?.phone ?? row.customer_phone ?? ''
     return {
       data: {
@@ -224,7 +224,7 @@ export function InvoiceTable({ invoices, logoDataUrl, canEdit = true }: InvoiceT
     if (!previewRow) return null
     const dealer = getDealer(previewRow)
     const completionDate = new Date(previewRow.completed_at ?? previewRow.updated_at)
-    const warrantyEnd = warrantyEndFromCompletion(completionDate, dealer?.name)
+    const warrantyEnd = warrantyEndFromCompletion(completionDate, dealer)
     const totalNum = getCalculatedTotal()
     const totalAmount = `$${totalNum.toFixed(2)}`
     return {
@@ -574,7 +574,7 @@ export function InvoiceTable({ invoices, logoDataUrl, canEdit = true }: InvoiceT
             const displayRow = getRowWithOptimisticStatus(row)
             const dealer = getDealer(displayRow)
             const completionDate = new Date(row.completed_at ?? row.updated_at)
-            const warrantyEnd = warrantyEndFromCompletion(completionDate, dealer?.name)
+            const warrantyEnd = warrantyEndFromCompletion(completionDate, dealer)
             const isEditingAmount = editing?.id === row.id && editing?.field === 'amount'
             const isEditingComments = editing?.id === row.id && editing?.field === 'comments'
             const v = values[row.id] ?? { amount: displayRow.invoice_total_amount != null ? String(displayRow.invoice_total_amount) : '', comments: displayRow.invoice_comments ?? '' }

@@ -7,6 +7,7 @@ export type CustomerPortalRow = {
   vehicle_make: string
   vehicle_model: string
   dealer_name: string
+  dealer_warranty_years?: number
   camera_model: string
   warranty_end: string | null
   specialist_name: string

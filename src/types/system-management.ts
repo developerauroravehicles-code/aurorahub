@@ -14,6 +14,7 @@ export interface Dealer {
   code: string
   address?: string | null
   phone?: string | null
+  warranty_years?: number
   region_code_id?: string | null
   created_at?: string
   region_codes?: RegionCode | null

@@ -52,7 +52,7 @@ const INVOICES_LIST_SELECT = `
   invoice_saved_at,
   invoice_downloaded_at,
   invoice_drive_uploaded_at,
-  dealers(name, address, phone)
+  dealers(name, address, phone, warranty_years)
 ` as const
 
 const DEFAULT_FINANCIAL_SUMMARY = {
