@@ -10,6 +10,9 @@ import { WarrantyPanel } from './warranty-panel'
 import { DocumentsPanel } from './documents-panel'
 import { RatingPanel } from './rating-panel'
 import { ServiceRecordPanel } from './service-record-panel'
+import { CameraInfoPanel } from './camera-info-panel'
+import { PortalContactPanel } from './portal-contact-panel'
+import type { PortalContactInfo } from '@/types/customer-portal'
 
 type Props = {
   row: CustomerPortalRow
@@ -17,6 +20,7 @@ type Props = {
   vinQuery: string
   serviceRecordsRefreshToken?: number
   onRated: (index: number, customerRating: number, qualityScore: number, comment: string) => void
+  portalContact?: PortalContactInfo | null
 }
 
 export function InstallationCard({
@@ -25,8 +29,10 @@ export function InstallationCard({
   vinQuery,
   serviceRecordsRefreshToken,
   onRated,
+  portalContact,
 }: Props) {
   const tz = dealerTimezone(row)
+  const effectiveVinQuery = vinQuery.trim() || row.vin_last6?.trim() || ''
   const greeting = row.customer_firstname?.trim()
   const vehicle = `${row.vehicle_year} ${row.vehicle_make} ${row.vehicle_model}`.trim()
   const status = (row.status || '').toLowerCase()
@@ -76,7 +82,12 @@ export function InstallationCard({
 
         <div className="grid gap-4 md:grid-cols-2">
           <WarrantyPanel row={row} />
+          <CameraInfoPanel row={row} />
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-2">
           <DocumentsPanel row={row} />
+          <PortalContactPanel contact={portalContact ?? null} />
         </div>
 
         {row.completed_at ? (
@@ -88,7 +99,7 @@ export function InstallationCard({
         ) : null}
 
         <RatingPanel
-          vinQuery={vinQuery}
+          vinQuery={effectiveVinQuery}
           demandNumber={row.demand_number}
           specialistName={row.specialist_name || 'Your specialist'}
           ratedCustomerRating={row.rated_customer_rating}
@@ -99,7 +110,7 @@ export function InstallationCard({
         />
 
         <ServiceRecordPanel
-          vinQuery={vinQuery}
+          vinQuery={effectiveVinQuery}
           demandNumber={row.demand_number}
           status={row.status}
           refreshToken={serviceRecordsRefreshToken}

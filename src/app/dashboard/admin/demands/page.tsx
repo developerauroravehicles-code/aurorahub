@@ -64,9 +64,9 @@ export default async function AdminDemandsPage({
     ?? (isGM && profile?.dealer_id ? profile.dealer_id : null)
     ?? (params.dealer && params.dealer !== 'all' ? params.dealer : null)
 
-  let dealersQuery = supabase.from('dealers').select('id, name').order('name')
+  let dealersQuery = supabase.from('dealers').select('id, name, region_codes(timezone_id, timezones(name))').order('name')
   if (imDealerId) {
-    dealersQuery = supabase.from('dealers').select('id, name').eq('id', imDealerId)
+    dealersQuery = supabase.from('dealers').select('id, name, region_codes(timezone_id, timezones(name))').eq('id', imDealerId)
   }
 
   const { data: dealers } = await dealersQuery

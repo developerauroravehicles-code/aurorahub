@@ -4,6 +4,8 @@ import Link from 'next/link'
 import { ResetPasswordButton } from './reset-password-button'
 import { CreateEmployeeForm } from './create-employee-form'
 import { EmployeesDealerFilter } from './employees-dealer-filter'
+import { getSpecialistStatsForList } from './compensation-actions'
+import { currentMonthPeriod } from '@/lib/specialist-compensation'
 
 export default async function EmployeesPage({
   searchParams,
@@ -100,6 +102,13 @@ export default async function EmployeesPage({
 
   const { data: dealers } = await dealersQuery
 
+  const specialistStats =
+    specialistIds.length > 0 && ['aurora_manager', 'hr'].includes(currentUserProfile.role ?? '')
+      ? await getSpecialistStatsForList(specialistIds)
+      : {}
+
+  const monthLabel = currentMonthPeriod()
+
   const showDealerFilter = ['aurora_manager', 'hr'].includes(currentUserProfile.role ?? '')
 
   return (
@@ -113,11 +122,18 @@ export default async function EmployeesPage({
           />
         )}
         <div className="bg-zinc-200/50 dark:bg-white/5 rounded-lg border border-zinc-200 dark:border-gray-800 shadow overflow-hidden">
+            {specialistIds.length > 0 && showDealerFilter ? (
+              <p className="px-4 py-2 text-xs text-zinc-500 border-b border-zinc-200 dark:border-gray-800">
+                Specialist stats for {monthLabel.start} — {monthLabel.end} (click name for live pay estimate)
+              </p>
+            ) : null}
             <ul className="divide-y divide-zinc-200 dark:divide-gray-800">
-                {employees?.map(e => (
+                {employees?.map(e => {
+                    const stats = e.role === 'specialist' ? specialistStats[e.id] : null
+                    return (
                     <li key={e.id} className="px-4 py-4 hover:bg-zinc-200/50 dark:bg-white/5 transition-colors">
-                        <div className="flex justify-between items-center">
-                            <div>
+                        <div className="flex justify-between items-center gap-4">
+                            <div className="min-w-0">
                                 <p className="font-bold text-zinc-900 dark:text-white">
                                     {e.role === 'specialist' ? (
                                         <Link href={`/dashboard/admin/employees/${e.id}`} className="hover:text-[#C27E00] hover:underline transition-colors">
@@ -128,8 +144,24 @@ export default async function EmployeesPage({
                                     )}
                                 </p>
                                 <p className="text-sm text-zinc-500 dark:text-gray-400 capitalize">{e.role === 'specialist' ? 'Technical Support' : e.role.replace('_', ' ')}</p>
+                                {stats ? (
+                                  <p className="text-xs text-zinc-500 dark:text-gray-400 mt-1">
+                                    This month:{' '}
+                                    <span className="text-[#C27E00] font-medium">{stats.installations_completed} installs</span>
+                                    {' · '}
+                                    <span className="font-medium">{stats.service_jobs_completed} service</span>
+                                    {(stats.service_earnings + stats.manual_total) > 0 ? (
+                                      <>
+                                        {' · '}
+                                        <span className="font-medium tabular-nums">
+                                          +${(stats.service_earnings + stats.manual_total).toFixed(2)} extras
+                                        </span>
+                                      </>
+                                    ) : null}
+                                  </p>
+                                ) : null}
                             </div>
-                            <div className="flex items-center gap-4">
+                            <div className="flex items-center gap-4 shrink-0">
                                 <div className="text-right text-sm text-zinc-500 dark:text-gray-400">
                                     {e.role === 'specialist' && ['aurora_manager', 'hr'].includes(currentUserProfile.role ?? '') && specialistDealersMap.has(e.id) ? (
                                         <p className="text-[#C27E00]">
@@ -138,7 +170,7 @@ export default async function EmployeesPage({
                                       ) : e.role === 'specialist' ? (
                                         <p className="text-zinc-600 dark:text-gray-600">—</p>
                                       ) : (
-                                        <p>{(e.dealers as any)?.name || 'Platform'}</p>
+                                        <p>{(e.dealers as { name?: string } | null)?.name || 'Platform'}</p>
                                       )}
                                     <p>{e.phone}</p>
                                 </div>
@@ -146,7 +178,7 @@ export default async function EmployeesPage({
                             </div>
                         </div>
                     </li>
-                ))}
+                )})}
             </ul>
         </div>
       </div>

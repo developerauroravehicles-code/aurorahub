@@ -1,4 +1,9 @@
-/** Row returned by `customer_portal_lookup_by_vin` RPC (public portal). */
+export type PortalTroubleshootingItem = {
+  title: string
+  body: string
+}
+
+/** Row returned by `customer_portal_lookup_by_vin` / `lookup_by_phone` RPC (public portal). */
 export type CustomerPortalRow = {
   demand_number: string | null
   status: string
@@ -10,6 +15,10 @@ export type CustomerPortalRow = {
   dealer_warranty_years?: number
   camera_model: string
   warranty_end: string | null
+  sd_card_warranty_end?: string | null
+  camera_image_url?: string
+  camera_manual_url?: string
+  camera_troubleshooting?: PortalTroubleshootingItem[] | null
   specialist_name: string
   rated_customer_rating: number | null
   rated_quality_score: number | null
@@ -23,6 +32,13 @@ export type CustomerPortalRow = {
   dealer_timezone: string
   rated_comment: string
   stock_number: string
+  vin_last6?: string
+}
+
+export type PortalContactInfo = {
+  phone: string
+  email: string
+  hours: string
 }
 
 export type PortalLookupResult =

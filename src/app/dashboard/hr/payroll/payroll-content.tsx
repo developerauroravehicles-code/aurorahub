@@ -15,6 +15,7 @@ import {
   updatePaymentRecord,
   deletePaymentRecord,
   getCompletedDemandsForPeriod,
+  getServiceCompletionEarningsForPeriod,
   calculatePayStub,
   calculatePayStubFromNet,
 } from './actions'
@@ -667,6 +668,9 @@ function PerCompletedPaymentForm({
   const [fetchError, setFetchError] = useState<string | null>(null)
   const [fetchingCount, setFetchingCount] = useState(false)
   const [extraEarnings, setExtraEarnings] = useState<ExtraEarningLine[]>([])
+  const [serviceEarnings, setServiceEarnings] = useState<
+    { id: string; description: string; amount: number }[]
+  >([])
 
   const availableTiers = perCompletedTiers.filter((t) => t.personnel_id === personnelId)
 
@@ -674,10 +678,32 @@ function PerCompletedPaymentForm({
     if (!personnelId || !periodStart || !periodEnd) return
     setFetchingCount(true)
     setFetchError(null)
-    const { count, demands, error } = await getCompletedDemandsForPeriod(personnelId, periodStart, periodEnd)
+    const [{ count, demands, error }, serviceResult] = await Promise.all([
+      getCompletedDemandsForPeriod(personnelId, periodStart, periodEnd),
+      getServiceCompletionEarningsForPeriod(personnelId, periodStart, periodEnd),
+    ])
     setCompletedCount(count)
     setCompletedDemands(demands)
-    setFetchError(error ?? null)
+    setFetchError(error ?? serviceResult.error ?? null)
+    const serviceLines = (serviceResult.earnings ?? []).map((e) => ({
+      id: e.id,
+      description: e.description || 'Service completion',
+      amount: Number(e.amount),
+    }))
+    setServiceEarnings(serviceLines)
+    if (serviceLines.length > 0) {
+      setExtraEarnings((prev) => {
+        const withoutService = prev.filter((line) => !line.id.startsWith('svc-'))
+        return [
+          ...withoutService,
+          ...serviceLines.map((line) => ({
+            id: `svc-${line.id}`,
+            label: line.description,
+            amount: line.amount,
+          })),
+        ]
+      })
+    }
     setFetchingCount(false)
   }
 
@@ -806,6 +832,15 @@ function PerCompletedPaymentForm({
             </div>
           </details>
         )}
+        {serviceEarnings.length > 0 ? (
+          <p className="text-sm text-zinc-600 dark:text-gray-300">
+            Service completions:{' '}
+            <strong className="text-zinc-900 dark:text-white">
+              ${serviceEarnings.reduce((s, e) => s + e.amount, 0).toFixed(2)}
+            </strong>{' '}
+            ({serviceEarnings.length} line{serviceEarnings.length !== 1 ? 's' : ''} added to extra earnings)
+          </p>
+        ) : null}
       </div>
       {tierId && completedCount !== null && (() => {
         const tier = availableTiers.find((t) => t.id === tierId)

@@ -43,6 +43,23 @@ export function WarrantyPanel({ row }: Props) {
         <li>Standard coverage period is {warrantyPeriodDescription({ name: row.dealer_name, warranty_years: row.dealer_warranty_years })} from completion date.</li>
         <li>Contact your dealer for warranty service or questions.</li>
       </ul>
+
+      {row.sd_card_warranty_end ? (
+        <div className="border-t border-zinc-200 dark:border-zinc-700 pt-3 space-y-1">
+          <p className="text-xs font-semibold text-zinc-800 dark:text-gray-200">SD card warranty</p>
+          <p className="text-sm text-zinc-800 dark:text-gray-200">
+            Your included SD card is covered until{' '}
+            <span className="font-semibold tabular-nums">
+              {formatInTimeZone(new Date(`${row.sd_card_warranty_end}T12:00:00Z`), tz, 'MMMM d, yyyy')}
+            </span>
+            {' '}(6 months from installation completion).
+          </p>
+        </div>
+      ) : completed ? (
+        <p className="text-xs text-zinc-500 dark:text-gray-500 border-t border-zinc-200 dark:border-zinc-700 pt-3">
+          SD card warranty (6 months from completion) applies once your installation is finalized.
+        </p>
+      ) : null}
     </section>
   )
 }

@@ -10,6 +10,7 @@
     { "path": "/api/check-low-stock", "schedule": "0 9 * * *" },
     { "path": "/api/run-alerts", "schedule": "*/15 * * * *" },
     { "path": "/api/daily-invoice-review-notify", "schedule": "0 * * * *" },
-    { "path": "/api/daily-invoice-auto-send", "schedule": "30 * * * *" }
+    { "path": "/api/daily-invoice-auto-send", "schedule": "30 * * * *" },
+    { "path": "/api/daily-invoice-eod-notify", "schedule": "0 * * * *" }
   ]
 }

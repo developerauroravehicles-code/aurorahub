@@ -127,6 +127,40 @@ export const CameraManagementContent = memo(function CameraManagementContent({ c
             />
           </div>
 
+          <div>
+            <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300 mb-2">
+              Stock photo URL (customer portal)
+            </label>
+            <input
+              type="url"
+              name="imageUrl"
+              className="block w-full rounded-md border border-zinc-300 dark:border-gray-700 bg-zinc-200/50 dark:bg-white/5 px-3 py-2 text-zinc-900 dark:text-white sm:text-sm"
+              placeholder="https://..."
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300 mb-2">
+              User manual URL (PDF)
+            </label>
+            <input
+              type="url"
+              name="userManualUrl"
+              className="block w-full rounded-md border border-zinc-300 dark:border-gray-700 bg-zinc-200/50 dark:bg-white/5 px-3 py-2 text-zinc-900 dark:text-white sm:text-sm"
+              placeholder="https://..."
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300 mb-2">
+              Troubleshooting JSON (optional)
+            </label>
+            <textarea
+              name="troubleshootingJson"
+              rows={3}
+              className="block w-full rounded-md border border-zinc-300 dark:border-gray-700 bg-zinc-200/50 dark:bg-white/5 px-3 py-2 text-zinc-900 dark:text-white font-mono text-xs"
+              placeholder='[{"title":"No recording","body":"Check SD card..."}]'
+            />
+          </div>
+
           <button
             type="submit"
             disabled={isPending}
@@ -181,6 +215,31 @@ export const CameraManagementContent = memo(function CameraManagementContent({ c
                         min="0"
                         required
                         className="block w-full rounded-md border border-zinc-300 dark:border-gray-700 bg-zinc-200 dark:bg-white/10 px-3 py-2 text-zinc-900 dark:text-white focus:border-[#C27E00] focus:outline-none focus:ring-1 focus:ring-[#C27E00] sm:text-sm"
+                      />
+                      <input
+                        type="url"
+                        name="imageUrl"
+                        defaultValue={camera.image_url || ''}
+                        placeholder="Portal stock photo URL"
+                        className="block w-full rounded-md border border-zinc-300 dark:border-gray-700 bg-zinc-200 dark:bg-white/10 px-3 py-2 text-zinc-900 dark:text-white sm:text-sm"
+                      />
+                      <input
+                        type="url"
+                        name="userManualUrl"
+                        defaultValue={camera.user_manual_url || ''}
+                        placeholder="User manual PDF URL"
+                        className="block w-full rounded-md border border-zinc-300 dark:border-gray-700 bg-zinc-200 dark:bg-white/10 px-3 py-2 text-zinc-900 dark:text-white sm:text-sm"
+                      />
+                      <textarea
+                        name="troubleshootingJson"
+                        rows={3}
+                        defaultValue={
+                          camera.troubleshooting_json
+                            ? JSON.stringify(camera.troubleshooting_json, null, 2)
+                            : ''
+                        }
+                        placeholder='[{"title":"Issue","body":"Fix..."}]'
+                        className="block w-full rounded-md border border-zinc-300 dark:border-gray-700 bg-zinc-200 dark:bg-white/10 px-3 py-2 text-zinc-900 dark:text-white font-mono text-xs"
                       />
                       <div className="flex gap-2">
                         <button

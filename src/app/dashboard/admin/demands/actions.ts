@@ -11,7 +11,7 @@ import { getSmsSettings } from '@/lib/sms-resolver'
 import { resolveCancellationTemplate } from '@/lib/sms-resolver'
 import { validateAppointmentSlot } from '@/app/dashboard/system-management/calendar/actions'
 import { getTimezoneFromDealer } from '@/lib/dealer-timezone'
-import { toDate } from 'date-fns-tz'
+import { wallDateToAppointmentIso } from '@/lib/external-demand-date'
 import { ptDatetimeLocalToISO, SYSTEM_DEFAULT_TIMEZONE } from '@/lib/timezone-defaults'
 import { lookupCameraModelId } from '@/lib/camera-model-resolve'
 import { addDemandToDailyBatch, ptDateFromIso } from '@/lib/daily-dealer-invoices'
@@ -388,12 +388,12 @@ export async function updateDemandByAuroraManager(
 
   if (isExternal && formData.get('appointment_date_date')) {
     const dateStr = formData.get('appointment_date_date') as string
-    const timezoneName = getTimezoneFromDealer(demand.dealers as Parameters<typeof getTimezoneFromDealer>[0]) ?? SYSTEM_DEFAULT_TIMEZONE
-    const atLocalNoon = toDate(`${dateStr}T12:00:00`, { timeZone: timezoneName })
-    if (Number.isNaN(atLocalNoon.getTime())) {
+    const timezoneName = getTimezoneFromDealer(demand.dealers as Parameters<typeof getTimezoneFromDealer>[0])
+    try {
+      appointmentDate = wallDateToAppointmentIso(dateStr, timezoneName ?? 'America/Vancouver')
+    } catch {
       return { error: 'Invalid appointment date' }
     }
-    appointmentDate = atLocalNoon.toISOString()
   }
 
   if (!appointmentDate) return { error: 'Appointment date is required' }

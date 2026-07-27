@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { formatInTimeZone } from 'date-fns-tz'
 import { getEffectiveTimezone, getPTDateRanges, SYSTEM_DEFAULT_TIMEZONE } from '@/lib/timezone-defaults'
 import { getTimezoneFromDealer } from '@/lib/dealer-timezone'
+import { formatExternalDemandDate } from '@/lib/external-demand-date'
 import { Filter, X, Plus } from 'lucide-react'
 import Link from 'next/link'
 import { demandMatchesSmartSearch } from '@/lib/demand-smart-search'
@@ -401,7 +402,7 @@ export function DemandsList({ demands, dealers, specialists, selectedDealerId, c
                         </p>
                         <p className="text-sm text-zinc-500 dark:text-gray-500">
                           Appointment: {demand.is_external
-                            ? formatInTimeZone(new Date(demand.appointment_date), dealerTz, 'PPP') + ' (External)'
+                            ? formatExternalDemandDate(demand.appointment_date, dealerTz) + ' (External)'
                             : formatInTimeZone(new Date(demand.appointment_date), dealerTz, 'PPP h:mm a')}
                         </p>
                         <p className="text-xs text-zinc-600 dark:text-gray-600 mt-1">

@@ -5,8 +5,10 @@ import { updateDemandByAuroraManager } from './actions'
 import { getAvailableSlotsForEdit } from '@/app/dashboard/system-management/calendar/actions'
 import { useRouter } from 'next/navigation'
 import { formatInTimeZone } from 'date-fns-tz'
+import { AppointmentCalendar } from '@/components/appointment-calendar'
 import { SYSTEM_DEFAULT_TIMEZONE, getEffectiveTimezone } from '@/lib/timezone-defaults'
 import { getTimezoneFromDealer } from '@/lib/dealer-timezone'
+import { appointmentIsoToWallDate } from '@/lib/external-demand-date'
 import { VEHICLE_MAKES_CA } from '@/lib/vehicle-makes'
 import { getModelsForMake, getTrimsForModel } from '@/lib/vehicle-models'
 import { CanadianPhoneInput, formatCanadianPhone } from '@/components/canadian-phone-input'
@@ -61,14 +63,16 @@ export function RescheduleDemandModal({ demand, isOpen, onClose }: RescheduleDem
     camera_model: demand.camera_model,
   })
   const dealerTz = getEffectiveTimezone(getTimezoneFromDealer(demand.dealers ?? null))
-  const initialAppointment = new Date(demand.appointment_date)
-  const [selectedDate, setSelectedDate] = useState(() => formatInTimeZone(initialAppointment, dealerTz, 'yyyy-MM-dd'))
+  const isExternal = !!demand.is_external
+  const [selectedDate, setSelectedDate] = useState(() =>
+    isExternal
+      ? appointmentIsoToWallDate(demand.appointment_date, dealerTz)
+      : formatInTimeZone(new Date(demand.appointment_date), dealerTz, 'yyyy-MM-dd')
+  )
   const [selectedSlot, setSelectedSlot] = useState<string>(() => demand.appointment_date)
   const [availableSlots, setAvailableSlots] = useState<string[]>([])
   const [slotsTimezone, setSlotsTimezone] = useState<string | null>(null)
   const [slotsLoading, setSlotsLoading] = useState(false)
-
-  const isExternal = !!demand.is_external
 
   useEffect(() => {
     if (isOpen) {
@@ -84,14 +88,17 @@ export function RescheduleDemandModal({ demand, isOpen, onClose }: RescheduleDem
         camera_model: demand.camera_model,
       })
       const tz = getEffectiveTimezone(getTimezoneFromDealer(demand.dealers ?? null))
-      const d = new Date(demand.appointment_date)
-      setSelectedDate(formatInTimeZone(d, tz, 'yyyy-MM-dd'))
+      setSelectedDate(
+        isExternal
+          ? appointmentIsoToWallDate(demand.appointment_date, tz)
+          : formatInTimeZone(new Date(demand.appointment_date), tz, 'yyyy-MM-dd')
+      )
       setSelectedSlot(demand.appointment_date)
       setError(null)
       setShowSmsConfirm(false)
       setPendingFormData(null)
     }
-  }, [isOpen, demand])
+  }, [isOpen, demand, isExternal])
 
   useEffect(() => {
     if (!isOpen || !demand.dealer_id || isExternal) {
@@ -126,9 +133,8 @@ export function RescheduleDemandModal({ demand, isOpen, onClose }: RescheduleDem
 
   const appointmentChanged = () => {
     if (isExternal) {
-      const oldCal = `${formatInTimeZone(new Date(demand.appointment_date), dealerTz, 'yyyy-MM-dd')} 12:00`
-      const newCal = `${selectedDate} 12:00`
-      return oldCal !== newCal
+      const oldCal = appointmentIsoToWallDate(demand.appointment_date, dealerTz)
+      return oldCal !== selectedDate
     }
     const oldStr = formatInTimeZone(new Date(demand.appointment_date), SYSTEM_DEFAULT_TIMEZONE, 'yyyy-MM-dd HH:mm')
     const newStr = formatInTimeZone(new Date(selectedSlot), SYSTEM_DEFAULT_TIMEZONE, 'yyyy-MM-dd HH:mm')
@@ -257,7 +263,15 @@ export function RescheduleDemandModal({ demand, isOpen, onClose }: RescheduleDem
                 <div className="md:col-span-2">
                   <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300 mb-1">Appointment *</label>
                   {isExternal ? (
-                    <input type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} min={today} className={`${inputClass} max-w-xs dark:[color-scheme:dark]`} />
+                    <AppointmentCalendar
+                      timezoneName={dealerTz}
+                      allowPastDates
+                      selectedPacificYmd={selectedDate || null}
+                      onDateSelect={(date) => {
+                        setSelectedDate(formatInTimeZone(date, dealerTz, 'yyyy-MM-dd'))
+                      }}
+                      getTakenSlots={async () => []}
+                    />
                   ) : !demand.dealer_id ? (
                     <p className="text-sm text-amber-500">Dealer not set; cannot show slots.</p>
                   ) : (

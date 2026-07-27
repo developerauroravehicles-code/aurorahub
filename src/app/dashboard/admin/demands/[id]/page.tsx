@@ -3,6 +3,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { formatInTimeZone } from 'date-fns-tz'
 import { getEffectiveTimezone } from '@/lib/timezone-defaults'
 import { getTimezoneFromDealer } from '@/lib/dealer-timezone'
+import { formatExternalDemandDate } from '@/lib/external-demand-date'
 import { checkCurrentUserPermission } from '@/lib/permissions'
 import { assertDealerDemandAccess, canEditDemandCoreFields, canUseSmsFeatures, getInventoryManagerDealerId, isInventoryManager } from '@/lib/inventory-manager-access'
 import Link from 'next/link'
@@ -189,11 +190,9 @@ export default async function DemandDetailsPage({
     : { data: [] }
 
   const customerName = `${demand.customer_firstname} ${demand.customer_lastname}`
-  const formattedAppointment = formatInTimeZone(
-    new Date(demand.appointment_date),
-    getEffectiveTimezone(getTimezoneFromDealer(demand.dealers as Parameters<typeof getTimezoneFromDealer>[0])),
-    'PPP h:mm a'
-  )
+  const formattedAppointment = demand.is_external
+    ? formatExternalDemandDate(demand.appointment_date, displayTzForDemand)
+    : formatInTimeZone(new Date(demand.appointment_date), displayTzForDemand, 'PPP h:mm a')
 
   return (
     <div className="space-y-8">
@@ -289,7 +288,9 @@ export default async function DemandDetailsPage({
             <div>
               <p className="text-sm text-zinc-500 dark:text-gray-400">Appointment Date</p>
               <p className="text-zinc-900 dark:text-white font-semibold text-[#C27E00]">
-                {formatInTimeZone(new Date(demand.appointment_date), displayTzForDemand, 'PPP h:mm a')}
+                {demand.is_external
+                  ? formatExternalDemandDate(demand.appointment_date, displayTzForDemand)
+                  : formatInTimeZone(new Date(demand.appointment_date), displayTzForDemand, 'PPP h:mm a')}
               </p>
             </div>
           </div>

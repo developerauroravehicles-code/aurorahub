@@ -139,6 +139,7 @@ export function Sidebar({
     links.push({ name: 'Reports', href: '/dashboard/finance/reports', icon: FileText })
   } else if (role === 'specialist') {
     links.push({ name: 'Work List', href: '/dashboard/specialist/work', icon: FileText })
+    links.push({ name: 'Service Jobs', href: '/dashboard/specialist/service-records', icon: Wrench })
     links.push({ name: 'Reports', href: '/dashboard/specialist/reports', icon: FileText })
   } else if (role === 'hr') {
     links.push({ name: 'Personnel Registry', href: '/dashboard/hr/personnel', icon: Users })

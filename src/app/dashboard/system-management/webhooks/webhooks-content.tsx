@@ -10,6 +10,7 @@ export type WebhookEvent =
   | 'demand_approved'
   | 'demand_cancelled'
   | 'appointment_completed'
+  | 'demand_completed'
 
 export interface WebhookConfig {
   id: string
@@ -25,6 +26,7 @@ const WEBHOOK_EVENTS: { value: WebhookEvent; label: string }[] = [
   { value: 'demand_approved', label: 'Demand Approved' },
   { value: 'demand_cancelled', label: 'Demand Cancelled' },
   { value: 'appointment_completed', label: 'Appointment Completed' },
+  { value: 'demand_completed', label: 'Demand Completed (with portal token hint)' },
 ]
 
 function generateId() {

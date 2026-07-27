@@ -1,4 +1,14 @@
-export type ServiceRecordStatus = 'pending_approval' | 'rejected' | 'scheduled'
+export type ServiceRecordStatus =
+  | 'pending_approval'
+  | 'rejected'
+  | 'scheduled'
+  | 'assigned'
+  | 'in_progress'
+  | 'completed'
+  | 'cancelled'
+
+export type ServiceRecordExpenseCategory = 'travel' | 'meals' | 'other'
+export type ServiceRecordExpenseStatus = 'pending' | 'approved' | 'rejected'
 
 export type ServiceRecordDiagnosisCode =
   | 'camera_not_recording'
@@ -42,6 +52,34 @@ export type CustomerServiceRecord = {
   sms_sent_at: string | null
   reviewed_by: string | null
   reviewed_at: string | null
+  assigned_specialist_id: string | null
+  assigned_at: string | null
+  completed_at: string | null
+  completed_by: string | null
+  completion_notes: string
+  service_fee_amount: number
+  compensation_recorded_at: string | null
   created_at: string
   updated_at: string
+}
+
+export type ServiceRecordExpense = {
+  id: string
+  service_record_id: string
+  description: string
+  amount: number
+  category: ServiceRecordExpenseCategory
+  submitted_by: string | null
+  status: ServiceRecordExpenseStatus
+  reviewed_by: string | null
+  reviewed_at: string | null
+  rejection_reason: string
+  payroll_recorded_at: string | null
+  created_at: string
+  updated_at: string
+}
+
+export type SpecialistOption = {
+  id: string
+  full_name: string
 }

@@ -53,6 +53,7 @@ export async function updateSession(request: NextRequest) {
     '/api/check-low-stock',
     '/api/daily-invoice-review-notify',
     '/api/daily-invoice-auto-send',
+    '/api/daily-invoice-eod-notify',
   ]
   const isCronApi = cronPaths.some((p) =>
     request.nextUrl.pathname === p || request.nextUrl.pathname.startsWith(p + '/')

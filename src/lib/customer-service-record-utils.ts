@@ -44,6 +44,10 @@ export function serviceRecordStatusLabel(status: string): string {
     pending_approval: 'Pending approval',
     rejected: 'Rejected',
     scheduled: 'Scheduled',
+    assigned: 'Assigned',
+    in_progress: 'In progress',
+    completed: 'Completed',
+    cancelled: 'Cancelled',
   }
   const s = (status || '').toLowerCase() as ServiceRecordStatus
   return map[s] ?? status.replace(/_/g, ' ')

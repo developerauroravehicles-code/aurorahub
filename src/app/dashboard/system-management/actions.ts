@@ -547,6 +547,19 @@ export async function createCameraModel(prevState: ActionState, formData: FormDa
   const name = formData.get('name') as string
   const description = formData.get('description') as string
   const stockQuantity = formData.get('stockQuantity') as string
+  const imageUrl = (formData.get('imageUrl') as string)?.trim() || null
+  const manualUrl = (formData.get('userManualUrl') as string)?.trim() || null
+  const troubleshootingRaw = (formData.get('troubleshootingJson') as string)?.trim()
+
+  let troubleshooting_json: { title: string; body: string }[] = []
+  if (troubleshootingRaw) {
+    try {
+      const parsed = JSON.parse(troubleshootingRaw)
+      if (Array.isArray(parsed)) troubleshooting_json = parsed
+    } catch {
+      return { error: 'Troubleshooting must be valid JSON array of {title, body} objects.' }
+    }
+  }
 
   if (!name) return { error: 'Camera model name is required' }
 
@@ -554,7 +567,10 @@ export async function createCameraModel(prevState: ActionState, formData: FormDa
     name: name.trim(),
     description: description?.trim() || null,
     stock_quantity: stockQuantity ? parseInt(stockQuantity) : 0,
-    is_active: true
+    is_active: true,
+    image_url: imageUrl,
+    user_manual_url: manualUrl,
+    troubleshooting_json,
   })
 
   if (error) return { error: error.message }
@@ -574,6 +590,19 @@ export async function updateCameraModel(prevState: ActionState, formData: FormDa
   const name = formData.get('name') as string
   const description = formData.get('description') as string
   const stockQuantity = formData.get('stockQuantity') as string
+  const imageUrl = (formData.get('imageUrl') as string)?.trim() || null
+  const manualUrl = (formData.get('userManualUrl') as string)?.trim() || null
+  const troubleshootingRaw = (formData.get('troubleshootingJson') as string)?.trim()
+
+  let troubleshooting_json: { title: string; body: string }[] = []
+  if (troubleshootingRaw) {
+    try {
+      const parsed = JSON.parse(troubleshootingRaw)
+      if (Array.isArray(parsed)) troubleshooting_json = parsed
+    } catch {
+      return { error: 'Troubleshooting must be valid JSON array of {title, body} objects.' }
+    }
+  }
 
   if (!id || !name) return { error: 'ID and name are required' }
 
@@ -582,7 +611,10 @@ export async function updateCameraModel(prevState: ActionState, formData: FormDa
     .update({
       name: name.trim(),
       description: description?.trim() || null,
-      stock_quantity: stockQuantity ? parseInt(stockQuantity) : 0
+      stock_quantity: stockQuantity ? parseInt(stockQuantity) : 0,
+      image_url: imageUrl,
+      user_manual_url: manualUrl,
+      troubleshooting_json,
     })
     .eq('id', id)
 

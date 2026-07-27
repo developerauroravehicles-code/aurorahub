@@ -28,6 +28,9 @@ type Props = {
 function statusTone(status: string): string {
   switch (status) {
     case 'scheduled':
+    case 'assigned':
+    case 'in_progress':
+    case 'completed':
       return 'bg-green-100 text-green-800 dark:bg-green-950/50 dark:text-green-300 border-green-200 dark:border-green-900'
     case 'rejected':
       return 'bg-red-100 text-red-800 dark:bg-red-950/50 dark:text-red-300 border-red-200 dark:border-red-900'
@@ -100,27 +103,20 @@ export function ServiceRecordPanel({ vinQuery, demandNumber, status, refreshToke
     setSuccess(null)
     setSubmitting(true)
     try {
-      const supabase = createClient()
-      const { data, error: rpcError } = await supabase.rpc('customer_portal_create_service_record', {
-        p_vin_query: vinQuery.trim(),
-        p_demand_number: demandNumber,
-        p_diagnosis_code: diagnosisCode,
-        p_comment: comment.trim() || null,
-        p_diagnosis_other: diagnosisOther.trim() || null,
+      const res = await fetch('/api/customer-portal/service-record', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          vin_query: vinQuery.trim(),
+          demand_number: demandNumber,
+          diagnosis_code: diagnosisCode,
+          comment: comment.trim() || null,
+          diagnosis_other: diagnosisOther.trim() || null,
+        }),
       })
+      const result = (await res.json()) as { ok?: boolean; error?: string } | null
 
-      if (rpcError) {
-        setError(
-          portalServiceRecordRpcErrorMessage(
-            rpcError,
-            'Could not submit your service request. Please try again.'
-          )
-        )
-        return
-      }
-
-      const result = data as { ok?: boolean; error?: string } | null
-      if (!result?.ok) {
+      if (!res.ok || !result?.ok) {
         setError(result?.error ?? 'Could not submit your service request.')
         return
       }
@@ -181,16 +177,24 @@ export function ServiceRecordPanel({ vinQuery, demandNumber, status, refreshToke
                     Reason: {record.rejection_reason.trim()}
                   </p>
                 ) : null}
-                {record.status === 'scheduled' && record.service_appointment_at ? (
-                  <p className="text-zinc-700 dark:text-gray-300">
-                    Scheduled:{' '}
-                    {formatInTimeZone(
-                      new Date(record.service_appointment_at),
-                      SYSTEM_DEFAULT_TIMEZONE,
-                      'EEEE, MMMM d, yyyy · h:mm a zzz'
-                    )}
-                    {record.service_location?.trim() ? ` · ${record.service_location.trim()}` : ''}
-                  </p>
+                {record.status === 'scheduled' || record.status === 'assigned' ? (
+                  record.service_appointment_at ? (
+                    <p className="text-zinc-700 dark:text-gray-300">
+                      Scheduled:{' '}
+                      {formatInTimeZone(
+                        new Date(record.service_appointment_at),
+                        SYSTEM_DEFAULT_TIMEZONE,
+                        'EEEE, MMMM d, yyyy · h:mm a zzz'
+                      )}
+                      {record.service_location?.trim() ? ` · ${record.service_location.trim()}` : ''}
+                    </p>
+                  ) : null
+                ) : null}
+                {record.status === 'in_progress' ? (
+                  <p className="text-blue-700 dark:text-blue-300">A technician is working on your request.</p>
+                ) : null}
+                {record.status === 'completed' ? (
+                  <p className="text-green-700 dark:text-green-300">Service completed. Thank you!</p>
                 ) : null}
                 <p className="text-zinc-400 dark:text-zinc-500 tabular-nums">
                   Submitted{' '}

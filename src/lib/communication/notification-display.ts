@@ -70,6 +70,13 @@ const TYPE_CONFIG: Record<CommNotificationType, NotificationTypeConfig> = {
     iconColor: 'text-red-600 dark:text-red-400',
     borderColor: 'border-l-red-500',
   },
+  daily_invoice_missed: {
+    label: 'Invoices need approval',
+    icon: ClipboardList,
+    iconBg: 'bg-orange-100 dark:bg-orange-900/40',
+    iconColor: 'text-orange-700 dark:text-orange-300',
+    borderColor: 'border-l-orange-500',
+  },
   service_record_pending: {
     label: 'Service record pending',
     icon: Wrench,
@@ -102,6 +109,7 @@ export function notificationLink(n: CommNotification): string {
   const p = n.payload as Record<string, string>
   if (n.type === 'daily_invoice_review' && p.link) return p.link
   if (n.type === 'daily_invoice_send_failed' && p.link) return p.link
+  if (n.type === 'daily_invoice_missed' && p.link) return p.link
   if (n.type === 'service_record_pending' && p.link) return p.link
   if (n.type === 'duplicate_stock_number' && p.link) return p.link
   if (p.context === 'meet' && p.room_id) return `/dashboard/communication/meet/${p.room_id}`
@@ -142,6 +150,8 @@ export function getNotificationSubtitle(n: CommNotification): string | null {
       return (p.message as string) || `${p.dealerCount ?? 0} dealer list(s) ready for review`
     case 'daily_invoice_send_failed':
       return (p.message as string) || `${p.dealerName ?? 'Dealer'} daily invoices not delivered`
+    case 'daily_invoice_missed':
+      return (p.message as string) || `${p.unapprovedCount ?? 0} invoice(s) still need approval`
     case 'service_record_pending': {
       const diagnosis =
         (p.diagnosis as string) ||

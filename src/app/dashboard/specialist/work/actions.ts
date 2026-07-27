@@ -4,6 +4,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { revalidatePath } from 'next/cache'
 import { logDemandChange } from '@/lib/demand-logger'
 import { dispatchWebhooks } from '@/lib/webhook-dispatch'
+import { issuePortalTokenForPhone } from '@/lib/issue-portal-token-for-phone'
 import { addDemandToDailyBatch } from '@/lib/daily-dealer-invoices'
 import {
   calculateDemandInvoiceAmount,
@@ -101,7 +102,7 @@ export async function completeDemand(demandId: string, options: CompleteDemandOp
 
   const { data: demand } = await supabase
     .from('demands')
-    .select('assigned_specialist_id, status, vin_last6, dealer_id, camera_model_id, camera_model')
+    .select('assigned_specialist_id, status, vin_last6, dealer_id, camera_model_id, camera_model, customer_phone')
     .eq('id', demandId)
     .single()
 
@@ -184,6 +185,25 @@ export async function completeDemand(demandId: string, options: CompleteDemandOp
     previous_status: 'approved',
     new_status: 'completed',
   }).catch(() => {})
+
+  if (demand.customer_phone?.trim()) {
+    issuePortalTokenForPhone(demand.customer_phone).then((portal) => {
+      if (!portal) return
+      dispatchWebhooks(supabase, 'demand_completed', {
+        demand_id: demandId,
+        customer_phone: demand.customer_phone,
+        portal_url: portal.url,
+        portal_expires_at: portal.expires_at,
+        hint: 'External SMS/email service can send portal_url to the customer.',
+      }).catch(() => {})
+    }).catch(() => {})
+  } else {
+    dispatchWebhooks(supabase, 'demand_completed', {
+      demand_id: demandId,
+      portal_url: null,
+      hint: 'No customer phone on file; call POST /api/customer-portal/issue-token when phone is available.',
+    }).catch(() => {})
+  }
   
   revalidatePath('/dashboard/specialist/work')
   revalidatePath('/dashboard/admin/invoices')

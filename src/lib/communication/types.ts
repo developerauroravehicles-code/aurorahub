@@ -99,6 +99,7 @@ export type CommNotificationType =
   | 'sms_pending'
   | 'daily_invoice_review'
   | 'daily_invoice_send_failed'
+  | 'daily_invoice_missed'
   | 'service_record_pending'
   | 'duplicate_stock_number'
 

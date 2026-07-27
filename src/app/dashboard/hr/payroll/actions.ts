@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { calculatePerCompletedAmount, calculateDeductions, calculateGrossFromNet } from './payroll-utils'
+import { getServicePayrollEarnings, type ServicePayrollEarning } from '@/lib/service-record-payroll'
 
 const PAYMENT_TYPES = ['salary', 'hourly', 'per_installation', 'per_completed_tiered', 'commission', 'bonus', 'job_based', 'dealer_commission', 'platform_commission'] as const
 
@@ -185,6 +186,20 @@ export async function getCompletedDemandsForPeriod(personnelId: string, periodSt
 export async function getCompletedCountForPeriod(personnelId: string, periodStart: string, periodEnd: string) {
   const r = await getCompletedDemandsForPeriod(personnelId, periodStart, periodEnd)
   return { count: r.count, error: r.error }
+}
+
+/** Service job $20 fees + approved expense reimbursements for payroll period. */
+export async function getServiceCompletionEarningsForPeriod(
+  personnelId: string,
+  periodStart: string,
+  periodEnd: string
+): Promise<{ earnings: ServicePayrollEarning[]; total: number; error?: string }> {
+  const { supabase } = await ensureAuth()
+  if (!supabase) return { earnings: [], total: 0, error: 'Not authenticated' }
+
+  const earnings = await getServicePayrollEarnings(supabase, personnelId, periodStart, periodEnd)
+  const total = earnings.reduce((s, e) => s + Number(e.amount), 0)
+  return { earnings, total: Math.round(total * 100) / 100 }
 }
 
 

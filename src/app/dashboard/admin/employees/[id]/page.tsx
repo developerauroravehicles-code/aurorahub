@@ -1,38 +1,43 @@
 import { createClient } from '@/lib/supabase/server'
+import { redirect } from 'next/navigation'
+import Link from 'next/link'
 import { format } from 'date-fns'
 import { formatInTimeZone } from 'date-fns-tz'
-import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 import { DealerAssignment } from './dealer-assignment'
+import { getSpecialistCompensationSnapshot } from '../compensation-actions'
+import { SpecialistCompensationPanel } from '../specialist-compensation-panel'
 
 export default async function SpecialistDetailsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const supabase = await createClient()
-  
-  // Check if current user is Aurora Manager
-  const { data: { user } } = await supabase.auth.getUser()
-  let isAuroraManager = false
-  
-  if (user) {
-    const { data: currentProfile } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', user.id)
-      .single()
-    
-    isAuroraManager = currentProfile?.role === 'aurora_manager'
-  }
-  
-  // Fetch Specialist Profile
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) redirect('/login')
+
+  const { data: currentProfile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single()
+
+  const canManage = ['aurora_manager', 'hr'].includes(currentProfile?.role ?? '')
+  const isAuroraManager = currentProfile?.role === 'aurora_manager'
+
   const { data: profile } = await supabase
     .from('profiles')
     .select('*, dealers(name)')
     .eq('id', id)
     .single()
 
-  if (!profile) return <div className="text-zinc-900 dark:text-white">Technical Support not found</div>
+  if (!profile || profile.role !== 'specialist') {
+    return <div className="text-zinc-900 dark:text-white">Technical Support not found</div>
+  }
 
-  // Fetch assigned dealers for this specialist (only if Aurora Manager)
+  if (!canManage) redirect('/dashboard/admin/employees')
+
   const { data: assignedDealersRaw } = isAuroraManager
     ? await supabase
         .from('specialist_dealers')
@@ -40,190 +45,224 @@ export default async function SpecialistDetailsPage({ params }: { params: Promis
         .eq('specialist_id', id)
         .order('created_at', { ascending: true })
     : { data: null }
-  
-  // Transform data to match component's expected type
-  const assignedDealers = assignedDealersRaw?.map((ad: any) => ({
-    id: ad.id,
-    dealer_id: ad.dealer_id,
-    dealers: {
-      name: (ad.dealers as any)?.name || ''
-    }
-  })) || null
 
-  // Fetch all dealers for assignment dropdown (only if Aurora Manager)
+  const assignedDealers =
+    assignedDealersRaw?.map((ad) => ({
+      id: ad.id,
+      dealer_id: ad.dealer_id,
+      dealers: { name: (ad.dealers as { name?: string } | null)?.name || '' },
+    })) ?? []
+
   const { data: allDealers } = isAuroraManager
-    ? await supabase
-        .from('dealers')
-        .select('id, name')
-        .order('name')
+    ? await supabase.from('dealers').select('id, name').order('name')
     : { data: null }
 
-  // Fetch Jobs (Demands) assigned to this specialist OR completed by them (if we track 'completed_by')
-  // For now, let's assume jobs are linked via 'assigned_specialist_id' or implicit assignment via dealer pool logic.
-  // The prompt says "completed" and "pending".
-  // Pending jobs for a specialist are usually 'approved' status in their dealer pool (or specifically assigned).
-  // Completed jobs are 'completed' status.
-  
-  // Let's fetch ALL demands for this specialist's dealer to calculate stats if they work from a pool,
-  // OR fetch demands specifically assigned to them if we implemented assignment.
-  // Based on current schema: `assigned_specialist_id` exists.
-  // Also specialists pick from pool. 
-  // Let's fetch demands where status is 'completed' AND (updated_by this user? we don't have that field easily accessible without logs).
-  // OR we can rely on `assigned_specialist_id`.
-  
-  // Let's assume `assigned_specialist_id` is set when they pick it or complete it.
-  
-  // Get list of dealer IDs assigned to this specialist (only if Aurora Manager can see them)
-  // For non-Aurora Managers, we still need to fetch jobs but won't show dealer names
-  const assignedDealerIds = (isAuroraManager && assignedDealers) ? assignedDealers.map(ad => ad.dealer_id) : []
-  
-  // If specialist has assigned dealers, fetch jobs from all assigned dealers
-  // Otherwise, fall back to profile.dealer_id (for backward compatibility)
-  // For non-Aurora Managers, we'll use profile.dealer_id but won't show dealer names in UI
-  const dealerIdsToQuery = assignedDealerIds.length > 0 ? assignedDealerIds : (profile.dealer_id ? [profile.dealer_id] : [])
+  const { data: completedJobs } = await supabase
+    .from('demands')
+    .select(
+      'id, demand_number, status, updated_at, completed_at, customer_firstname, customer_lastname, vehicle_make, vehicle_model, vehicle_year, appointment_date, dealers(name, region_codes(timezones(name)))'
+    )
+    .eq('status', 'completed')
+    .eq('assigned_specialist_id', id)
+    .order('completed_at', { ascending: false })
+    .limit(50)
 
-  // Fetch Completed Jobs from all assigned dealers (with dealer timezone for date display)
-  const { data: completedJobs } = assignedDealerIds.length > 0
-    ? await supabase
-        .from('demands')
-        .select('id, demand_number, status, created_at, updated_at, customer_firstname, customer_lastname, vehicle_make, vehicle_model, vehicle_year, appointment_date, dealer_id, dealers(name, region_codes(timezone_id, timezones(name)))')
-        .eq('status', 'completed')
-        .in('dealer_id', assignedDealerIds)
-        .order('updated_at', { ascending: false })
-    : await supabase
-        .from('demands')
-        .select('id, demand_number, status, created_at, updated_at, customer_firstname, customer_lastname, vehicle_make, vehicle_model, vehicle_year, appointment_date, dealer_id, dealers(name, region_codes(timezone_id, timezones(name)))')
-        .eq('status', 'completed')
-        .eq('dealer_id', profile.dealer_id || '')
-        .order('updated_at', { ascending: false })
-    
-  // Fetch Pending Jobs (Approved but not completed) from all assigned dealers (with dealer timezone)
-  const { data: pendingJobs } = assignedDealerIds.length > 0
-    ? await supabase
-        .from('demands')
-        .select('id, demand_number, status, created_at, customer_firstname, customer_lastname, vehicle_make, vehicle_model, vehicle_year, appointment_date, dealer_id, dealers(name, region_codes(timezone_id, timezones(name)))')
-        .eq('status', 'approved')
-        .in('dealer_id', assignedDealerIds)
-        .order('appointment_date', { ascending: true })
-    : await supabase
-        .from('demands')
-        .select('id, demand_number, status, created_at, customer_firstname, customer_lastname, vehicle_make, vehicle_model, vehicle_year, appointment_date, dealer_id, dealers(name, region_codes(timezone_id, timezones(name)))')
-        .eq('status', 'approved')
-        .eq('dealer_id', profile.dealer_id || '')
-        .order('appointment_date', { ascending: true })
+  const { data: pendingJobs } = await supabase
+    .from('demands')
+    .select(
+      'id, demand_number, status, customer_firstname, customer_lastname, vehicle_make, vehicle_model, vehicle_year, appointment_date, dealers(name, region_codes(timezones(name)))'
+    )
+    .eq('status', 'approved')
+    .eq('assigned_specialist_id', id)
+    .order('appointment_date', { ascending: true })
+    .limit(50)
+
+  const { data: serviceJobs } = await supabase
+    .from('customer_service_records')
+    .select('id, demand_number, status, diagnosis_code, completed_at, service_appointment_at, vehicle_summary')
+    .eq('assigned_specialist_id', id)
+    .order('created_at', { ascending: false })
+    .limit(50)
+
+  const compensationResult = await getSpecialistCompensationSnapshot(id)
+  const compensationSnapshot = compensationResult.snapshot
 
   return (
     <div className="space-y-8">
       <div>
-        <Link href="/dashboard/admin/employees" className="flex items-center text-zinc-500 dark:text-gray-400 hover:text-zinc-900 dark:text-white mb-4 transition-colors">
-            <ArrowLeft className="w-4 h-4 mr-2" /> Back to Employees
+        <Link
+          href="/dashboard/admin/employees"
+          className="flex items-center text-zinc-500 dark:text-gray-400 hover:text-zinc-900 dark:hover:text-white mb-4 transition-colors"
+        >
+          <ArrowLeft className="w-4 h-4 mr-2" /> Back to Employees
         </Link>
         <h1 className="text-2xl font-bold text-zinc-900 dark:text-white mb-2">{profile.full_name}</h1>
         <p className="text-zinc-500 dark:text-gray-400">
-          {profile.role.replace('_', ' ')}
-          {isAuroraManager && assignedDealers && assignedDealers.length > 0 ? (
+          Technical Support
+          {assignedDealers.length > 0 ? (
             <span className="text-[#C27E00]">
-              {' '}at {assignedDealers.map(ad => (ad.dealers as any)?.name).join(', ')}
+              {' '}
+              · {assignedDealers.map((ad) => ad.dealers.name).join(', ')}
             </span>
-          ) : isAuroraManager && profile.dealers?.name ? (
-            <span className="text-[#C27E00]"> at {profile.dealers.name}</span>
           ) : null}
         </p>
       </div>
 
-      {/* Dealer Assignment Section (only for Aurora Managers) */}
-      {isAuroraManager && (
+      {isAuroraManager ? (
         <DealerAssignment
           specialistId={id}
-          assignedDealers={assignedDealers || []}
-          availableDealers={allDealers || []}
+          assignedDealers={assignedDealers}
+          availableDealers={allDealers ?? []}
         />
-      )}
+      ) : null}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Stats Cards */}
-          <div className="bg-zinc-200/50 dark:bg-white/5 border border-zinc-200 dark:border-gray-800 p-6 rounded-lg">
-              <h3 className="text-lg font-medium text-zinc-600 dark:text-gray-300">Completed Jobs</h3>
-              <p className="text-4xl font-bold text-[#C27E00] mt-2">{completedJobs?.length || 0}</p>
-          </div>
-          <div className="bg-zinc-200/50 dark:bg-white/5 border border-zinc-200 dark:border-gray-800 p-6 rounded-lg">
-              <h3 className="text-lg font-medium text-zinc-600 dark:text-gray-300">Pending Jobs (Dealer Pool)</h3>
-              <p className="text-4xl font-bold text-zinc-900 dark:text-white mt-2">{pendingJobs?.length || 0}</p>
-          </div>
+      {compensationSnapshot ? (
+        <SpecialistCompensationPanel profileId={id} initialSnapshot={compensationSnapshot} />
+      ) : null}
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="bg-zinc-200/50 dark:bg-white/5 border border-zinc-200 dark:border-gray-800 p-5 rounded-lg">
+          <h3 className="text-sm font-medium text-zinc-600 dark:text-gray-300">Installations (this period)</h3>
+          <p className="text-3xl font-bold text-[#C27E00] mt-1">
+            {compensationSnapshot?.installations_completed ?? 0}
+          </p>
+        </div>
+        <div className="bg-zinc-200/50 dark:bg-white/5 border border-zinc-200 dark:border-gray-800 p-5 rounded-lg">
+          <h3 className="text-sm font-medium text-zinc-600 dark:text-gray-300">Service jobs completed</h3>
+          <p className="text-3xl font-bold text-zinc-900 dark:text-white mt-1">
+            {compensationSnapshot?.service_jobs_completed ?? 0}
+          </p>
+        </div>
+        <div className="bg-zinc-200/50 dark:bg-white/5 border border-zinc-200 dark:border-gray-800 p-5 rounded-lg">
+          <h3 className="text-sm font-medium text-zinc-600 dark:text-gray-300">Assigned / in progress</h3>
+          <p className="text-3xl font-bold text-zinc-900 dark:text-white mt-1">{pendingJobs?.length ?? 0}</p>
+        </div>
       </div>
 
-      {/* Detailed Lists */}
       <div className="space-y-6">
-          <div>
-              <h2 className="text-xl font-semibold text-zinc-900 dark:text-white mb-4">Pending Jobs</h2>
-              <div className="bg-zinc-200/50 dark:bg-white/5 border border-zinc-200 dark:border-gray-800 rounded-lg overflow-hidden">
-                  {pendingJobs?.length === 0 ? (
-                      <p className="p-4 text-zinc-500 dark:text-gray-500">No pending jobs.</p>
-                  ) : (
-                      <ul className="divide-y divide-zinc-200 dark:divide-gray-800">
-                          {pendingJobs?.map(job => {
-                              const jobTz = (job.dealers as { region_codes?: { timezones?: { name: string } } } | null)?.region_codes?.timezones?.name ?? null
-                              return (
-                              <li key={job.id} className="p-4 hover:bg-zinc-200/50 dark:bg-white/5 transition-colors">
-                                  <div className="flex justify-between items-center">
-                                      <div>
-                                          <p className="font-medium text-zinc-900 dark:text-white">{job.vehicle_year} {job.vehicle_make} {job.vehicle_model}</p>
-                                          <p className="text-sm text-zinc-500 dark:text-gray-400">{job.customer_firstname} {job.customer_lastname}</p>
-                                          {(job as { demand_number?: number }).demand_number != null && (
-                                            <p className="text-xs text-zinc-500 dark:text-gray-500 mt-1">Demand ID: #{(job as { demand_number?: number }).demand_number}</p>
-                                          )}
-                                          {isAuroraManager && (job.dealers as any)?.name && (
-                                            <p className="text-xs text-zinc-500 dark:text-gray-500 mt-1">Dealer: {(job.dealers as any).name}</p>
-                                          )}
-                                      </div>
-                                      <div className="text-right">
-                                          <p className="text-sm text-[#C27E00]">{jobTz ? formatInTimeZone(new Date(job.appointment_date), jobTz, 'PPP h:mm a') : format(new Date(job.appointment_date), 'PPP h:mm a')}</p>
-                                      </div>
-                                  </div>
-                              </li>
-                              )
-                          })}
-                      </ul>
-                  )}
-              </div>
-          </div>
+        <div>
+          <h2 className="text-xl font-semibold text-zinc-900 dark:text-white mb-3">Assigned installations</h2>
+          <JobList
+            jobs={(pendingJobs ?? []) as JobRow[]}
+            empty="No installations currently assigned."
+            showDealer={isAuroraManager}
+          />
+        </div>
 
-          <div>
-              <h2 className="text-xl font-semibold text-zinc-900 dark:text-white mb-4">Completed Jobs History</h2>
-              <div className="bg-zinc-200/50 dark:bg-white/5 border border-zinc-200 dark:border-gray-800 rounded-lg overflow-hidden">
-                  {completedJobs?.length === 0 ? (
-                      <p className="p-4 text-zinc-500 dark:text-gray-500">No completed jobs.</p>
-                  ) : (
-                      <ul className="divide-y divide-zinc-200 dark:divide-gray-800">
-                          {completedJobs?.map(job => {
-                              const jobTz = (job.dealers as { region_codes?: { timezones?: { name: string } } } | null)?.region_codes?.timezones?.name ?? null
-                              return (
-                              <li key={job.id} className="p-4 hover:bg-zinc-200/50 dark:bg-white/5 transition-colors">
-                                  <div className="flex justify-between items-center">
-                                      <div>
-                                          <p className="font-medium text-zinc-900 dark:text-white">{job.vehicle_year} {job.vehicle_make} {job.vehicle_model}</p>
-                                          <p className="text-sm text-zinc-500 dark:text-gray-400">{job.customer_firstname} {job.customer_lastname}</p>
-                                          {(job as { demand_number?: number }).demand_number != null && (
-                                            <p className="text-xs text-zinc-500 dark:text-gray-500 mt-1">Demand ID: #{(job as { demand_number?: number }).demand_number}</p>
-                                          )}
-                                          {isAuroraManager && (job.dealers as any)?.name && (
-                                            <p className="text-xs text-zinc-500 dark:text-gray-500 mt-1">Dealer: {(job.dealers as any).name}</p>
-                                          )}
-                                      </div>
-                                      <div className="text-right">
-                                          <p className="text-sm text-green-500">Completed</p>
-                                          <p className="text-xs text-zinc-500 dark:text-gray-500">{jobTz ? formatInTimeZone(new Date(job.updated_at), jobTz, 'PPP') : format(new Date(job.updated_at), 'PPP')}</p>
-                                      </div>
-                                  </div>
-                              </li>
-                              )
-                          })}
-                      </ul>
-                  )}
-              </div>
+        <div>
+          <h2 className="text-xl font-semibold text-zinc-900 dark:text-white mb-3">Recent installations</h2>
+          <JobList
+            jobs={(completedJobs ?? []) as JobRow[]}
+            empty="No completed installations yet."
+            completed
+            showDealer={isAuroraManager}
+          />
+        </div>
+
+        <div>
+          <h2 className="text-xl font-semibold text-zinc-900 dark:text-white mb-3">Service records</h2>
+          <div className="bg-zinc-200/50 dark:bg-white/5 border border-zinc-200 dark:border-gray-800 rounded-lg overflow-hidden">
+            {!serviceJobs?.length ? (
+              <p className="p-4 text-zinc-500">No service records assigned.</p>
+            ) : (
+              <ul className="divide-y divide-zinc-200 dark:divide-gray-800">
+                {serviceJobs.map((job) => (
+                  <li key={job.id} className="p-4 text-sm">
+                    <div className="flex justify-between gap-2">
+                      <div>
+                        <p className="font-medium text-zinc-900 dark:text-white">
+                          #{job.demand_number} · {job.vehicle_summary}
+                        </p>
+                        <p className="text-zinc-500 capitalize">{job.diagnosis_code?.replace(/_/g, ' ')}</p>
+                      </div>
+                      <span className="text-xs uppercase font-semibold text-zinc-500">{job.status}</span>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
+        </div>
       </div>
     </div>
   )
 }
 
+type JobRow = {
+  id: string
+  demand_number?: number | string | null
+  vehicle_year?: number | null
+  vehicle_make?: string | null
+  vehicle_model?: string | null
+  customer_firstname?: string | null
+  customer_lastname?: string | null
+  appointment_date?: string | null
+  updated_at?: string | null
+  completed_at?: string | null
+  dealers?: { name?: string; region_codes?: { timezones?: { name: string } } | null } | null
+}
+
+function JobList({
+  jobs,
+  empty,
+  completed,
+  showDealer,
+}: {
+  jobs: JobRow[]
+  empty: string
+  completed?: boolean
+  showDealer?: boolean
+}) {
+  if (!jobs.length) {
+    return (
+      <div className="bg-zinc-200/50 dark:bg-white/5 border border-zinc-200 dark:border-gray-800 rounded-lg p-4 text-zinc-500">
+        {empty}
+      </div>
+    )
+  }
+
+  return (
+    <div className="bg-zinc-200/50 dark:bg-white/5 border border-zinc-200 dark:border-gray-800 rounded-lg overflow-hidden">
+      <ul className="divide-y divide-zinc-200 dark:divide-gray-800">
+        {jobs.map((job) => {
+          const jobTz = job.dealers?.region_codes?.timezones?.name ?? null
+          const dateSource = completed
+            ? job.completed_at || job.updated_at
+            : job.appointment_date
+          return (
+            <li key={job.id} className="p-4 hover:bg-zinc-200/30 dark:hover:bg-white/5">
+              <div className="flex justify-between items-center gap-3">
+                <div>
+                  <p className="font-medium text-zinc-900 dark:text-white">
+                    {job.vehicle_year} {job.vehicle_make} {job.vehicle_model}
+                  </p>
+                  <p className="text-sm text-zinc-500">
+                    {job.customer_firstname} {job.customer_lastname}
+                  </p>
+                  {job.demand_number != null ? (
+                    <p className="text-xs text-zinc-500 mt-0.5">#{job.demand_number}</p>
+                  ) : null}
+                  {showDealer && job.dealers?.name ? (
+                    <p className="text-xs text-zinc-500">{job.dealers.name}</p>
+                  ) : null}
+                </div>
+                <div className="text-right text-sm">
+                  {completed ? (
+                    <p className="text-green-600 dark:text-green-400">Completed</p>
+                  ) : null}
+                  {dateSource ? (
+                    <p className="text-zinc-500 text-xs">
+                      {jobTz
+                        ? formatInTimeZone(new Date(dateSource), jobTz, 'PPP')
+                        : format(new Date(dateSource), 'PPP')}
+                    </p>
+                  ) : null}
+                </div>
+              </div>
+            </li>
+          )
+        })}
+      </ul>
+    </div>
+  )
+}

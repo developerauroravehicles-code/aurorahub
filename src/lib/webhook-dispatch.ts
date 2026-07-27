@@ -11,6 +11,7 @@ export type WebhookEvent =
   | 'demand_approved'
   | 'demand_cancelled'
   | 'appointment_completed'
+  | 'demand_completed'
 
 interface WebhookConfig {
   id: string

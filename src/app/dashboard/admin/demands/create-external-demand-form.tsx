@@ -1,11 +1,16 @@
 'use client'
 
-import { useActionState, useState, useEffect } from 'react'
+import { useActionState, useState, useEffect, useMemo } from 'react'
 import { createExternalDemand } from './create-external-demand-actions'
 import { getCameraModelsForDealer } from './get-cameras-for-dealer'
 import { VEHICLE_MAKES_CA } from '@/lib/vehicle-makes'
 import { getModelsForMake, getTrimsForModel } from '@/lib/vehicle-models'
 import { CanadianPhoneInput } from '@/components/canadian-phone-input'
+import { DemandDocumentFillButton } from '@/components/demand-document-fill-button'
+import { AppointmentCalendar } from '@/components/appointment-calendar'
+import { formatInTimeZone } from 'date-fns-tz'
+import { getEffectiveTimezone } from '@/lib/timezone-defaults'
+import { getTimezoneFromDealer } from '@/lib/dealer-timezone'
 import {
   DemandServiceType,
   REMOVAL_FEE_CAD,
@@ -16,6 +21,10 @@ import {
 interface Dealer {
   id: string
   name: string
+  region_codes?: { timezone_id?: unknown; timezones?: { name: string } | Array<{ name: string }> } | Array<{
+    timezone_id?: unknown
+    timezones?: { name: string } | Array<{ name: string }>
+  }> | null
 }
 
 interface CameraModel {
@@ -50,6 +59,13 @@ export function CreateExternalDemandForm({ dealers, specialists, onSuccess, onCa
   }, [dealers])
 
   const [cameraModels, setCameraModels] = useState<CameraModel[]>([])
+  const [firstName, setFirstName] = useState('')
+  const [lastName, setLastName] = useState('')
+  const [phone, setPhone] = useState('')
+  const [address, setAddress] = useState('')
+  const [vehicleYear, setVehicleYear] = useState('')
+  const [stockNumber, setStockNumber] = useState('')
+  const [vinLast6, setVinLast6] = useState('')
   const [selectedMake, setSelectedMake] = useState('')
   const [selectedModel, setSelectedModel] = useState('')
   const [selectedTrim, setSelectedTrim] = useState('')
@@ -59,6 +75,16 @@ export function CreateExternalDemandForm({ dealers, specialists, onSuccess, onCa
   const [isFutureCustomer, setIsFutureCustomer] = useState(false)
   const [completeOnCreate, setCompleteOnCreate] = useState(false)
   const [serviceType, setServiceType] = useState<DemandServiceType>('installation')
+  const [appointmentDate, setAppointmentDate] = useState('')
+
+  const selectedDealer = dealers.find((d) => d.id === selectedDealerId)
+  const dealerTimezone = useMemo(
+    () =>
+      getEffectiveTimezone(
+        getTimezoneFromDealer(selectedDealer as Parameters<typeof getTimezoneFromDealer>[0])
+      ),
+    [selectedDealer]
+  )
 
   useEffect(() => {
     if (selectedDealerId) {
@@ -87,6 +113,35 @@ export function CreateExternalDemandForm({ dealers, specialists, onSuccess, onCa
         </div>
       )}
 
+      {!isFutureCustomer && (
+        <DemandDocumentFillButton
+          disabled={isPending}
+          currentValues={{
+            firstName,
+            lastName,
+            phone,
+            vehicleYear,
+            stockNumber,
+            vinLast6,
+            selectedMake,
+            selectedModel,
+            customModel,
+          }}
+          setters={{
+            setFirstName,
+            setLastName,
+            setPhone,
+            setVehicleYear,
+            setStockNumber,
+            setVinLast6,
+            setSelectedMake,
+            setSelectedModel,
+            setSelectedTrim,
+            setCustomModel,
+          }}
+        />
+      )}
+
       <div className="grid grid-cols-1 gap-y-4 sm:grid-cols-2 sm:gap-x-4">
         <div className="sm:col-span-2">
           <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300">Dealer *</label>
@@ -106,17 +161,21 @@ export function CreateExternalDemandForm({ dealers, specialists, onSuccess, onCa
           </select>
         </div>
 
-        <div>
+        <div className="sm:col-span-2">
           <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300">Date *</label>
-          <input
-            name="appointmentDate"
-            type="date"
-            required
-            className={inputClass}
+          <AppointmentCalendar
+            timezoneName={dealerTimezone}
+            allowPastDates
+            selectedPacificYmd={appointmentDate || null}
+            onDateSelect={(date) => {
+              setAppointmentDate(formatInTimeZone(date, dealerTimezone, 'yyyy-MM-dd'))
+            }}
+            getTakenSlots={async () => []}
           />
-          <p className="text-xs text-zinc-500 dark:text-gray-500 mt-1">
-            Past dates allowed. Saved as noon on that day in the dealer region (defaults to US Pacific if none). If you mark
-            complete on create, the completion timestamp matches this date so statements use the same month as the job.
+          <input type="hidden" name="appointmentDate" value={appointmentDate} required />
+          <p className="text-xs text-zinc-500 dark:text-gray-500 mt-2">
+            Calendar uses the selected dealer&apos;s region timezone ({dealerTimezone}). Past dates are allowed.
+            Saved as noon on that day in the dealer region so the date does not shift.
           </p>
         </div>
 
@@ -203,36 +262,33 @@ export function CreateExternalDemandForm({ dealers, specialists, onSuccess, onCa
         <div>
           <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300">First Name *</label>
           <input
-            key={isFutureCustomer ? 'fn-future' : 'fn-normal'}
             name="firstName"
             required
-            value={isFutureCustomer ? 'Future' : undefined}
+            value={isFutureCustomer ? 'Future' : firstName}
             readOnly={isFutureCustomer}
+            onChange={!isFutureCustomer ? (e) => setFirstName(e.target.value.toUpperCase()) : undefined}
             className={isFutureCustomer ? inputReadOnlyClass : inputClass}
             placeholder={isFutureCustomer ? '' : undefined}
             style={!isFutureCustomer ? { textTransform: 'uppercase' } : undefined}
-            onInput={!isFutureCustomer ? (e) => { (e.target as HTMLInputElement).value = (e.target as HTMLInputElement).value.toUpperCase() } : undefined}
           />
         </div>
         <div>
           <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300">Last Name *</label>
           <input
-            key={isFutureCustomer ? 'ln-future' : 'ln-normal'}
             name="lastName"
             required
-            value={isFutureCustomer ? 'Customer' : undefined}
+            value={isFutureCustomer ? 'Customer' : lastName}
             readOnly={isFutureCustomer}
+            onChange={!isFutureCustomer ? (e) => setLastName(e.target.value.toUpperCase()) : undefined}
             className={isFutureCustomer ? inputReadOnlyClass : inputClass}
             placeholder={isFutureCustomer ? '' : undefined}
             style={!isFutureCustomer ? { textTransform: 'uppercase' } : undefined}
-            onInput={!isFutureCustomer ? (e) => { (e.target as HTMLInputElement).value = (e.target as HTMLInputElement).value.toUpperCase() } : undefined}
           />
         </div>
         <div>
           <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300">Phone *</label>
           {isFutureCustomer ? (
             <input
-              key="ph-future"
               name="phone"
               type="tel"
               required
@@ -242,9 +298,10 @@ export function CreateExternalDemandForm({ dealers, specialists, onSuccess, onCa
             />
           ) : (
             <CanadianPhoneInput
-              key="ph-normal"
               name="phone"
               required
+              value={phone}
+              onChange={setPhone}
               placeholder="416 - 123 - 4567"
               className={inputClass}
             />
@@ -253,10 +310,10 @@ export function CreateExternalDemandForm({ dealers, specialists, onSuccess, onCa
         <div>
           <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300">Address</label>
           <input
-            key={isFutureCustomer ? 'addr-future' : 'addr-normal'}
             name="address"
-            value={isFutureCustomer ? 'Future' : undefined}
+            value={isFutureCustomer ? 'Future' : address}
             readOnly={isFutureCustomer}
+            onChange={!isFutureCustomer ? (e) => setAddress(e.target.value) : undefined}
             className={isFutureCustomer ? inputReadOnlyClass : inputClass}
             placeholder={!isFutureCustomer ? 'Optional' : undefined}
           />
@@ -350,11 +407,11 @@ export function CreateExternalDemandForm({ dealers, specialists, onSuccess, onCa
         </div>
         <div>
           <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300">Year *</label>
-          <input name="vehicleYear" type="number" min={1900} max={2100} required className={inputClass} />
+          <input name="vehicleYear" type="number" min={1900} max={2100} required value={vehicleYear} onChange={(e) => setVehicleYear(e.target.value)} className={inputClass} />
         </div>
         <div>
           <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300">Stock Number *</label>
-          <input name="stockNumber" required className={inputClass} placeholder="Stock number" style={{ textTransform: 'uppercase' }} onInput={(e) => { (e.target as HTMLInputElement).value = (e.target as HTMLInputElement).value.toUpperCase() }} />
+          <input name="stockNumber" required value={stockNumber} onChange={(e) => setStockNumber(e.target.value.toUpperCase())} className={inputClass} placeholder="Stock number" style={{ textTransform: 'uppercase' }} />
         </div>
         <div>
           <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300">VIN Last 6 Digits <span className="text-red-400">*</span></label>
@@ -362,10 +419,11 @@ export function CreateExternalDemandForm({ dealers, specialists, onSuccess, onCa
             name="vinLast6"
             required
             minLength={6}
+            value={vinLast6}
+            onChange={(e) => setVinLast6(e.target.value.toUpperCase())}
             className={inputClass}
             placeholder="Last 6 digits"
             style={{ textTransform: 'uppercase' }}
-            onInput={(e) => { (e.target as HTMLInputElement).value = (e.target as HTMLInputElement).value.toUpperCase() }}
           />
         </div>
 

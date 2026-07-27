@@ -1,14 +1,16 @@
 'use client'
 
-import type { CustomerPortalRow } from '@/types/customer-portal'
+import type { CustomerPortalRow, PortalContactInfo } from '@/types/customer-portal'
 import { groupInstallations, rowKey } from '@/lib/customer-portal-utils'
 import { InstallationCard } from './installation-card'
+import { PortalContactPanel } from './portal-contact-panel'
 
 type Props = {
   rows: CustomerPortalRow[]
   vinQuery: string
   serviceRecordsRefreshToken?: number
   onRated: (index: number, customerRating: number, qualityScore: number, comment: string) => void
+  portalContact?: PortalContactInfo | null
 }
 
 function Section({
@@ -18,6 +20,7 @@ function Section({
   vinQuery,
   serviceRecordsRefreshToken,
   onRated,
+  portalContact,
 }: {
   title: string
   subtitle?: string
@@ -25,6 +28,7 @@ function Section({
   vinQuery: string
   serviceRecordsRefreshToken?: number
   onRated: Props['onRated']
+  portalContact?: PortalContactInfo | null
 }) {
   if (items.length === 0) return null
   return (
@@ -42,6 +46,7 @@ function Section({
             vinQuery={vinQuery}
             serviceRecordsRefreshToken={serviceRecordsRefreshToken}
             onRated={onRated}
+            portalContact={portalContact}
           />
         ))}
       </div>
@@ -54,11 +59,13 @@ export function InstallationList({
   vinQuery,
   serviceRecordsRefreshToken,
   onRated,
+  portalContact,
 }: Props) {
   const { active, past } = groupInstallations(rows)
 
   return (
     <div className="space-y-8">
+      <PortalContactPanel contact={portalContact ?? null} />
       <Section
         title="Active installations"
         subtitle="Upcoming or in-progress dashcam appointments"
@@ -66,6 +73,7 @@ export function InstallationList({
         vinQuery={vinQuery}
         serviceRecordsRefreshToken={serviceRecordsRefreshToken}
         onRated={onRated}
+        portalContact={portalContact}
       />
       <Section
         title="Past installations"
@@ -74,6 +82,7 @@ export function InstallationList({
         vinQuery={vinQuery}
         serviceRecordsRefreshToken={serviceRecordsRefreshToken}
         onRated={onRated}
+        portalContact={portalContact}
       />
     </div>
   )

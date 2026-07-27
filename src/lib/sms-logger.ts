@@ -9,6 +9,8 @@ export type SmsMessageType =
   | 'twenty_four_hour_reminder'
   | 'customer_directory_manual'
   | 'service_appointment_scheduled'
+  | 'service_record_pending'
+  | 'daily_invoice_missed'
 
 export interface LogSmsParams {
   phoneNumber: string

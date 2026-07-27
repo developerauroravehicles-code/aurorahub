@@ -14,6 +14,7 @@ import { VEHICLE_MAKES_CA } from '@/lib/vehicle-makes'
 import { getModelsForMake, getTrimsForModel } from '@/lib/vehicle-models'
 import { getISODay } from 'date-fns'
 import { CanadianPhoneInput } from '@/components/canadian-phone-input'
+import { DemandDocumentFillButton } from '@/components/demand-document-fill-button'
 
 interface CameraModel {
   id: string
@@ -48,6 +49,12 @@ export function DemandForm({ cameraModels, defaultAddress = '', timezoneName: pr
   const [selectedSlot, setSelectedSlot] = useState<string>('')
   const [selectedCamera, setSelectedCamera] = useState<string>('')
   const [customCamera, setCustomCamera] = useState<string>('')
+  const [firstName, setFirstName] = useState('')
+  const [lastName, setLastName] = useState('')
+  const [phone, setPhone] = useState('')
+  const [vehicleYear, setVehicleYear] = useState('')
+  const [stockNumber, setStockNumber] = useState('')
+  const [vinLast6, setVinLast6] = useState('')
   const [selectedMake, setSelectedMake] = useState<string>('')
   const [selectedModel, setSelectedModel] = useState<string>('')
   const [selectedTrim, setSelectedTrim] = useState<string>('')
@@ -125,17 +132,44 @@ export function DemandForm({ cameraModels, defaultAddress = '', timezoneName: pr
         </div>
       )}
 
+      <DemandDocumentFillButton
+        disabled={isPending}
+        currentValues={{
+          firstName,
+          lastName,
+          phone,
+          vehicleYear,
+          stockNumber,
+          vinLast6,
+          selectedMake,
+          selectedModel,
+          customModel,
+        }}
+        setters={{
+          setFirstName,
+          setLastName,
+          setPhone,
+          setVehicleYear,
+          setStockNumber,
+          setVinLast6,
+          setSelectedMake,
+          setSelectedModel,
+          setSelectedTrim,
+          setCustomModel,
+        }}
+      />
+
       <div className="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-2">
         <h3 className="col-span-full text-xl font-semibold leading-7 text-zinc-900 dark:text-white border-b border-zinc-200 dark:border-gray-800 pb-2">Customer Information</h3>
         
         <div>
           <label className="block text-base font-medium text-zinc-600 dark:text-gray-300">First Name</label>
-          <input name="firstName" required style={{ textTransform: 'uppercase' }} onInput={(e) => { (e.target as HTMLInputElement).value = (e.target as HTMLInputElement).value.toUpperCase() }} className="mt-1.5 block w-full rounded-md border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 py-2.5 px-3 text-base shadow-sm focus:border-[#C27E00] focus:outline-none focus:ring-[#C27E00] text-zinc-900 dark:text-white placeholder:text-zinc-500 dark:placeholder:text-gray-500" />
+          <input name="firstName" required value={firstName} onChange={(e) => setFirstName(e.target.value.toUpperCase())} style={{ textTransform: 'uppercase' }} className="mt-1.5 block w-full rounded-md border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 py-2.5 px-3 text-base shadow-sm focus:border-[#C27E00] focus:outline-none focus:ring-[#C27E00] text-zinc-900 dark:text-white placeholder:text-zinc-500 dark:placeholder:text-gray-500" />
         </div>
 
         <div>
           <label className="block text-base font-medium text-zinc-600 dark:text-gray-300">Last Name</label>
-          <input name="lastName" required style={{ textTransform: 'uppercase' }} onInput={(e) => { (e.target as HTMLInputElement).value = (e.target as HTMLInputElement).value.toUpperCase() }} className="mt-1.5 block w-full rounded-md border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 py-2.5 px-3 shadow-sm focus:border-[#C27E00] focus:outline-none focus:ring-[#C27E00] text-base text-zinc-900 dark:text-white placeholder:text-zinc-500 dark:placeholder:text-gray-500" />
+          <input name="lastName" required value={lastName} onChange={(e) => setLastName(e.target.value.toUpperCase())} style={{ textTransform: 'uppercase' }} className="mt-1.5 block w-full rounded-md border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 py-2.5 px-3 shadow-sm focus:border-[#C27E00] focus:outline-none focus:ring-[#C27E00] text-base text-zinc-900 dark:text-white placeholder:text-zinc-500 dark:placeholder:text-gray-500" />
         </div>
 
         <div>
@@ -145,6 +179,8 @@ export function DemandForm({ cameraModels, defaultAddress = '', timezoneName: pr
           <CanadianPhoneInput
             name="phone"
             required
+            value={phone}
+            onChange={setPhone}
             placeholder="416 - 123 - 4567"
             className="mt-1.5 block w-full rounded-md border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 py-2.5 px-3 shadow-sm focus:border-[#C27E00] focus:outline-none focus:ring-[#C27E00] text-base text-zinc-900 dark:text-white placeholder:text-zinc-500 dark:placeholder:text-gray-500"
           />
@@ -255,15 +291,16 @@ export function DemandForm({ cameraModels, defaultAddress = '', timezoneName: pr
 
         <div>
           <label className="block text-base font-medium text-zinc-600 dark:text-gray-300">Year</label>
-          <input name="vehicleYear" type="number" min="1900" max="2100" required className="mt-1.5 block w-full rounded-md border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 py-2.5 px-3 shadow-sm focus:border-[#C27E00] focus:outline-none focus:ring-[#C27E00] text-base text-zinc-900 dark:text-white placeholder:text-zinc-500 dark:placeholder:text-gray-500" />
+          <input name="vehicleYear" type="number" min="1900" max="2100" required value={vehicleYear} onChange={(e) => setVehicleYear(e.target.value)} className="mt-1.5 block w-full rounded-md border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 py-2.5 px-3 shadow-sm focus:border-[#C27E00] focus:outline-none focus:ring-[#C27E00] text-base text-zinc-900 dark:text-white placeholder:text-zinc-500 dark:placeholder:text-gray-500" />
         </div>
 
         <div>
           <label className="block text-base font-medium text-zinc-600 dark:text-gray-300">Stock Number</label>
           <input 
             name="stockNumber"
+            value={stockNumber}
+            onChange={(e) => setStockNumber(e.target.value.toUpperCase())}
             style={{ textTransform: 'uppercase' }}
-            onInput={(e) => { (e.target as HTMLInputElement).value = (e.target as HTMLInputElement).value.toUpperCase() }} 
             required 
             className="mt-1.5 block w-full rounded-md border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 py-2.5 px-3 shadow-sm focus:border-[#C27E00] focus:outline-none focus:ring-[#C27E00] text-base text-zinc-900 dark:text-white placeholder:text-zinc-500 dark:placeholder:text-gray-500" 
             placeholder="Enter stock number"
@@ -274,8 +311,9 @@ export function DemandForm({ cameraModels, defaultAddress = '', timezoneName: pr
           <label className="block text-base font-medium text-zinc-600 dark:text-gray-300">VIN Last 6 Digits <span className="text-red-400">*</span></label>
           <input 
             name="vinLast6"
+            value={vinLast6}
+            onChange={(e) => setVinLast6(e.target.value.toUpperCase())}
             style={{ textTransform: 'uppercase' }}
-            onInput={(e) => { (e.target as HTMLInputElement).value = (e.target as HTMLInputElement).value.toUpperCase() }} 
             required
             minLength={6}
             className="mt-1.5 block w-full rounded-md border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 py-2.5 px-3 shadow-sm focus:border-[#C27E00] focus:outline-none focus:ring-[#C27E00] text-base text-zinc-900 dark:text-white placeholder:text-zinc-500 dark:placeholder:text-gray-500" 

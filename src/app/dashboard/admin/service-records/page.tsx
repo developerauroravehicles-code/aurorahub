@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import type { CustomerServiceRecord } from '@/types/customer-service-record'
 import { ServiceRecordsContent } from './service-records-content'
+import { fetchPendingExpenses } from './actions'
 
 type PageProps = {
   searchParams: Promise<{
@@ -26,13 +27,14 @@ export default async function ServiceRecordsPage({ searchParams }: PageProps) {
   const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
   if (profile?.role !== 'aurora_manager') redirect('/dashboard')
 
-  const [{ data, error }, { data: dealers }] = await Promise.all([
+  const [{ data, error }, { data: dealers }, pendingExpenses] = await Promise.all([
     supabase
       .from('customer_service_records')
       .select('*')
       .order('created_at', { ascending: false })
       .limit(500),
     supabase.from('dealers').select('id, name').order('name'),
+    fetchPendingExpenses(),
   ])
 
   if (error) {
@@ -43,6 +45,7 @@ export default async function ServiceRecordsPage({ searchParams }: PageProps) {
     <ServiceRecordsContent
       records={(data ?? []) as CustomerServiceRecord[]}
       dealers={dealers ?? []}
+      pendingExpenses={pendingExpenses}
       filterParams={params}
     />
   )

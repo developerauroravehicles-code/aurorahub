@@ -37,6 +37,9 @@ export interface CameraModel {
   description?: string | null
   stock_quantity?: number
   is_active: boolean
+  image_url?: string | null
+  user_manual_url?: string | null
+  troubleshooting_json?: { title: string; body: string }[] | null
   created_at?: string
   dealer_cameras?: DealerCamera[]
 }
