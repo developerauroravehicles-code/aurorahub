@@ -148,13 +148,29 @@ export default async function EmployeesPage({
                                   <p className="text-xs text-zinc-500 dark:text-gray-400 mt-1">
                                     This month:{' '}
                                     <span className="text-[#C27E00] font-medium">{stats.installations_completed} installs</span>
-                                    {' · '}
-                                    <span className="font-medium">{stats.service_jobs_completed} service</span>
-                                    {(stats.service_earnings + stats.manual_total) > 0 ? (
+                                    {stats.removals_completed > 0 ? (
                                       <>
                                         {' · '}
-                                        <span className="font-medium tabular-nums">
-                                          +${(stats.service_earnings + stats.manual_total).toFixed(2)} extras
+                                        <span className="font-medium">{stats.removals_completed} removal</span>
+                                      </>
+                                    ) : null}
+                                    {stats.transfers_completed > 0 ? (
+                                      <>
+                                        {' · '}
+                                        <span className="font-medium">{stats.transfers_completed} transfer</span>
+                                      </>
+                                    ) : null}
+                                    {' · '}
+                                    <span className="font-medium">{stats.service_jobs_completed} service</span>
+                                    {' · '}
+                                    <span className="font-medium tabular-nums text-green-700 dark:text-green-400">
+                                      Net ${stats.estimated_net_cad.toFixed(2)} CAD
+                                    </span>
+                                    {stats.estimated_delay_usd > 0 ? (
+                                      <>
+                                        {' · '}
+                                        <span className="font-medium tabular-nums text-blue-700 dark:text-blue-400">
+                                          +${stats.estimated_delay_usd.toFixed(2)} USD delay
                                         </span>
                                       </>
                                     ) : null}

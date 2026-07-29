@@ -1,45 +1,38 @@
-import {
-  calculateDeductions,
-  calculateGrossFromNet,
-  calculatePerCompletedAmount,
-} from '@/app/dashboard/hr/payroll/payroll-utils'
+import { calculatePerCompletedAmount } from '@/app/dashboard/hr/payroll/payroll-utils'
+
+export const SPECIALIST_RATES = {
+  baseCompleted: 15,
+  baseAmountCad: 2000,
+  perExtraCad: 50,
+  removalCad: 30,
+  transferCad: 80,
+  delay30Usd: 20,
+  delay60Usd: 30,
+} as const
+
+export type DelayFeeTier = 'none' | '30min' | '60min'
 
 export type SpecialistPayLine = {
   id: string
   label: string
   amount: number
-  source: 'installation' | 'service_fee' | 'expense' | 'manual'
-}
-
-export type SpecialistCompensationTier = {
-  id: string
-  base_completed: number
-  base_amount: number
-  per_completed_amount: number
-  currency: string | null
-  effective_from?: string
-  effective_to?: string | null
+  currency: 'CAD' | 'USD'
+  source: 'installation' | 'removal' | 'transfer' | 'delay' | 'service_fee' | 'expense' | 'expense_claim' | 'manual'
 }
 
 export type SpecialistCompensationSnapshot = {
   profile_id: string
-  personnel_id: string | null
   period_start: string
   period_end: string
   installations_completed: number
+  removals_completed: number
+  transfers_completed: number
+  delay_30min_count: number
+  delay_60min_count: number
   service_jobs_completed: number
-  tier: SpecialistCompensationTier | null
-  installation_target_net: number
   pay_lines: SpecialistPayLine[]
-  extras_gross: number
-  base_gross: number
-  effective_gross: number
-  cpp: number
-  ei: number
-  federal_tax: number
-  provincial_tax: number
-  total_deductions: number
-  estimated_net: number
+  estimated_net_cad: number
+  estimated_delay_usd: number
   manual_items: {
     id: string
     label: string
@@ -51,50 +44,87 @@ export type SpecialistCompensationSnapshot = {
 
 export function computeSpecialistPayEstimate(input: {
   installationsCompleted: number
-  tier: SpecialistCompensationTier | null
+  removalsCompleted: number
+  transfersCompleted: number
+  delay30minCount: number
+  delay60minCount: number
   serviceFeeTotal: number
   expenseReimbTotal: number
+  expenseClaims: { id: string; label: string; amount: number }[]
   manualItems: { id: string; label: string; amount: number }[]
 }): Pick<
   SpecialistCompensationSnapshot,
-  | 'installation_target_net'
-  | 'pay_lines'
-  | 'extras_gross'
-  | 'base_gross'
-  | 'effective_gross'
-  | 'cpp'
-  | 'ei'
-  | 'federal_tax'
-  | 'provincial_tax'
-  | 'total_deductions'
-  | 'estimated_net'
+  'pay_lines' | 'estimated_net_cad' | 'estimated_delay_usd'
 > {
-  const tier = input.tier
-  const installationTargetNet = tier
-    ? calculatePerCompletedAmount(
-        Number(tier.base_completed),
-        Number(tier.base_amount),
-        Number(tier.per_completed_amount),
-        input.installationsCompleted
-      )
-    : 0
-
   const pay_lines: SpecialistPayLine[] = []
 
-  if (installationTargetNet > 0) {
+  const installationNet = calculatePerCompletedAmount(
+    SPECIALIST_RATES.baseCompleted,
+    SPECIALIST_RATES.baseAmountCad,
+    SPECIALIST_RATES.perExtraCad,
+    input.installationsCompleted
+  )
+
+  if (installationNet > 0) {
     pay_lines.push({
       id: 'installations',
-      label: `Installations (${input.installationsCompleted}) — net target before extras`,
-      amount: installationTargetNet,
+      label: `Installations (${input.installationsCompleted}) — first ${SPECIALIST_RATES.baseCompleted} @ $${SPECIALIST_RATES.baseAmountCad.toLocaleString()} CAD, then +$${SPECIALIST_RATES.perExtraCad} CAD each`,
+      amount: Math.round(installationNet * 100) / 100,
+      currency: 'CAD',
       source: 'installation',
+    })
+  }
+
+  const removalNet = input.removalsCompleted * SPECIALIST_RATES.removalCad
+  if (removalNet > 0) {
+    pay_lines.push({
+      id: 'removals',
+      label: `Removals (${input.removalsCompleted} × $${SPECIALIST_RATES.removalCad} CAD)`,
+      amount: removalNet,
+      currency: 'CAD',
+      source: 'removal',
+    })
+  }
+
+  const transferNet = input.transfersCompleted * SPECIALIST_RATES.transferCad
+  if (transferNet > 0) {
+    pay_lines.push({
+      id: 'transfers',
+      label: `Transfers (${input.transfersCompleted} × $${SPECIALIST_RATES.transferCad} CAD)`,
+      amount: transferNet,
+      currency: 'CAD',
+      source: 'transfer',
+    })
+  }
+
+  const delay30Total = input.delay30minCount * SPECIALIST_RATES.delay30Usd
+  if (delay30Total > 0) {
+    pay_lines.push({
+      id: 'delay-30',
+      label: `Delay 30 min (${input.delay30minCount} × $${SPECIALIST_RATES.delay30Usd} USD)`,
+      amount: delay30Total,
+      currency: 'USD',
+      source: 'delay',
+    })
+  }
+
+  const delay60Total = input.delay60minCount * SPECIALIST_RATES.delay60Usd
+  if (delay60Total > 0) {
+    pay_lines.push({
+      id: 'delay-60',
+      label: `Delay 1 hour (${input.delay60minCount} × $${SPECIALIST_RATES.delay60Usd} USD)`,
+      amount: delay60Total,
+      currency: 'USD',
+      source: 'delay',
     })
   }
 
   if (input.serviceFeeTotal > 0) {
     pay_lines.push({
       id: 'service-fees',
-      label: 'Service completions ($20 each)',
+      label: 'Service completions ($20 CAD each)',
       amount: input.serviceFeeTotal,
+      currency: 'CAD',
       source: 'service_fee',
     })
   }
@@ -102,9 +132,20 @@ export function computeSpecialistPayEstimate(input: {
   if (input.expenseReimbTotal > 0) {
     pay_lines.push({
       id: 'expense-reimb',
-      label: 'Approved expense reimbursements',
+      label: 'Service job expense reimbursements',
       amount: input.expenseReimbTotal,
+      currency: 'CAD',
       source: 'expense',
+    })
+  }
+
+  for (const claim of input.expenseClaims) {
+    pay_lines.push({
+      id: claim.id,
+      label: claim.label,
+      amount: claim.amount,
+      currency: 'CAD',
+      source: 'expense_claim',
     })
   }
 
@@ -113,31 +154,22 @@ export function computeSpecialistPayEstimate(input: {
       id: item.id,
       label: item.label,
       amount: item.amount,
+      currency: 'CAD',
       source: 'manual',
     })
   }
 
-  const baseGross = installationTargetNet > 0 ? calculateGrossFromNet(installationTargetNet) : 0
-  const extrasGross =
-    input.serviceFeeTotal +
-    input.expenseReimbTotal +
-    input.manualItems.reduce((s, m) => s + m.amount, 0)
-  const effectiveGross = Math.round((baseGross + extrasGross) * 100) / 100
-  const d = calculateDeductions(effectiveGross)
+  const estimated_net_cad =
+    Math.round(
+      pay_lines.filter((l) => l.currency === 'CAD').reduce((s, l) => s + l.amount, 0) * 100
+    ) / 100
 
-  return {
-    installation_target_net: Math.round(installationTargetNet * 100) / 100,
-    pay_lines,
-    extras_gross: Math.round(extrasGross * 100) / 100,
-    base_gross: Math.round(baseGross * 100) / 100,
-    effective_gross: effectiveGross,
-    cpp: Math.round(d.cpp * 100) / 100,
-    ei: Math.round(d.ei * 100) / 100,
-    federal_tax: Math.round(d.federalTax * 100) / 100,
-    provincial_tax: Math.round(d.provincialTax * 100) / 100,
-    total_deductions: Math.round(d.totalDeductions * 100) / 100,
-    estimated_net: Math.round(d.net * 100) / 100,
-  }
+  const estimated_delay_usd =
+    Math.round(
+      pay_lines.filter((l) => l.currency === 'USD').reduce((s, l) => s + l.amount, 0) * 100
+    ) / 100
+
+  return { pay_lines, estimated_net_cad, estimated_delay_usd }
 }
 
 export function currentMonthPeriod(): { start: string; end: string } {
@@ -148,4 +180,9 @@ export function currentMonthPeriod(): { start: string; end: string } {
     start: start.toISOString().slice(0, 10),
     end: end.toISOString().slice(0, 10),
   }
+}
+
+export function formatRatesSummary(): string {
+  const r = SPECIALIST_RATES
+  return `${r.baseCompleted} dashcam @ $${r.baseAmountCad.toLocaleString()} CAD · +$${r.perExtraCad} CAD · removal $${r.removalCad} · transfer $${r.transferCad} · delay $${r.delay30Usd}/$${r.delay60Usd} USD`
 }

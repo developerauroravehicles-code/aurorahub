@@ -15,8 +15,13 @@ import {
   ExternalLink,
   Ticket,
   Plus,
+  Receipt,
 } from 'lucide-react'
 import { requestLeave, createITRequest } from './actions'
+import { SelfPayEstimatePanel } from './self-pay-estimate-panel'
+import { SelfExpensesPanel } from './self-expenses-panel'
+import type { SpecialistCompensationSnapshot } from '@/lib/specialist-compensation'
+import type { SpecialistExpenseClaim } from '@/lib/specialist-expense-claims'
 
 const LEAVE_TYPE_LABELS: Record<string, string> = {
   vacation: 'Vacation',
@@ -67,6 +72,7 @@ const PAYMENT_TYPES: Record<string, string> = {
   salary: 'Salary',
   hourly: 'Hourly',
   per_installation: 'Per Installation',
+  per_completed_tiered: 'Per Completed (Tiered)',
   commission: 'Commission',
   bonus: 'Bonus',
   job_based: 'Job Based',
@@ -77,6 +83,8 @@ export function SelfPortalContent({
   personnel,
   leaveRequests,
   payments,
+  payEstimate,
+  expenseClaims,
   equipment,
   certifications,
   complianceDocuments,
@@ -90,6 +98,8 @@ export function SelfPortalContent({
   personnel: { id: string; full_name?: string | null; phone?: string | null; email?: string | null; position?: string | null; status?: string | null; start_date?: string | null; province?: string | null } | null
   leaveRequests: { id: string; leave_type: string; start_date: string; end_date: string; status: string; notes?: string | null }[]
   payments: { id: string; amount: number; period_start: string | null; period_end: string | null; status: string; paid_at: string | null; payment_type: string | null; completed_count?: number | null }[]
+  payEstimate: SpecialistCompensationSnapshot | null
+  expenseClaims: SpecialistExpenseClaim[]
   equipment: { id: string; item_name?: string | null; serial_number?: string | null; assigned_at: string; condition?: string | null; equipment_types?: { name: string } | null }[]
   certifications: { id: string; certification_type: string; name?: string | null; institution?: string | null; issue_date: string; expiry_date: string | null; status?: string | null }[]
   complianceDocuments: { id: string; document_type: string | null; title: string | null; expiry_date: string | null; verified_at: string | null; document_url: string | null }[]
@@ -99,7 +109,7 @@ export function SelfPortalContent({
   leaveBlocks: { id: string; start_date: string; end_date: string; reason?: string | null }[]
   onboardingTasks: { id: string; title: string; status: string; due_date: string | null; completed_at: string | null }[]
 }) {
-  const [activeTab, setActiveTab] = useState<'profile' | 'leave' | 'pay' | 'documents' | 'certifications' | 'equipment' | 'schedule' | 'feedback' | 'onboarding' | 'it_request'>('profile')
+  const [activeTab, setActiveTab] = useState<'profile' | 'leave' | 'pay' | 'expenses' | 'documents' | 'certifications' | 'equipment' | 'schedule' | 'feedback' | 'onboarding' | 'it_request'>('profile')
   const [leaveError, setLeaveError] = useState<string | null>(null)
   const [leaveSuccess, setLeaveSuccess] = useState(false)
   const [itError, setItError] = useState<string | null>(null)
@@ -111,6 +121,9 @@ export function SelfPortalContent({
     { id: 'profile' as const, label: 'Profile', icon: UserCircle },
     { id: 'leave' as const, label: 'Leave', icon: CalendarDays },
     { id: 'pay' as const, label: 'Pay', icon: DollarSign },
+    ...(profile.role === 'specialist'
+      ? [{ id: 'expenses' as const, label: 'Expenses', icon: Receipt }]
+      : []),
     { id: 'it_request' as const, label: 'IT Request', icon: Ticket },
     { id: 'documents' as const, label: 'Documents', icon: FileText },
     { id: 'certifications' as const, label: 'Certifications', icon: Award },
@@ -290,29 +303,47 @@ export function SelfPortalContent({
         </div>
       )}
 
+      {activeTab === 'expenses' && profile.role === 'specialist' ? (
+        <div className="bg-zinc-200/50 dark:bg-white/5 rounded-lg border border-zinc-200 dark:border-gray-800 p-6">
+          <SelfExpensesPanel initialClaims={expenseClaims} />
+        </div>
+      ) : null}
+
       {activeTab === 'pay' && (
         <div className="bg-zinc-200/50 dark:bg-white/5 rounded-lg border border-zinc-200 dark:border-gray-800 p-6">
+          {profile.role === 'specialist' && payEstimate ? (
+            <SelfPayEstimatePanel initialSnapshot={payEstimate} />
+          ) : null}
           {(() => {
             const pendingPayments = payments.filter((p) => (p.status || '').toLowerCase() === 'pending')
             const paidPayments = payments.filter((p) => (p.status || '').toLowerCase() === 'paid')
             const pendingTotal = pendingPayments.reduce((sum, p) => sum + Number(p.amount), 0)
             const paidTotal = paidPayments.reduce((sum, p) => sum + Number(p.amount), 0)
+            const showLiveEstimate = profile.role === 'specialist' && payEstimate
             return (
               <>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
-                  <div className="rounded-lg border border-amber-500/30 bg-amber-900/10 p-4">
-                    <p className="text-xs text-amber-400 uppercase mb-1">Amount to Receive</p>
-                    <p className="text-2xl font-semibold text-zinc-900 dark:text-white">${pendingTotal.toLocaleString()}</p>
-                    <p className="text-zinc-500 dark:text-gray-500 text-sm mt-1">{pendingPayments.length} pending payment(s)</p>
+                {!showLiveEstimate ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+                    <div className="rounded-lg border border-amber-500/30 bg-amber-900/10 p-4">
+                      <p className="text-xs text-amber-400 uppercase mb-1">Amount to Receive</p>
+                      <p className="text-2xl font-semibold text-zinc-900 dark:text-white">${pendingTotal.toLocaleString()}</p>
+                      <p className="text-zinc-500 dark:text-gray-500 text-sm mt-1">{pendingPayments.length} pending payment(s)</p>
+                    </div>
+                    <div className="rounded-lg border border-zinc-300 dark:border-gray-700 bg-zinc-100/90 dark:bg-black/30 p-4">
+                      <p className="text-xs text-zinc-500 dark:text-gray-500 uppercase mb-1">Total Received</p>
+                      <p className="text-2xl font-semibold text-zinc-900 dark:text-white">${paidTotal.toLocaleString()}</p>
+                      <p className="text-zinc-500 dark:text-gray-500 text-sm mt-1">{paidPayments.length} paid payment(s)</p>
+                    </div>
                   </div>
-                  <div className="rounded-lg border border-zinc-300 dark:border-gray-700 bg-zinc-100/90 dark:bg-black/30 p-4">
-                    <p className="text-xs text-zinc-500 dark:text-gray-500 uppercase mb-1">Total Received</p>
-                    <p className="text-2xl font-semibold text-zinc-900 dark:text-white">${paidTotal.toLocaleString()}</p>
-                    <p className="text-zinc-500 dark:text-gray-500 text-sm mt-1">{paidPayments.length} paid payment(s)</p>
-                  </div>
-                </div>
+                ) : (
+                  <p className="text-sm text-zinc-500 dark:text-gray-400 mb-6">
+                    HR payroll: ${paidTotal.toLocaleString()} paid · ${pendingTotal.toLocaleString()} pending
+                  </p>
+                )}
                 <div className="flex justify-between items-center mb-4">
-                  <h2 className="text-lg font-semibold text-zinc-900 dark:text-white">Payment History</h2>
+                  <h2 className="text-lg font-semibold text-zinc-900 dark:text-white">
+                    {showLiveEstimate ? 'HR payment records' : 'Payment History'}
+                  </h2>
                   {['hr', 'aurora_manager'].includes(profile.role) && (
                     <Link href="/dashboard/hr/payroll" className="text-sm text-[#C27E00] hover:underline">Payroll →</Link>
                   )}

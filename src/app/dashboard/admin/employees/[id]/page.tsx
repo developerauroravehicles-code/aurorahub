@@ -4,9 +4,12 @@ import Link from 'next/link'
 import { format } from 'date-fns'
 import { formatInTimeZone } from 'date-fns-tz'
 import { ArrowLeft } from 'lucide-react'
+import { SERVICE_TYPE_LABELS, type DemandServiceType } from '@/lib/demand-pricing'
 import { DealerAssignment } from './dealer-assignment'
 import { getSpecialistCompensationSnapshot } from '../compensation-actions'
 import { SpecialistCompensationPanel } from '../specialist-compensation-panel'
+import { getSpecialistExpenseClaims } from '../expense-claim-actions'
+import { SpecialistExpenseClaimsPanel } from '../specialist-expense-claims-panel'
 
 export default async function SpecialistDetailsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -60,7 +63,7 @@ export default async function SpecialistDetailsPage({ params }: { params: Promis
   const { data: completedJobs } = await supabase
     .from('demands')
     .select(
-      'id, demand_number, status, updated_at, completed_at, customer_firstname, customer_lastname, vehicle_make, vehicle_model, vehicle_year, appointment_date, dealers(name, region_codes(timezones(name)))'
+      'id, demand_number, status, updated_at, completed_at, service_type, delay_fee_tier, customer_firstname, customer_lastname, vehicle_make, vehicle_model, vehicle_year, appointment_date, dealers(name, region_codes(timezones(name)))'
     )
     .eq('status', 'completed')
     .eq('assigned_specialist_id', id)
@@ -86,6 +89,7 @@ export default async function SpecialistDetailsPage({ params }: { params: Promis
 
   const compensationResult = await getSpecialistCompensationSnapshot(id)
   const compensationSnapshot = compensationResult.snapshot
+  const expenseClaimsResult = await getSpecialistExpenseClaims(id)
 
   return (
     <div className="space-y-8">
@@ -119,6 +123,11 @@ export default async function SpecialistDetailsPage({ params }: { params: Promis
       {compensationSnapshot ? (
         <SpecialistCompensationPanel profileId={id} initialSnapshot={compensationSnapshot} />
       ) : null}
+
+      <SpecialistExpenseClaimsPanel
+        profileId={id}
+        initialClaims={expenseClaimsResult.claims ?? []}
+      />
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="bg-zinc-200/50 dark:bg-white/5 border border-zinc-200 dark:border-gray-800 p-5 rounded-lg">
@@ -199,7 +208,14 @@ type JobRow = {
   appointment_date?: string | null
   updated_at?: string | null
   completed_at?: string | null
+  service_type?: DemandServiceType | null
+  delay_fee_tier?: 'none' | '30min' | '60min' | null
   dealers?: { name?: string; region_codes?: { timezones?: { name: string } } | null } | null
+}
+
+const DELAY_LABELS: Record<string, string> = {
+  '30min': 'Delay 30 min ($20 USD)',
+  '60min': 'Delay 1 hr ($30 USD)',
 }
 
 function JobList({
@@ -241,6 +257,14 @@ function JobList({
                   </p>
                   {job.demand_number != null ? (
                     <p className="text-xs text-zinc-500 mt-0.5">#{job.demand_number}</p>
+                  ) : null}
+                  {completed && job.service_type ? (
+                    <p className="text-xs text-zinc-500 mt-0.5">
+                      {SERVICE_TYPE_LABELS[job.service_type as DemandServiceType]}
+                      {job.delay_fee_tier && job.delay_fee_tier !== 'none'
+                        ? ` · ${DELAY_LABELS[job.delay_fee_tier] ?? job.delay_fee_tier}`
+                        : ''}
+                    </p>
                   ) : null}
                   {showDealer && job.dealers?.name ? (
                     <p className="text-xs text-zinc-500">{job.dealers.name}</p>

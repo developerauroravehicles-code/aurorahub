@@ -1,8 +1,9 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import { Loader2, Plus, Trash2, DollarSign, Wrench, Car } from 'lucide-react'
+import { Loader2, Plus, Trash2, DollarSign, Wrench, Car, ArrowRightLeft, Unplug, Clock } from 'lucide-react'
 import type { SpecialistCompensationSnapshot } from '@/lib/specialist-compensation'
+import { formatRatesSummary } from '@/lib/specialist-compensation'
 import {
   addSpecialistManualPayrollItem,
   deleteSpecialistManualPayrollItem,
@@ -95,7 +96,7 @@ export function SpecialistCompensationPanel({ profileId, initialSnapshot }: Prop
             Compensation (live estimate)
           </h2>
           <p className="text-sm text-zinc-500 dark:text-gray-400 mt-0.5">
-            Installations, service jobs, expenses, and manual adjustments for the selected period.
+            Net pay by job type for the selected period. Delay fees shown separately in USD.
           </p>
         </div>
         {loading ? <Loader2 className="h-5 w-5 animate-spin text-zinc-400" /> : null}
@@ -122,12 +123,24 @@ export function SpecialistCompensationPanel({ profileId, initialSnapshot }: Prop
         </div>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
         <div className="rounded-lg border border-zinc-200 dark:border-zinc-700 p-3">
           <p className="text-xs text-zinc-500 flex items-center gap-1">
             <Car className="h-3.5 w-3.5" /> Installations
           </p>
           <p className="text-2xl font-bold text-[#C27E00] mt-1">{snapshot.installations_completed}</p>
+        </div>
+        <div className="rounded-lg border border-zinc-200 dark:border-zinc-700 p-3">
+          <p className="text-xs text-zinc-500 flex items-center gap-1">
+            <Unplug className="h-3.5 w-3.5" /> Removals
+          </p>
+          <p className="text-2xl font-bold text-zinc-900 dark:text-white mt-1">{snapshot.removals_completed}</p>
+        </div>
+        <div className="rounded-lg border border-zinc-200 dark:border-zinc-700 p-3">
+          <p className="text-xs text-zinc-500 flex items-center gap-1">
+            <ArrowRightLeft className="h-3.5 w-3.5" /> Transfers
+          </p>
+          <p className="text-2xl font-bold text-zinc-900 dark:text-white mt-1">{snapshot.transfers_completed}</p>
         </div>
         <div className="rounded-lg border border-zinc-200 dark:border-zinc-700 p-3">
           <p className="text-xs text-zinc-500 flex items-center gap-1">
@@ -138,29 +151,38 @@ export function SpecialistCompensationPanel({ profileId, initialSnapshot }: Prop
           </p>
         </div>
         <div className="rounded-lg border border-zinc-200 dark:border-zinc-700 p-3">
-          <p className="text-xs text-zinc-500">Gross (est.)</p>
-          <p className="text-2xl font-bold text-zinc-900 dark:text-white mt-1 tabular-nums">
-            ${snapshot.effective_gross.toFixed(2)}
+          <p className="text-xs text-zinc-500 flex items-center gap-1">
+            <Clock className="h-3.5 w-3.5" /> Delays
           </p>
-        </div>
-        <div className="rounded-lg border border-green-200 dark:border-green-900/50 bg-green-50/50 dark:bg-green-950/20 p-3">
-          <p className="text-xs text-green-700 dark:text-green-400">Net pay (est.)</p>
-          <p className="text-2xl font-bold text-green-700 dark:text-green-300 mt-1 tabular-nums">
-            ${snapshot.estimated_net.toFixed(2)}
+          <p className="text-2xl font-bold text-zinc-900 dark:text-white mt-1">
+            {snapshot.delay_30min_count + snapshot.delay_60min_count}
           </p>
         </div>
       </div>
 
-      {snapshot.tier ? (
-        <p className="text-xs text-zinc-500">
-          Tier: first {snapshot.tier.base_completed} @ ${Number(snapshot.tier.base_amount).toFixed(2)} net,
-          then +${Number(snapshot.tier.per_completed_amount).toFixed(2)} net each
-        </p>
-      ) : (
-        <p className="text-xs text-amber-600 dark:text-amber-400">
-          No per-completed tier in HR Payroll for this specialist — installation pay shows as $0 until configured.
-        </p>
-      )}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div className="rounded-lg border border-green-200 dark:border-green-900/50 bg-green-50/50 dark:bg-green-950/20 p-3">
+          <p className="text-xs text-green-700 dark:text-green-400">Net pay (CAD)</p>
+          <p className="text-2xl font-bold text-green-700 dark:text-green-300 mt-1 tabular-nums">
+            ${snapshot.estimated_net_cad.toFixed(2)}
+          </p>
+        </div>
+        {snapshot.estimated_delay_usd > 0 ? (
+          <div className="rounded-lg border border-blue-200 dark:border-blue-900/50 bg-blue-50/50 dark:bg-blue-950/20 p-3">
+            <p className="text-xs text-blue-700 dark:text-blue-400">Delay fees (USD)</p>
+            <p className="text-2xl font-bold text-blue-700 dark:text-blue-300 mt-1 tabular-nums">
+              ${snapshot.estimated_delay_usd.toFixed(2)}
+            </p>
+          </div>
+        ) : (
+          <div className="rounded-lg border border-zinc-200 dark:border-zinc-700 p-3">
+            <p className="text-xs text-zinc-500">Delay fees (USD)</p>
+            <p className="text-2xl font-bold text-zinc-400 mt-1 tabular-nums">$0.00</p>
+          </div>
+        )}
+      </div>
+
+      <p className="text-xs text-zinc-500">{formatRatesSummary()}</p>
 
       {snapshot.pay_lines.length > 0 ? (
         <div className="rounded-lg border border-zinc-200 dark:border-zinc-700 overflow-hidden">
@@ -176,7 +198,7 @@ export function SpecialistCompensationPanel({ profileId, initialSnapshot }: Prop
                 <tr key={line.id}>
                   <td className="px-3 py-2 text-zinc-800 dark:text-gray-200">{line.label}</td>
                   <td className="px-3 py-2 text-right tabular-nums font-medium">
-                    ${line.amount.toFixed(2)}
+                    ${line.amount.toFixed(2)} {line.currency}
                   </td>
                 </tr>
               ))}
@@ -236,7 +258,7 @@ export function SpecialistCompensationPanel({ profileId, initialSnapshot }: Prop
                   ) : null}
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="tabular-nums font-semibold">${item.amount.toFixed(2)}</span>
+                  <span className="tabular-nums font-semibold">${item.amount.toFixed(2)} CAD</span>
                   <button
                     type="button"
                     onClick={() => void handleDelete(item.id)}
@@ -250,13 +272,6 @@ export function SpecialistCompensationPanel({ profileId, initialSnapshot }: Prop
             ))}
           </ul>
         ) : null}
-      </div>
-
-      <div className="grid sm:grid-cols-2 gap-2 text-xs text-zinc-500 dark:text-gray-400">
-        <p>CPP: ${snapshot.cpp.toFixed(2)} · EI: ${snapshot.ei.toFixed(2)}</p>
-        <p>
-          Federal: ${snapshot.federal_tax.toFixed(2)} · Provincial: ${snapshot.provincial_tax.toFixed(2)}
-        </p>
       </div>
 
       {error ? <p className="text-sm text-red-600 dark:text-red-400">{error}</p> : null}

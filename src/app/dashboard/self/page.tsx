@@ -1,6 +1,8 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { SelfPortalContent } from './self-portal-content'
+import { fetchSpecialistCompensationSnapshot } from '@/lib/specialist-compensation-snapshot'
+import { getMyExpenseClaims } from './expense-actions'
 
 export const dynamic = 'force-dynamic'
 
@@ -65,6 +67,14 @@ export default async function SelfPortalPage() {
     equipment_types: normEquipmentTypes(e.equipment_types),
   })) as Equipment
 
+  const payEstimate =
+    profile.role === 'specialist'
+      ? await fetchSpecialistCompensationSnapshot(supabase, user.id)
+      : null
+
+  const expenseClaimsResult =
+    profile.role === 'specialist' ? await getMyExpenseClaims() : { claims: [] as never[] }
+
   return (
     <div className="min-w-0 max-w-full space-y-8">
       <div>
@@ -76,6 +86,8 @@ export default async function SelfPortalPage() {
         personnel={personnel}
         leaveRequests={leaveRes.data ?? []}
         payments={(paymentsRes.data ?? []) as Payments}
+        payEstimate={payEstimate}
+        expenseClaims={expenseClaimsResult.claims ?? []}
         equipment={normEquipment}
         certifications={(certsRes.data ?? []) as Parameters<typeof SelfPortalContent>[0]['certifications']}
         complianceDocuments={(complianceDocsRes.data ?? []) as Parameters<typeof SelfPortalContent>[0]['complianceDocuments']}

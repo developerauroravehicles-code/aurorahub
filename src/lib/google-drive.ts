@@ -592,3 +592,78 @@ export async function appendCommunicationLogToDrive(
     return { success: false, error: `Drive log append failed: ${msg}` }
   }
 }
+
+export type SpecialistExpenseReceiptFile = {
+  buffer: Buffer | Uint8Array
+  mimeType: string
+  fileName: string
+}
+
+/**
+ * Upload specialist expense receipt under:
+ * rootFolder / SpecialistExpenses / {specialistName} / YYYY-MM /
+ */
+export async function uploadSpecialistExpenseReceiptToDrive(
+  settings: GoogleDriveSettings,
+  specialistName: string,
+  expenseDate: string,
+  file: SpecialistExpenseReceiptFile
+): Promise<{ success: true; fileId: string; webViewLink?: string; name: string } | { success: false; error: string }> {
+  const client = await getDriveClient(settings)
+  if (!client.drive || !client.rootFolderId) {
+    return { success: false, error: client.error ?? 'Google Drive not available' }
+  }
+
+  const { drive, rootFolderId } = client
+
+  try {
+    const expensesRootId = await findOrCreateFolder(drive, rootFolderId, 'SpecialistExpenses')
+    const specialistFolderId = await findOrCreateFolder(
+      drive,
+      expensesRootId,
+      sanitizeFolderName(specialistName) || 'Specialist'
+    )
+
+    const datePart = /^\d{4}-\d{2}-\d{2}/.test(expenseDate)
+      ? expenseDate.slice(0, 7)
+      : new Date().toISOString().slice(0, 7)
+    const monthFolderId = await findOrCreateFolder(drive, specialistFolderId, datePart)
+
+    const { Readable } = await import('stream')
+    const buffer = Buffer.isBuffer(file.buffer) ? file.buffer : Buffer.from(file.buffer)
+    const base = sanitizeFolderName(file.fileName.replace(/\.[^.]+$/, '')) || 'receipt'
+    const extMatch = /\.([a-zA-Z0-9]+)$/.exec(file.fileName)
+    const ext =
+      extMatch ? `.${extMatch[1].toLowerCase()}`
+        : file.mimeType === 'image/jpeg' ? '.jpg'
+          : file.mimeType === 'image/png' ? '.png'
+            : file.mimeType === 'image/webp' ? '.webp'
+              : file.mimeType === 'image/gif' ? '.gif'
+                : file.mimeType === 'application/pdf' ? '.pdf'
+                  : '.jpg'
+    const uniqueName = `${base}_${Date.now()}${ext}`.replace(/[<>:"/\\|?*]/g, '_')
+
+    const { data: uploaded } = await drive.files.create({
+      requestBody: {
+        name: uniqueName,
+        parents: [monthFolderId],
+      },
+      media: {
+        mimeType: file.mimeType || 'application/octet-stream',
+        body: Readable.from(buffer),
+      },
+      fields: 'id, webViewLink, name',
+      supportsAllDrives: true,
+    })
+
+    return {
+      success: true,
+      fileId: uploaded.id!,
+      webViewLink: uploaded.webViewLink ?? undefined,
+      name: uploaded.name ?? uniqueName,
+    }
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err)
+    return { success: false, error: `Drive upload failed: ${msg}` }
+  }
+}

@@ -84,10 +84,15 @@ export async function assignWorkToMe(demandId: string) {
   return { success: true }
 }
 
+export type DelayFeeTier = 'none' | '30min' | '60min'
+
+const DELAY_FEE_TIERS: DelayFeeTier[] = ['none', '30min', '60min']
+
 type CompleteDemandOptions = {
   serviceType: DemandServiceType
   vinLast6?: string
   skipVinCheck?: boolean
+  delayFeeTier?: DelayFeeTier
 }
 
 export async function completeDemand(demandId: string, options: CompleteDemandOptions) {
@@ -99,6 +104,11 @@ export async function completeDemand(demandId: string, options: CompleteDemandOp
   if (!options?.serviceType || !isDemandServiceType(options.serviceType)) {
     return { error: 'Service type is required.' }
   }
+
+  const delayFeeTier: DelayFeeTier =
+    options.delayFeeTier && DELAY_FEE_TIERS.includes(options.delayFeeTier)
+      ? options.delayFeeTier
+      : 'none'
 
   const { data: demand } = await supabase
     .from('demands')
@@ -155,6 +165,7 @@ export async function completeDemand(demandId: string, options: CompleteDemandOp
       status: 'completed',
       completed_at: new Date().toISOString(),
       service_type: options.serviceType,
+      delay_fee_tier: delayFeeTier,
       invoice_total_amount: pricingResult.amount,
       ...(resolvedCameraModelId && !demand.camera_model_id
         ? { camera_model_id: resolvedCameraModelId }
@@ -171,7 +182,7 @@ export async function completeDemand(demandId: string, options: CompleteDemandOp
     actorId: user.id,
     previousStatus: 'approved',
     newStatus: 'completed',
-    notes: `Demand completed (${options.serviceType})`,
+    notes: `Demand completed (${options.serviceType}${delayFeeTier !== 'none' ? `, delay ${delayFeeTier}` : ''})`,
   }).catch(() => {})
 
   dispatchWebhooks(supabase, 'appointment_completed', {

@@ -3,11 +3,14 @@
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import {
-  computeSpecialistPayEstimate,
   currentMonthPeriod,
   type SpecialistCompensationSnapshot,
-  type SpecialistCompensationTier,
 } from '@/lib/specialist-compensation'
+import {
+  buildSpecialistCompensationSnapshot,
+  fetchSpecialistCompensationSnapshot,
+  type PeriodStatsRow,
+} from '@/lib/specialist-compensation-snapshot'
 
 async function ensureAmOrHr() {
   const supabase = await createClient()
@@ -24,19 +27,6 @@ async function ensureAmOrHr() {
   return { error: null, userId: user.id, supabase }
 }
 
-function activeTier(
-  tiers: SpecialistCompensationTier[],
-  periodEnd: string
-): SpecialistCompensationTier | null {
-  const end = periodEnd
-  const match = tiers.find((t) => {
-    const from = t.effective_from?.slice(0, 10) ?? ''
-    const to = t.effective_to?.slice(0, 10) ?? null
-    return from <= end && (!to || to >= end)
-  })
-  return match ?? tiers[0] ?? null
-}
-
 export async function getSpecialistCompensationSnapshot(
   profileId: string,
   periodStart?: string,
@@ -45,13 +35,7 @@ export async function getSpecialistCompensationSnapshot(
   const auth = await ensureAmOrHr()
   if (auth.error || !auth.supabase) return { error: auth.error ?? 'Unauthorized' }
 
-  const period = currentMonthPeriod()
-  const start = periodStart ?? period.start
-  const end = periodEnd ?? period.end
-
-  const supabase = auth.supabase
-
-  const { data: profile } = await supabase
+  const { data: profile } = await auth.supabase
     .from('profiles')
     .select('id, role, full_name')
     .eq('id', profileId)
@@ -61,75 +45,14 @@ export async function getSpecialistCompensationSnapshot(
     return { error: 'Specialist not found.' }
   }
 
-  const { data: personnel } = await supabase
-    .from('personnel')
-    .select('id')
-    .eq('profile_id', profileId)
-    .maybeSingle()
+  const snapshot = await fetchSpecialistCompensationSnapshot(
+    auth.supabase,
+    profileId,
+    periodStart,
+    periodEnd
+  )
 
-  const { data: statsRows } = await supabase.rpc('get_specialist_period_stats', {
-    p_profile_ids: [profileId],
-    p_period_start: start,
-    p_period_end: end,
-  })
-
-  const stats = (statsRows as Array<{
-    profile_id: string
-    installations_completed: number
-    service_jobs_completed: number
-    service_fee_total: number
-    expense_reimbursement_total: number
-    manual_items_total: number
-  }> | null)?.[0]
-
-  let tier: SpecialistCompensationTier | null = null
-  if (personnel?.id) {
-    const { data: tiers } = await supabase
-      .from('compensation_per_completed')
-      .select('id, base_completed, base_amount, per_completed_amount, currency, effective_from, effective_to')
-      .eq('personnel_id', personnel.id)
-      .order('effective_from', { ascending: false })
-
-    tier = activeTier((tiers ?? []) as SpecialistCompensationTier[], end)
-  }
-
-  const { data: manualRows } = await supabase
-    .from('specialist_manual_payroll_items')
-    .select('id, label, amount, notes, created_at')
-    .eq('profile_id', profileId)
-    .eq('period_start', start)
-    .eq('period_end', end)
-    .order('created_at', { ascending: false })
-
-  const manualItems = (manualRows ?? []).map((r) => ({
-    id: r.id,
-    label: r.label,
-    amount: Number(r.amount),
-    notes: r.notes ?? '',
-    created_at: r.created_at,
-  }))
-
-  const payCalc = computeSpecialistPayEstimate({
-    installationsCompleted: Number(stats?.installations_completed ?? 0),
-    tier,
-    serviceFeeTotal: Number(stats?.service_fee_total ?? 0),
-    expenseReimbTotal: Number(stats?.expense_reimbursement_total ?? 0),
-    manualItems: manualItems.map((m) => ({ id: m.id, label: m.label, amount: m.amount })),
-  })
-
-  return {
-    snapshot: {
-      profile_id: profileId,
-      personnel_id: personnel?.id ?? null,
-      period_start: start,
-      period_end: end,
-      installations_completed: Number(stats?.installations_completed ?? 0),
-      service_jobs_completed: Number(stats?.service_jobs_completed ?? 0),
-      tier,
-      manual_items: manualItems,
-      ...payCalc,
-    },
-  }
+  return { snapshot }
 }
 
 export async function getSpecialistStatsBatch(
@@ -142,14 +65,20 @@ export async function getSpecialistStatsBatch(
     {
       installations_completed: number
       service_jobs_completed: number
-      estimated_net: number
+      estimated_net_cad: number
+      estimated_delay_usd: number
     }
   >
 > {
   const auth = await ensureAmOrHr()
   const result = new Map<
     string,
-    { installations_completed: number; service_jobs_completed: number; estimated_net: number }
+    {
+      installations_completed: number
+      service_jobs_completed: number
+      estimated_net_cad: number
+      estimated_delay_usd: number
+    }
   >()
   if (auth.error || !auth.supabase || profileIds.length === 0) return result
 
@@ -157,25 +86,13 @@ export async function getSpecialistStatsBatch(
   const start = periodStart ?? period.start
   const end = periodEnd ?? period.end
 
-  const { data: statsRows } = await auth.supabase.rpc('get_specialist_period_stats', {
-    p_profile_ids: profileIds,
-    p_period_start: start,
-    p_period_end: end,
-  })
-
-  for (const row of (statsRows ?? []) as Array<{
-    profile_id: string
-    installations_completed: number
-    service_jobs_completed: number
-    service_fee_total: number
-    expense_reimbursement_total: number
-    manual_items_total: number
-  }>) {
-    const { snapshot } = await getSpecialistCompensationSnapshot(row.profile_id, start, end)
-    result.set(row.profile_id, {
-      installations_completed: Number(row.installations_completed ?? 0),
-      service_jobs_completed: Number(row.service_jobs_completed ?? 0),
-      estimated_net: snapshot?.estimated_net ?? 0,
+  for (const profileId of profileIds) {
+    const snapshot = await fetchSpecialistCompensationSnapshot(auth.supabase, profileId, start, end)
+    result.set(profileId, {
+      installations_completed: snapshot.installations_completed,
+      service_jobs_completed: snapshot.service_jobs_completed,
+      estimated_net_cad: snapshot.estimated_net_cad,
+      estimated_delay_usd: snapshot.estimated_delay_usd,
     })
   }
 
@@ -212,6 +129,7 @@ export async function addSpecialistManualPayrollItem(
   if (error) return { error: error.message }
   revalidatePath('/dashboard/admin/employees')
   revalidatePath(`/dashboard/admin/employees/${profileId}`)
+  revalidatePath('/dashboard/self')
   return { success: true }
 }
 
@@ -231,6 +149,7 @@ export async function deleteSpecialistManualPayrollItem(
   if (error) return { error: error.message }
   revalidatePath('/dashboard/admin/employees')
   revalidatePath(`/dashboard/admin/employees/${profileId}`)
+  revalidatePath('/dashboard/self')
   return { success: true }
 }
 
@@ -241,9 +160,11 @@ export async function getSpecialistStatsForList(
     string,
     {
       installations_completed: number
+      removals_completed: number
+      transfers_completed: number
       service_jobs_completed: number
-      service_earnings: number
-      manual_total: number
+      estimated_net_cad: number
+      estimated_delay_usd: number
     }
   >
 > {
@@ -261,26 +182,23 @@ export async function getSpecialistStatsForList(
     string,
     {
       installations_completed: number
+      removals_completed: number
+      transfers_completed: number
       service_jobs_completed: number
-      service_earnings: number
-      manual_total: number
+      estimated_net_cad: number
+      estimated_delay_usd: number
     }
   > = {}
 
-  for (const row of (statsRows ?? []) as Array<{
-    profile_id: string
-    installations_completed: number
-    service_jobs_completed: number
-    service_fee_total: number
-    expense_reimbursement_total: number
-    manual_items_total: number
-  }>) {
+  for (const row of (statsRows ?? []) as PeriodStatsRow[]) {
+    const snapshot = buildSpecialistCompensationSnapshot(row.profile_id, period.start, period.end, row, [], [])
     out[row.profile_id] = {
-      installations_completed: Number(row.installations_completed ?? 0),
-      service_jobs_completed: Number(row.service_jobs_completed ?? 0),
-      service_earnings:
-        Number(row.service_fee_total ?? 0) + Number(row.expense_reimbursement_total ?? 0),
-      manual_total: Number(row.manual_items_total ?? 0),
+      installations_completed: snapshot.installations_completed,
+      removals_completed: snapshot.removals_completed,
+      transfers_completed: snapshot.transfers_completed,
+      service_jobs_completed: snapshot.service_jobs_completed,
+      estimated_net_cad: snapshot.estimated_net_cad,
+      estimated_delay_usd: snapshot.estimated_delay_usd,
     }
   }
 
