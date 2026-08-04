@@ -1,9 +1,9 @@
 'use client'
 
 import { useState, useEffect, useTransition, memo, useCallback } from 'react'
-import { createCameraModel, deleteCameraModel, toggleCameraModelStatus, updateCameraModel, updateCameraStock, assignCameraToDealer, assignCameraToAllDealers, removeCameraFromDealer } from '../actions'
+import { createCameraModel, deleteCameraModel, toggleCameraModelStatus, updateCameraModel, assignCameraToDealer, assignCameraToAllDealers, removeCameraFromDealer } from '../actions'
 import { useActionState } from 'react'
-import { Trash2, Power, PowerOff, Edit2, Package, Building2, X } from 'lucide-react'
+import { Trash2, Power, PowerOff, Edit2, Building2, X } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import type { CameraModel, Dealer, SystemDataErrors } from '@/types/system-management'
@@ -14,9 +14,6 @@ export const CameraManagementContent = memo(function CameraManagementContent({ c
   const [isDeleting, startDeleteTransition] = useTransition()
   const [isToggling, startToggleTransition] = useTransition()
   const [editingId, setEditingId] = useState<string | null>(null)
-  const [stockEditingId, setStockEditingId] = useState<string | null>(null)
-  const [stockValue, setStockValue] = useState<number>(0)
-  const [stockUpdating, setStockUpdating] = useState(false)
   const [dealerAssigningId, setDealerAssigningId] = useState<string | null>(null)
   const [assigningDealerId, setAssigningDealerId] = useState<string | null>(null)
   const [removingDealerId, setRemovingDealerId] = useState<string | null>(null)
@@ -113,22 +110,6 @@ export const CameraManagementContent = memo(function CameraManagementContent({ c
 
           <div>
             <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300 mb-2">
-              Stock Quantity *
-            </label>
-            <input
-              type="number"
-              name="stockQuantity"
-              min="0"
-              max="999999"
-              defaultValue="0"
-              required
-              className="block w-full rounded-md border border-zinc-300 dark:border-gray-700 bg-zinc-200/50 dark:bg-white/5 px-3 py-2 text-zinc-900 dark:text-white placeholder-zinc-500 dark:placeholder-gray-500 focus:border-[#C27E00] focus:outline-none focus:ring-1 focus:ring-[#C27E00] sm:text-sm"
-              placeholder="0"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300 mb-2">
               Stock photo URL (customer portal)
             </label>
             <input
@@ -209,14 +190,6 @@ export const CameraManagementContent = memo(function CameraManagementContent({ c
                         className="block w-full rounded-md border border-zinc-300 dark:border-gray-700 bg-zinc-200 dark:bg-white/10 px-3 py-2 text-zinc-900 dark:text-white focus:border-[#C27E00] focus:outline-none focus:ring-1 focus:ring-[#C27E00] sm:text-sm"
                       />
                       <input
-                        type="number"
-                        name="stockQuantity"
-                        defaultValue={camera.stock_quantity || 0}
-                        min="0"
-                        required
-                        className="block w-full rounded-md border border-zinc-300 dark:border-gray-700 bg-zinc-200 dark:bg-white/10 px-3 py-2 text-zinc-900 dark:text-white focus:border-[#C27E00] focus:outline-none focus:ring-1 focus:ring-[#C27E00] sm:text-sm"
-                      />
-                      <input
                         type="url"
                         name="imageUrl"
                         defaultValue={camera.image_url || ''}
@@ -273,9 +246,6 @@ export const CameraManagementContent = memo(function CameraManagementContent({ c
                             Inactive
                           </span>
                         )}
-                        <span className="px-2 py-1 text-xs rounded bg-[#C27E00]/20 text-[#C27E00] border border-[#C27E00]/30">
-                          Stock: {camera.stock_quantity || 0}
-                        </span>
                       </div>
                       {camera.description && (
                         <p className="text-sm text-zinc-500 dark:text-gray-400 mt-1">{camera.description}</p>
@@ -309,7 +279,6 @@ export const CameraManagementContent = memo(function CameraManagementContent({ c
                     <button
                       onClick={() => {
                         setEditingId(camera.id)
-                        setStockEditingId(null)
                         setDealerAssigningId(null)
                       }}
                       className="p-2 rounded text-blue-500 hover:bg-blue-900/20 transition-colors"
@@ -319,21 +288,8 @@ export const CameraManagementContent = memo(function CameraManagementContent({ c
                     </button>
                     <button
                       onClick={() => {
-                        setStockEditingId(camera.id)
-                        setStockValue(camera.stock_quantity || 0)
-                        setEditingId(null)
-                        setDealerAssigningId(null)
-                      }}
-                      className="p-2 rounded text-green-500 hover:bg-green-900/20 transition-colors"
-                      title="Update Stock"
-                    >
-                      <Package className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => {
                         setDealerAssigningId(camera.id)
                         setEditingId(null)
-                        setStockEditingId(null)
                       }}
                       className="p-2 rounded text-purple-500 hover:bg-purple-900/20 transition-colors"
                       title="Assign to Dealer"
@@ -371,70 +327,6 @@ export const CameraManagementContent = memo(function CameraManagementContent({ c
           </div>
         )}
       </div>
-
-      {/* Stock Edit Modal */}
-      {stockEditingId && (
-        <div className="fixed inset-0 bg-white dark:bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-zinc-50 dark:bg-black border border-zinc-200 dark:border-gray-800 rounded-lg p-6 w-full max-w-md shadow-2xl">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-zinc-900 dark:text-white font-semibold">Update Stock</h3>
-              <button
-                onClick={() => setStockEditingId(null)}
-                className="text-zinc-500 dark:text-gray-400 hover:text-zinc-900 dark:text-white"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300 mb-2">
-                  Stock Quantity
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  value={stockValue}
-                  onChange={(e) => setStockValue(parseInt(e.target.value) || 0)}
-                  className="block w-full rounded-md border border-zinc-300 dark:border-gray-700 bg-zinc-200/50 dark:bg-white/5 px-3 py-2 text-zinc-900 dark:text-white focus:border-[#C27E00] focus:outline-none focus:ring-1 focus:ring-[#C27E00] sm:text-sm"
-                />
-              </div>
-              <div className="flex gap-2">
-                <button
-                  onClick={async () => {
-                    try {
-                      setStockUpdating(true)
-                      const camera = cameras.find(c => c.id === stockEditingId)
-                      if (camera) {
-                        const result = await updateCameraStock(stockEditingId, stockValue)
-                        if (result?.success) {
-                          setStockEditingId(null)
-                          router.refresh()
-                        } else {
-                          alert(result?.error || 'Failed to update stock')
-                        }
-                      }
-                    } catch (error) {
-                      alert(error instanceof Error ? error.message : 'Failed to update stock')
-                    } finally {
-                      setStockUpdating(false)
-                    }
-                  }}
-                  disabled={stockUpdating}
-                  className="bg-[#C27E00] hover:bg-[#a06900] text-white px-4 py-2 rounded-md font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {stockUpdating ? 'Updating...' : 'Update Stock'}
-                </button>
-                <button
-                  onClick={() => setStockEditingId(null)}
-                  className="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-md font-medium transition-colors"
-                >
-                  Cancel
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Dealer Assignment Modal */}
       {dealerAssigningId && (

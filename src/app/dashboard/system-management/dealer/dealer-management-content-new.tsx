@@ -8,7 +8,7 @@ import { DealerInvoiceEmailsManagement } from './dealer-invoice-emails-managemen
 import { Edit2, Trash2, MapPin, Mail } from 'lucide-react'
 import { updateDealer, deleteDealer } from '../region/actions'
 import { WARRANTY_YEAR_OPTIONS } from '@/lib/warranty-period'
-import type { DealerCamera, Dealer, RegionCode } from '@/types/system-management'
+import type { DealerCamera, Dealer, RegionCode, InventoryRegionOption } from '@/types/system-management'
 
 interface CameraModel {
   id: string
@@ -19,6 +19,7 @@ interface CameraModel {
 export const DealerManagementContent = memo(function DealerManagementContent({
   dealers,
   regionCodes,
+  inventoryRegions,
   cameraModels,
   updateDealerRegionCode,
   addCameraToDealer,
@@ -26,6 +27,7 @@ export const DealerManagementContent = memo(function DealerManagementContent({
 }: {
   dealers: Dealer[]
   regionCodes: RegionCode[]
+  inventoryRegions: InventoryRegionOption[]
   cameraModels: CameraModel[]
   updateDealerRegionCode: (dealerId: string, regionCodeId: string | null) => Promise<{ success: boolean; error?: string }>
   addCameraToDealer: (dealerId: string, cameraModelId: string) => Promise<{ success: boolean; error?: string }>
@@ -76,6 +78,7 @@ export const DealerManagementContent = memo(function DealerManagementContent({
                   <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500 dark:text-gray-400 uppercase tracking-wider">Name</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500 dark:text-gray-400 uppercase tracking-wider">Code</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500 dark:text-gray-400 uppercase tracking-wider">Region</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500 dark:text-gray-400 uppercase tracking-wider">Inv. region</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500 dark:text-gray-400 uppercase tracking-wider">Phone</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500 dark:text-gray-400 uppercase tracking-wider">Invoice emails</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500 dark:text-gray-400 uppercase tracking-wider">Address</th>
@@ -95,7 +98,7 @@ export const DealerManagementContent = memo(function DealerManagementContent({
               if (isEditing) {
                 return (
                   <tr key={d.id} className="bg-zinc-200/50 dark:bg-white/5">
-                    <td colSpan={7} className="px-4 py-4">
+                    <td colSpan={8} className="px-4 py-4">
                       <form onSubmit={handleUpdateDealer} className="space-y-4">
                         <input type="hidden" name="dealerId" value={d.id} />
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -146,6 +149,21 @@ export const DealerManagementContent = memo(function DealerManagementContent({
                               {regionCodes.map(rc => (
                                 <option key={rc.id} value={rc.id} className="bg-zinc-50 dark:bg-black text-zinc-900 dark:text-white">
                                   {rc.code} - {rc.name}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300 mb-1">Inventory inner region</label>
+                            <select
+                              name="inventory_region_id"
+                              defaultValue={d.inventory_region_id || d.inventory_regions?.id || 'none'}
+                              className="border border-zinc-300 dark:border-gray-700 bg-zinc-200/50 dark:bg-white/5 p-2 w-full rounded text-zinc-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00] text-sm"
+                            >
+                              <option value="none" className="bg-zinc-50 dark:bg-black text-zinc-900 dark:text-white">Not assigned</option>
+                              {inventoryRegions.map((ir) => (
+                                <option key={ir.id} value={ir.id} className="bg-zinc-50 dark:bg-black text-zinc-900 dark:text-white">
+                                  {ir.province_code ?? '—'} / {ir.city_name ?? 'City'} / {ir.name}
                                 </option>
                               ))}
                             </select>
@@ -205,6 +223,15 @@ export const DealerManagementContent = memo(function DealerManagementContent({
                         <MapPin className="w-3.5 h-3.5" />
                         No Region
                       </span>
+                    )}
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    {d.inventory_regions ? (
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-[#C27E00]/15 text-[#C27E00] rounded border border-[#C27E00]/30 text-xs font-medium">
+                        {d.inventory_regions.inventory_cities?.name ?? 'City'} / {d.inventory_regions.name}
+                      </span>
+                    ) : (
+                      <span className="text-xs text-zinc-500">—</span>
                     )}
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap">

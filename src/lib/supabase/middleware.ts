@@ -51,6 +51,8 @@ export async function updateSession(request: NextRequest) {
     '/api/send-reminders',
     '/api/send-scheduled-reports',
     '/api/check-low-stock',
+    '/api/inventory-stock-notify',
+    '/api/run-alerts',
     '/api/daily-invoice-review-notify',
     '/api/daily-invoice-auto-send',
     '/api/daily-invoice-eod-notify',

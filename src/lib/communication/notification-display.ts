@@ -6,6 +6,7 @@ import {
   Mail,
   MessageCircle,
   MessageSquareX,
+  Package,
   Video,
   Wrench,
   type LucideIcon,
@@ -91,6 +92,13 @@ const TYPE_CONFIG: Record<CommNotificationType, NotificationTypeConfig> = {
     iconColor: 'text-amber-700 dark:text-amber-300',
     borderColor: 'border-l-amber-500',
   },
+  inventory_stock_alert: {
+    label: 'Inventory stock alert',
+    icon: Package,
+    iconBg: 'bg-amber-100 dark:bg-amber-900/40',
+    iconColor: 'text-amber-700 dark:text-amber-300',
+    borderColor: 'border-l-amber-500',
+  },
 }
 
 const DEFAULT_CONFIG: NotificationTypeConfig = {
@@ -112,6 +120,7 @@ export function notificationLink(n: CommNotification): string {
   if (n.type === 'daily_invoice_missed' && p.link) return p.link
   if (n.type === 'service_record_pending' && p.link) return p.link
   if (n.type === 'duplicate_stock_number' && p.link) return p.link
+  if (n.type === 'inventory_stock_alert' && p.link) return p.link
   if (p.context === 'meet' && p.room_id) return `/dashboard/communication/meet/${p.room_id}`
   if (p.conversation_id) return `/dashboard/communication/chat?c=${p.conversation_id}`
   if (p.room_id) return `/dashboard/communication/meet/${p.room_id}`
@@ -169,6 +178,8 @@ export function getNotificationSubtitle(n: CommNotification): string | null {
       if (p.demandNumber) parts.push(`Demand #${p.demandNumber}`)
       return parts.join(' · ') || (p.message as string) || 'Duplicate stock number detected'
     }
+    case 'inventory_stock_alert':
+      return (p.message as string) || `${p.warningCount ?? 0} inventory warning(s)`
     default:
       return null
   }

@@ -218,53 +218,14 @@ export async function GET(req: Request) {
     }
 
     if (rule.type === 'low_stock') {
-      const threshold = Number(rule.params?.threshold ?? 5)
-      const { data: cameras } = await supabase
-        .from('camera_models')
-        .select('id, name, stock_quantity')
-        .eq('is_active', true)
-        .lt('stock_quantity', threshold)
-
-      const lowStock = (cameras ?? []).filter((c) => c.stock_quantity != null)
-      if (lowStock.length === 0) continue
-
-      const entityId = lowStock.map((c) => c.id).join(',')
-      if (await alreadySent('low_stock', 'camera_models', entityId)) continue
-
-      const subject = `AuroraHub Alert: Low Stock (${lowStock.length} item(s) below ${threshold})`
-      const html = `
-        <div style="font-family: Arial, sans-serif;">
-          <h2 style="color: #C27E00;">Low Stock Alert</h2>
-          <p>The following items are below threshold (${threshold}):</p>
-          <ul>
-            ${lowStock.map((c) => `<li><strong>${c.name}</strong>: ${c.stock_quantity} units</li>`).join('')}
-          </ul>
-          <p style="margin-top: 16px; color: #666;">— AuroraHub Alerts</p>
-        </div>
-      `
-      const result = await sendEmailViaSMTP(mailSettings, { to: emails, subject, html })
-      logMailSent({
-        recipientEmails: emails,
-        subject,
-        mailType: 'alert',
-        reportTitle: 'low_stock',
-        success: result.success,
-        errorMessage: result.error,
-      })
-      await logAlert({
-        alertType: 'low_stock',
-        entityType: 'camera_models',
-        entityId,
-        subject,
-        recipientCount: emails.length,
-        success: result.success ?? false,
-        errorMessage: result.error,
-      })
-      if (result.success) {
-        sentAlerts.push({ type: 'low_stock', count: lowStock.length })
-      } else {
-        errors.push(result.error ?? 'Send failed')
+      const { notifyInventoryStockAlerts } = await import('@/lib/notify-inventory-stock-alerts')
+      const result = await notifyInventoryStockAlerts(supabase)
+      if (!result.skipped && result.warnings > 0) {
+        sentAlerts.push({ type: 'inventory_stock', count: result.warnings })
+      } else if (result.skipped && result.reason && result.reason !== 'No inventory warnings') {
+        // dedup or config skip — no error
       }
+      continue
     }
 
     if (rule.type === 'new_critical_ticket') {

@@ -246,6 +246,7 @@ export async function updateDealer(formData: FormData): Promise<{ success: boole
     const address = formData.get('address') as string
     const phone = formData.get('phone') as string
     const regionCodeId = formData.get('region_code_id') as string
+    const inventoryRegionId = formData.get('inventory_region_id') as string
 
     if (!dealerId || !name || !code) {
       return { success: false, error: 'Missing required fields' }
@@ -257,6 +258,7 @@ export async function updateDealer(formData: FormData): Promise<{ success: boole
       address: string | null
       phone: string | null
       region_code_id: string | null
+      inventory_region_id: string | null
       warranty_years: number
     } = {
       name,
@@ -264,10 +266,14 @@ export async function updateDealer(formData: FormData): Promise<{ success: boole
       address: address || null,
       phone: phone?.trim() || null,
       region_code_id: null,
+      inventory_region_id: null,
       warranty_years: parseWarrantyYearsFromForm(formData.get('warranty_years')),
     }
     if (regionCodeId && regionCodeId !== 'none') {
       updateData.region_code_id = regionCodeId
+    }
+    if (inventoryRegionId && inventoryRegionId !== 'none') {
+      updateData.inventory_region_id = inventoryRegionId
     }
 
     const { error } = await supabase

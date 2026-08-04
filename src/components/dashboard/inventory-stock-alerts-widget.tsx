@@ -31,7 +31,7 @@ export function InventoryStockAlertsWidget({
           <div>
             <h2 className="text-lg font-semibold text-zinc-900 dark:text-white">Inventory &amp; stock alerts</h2>
             <p className="text-xs text-zinc-500 dark:text-gray-500">
-              All dealers; completed demands auto-consume catalog-linked cameras
+              Hierarchical inventory v2; completed installs consume dealer stock
             </p>
           </div>
         </div>

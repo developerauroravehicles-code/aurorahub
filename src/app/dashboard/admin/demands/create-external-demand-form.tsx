@@ -13,9 +13,7 @@ import { getEffectiveTimezone } from '@/lib/timezone-defaults'
 import { getTimezoneFromDealer } from '@/lib/dealer-timezone'
 import {
   DemandServiceType,
-  REMOVAL_FEE_CAD,
   SERVICE_TYPE_LABELS,
-  TRANSFER_FEE_CAD,
 } from '@/lib/demand-pricing'
 
 interface Dealer {
@@ -229,9 +227,9 @@ export function CreateExternalDemandForm({ dealers, specialists, onSuccess, onCa
             <div className="grid gap-2 sm:grid-cols-3">
               {(
                 [
-                  { value: 'installation' as const, hint: 'Dealer camera price' },
-                  { value: 'transfer' as const, hint: `Transfer fee — $${TRANSFER_FEE_CAD} CAD` },
-                  { value: 'removal' as const, hint: `Removal fee — $${REMOVAL_FEE_CAD} CAD` },
+                  { value: 'installation' as const, hint: 'Dealer camera price (pricing cascade)' },
+                  { value: 'transfer' as const, hint: 'Transfer fee (Inventory → Pricing)' },
+                  { value: 'removal' as const, hint: 'Removal fee (Inventory → Pricing)' },
                 ] as const
               ).map((opt) => (
                 <label

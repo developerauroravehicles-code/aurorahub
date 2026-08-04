@@ -1,10 +1,8 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { lookupCameraModelId } from '@/lib/camera-model-resolve'
+import { resolveInventoryPrice } from '@/lib/inventory-v2/pricing'
 
 export type DemandServiceType = 'installation' | 'transfer' | 'removal'
-
-export const TRANSFER_FEE_CAD = 150
-export const REMOVAL_FEE_CAD = 100
 
 export const SERVICE_TYPE_LABELS: Record<DemandServiceType, string> = {
   installation: 'Installation',
@@ -39,54 +37,61 @@ export async function calculateDemandInvoiceAmount(
 ): Promise<{ amount: number } | { error: string }> {
   const { serviceType, dealerId } = input
 
-  if (serviceType === 'transfer') {
-    return { amount: TRANSFER_FEE_CAD }
-  }
-  if (serviceType === 'removal') {
-    return { amount: REMOVAL_FEE_CAD }
-  }
-
-  if (!dealerId) {
+  if (serviceType === 'installation' && !dealerId) {
     return { error: 'Dealer is required to calculate installation price.' }
   }
 
-  const modelId = await resolveCameraModelIdForDemand(
-    supabase,
-    input.cameraModelId,
-    input.cameraModelName
-  )
-  if (!modelId) {
-    return {
-      error: `Camera model "${input.cameraModelName ?? 'unknown'}" could not be matched to the catalog.`,
+  let cameraModelId = input.cameraModelId
+  if (serviceType === 'installation') {
+    cameraModelId = await resolveCameraModelIdForDemand(
+      supabase,
+      input.cameraModelId,
+      input.cameraModelName
+    )
+    if (!cameraModelId) {
+      return {
+        error: `Camera model "${input.cameraModelName ?? 'unknown'}" could not be matched to the catalog.`,
+      }
     }
   }
 
-  const { data: pricing, error: pricingError } = await supabase
-    .from('dealer_camera_pricing')
-    .select('price_cad')
-    .eq('dealer_id', dealerId)
-    .eq('camera_model_id', modelId)
-    .maybeSingle()
+  const resolved = await resolveInventoryPrice(supabase, {
+    dealerId,
+    cameraModelId: serviceType === 'installation' ? cameraModelId : null,
+    serviceType,
+  })
 
-  if (pricingError) {
-    return { error: pricingError.message }
-  }
-  if (!pricing) {
-    const [{ data: dealer }, { data: camera }] = await Promise.all([
-      supabase.from('dealers').select('name').eq('id', dealerId).maybeSingle(),
-      supabase.from('camera_models').select('name').eq('id', modelId).maybeSingle(),
-    ])
-    const dealerName = dealer?.name ?? 'dealer'
-    const cameraName = camera?.name ?? input.cameraModelName ?? 'camera model'
-    return {
-      error: `No price configured for ${dealerName} / ${cameraName}. Set pricing in Inventory.`,
+  if ('error' in resolved) {
+    if (serviceType === 'installation' && dealerId && cameraModelId) {
+      const [{ data: dealer }, { data: camera }] = await Promise.all([
+        supabase.from('dealers').select('name').eq('id', dealerId).maybeSingle(),
+        supabase.from('camera_models').select('name').eq('id', cameraModelId).maybeSingle(),
+      ])
+      const dealerName = dealer?.name ?? 'dealer'
+      const cameraName = camera?.name ?? input.cameraModelName ?? 'camera model'
+      return {
+        error: `No price configured for ${dealerName} / ${cameraName}. Set pricing in Inventory → Pricing.`,
+      }
     }
+    return { error: resolved.error }
   }
 
-  const price = Number(pricing.price_cad)
+  const price = resolved.amount
   if (!Number.isFinite(price) || price < 0) {
-    return { error: 'Configured installation price is invalid.' }
+    return { error: 'Configured price is invalid.' }
   }
 
   return { amount: price }
+}
+
+/** @deprecated Use resolveInventoryPrice / fetchNationalServiceFees instead */
+export async function getNationalTransferRemovalFees(
+  supabase: SupabaseClient
+): Promise<{ transfer: number; removal: number }> {
+  const { fetchNationalServiceFees } = await import('@/lib/inventory-v2/pricing')
+  const fees = await fetchNationalServiceFees(supabase)
+  return {
+    transfer: fees.transfer ?? 150,
+    removal: fees.removal ?? 100,
+  }
 }

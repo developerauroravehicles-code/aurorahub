@@ -16,8 +16,16 @@ export interface Dealer {
   phone?: string | null
   warranty_years?: number
   region_code_id?: string | null
+  inventory_region_id?: string | null
   created_at?: string
   region_codes?: RegionCode | null
+  inventory_regions?: {
+    id: string
+    code: string
+    name: string
+    city_id?: string
+    inventory_cities?: { name: string; code: string } | null
+  } | null
   dealer_cameras?: DealerCamera[]
   dealer_invoice_emails?: DealerInvoiceEmail[]
 }
@@ -29,6 +37,16 @@ export interface RegionCode {
   description?: string | null
   created_at?: string
   updated_at?: string
+}
+
+export interface InventoryRegionOption {
+  id: string
+  code: string
+  name: string
+  city_id: string
+  province_id: string
+  city_name?: string
+  province_code?: string
 }
 
 export interface CameraModel {

@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { notifyInventoryStockAlerts } from '@/lib/notify-inventory-stock-alerts'
 
-/** Legacy cron path — delegates to inventory v2 alert notify (in-app + email to Aurora Manager). */
 export async function GET(req: Request) {
   const authHeader = req.headers.get('authorization')
   const cronSecret = process.env.CRON_SECRET
