@@ -2,6 +2,7 @@
 
 import { ExternalLink, BookOpen, Camera } from 'lucide-react'
 import type { CustomerPortalRow, PortalTroubleshootingItem } from '@/types/customer-portal'
+import { DashcamQrSection } from './dashcam-qr-section'
 
 type Props = {
   row: CustomerPortalRow
@@ -26,16 +27,18 @@ export function CameraInfoPanel({ row }: Props) {
   const imageUrl = row.camera_image_url?.trim()
   const manualUrl = row.camera_manual_url?.trim()
   const troubleshooting = parseTroubleshooting(row.camera_troubleshooting)
-  const hasContent = Boolean(row.camera_model?.trim() || imageUrl || manualUrl || troubleshooting.length)
+  const cameraModel = (row.camera_model ?? '').trim()
+  const hasDashcamDetails = Boolean(imageUrl || manualUrl || troubleshooting.length)
 
-  if (!hasContent) return null
+  // Always show when we have a camera model (QR section) or catalog extras
+  if (!cameraModel && !hasDashcamDetails) return null
 
   return (
     <section className="rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/80 dark:bg-zinc-950/40 p-4 space-y-3">
       <h3 className="text-sm font-semibold text-zinc-900 dark:text-white flex items-center gap-2">
         <Camera className="h-4 w-4 text-[#C27E00]" />
         Your dashcam
-        {row.camera_model?.trim() ? `: ${row.camera_model.trim()}` : ''}
+        {cameraModel ? `: ${cameraModel}` : ''}
       </h3>
 
       {imageUrl ? (
@@ -43,7 +46,7 @@ export function CameraInfoPanel({ row }: Props) {
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={imageUrl}
-            alt={row.camera_model?.trim() ? `${row.camera_model} dashcam` : 'Dashcam'}
+            alt={cameraModel ? `${cameraModel} dashcam` : 'Dashcam'}
             className="w-full max-h-48 object-contain bg-zinc-100 dark:bg-zinc-950"
           />
         </div>
@@ -78,6 +81,9 @@ export function CameraInfoPanel({ row }: Props) {
           </ul>
         </div>
       ) : null}
+
+      {/* Always render when camera model exists — do not gate on catalog media */}
+      {cameraModel ? <DashcamQrSection cameraModel={cameraModel} /> : null}
     </section>
   )
 }

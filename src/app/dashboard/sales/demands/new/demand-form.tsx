@@ -1,7 +1,9 @@
 'use client'
 
-import { useActionState, useState, useEffect } from 'react'
-import { createDemand, getTakenSlots } from './actions'
+import { useActionState, useState, useEffect, useRef } from 'react'
+import { useRouter } from 'next/navigation'
+import { CheckCircle, Printer } from 'lucide-react'
+import { createDemand, getTakenSlots, type CreateDemandState } from './actions'
 import { getDealerBlocksForDate } from '@/app/dashboard/system-management/calendar/actions'
 import { getGlobalSlotMinutes, getSlotMinutesFromConfig, CALENDAR_DEFAULTS } from '@/lib/calendar-defaults'
 import { formatInTimeZone, toDate } from 'date-fns-tz'
@@ -15,6 +17,10 @@ import { getModelsForMake, getTrimsForModel } from '@/lib/vehicle-models'
 import { getISODay } from 'date-fns'
 import { CanadianPhoneInput } from '@/components/canadian-phone-input'
 import { DemandDocumentFillButton } from '@/components/demand-document-fill-button'
+import {
+  DemandCustomerHandoffPrint,
+  printDemandHandoffSheet,
+} from '@/components/demand-customer-handoff-print'
 
 interface CameraModel {
   id: string
@@ -37,11 +43,20 @@ interface DemandFormProps {
   calendarSettings?: { weekday?: CalendarSetting; saturday?: CalendarSetting; sunday?: CalendarSetting }
 }
 
+function isDemandErrorState(
+  state: CreateDemandState
+): state is { error?: string; fieldErrors?: Record<string, string[]> } {
+  return state != null && !('success' in state && state.success)
+}
+
 export function DemandForm({ cameraModels, defaultAddress = '', timezoneName: propTimezone = null, dealerId = null, calendarSettings }: DemandFormProps) {
+  const router = useRouter()
+  const printRef = useRef<HTMLDivElement>(null)
+  const [printSheetReady, setPrintSheetReady] = useState(false)
   // Use layout timezone (same as top-left clock) when prop not provided
   const contextTimezone = useTimezone()
   const timezoneName = propTimezone ?? contextTimezone
-  const [state, formAction, isPending] = useActionState(createDemand, null)
+  const [state, formAction, isPending] = useActionState(createDemand, null as CreateDemandState)
   const [selectedDate, setSelectedDate] = useState<string>('')
   const [availableSlots, setAvailableSlots] = useState<string[]>([])
   const [takenSlots, setTakenSlots] = useState<string[]>([])
@@ -117,9 +132,60 @@ export function DemandForm({ cameraModels, defaultAddress = '', timezoneName: pr
     setAvailableSlots(slots)
   }, [selectedDate, calendarSettings, systemNow])
 
+  if (state && 'success' in state && state.success) {
+    const { demand, dealer, timezoneName: successTz, role } = state
+    const listHref =
+      role === 'finance' ? '/dashboard/finance/demands' : '/dashboard/sales/demands'
+
+    return (
+      <div className="max-w-4xl space-y-6">
+        <div className="rounded-lg border border-green-800/40 bg-green-950/20 p-6 sm:p-8 shadow">
+          <div className="flex items-start gap-4">
+            <CheckCircle className="h-10 w-10 text-green-400 shrink-0" />
+            <div className="space-y-2">
+              <h2 className="text-xl font-semibold text-zinc-900 dark:text-white">Demand created</h2>
+              <p className="text-zinc-600 dark:text-gray-400">
+                Demand #{demand.demand_number} has been submitted for finance review. Print the
+                customer information sheet below to share appointment and warranty details with your
+                customer.
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-6 flex flex-wrap gap-3">
+            <button
+              type="button"
+              onClick={() => void printDemandHandoffSheet(printRef.current)}
+              disabled={!printSheetReady}
+              className="inline-flex items-center gap-2 rounded-md bg-[#C27E00] px-5 py-2.5 text-base font-semibold text-white hover:bg-[#a06900] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <Printer className="h-4 w-4" />
+              {printSheetReady ? 'Print Customer Sheet' : 'Preparing print sheet…'}
+            </button>
+            <button
+              type="button"
+              onClick={() => router.push(listHref)}
+              className="inline-flex items-center rounded-md border border-zinc-300 dark:border-gray-700 px-5 py-2.5 text-base font-medium text-zinc-700 dark:text-gray-300 hover:bg-zinc-100 dark:hover:bg-white/5 transition-colors"
+            >
+              Back to Demands
+            </button>
+          </div>
+        </div>
+
+        <DemandCustomerHandoffPrint
+          ref={printRef}
+          demand={demand}
+          dealer={dealer}
+          timezoneName={successTz ?? timezoneName}
+          onPrintReadyChange={setPrintSheetReady}
+        />
+      </div>
+    )
+  }
+
   return (
     <form action={formAction} className="space-y-6 max-w-4xl bg-zinc-200/50 dark:bg-white/5 p-6 sm:p-8 rounded-lg shadow border border-zinc-200 dark:border-gray-800 text-base">
-      {state?.error && (
+      {isDemandErrorState(state) && state.error && (
         <div className="bg-red-900/50 border border-red-800 text-red-200 p-4 rounded-md text-base">
           {state.error}
           {state.fieldErrors && (

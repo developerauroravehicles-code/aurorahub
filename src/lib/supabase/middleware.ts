@@ -73,6 +73,8 @@ export async function updateSession(request: NextRequest) {
     !request.nextUrl.pathname.startsWith('/login') &&
     !request.nextUrl.pathname.startsWith('/auth') &&
     !request.nextUrl.pathname.startsWith('/customer-portal') &&
+    !request.nextUrl.pathname.startsWith('/api/qr') &&
+    !request.nextUrl.pathname.startsWith('/api/customer-portal') &&
     request.nextUrl.pathname !== '/' // Allow access to landing page
   ) {
     // no user, potentially redirect to login

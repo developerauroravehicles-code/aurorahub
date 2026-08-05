@@ -12,6 +12,11 @@ import {
   warrantyBadgeLabel,
   warrantyPeriodDescription,
 } from '@/lib/warranty-period'
+import {
+  CUSTOMER_PORTAL_QR_PATH,
+  resolveDashcamAppLinks,
+} from '@/lib/dashcam-app-links'
+import { generateQrDataUrl, loadImageAsDataUrl } from '@/lib/generate-qr-data-url'
 
 export type CustomerPortalSummaryPdfData = {
   row: CustomerPortalRow
@@ -132,7 +137,70 @@ function addDetailTable(
   return (doc as jsPDF & { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY ?? startY
 }
 
-export function buildCustomerPortalSummaryPdf(data: CustomerPortalSummaryPdfData): jsPDF {
+function drawCustomerResourcesQrRow(
+  doc: jsPDF,
+  y: number,
+  margin: number,
+  pageWidth: number,
+  pageHeight: number,
+  cameraModel: string | null | undefined,
+  portalQrDataUrl: string,
+  iosQrDataUrl: string,
+  androidQrDataUrl: string,
+  watermarkDataUrl?: string | null
+): number {
+  const contentWidth = pageWidth - margin * 2
+  const qrSize = 24
+  const headerH = 5
+  const gap = (contentWidth - qrSize * 3) / 2
+  const sectionHeight = headerH + qrSize + 12
+
+  if (y + sectionHeight + 24 > pageHeight - margin) {
+    doc.addPage()
+    if (watermarkDataUrl) {
+      drawPageWatermark(doc, watermarkDataUrl, pageWidth, pageHeight)
+    }
+    y = margin
+  }
+
+  y = drawSectionTitle(doc, 'Customer Resources', y, margin)
+
+  const links = resolveDashcamAppLinks(cameraModel)
+  const items = [
+    { heading: 'Customer Portal', sub: 'Support & portal', dataUrl: portalQrDataUrl },
+    { heading: 'IOS', sub: `${links.appName} · Download`, dataUrl: iosQrDataUrl },
+    { heading: 'Android', sub: `${links.appName} · Download`, dataUrl: androidQrDataUrl },
+  ]
+
+  items.forEach((item, index) => {
+    const x = margin + index * (qrSize + gap)
+
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(7.5)
+    doc.setTextColor(...INK)
+    doc.text(item.heading, x + qrSize / 2, y + 3.5, { align: 'center', maxWidth: qrSize + 8 })
+
+    const qrY = y + headerH
+    doc.setDrawColor(...BORDER)
+    doc.setFillColor(...WHITE)
+    doc.roundedRect(x, qrY, qrSize, qrSize, 2, 2, 'FD')
+
+    try {
+      doc.addImage(item.dataUrl, 'PNG', x + 1, qrY + 1, qrSize - 2, qrSize - 2, undefined, 'FAST')
+    } catch {
+      /* optional QR image */
+    }
+
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(6.5)
+    doc.setTextColor(...MUTED)
+    doc.text(item.sub, x + qrSize / 2, qrY + qrSize + 4, { align: 'center', maxWidth: qrSize + 8 })
+  })
+
+  return y + sectionHeight + 4
+}
+
+export async function buildCustomerPortalSummaryPdf(data: CustomerPortalSummaryPdfData): Promise<jsPDF> {
   const { row, watermarkDataUrl } = data
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
   const pageWidth = doc.internal.pageSize.getWidth()
@@ -274,6 +342,26 @@ export function buildCustomerPortalSummaryPdf(data: CustomerPortalSummaryPdfData
 
   y += warrantyBoxH + 10
 
+  const links = resolveDashcamAppLinks(row.camera_model)
+  const [portalQrDataUrl, iosQrDataUrl, androidQrDataUrl] = await Promise.all([
+    loadImageAsDataUrl(CUSTOMER_PORTAL_QR_PATH),
+    generateQrDataUrl(links.iosUrl, 256),
+    generateQrDataUrl(links.androidUrl, 256),
+  ])
+
+  y = drawCustomerResourcesQrRow(
+    doc,
+    y,
+    margin,
+    pageWidth,
+    pageHeight,
+    row.camera_model,
+    portalQrDataUrl,
+    iosQrDataUrl,
+    androidQrDataUrl,
+    watermarkDataUrl
+  )
+
   // Footer
   const footerY = pageHeight - 22
   doc.setDrawColor(...BORDER)
@@ -296,7 +384,7 @@ export function buildCustomerPortalSummaryPdf(data: CustomerPortalSummaryPdfData
 export async function downloadCustomerPortalSummaryPdf(data: CustomerPortalSummaryPdfData): Promise<void> {
   const { loadInstallationSummaryWatermark } = await import('./installation-summary-watermark')
   const watermarkDataUrl = await loadInstallationSummaryWatermark()
-  const doc = buildCustomerPortalSummaryPdf({ ...data, watermarkDataUrl })
+  const doc = await buildCustomerPortalSummaryPdf({ ...data, watermarkDataUrl })
   const ref = data.row.demand_number ?? 'installation'
   doc.save(`Aurora_Installation_Summary_${ref}.pdf`)
 }

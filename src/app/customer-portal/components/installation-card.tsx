@@ -44,7 +44,7 @@ export function InstallationCard({
         : 'bg-amber-100 text-amber-800 dark:bg-amber-950/50 dark:text-amber-300 border-amber-200 dark:border-amber-900'
 
   return (
-    <article className="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/60 shadow-sm overflow-hidden">
+    <article className="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/60 shadow-sm">
       <div className="border-b border-zinc-200 dark:border-zinc-800 bg-gradient-to-r from-[#C27E00]/10 via-transparent to-transparent px-4 py-4 sm:px-6">
         {greeting ? (
           <p className="text-sm text-[#C27E00] font-medium mb-1">Hi, {greeting}</p>

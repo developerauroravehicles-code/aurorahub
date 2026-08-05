@@ -3,7 +3,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { logDemandChange } from '@/lib/demand-logger'
 import { dispatchWebhooks } from '@/lib/webhook-dispatch'
-import { redirect } from 'next/navigation'
 import { z } from 'zod'
 import { fromZonedTime, formatInTimeZone } from 'date-fns-tz'
 import { validateAppointmentSlot } from '@/app/dashboard/system-management/calendar/actions'
@@ -41,9 +40,37 @@ const schema = z.object({
   comment: z.string().optional(),
 })
 
-type ActionState = { error?: string; fieldErrors?: Record<string, string[]> } | null
+export type DemandHandoffDemand = {
+  id: string
+  demand_number: number | null
+  customer_firstname: string
+  customer_lastname: string
+  customer_phone: string
+  customer_address: string | null
+  vehicle_make: string
+  vehicle_model: string
+  vehicle_year: number
+  stock_number: string
+  vin_last6: string | null
+  camera_model: string | null
+  appointment_date: string
+  comment: string | null
+  status: string
+  created_at: string
+}
 
-export async function createDemand(prevState: ActionState, formData: FormData) {
+export type CreateDemandState =
+  | { error?: string; fieldErrors?: Record<string, string[]> }
+  | {
+      success: true
+      demand: DemandHandoffDemand
+      dealer: { name: string; warranty_years: number | null }
+      timezoneName: string | null
+      role: 'sales' | 'finance'
+    }
+  | null
+
+export async function createDemand(prevState: CreateDemandState, formData: FormData) {
   const supabase = await createClient()
   
   const { data: { user } } = await supabase.auth.getUser()
@@ -154,7 +181,39 @@ export async function createDemand(prevState: ActionState, formData: FormData) {
   // SMS will be sent when finance approves the demand
   // Removed SMS sending from demand creation
 
-  redirect(profile.role === 'finance' ? '/dashboard/finance/demands' : '/dashboard/sales/demands')
+  const { data: dealerRow } = await supabase
+    .from('dealers')
+    .select('name, warranty_years')
+    .eq('id', profile.dealer_id)
+    .single()
+
+  return {
+    success: true as const,
+    demand: {
+      id: demand.id,
+      demand_number: demand.demand_number,
+      customer_firstname: demand.customer_firstname,
+      customer_lastname: demand.customer_lastname,
+      customer_phone: demand.customer_phone,
+      customer_address: demand.customer_address,
+      vehicle_make: demand.vehicle_make,
+      vehicle_model: demand.vehicle_model,
+      vehicle_year: demand.vehicle_year,
+      stock_number: demand.stock_number,
+      vin_last6: demand.vin_last6,
+      camera_model: demand.camera_model,
+      appointment_date: demand.appointment_date,
+      comment: demand.comment,
+      status: demand.status,
+      created_at: demand.created_at,
+    },
+    dealer: {
+      name: dealerRow?.name ?? data.address ?? 'Dealer',
+      warranty_years: dealerRow?.warranty_years ?? null,
+    },
+    timezoneName,
+    role: profile.role as 'sales' | 'finance',
+  }
 }
 
 /**
