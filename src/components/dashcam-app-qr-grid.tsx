@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { CUSTOMER_PORTAL_QR_PATH, resolveDashcamAppLinks } from '@/lib/dashcam-app-links'
+import { loadImageAsDataUrl } from '@/lib/generate-qr-data-url'
 
 async function createQrDataUrl(text: string, size: number): Promise<string> {
   const QRCode = (await import('qrcode')).default
@@ -102,13 +103,14 @@ export function DashcamAppQrGrid({
   onReadyChange,
   qrSize: qrSizeProp,
 }: Props) {
+  const isPrint = variant === 'print'
+  const qrSize = qrSizeProp ?? (isPrint ? 72 : 120)
+  const links = resolveDashcamAppLinks(cameraModel)
+
+  const [portalQr, setPortalQr] = useState<string | null>(isPrint ? null : CUSTOMER_PORTAL_QR_PATH)
   const [androidQr, setAndroidQr] = useState<string | null>(null)
   const [iosQr, setIosQr] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
-
-  const links = resolveDashcamAppLinks(cameraModel)
-  const isPrint = variant === 'print'
-  const qrSize = qrSizeProp ?? (isPrint ? 88 : 120)
 
   useEffect(() => {
     let cancelled = false
@@ -117,11 +119,16 @@ export function DashcamAppQrGrid({
       setLoading(true)
       onReadyChange?.(false)
       try {
-        const [android, ios] = await Promise.all([
+        const portalPromise = isPrint
+          ? loadImageAsDataUrl(CUSTOMER_PORTAL_QR_PATH)
+          : Promise.resolve(CUSTOMER_PORTAL_QR_PATH)
+        const [portal, android, ios] = await Promise.all([
+          portalPromise,
           createQrDataUrl(links.androidUrl, qrSize * 2),
           createQrDataUrl(links.iosUrl, qrSize * 2),
         ])
         if (!cancelled) {
+          setPortalQr(portal)
           setAndroidQr(android)
           setIosQr(ios)
         }
@@ -137,7 +144,7 @@ export function DashcamAppQrGrid({
     return () => {
       cancelled = true
     }
-  }, [links.androidUrl, links.iosUrl, onReadyChange, qrSize])
+  }, [isPrint, links.androidUrl, links.iosUrl, onReadyChange, qrSize])
 
   const gridClass = isPrint
     ? 'demand-handoff-qr-grid'
@@ -152,7 +159,8 @@ export function DashcamAppQrGrid({
         layout={layout}
         heading="Customer Portal"
         subtitle="Support & portal access"
-        src={CUSTOMER_PORTAL_QR_PATH}
+        src={portalQr}
+        loading={isPrint && !portalQr}
         qrSize={qrSize}
       />
       <QrCard

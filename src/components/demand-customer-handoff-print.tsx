@@ -104,25 +104,27 @@ export const DemandCustomerHandoffPrint = forwardRef<HTMLDivElement, DemandHando
             </ul>
           </section>
 
-          <section className="demand-handoff-section">
-            <h2 className="demand-handoff-section-title">Customer Resources</h2>
-            <p className="demand-handoff-value" style={{ margin: '0 0 6px', fontSize: '9.5pt', color: '#52525b' }}>
-              Scan the QR codes below for customer support, portal access, and the dashcam mobile app for your
-              camera model.
-            </p>
-            <DashcamAppQrGrid
-              cameraModel={demand.camera_model}
-              variant="print"
-              onReadyChange={onPrintReadyChange}
-            />
-          </section>
+          <div className="demand-handoff-tail">
+            <section className="demand-handoff-section">
+              <h2 className="demand-handoff-section-title">Customer Resources</h2>
+              <p className="demand-handoff-value" style={{ margin: '0 0 4px', fontSize: '9pt', color: '#52525b' }}>
+                Scan the QR codes below for customer support, portal access, and the dashcam mobile app for your
+                camera model.
+              </p>
+              <DashcamAppQrGrid
+                cameraModel={demand.camera_model}
+                variant="print"
+                onReadyChange={onPrintReadyChange}
+              />
+            </section>
 
-          <footer className="demand-handoff-footer">
-            <p style={{ margin: 0 }}>
-              For your information only. This document does not include pricing, billing, or payment
-              details. For invoice requests, please contact your dealer directly.
-            </p>
-          </footer>
+            <footer className="demand-handoff-footer">
+              <p style={{ margin: 0 }}>
+                For your information only. This document does not include pricing, billing, or payment
+                details. For invoice requests, please contact your dealer directly.
+              </p>
+            </footer>
+          </div>
         </div>
       </div>
     )
@@ -131,6 +133,11 @@ export const DemandCustomerHandoffPrint = forwardRef<HTMLDivElement, DemandHando
 
 export async function printDemandHandoffSheet(root: HTMLDivElement | null) {
   if (!root) return
+
+  document.querySelectorAll('.demand-handoff-print-root').forEach((el) => {
+    el.classList.remove('demand-handoff-print-active')
+  })
+  root.classList.add('demand-handoff-print-active')
 
   const images = root.querySelectorAll('img')
   await Promise.all(
@@ -147,5 +154,13 @@ export async function printDemandHandoffSheet(root: HTMLDivElement | null) {
     )
   )
 
-  window.print()
+  await new Promise<void>((resolve) => {
+    const cleanup = () => {
+      root.classList.remove('demand-handoff-print-active')
+      window.removeEventListener('afterprint', cleanup)
+      resolve()
+    }
+    window.addEventListener('afterprint', cleanup)
+    window.print()
+  })
 }
