@@ -9,6 +9,8 @@ import { formatExternalDemandDate } from '@/lib/external-demand-date'
 import { Filter, X, Plus } from 'lucide-react'
 import Link from 'next/link'
 import { demandMatchesSmartSearch } from '@/lib/demand-smart-search'
+import { DemandPrintButton } from '@/components/demand-print-button'
+import { getDealerPrintMeta, toHandoffDemand } from '@/lib/demand-handoff-print-utils'
 import { CreateExternalDemandForm } from './create-external-demand-form'
 
 interface Dealer {
@@ -29,6 +31,7 @@ interface Demand {
   customer_firstname: string
   customer_lastname: string
   customer_phone?: string | null
+  customer_address?: string | null
   vehicle_year: number
   vehicle_make: string
   vehicle_model: string
@@ -36,7 +39,13 @@ interface Demand {
   is_external?: boolean | null
   vin_last6?: string | null
   stock_number?: string | null
-  dealers?: { name: string; region_codes?: { timezones?: { name: string } | Array<{ name: string }> } | Array<{ timezones?: { name: string } | Array<{ name: string }> }> } | null
+  camera_model?: string | null
+  comment?: string | null
+  dealers?: {
+    name: string
+    warranty_years?: number | null
+    region_codes?: { timezones?: { name: string } | Array<{ name: string }> } | Array<{ timezones?: { name: string } | Array<{ name: string }> }>
+  } | null
   profiles?: { full_name: string } | null
   assigned_specialist?: { full_name: string } | null
   assigned_finance?: { full_name: string } | null
@@ -381,50 +390,62 @@ export function DemandsList({ demands, dealers, specialists, selectedDealerId, c
 
               const dealerTz = getEffectiveTimezone(getTimezoneFromDealer(demand.dealers as Parameters<typeof getTimezoneFromDealer>[0]))
 
+              const dealerMeta = getDealerPrintMeta(demand.dealers)
+
               return (
                 <li key={demand.id} className="p-4 hover:bg-zinc-200/50 dark:bg-white/5 transition-colors">
-                  <Link href={detailHref} className="block">
-                    <div className="flex justify-between items-start">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2">
-                          <p className="text-lg font-medium text-[#C27E00] hover:text-[#a06900] transition-colors">
-                            {demand.customer_firstname} {demand.customer_lastname}
+                  <div className="flex justify-between items-start gap-4">
+                    <Link href={detailHref} className="block flex-1 min-w-0">
+                      <div className="flex justify-between items-start">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <p className="text-lg font-medium text-[#C27E00] hover:text-[#a06900] transition-colors">
+                              {demand.customer_firstname} {demand.customer_lastname}
+                            </p>
+                            {demand.demand_number != null && (
+                              <span className="text-xs font-medium text-zinc-500 dark:text-gray-500">#{demand.demand_number}</span>
+                            )}
+                            {demand.stock_number && duplicateStockNumbers.includes((demand.stock_number as string).trim().toUpperCase()) && (
+                              <span className="text-xs text-amber-400">(Duplicate Stock No)</span>
+                            )}
+                          </div>
+                          <p className="text-sm text-zinc-500 dark:text-gray-400">
+                            {demand.vehicle_year} {demand.vehicle_make} {demand.vehicle_model}
                           </p>
-                          {demand.demand_number != null && (
-                            <span className="text-xs font-medium text-zinc-500 dark:text-gray-500">#{demand.demand_number}</span>
-                          )}
-                          {demand.stock_number && duplicateStockNumbers.includes((demand.stock_number as string).trim().toUpperCase()) && (
-                            <span className="text-xs text-amber-400">(Duplicate Stock No)</span>
-                          )}
+                          <p className="text-sm text-zinc-500 dark:text-gray-500">
+                            Appointment: {demand.is_external
+                              ? formatExternalDemandDate(demand.appointment_date, dealerTz) + ' (External)'
+                              : formatInTimeZone(new Date(demand.appointment_date), dealerTz, 'PPP h:mm a')}
+                          </p>
+                          <p className="text-xs text-zinc-600 dark:text-gray-600 mt-1">
+                            Dealer: {(demand.dealers as any)?.name || 'Unknown'} | Created by: {(demand.profiles as any)?.full_name || 'Unknown'}
+                            {demand.vin_last6
+                              ? ` | VIN: ${demand.vin_last6.toUpperCase()}`
+                              : ' | VIN: —'}
+                            {' | Finance: '}
+                            {(demand.assigned_finance as any)?.full_name || '—'}
+                            {' | Specialist: '}
+                            {(demand.assigned_specialist as any)?.full_name || '—'}
+                          </p>
                         </div>
-                        <p className="text-sm text-zinc-500 dark:text-gray-400">
-                          {demand.vehicle_year} {demand.vehicle_make} {demand.vehicle_model}
-                        </p>
-                        <p className="text-sm text-zinc-500 dark:text-gray-500">
-                          Appointment: {demand.is_external
-                            ? formatExternalDemandDate(demand.appointment_date, dealerTz) + ' (External)'
-                            : formatInTimeZone(new Date(demand.appointment_date), dealerTz, 'PPP h:mm a')}
-                        </p>
-                        <p className="text-xs text-zinc-600 dark:text-gray-600 mt-1">
-                          Dealer: {(demand.dealers as any)?.name || 'Unknown'} | Created by: {(demand.profiles as any)?.full_name || 'Unknown'}
-                          {demand.vin_last6
-                            ? ` | VIN: ${demand.vin_last6.toUpperCase()}`
-                            : ' | VIN: —'}
-                          {' | Finance: '}
-                          {(demand.assigned_finance as any)?.full_name || '—'}
-                          {' | Specialist: '}
-                          {(demand.assigned_specialist as any)?.full_name || '—'}
-                        </p>
+                        <div>
+                          <span className={`px-2 py-1 text-xs font-semibold rounded-full capitalize ${
+                            statusColors[demand.status as keyof typeof statusColors] || 'bg-gray-500/20 text-zinc-500 dark:text-gray-400'
+                          }`}>
+                            {demand.status.replace('_', ' ')}
+                          </span>
+                        </div>
                       </div>
-                      <div>
-                        <span className={`px-2 py-1 text-xs font-semibold rounded-full capitalize ${
-                          statusColors[demand.status as keyof typeof statusColors] || 'bg-gray-500/20 text-zinc-500 dark:text-gray-400'
-                        }`}>
-                          {demand.status.replace('_', ' ')}
-                        </span>
-                      </div>
-                    </div>
-                  </Link>
+                    </Link>
+                    <DemandPrintButton
+                      demand={toHandoffDemand(demand)}
+                      dealer={{
+                        name: dealerMeta.name,
+                        warranty_years: dealerMeta.warranty_years,
+                      }}
+                      timezoneName={dealerMeta.timezoneName}
+                    />
+                  </div>
                 </li>
               )
             })}

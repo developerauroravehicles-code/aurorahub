@@ -104,7 +104,7 @@ export function DashcamAppQrGrid({
   qrSize: qrSizeProp,
 }: Props) {
   const isPrint = variant === 'print'
-  const qrSize = qrSizeProp ?? (isPrint ? 72 : 120)
+  const qrSize = qrSizeProp ?? (isPrint ? 68 : 120)
   const links = resolveDashcamAppLinks(cameraModel)
 
   const [portalQr, setPortalQr] = useState<string | null>(isPrint ? null : CUSTOMER_PORTAL_QR_PATH)

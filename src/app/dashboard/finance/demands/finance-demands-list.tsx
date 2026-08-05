@@ -6,6 +6,7 @@ import { getEffectiveTimezone } from '@/lib/timezone-defaults'
 import { Filter, X } from 'lucide-react'
 import { demandMatchesSmartSearch } from '@/lib/demand-smart-search'
 import { DemandPrintButton } from '@/components/demand-print-button'
+import { toHandoffDemand } from '@/lib/demand-handoff-print-utils'
 import { DemandActions } from './demand-actions'
 
 type DealerRow = { name: string; region_codes?: { timezones?: { name: string } } } | null
@@ -41,12 +42,6 @@ interface FinanceDemandsListProps {
   duplicateStockNumbers?: string[]
   dealer: { name: string; warranty_years: number | null }
   timezoneName: string | null
-}
-
-function toDemandNumber(value: number | string | undefined): number | null {
-  if (value == null) return null
-  const n = typeof value === 'number' ? value : Number(value)
-  return Number.isFinite(n) ? n : null
 }
 
 function getDealerTimezone(dealers: Demand['dealers']): string | null {
@@ -222,24 +217,7 @@ function DemandRow({
         </div>
         <div className="flex flex-col items-end gap-2 shrink-0">
           <DemandPrintButton
-            demand={{
-              id: demand.id,
-              demand_number: toDemandNumber(demand.demand_number),
-              customer_firstname: demand.customer_firstname,
-              customer_lastname: demand.customer_lastname,
-              customer_phone: demand.customer_phone,
-              customer_address: demand.customer_address,
-              vehicle_make: demand.vehicle_make,
-              vehicle_model: demand.vehicle_model,
-              vehicle_year: demand.vehicle_year,
-              stock_number: demand.stock_number ?? '',
-              vin_last6: demand.vin_last6 ?? null,
-              camera_model: demand.camera_model,
-              appointment_date: demand.appointment_date,
-              comment: demand.comment ?? null,
-              status: demand.status,
-              created_at: demand.created_at,
-            }}
+            demand={toHandoffDemand(demand)}
             dealer={dealer}
             timezoneName={timezoneName}
           />

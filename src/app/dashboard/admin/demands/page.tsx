@@ -3,9 +3,10 @@ import { redirect } from 'next/navigation'
 import { getDuplicateStockNumbers } from '@/lib/demand-stock'
 import { getInventoryManagerDealerId, isInventoryManager } from '@/lib/inventory-manager-access'
 import { DemandsList } from './demands-list'
+import { DemandPrintHost } from '@/components/demand-print-host'
 
 const ADMIN_DEMANDS_SELECT =
-  '*, dealers(name, region_codes(timezone_id, timezones(name))), profiles!demands_created_by_fkey(full_name), assigned_specialist:profiles!demands_assigned_specialist_id_fkey(full_name), assigned_finance:profiles!demands_assigned_finance_id_fkey(full_name)'
+  '*, dealers(name, warranty_years, region_codes(timezone_id, timezones(name))), profiles!demands_created_by_fkey(full_name), assigned_specialist:profiles!demands_assigned_specialist_id_fkey(full_name), assigned_finance:profiles!demands_assigned_finance_id_fkey(full_name)'
 
 const DEMANDS_PAGE_SIZE = 1000
 
@@ -86,15 +87,17 @@ export default async function AdminDemandsPage({
         <h1 className="text-2xl font-semibold mb-4 text-zinc-900 dark:text-white">
           {imDealerId ? 'Dealer Demands' : 'All Demands'}
         </h1>
-        <DemandsList
-          demands={demands || []}
-          dealers={dealers || []}
-          specialists={specialists || []}
-          selectedDealerId={isDealerScopedAdmin ? (imDealerId ?? profile!.dealer_id!) : (params.dealer ?? 'all')}
-          canCreateExternal={canCreateExternal}
-          hideDealerFilter={!!isDealerScopedAdmin}
-          duplicateStockNumbers={duplicateStockNumbers}
-        />
+        <DemandPrintHost>
+          <DemandsList
+            demands={demands || []}
+            dealers={dealers || []}
+            specialists={specialists || []}
+            selectedDealerId={isDealerScopedAdmin ? (imDealerId ?? profile!.dealer_id!) : (params.dealer ?? 'all')}
+            canCreateExternal={canCreateExternal}
+            hideDealerFilter={!!isDealerScopedAdmin}
+            duplicateStockNumbers={duplicateStockNumbers}
+          />
+        </DemandPrintHost>
       </div>
     </div>
   )

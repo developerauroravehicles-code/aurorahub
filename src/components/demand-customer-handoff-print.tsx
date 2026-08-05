@@ -5,6 +5,7 @@ import { formatInTimeZone } from 'date-fns-tz'
 import type { DemandHandoffDemand } from '@/app/dashboard/sales/demands/new/actions'
 import { warrantyPeriodDescription } from '@/lib/warranty-period'
 import { SYSTEM_DEFAULT_TIMEZONE } from '@/lib/timezone-defaults'
+import { DEMAND_HANDOFF_PRINT_STYLES } from '@/lib/demand-handoff-print-styles'
 import { DashcamAppQrGrid } from '@/components/dashcam-app-qr-grid'
 import './demand-customer-handoff-print.css'
 
@@ -81,7 +82,7 @@ export const DemandCustomerHandoffPrint = forwardRef<HTMLDivElement, DemandHando
               {demand.comment ? (
                 <div className="demand-handoff-row demand-handoff-full">
                   <span className="demand-handoff-label">Notes</span>
-                  <span className="demand-handoff-value">{demand.comment}</span>
+                  <span className="demand-handoff-value demand-handoff-notes">{demand.comment}</span>
                 </div>
               ) : null}
             </div>
@@ -131,15 +132,8 @@ export const DemandCustomerHandoffPrint = forwardRef<HTMLDivElement, DemandHando
   }
 )
 
-export async function printDemandHandoffSheet(root: HTMLDivElement | null) {
-  if (!root) return
-
-  document.querySelectorAll('.demand-handoff-print-root').forEach((el) => {
-    el.classList.remove('demand-handoff-print-active')
-  })
-  root.classList.add('demand-handoff-print-active')
-
-  const images = root.querySelectorAll('img')
+async function waitForImages(container: ParentNode) {
+  const images = container.querySelectorAll('img')
   await Promise.all(
     Array.from(images).map(
       (img) =>
@@ -153,14 +147,61 @@ export async function printDemandHandoffSheet(root: HTMLDivElement | null) {
         })
     )
   )
+}
+
+export async function printDemandHandoffSheet(root: HTMLDivElement | null) {
+  if (!root) return
+
+  await waitForImages(root)
+
+  const sheet = root.querySelector('.demand-handoff-sheet')
+  if (!sheet) return
+
+  const iframe = document.createElement('iframe')
+  iframe.setAttribute('aria-hidden', 'true')
+  Object.assign(iframe.style, {
+    position: 'fixed',
+    right: '0',
+    bottom: '0',
+    width: '0',
+    height: '0',
+    border: 'none',
+  })
+  document.body.appendChild(iframe)
+
+  const win = iframe.contentWindow
+  const doc = iframe.contentDocument
+  if (!win || !doc) {
+    iframe.remove()
+    return
+  }
+
+  doc.open()
+  doc.write(`<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Customer Installation Summary</title>
+  <style>${DEMAND_HANDOFF_PRINT_STYLES}</style>
+</head>
+<body>${sheet.outerHTML}</body>
+</html>`)
+  doc.close()
+
+  await waitForImages(doc.body)
 
   await new Promise<void>((resolve) => {
+    let done = false
     const cleanup = () => {
-      root.classList.remove('demand-handoff-print-active')
-      window.removeEventListener('afterprint', cleanup)
+      if (done) return
+      done = true
+      iframe.remove()
+      win.removeEventListener('afterprint', cleanup)
       resolve()
     }
-    window.addEventListener('afterprint', cleanup)
-    window.print()
+    win.addEventListener('afterprint', cleanup)
+    window.setTimeout(cleanup, 120_000)
+    win.focus()
+    win.print()
   })
 }

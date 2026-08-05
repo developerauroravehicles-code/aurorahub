@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { getDuplicateStockNumbers } from '@/lib/demand-stock'
 import { DemandsList } from './demands-list'
 import { getTimezoneFromDealer } from '@/lib/dealer-timezone'
+import { DemandPrintHost } from '@/components/demand-print-host'
 
 export default async function DemandsPage() {
   const supabase = await createClient()
@@ -50,12 +51,14 @@ export default async function DemandsPage() {
         </Link>
       </div>
 
-      <DemandsList
-        demands={demands || []}
-        timezoneName={timezoneName}
-        duplicateStockNumbers={duplicateStockNumbers}
-        dealer={{ name: dealerName, warranty_years: dealerWarrantyYears }}
-      />
+      <DemandPrintHost>
+        <DemandsList
+          demands={demands || []}
+          timezoneName={timezoneName}
+          duplicateStockNumbers={duplicateStockNumbers}
+          dealer={{ name: dealerName, warranty_years: dealerWarrantyYears }}
+        />
+      </DemandPrintHost>
     </div>
   )
 }

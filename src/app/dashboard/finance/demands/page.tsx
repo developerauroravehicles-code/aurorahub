@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { getDuplicateStockNumbers } from '@/lib/demand-stock'
 import { getTimezoneFromDealer } from '@/lib/dealer-timezone'
 import { FinanceDemandsList } from './finance-demands-list'
+import { DemandPrintHost } from '@/components/demand-print-host'
 
 const EMPTY_DEALER = '00000000-0000-0000-0000-000000000000'
 
@@ -96,14 +97,16 @@ export default async function FinanceDemandsPage() {
         </Link>
       </div>
 
-      <FinanceDemandsList
-        activeDemands={activeDemands}
-        completedDemands={completedDemands}
-        currentUserId={user.id}
-        duplicateStockNumbers={duplicateStockNumbers}
-        dealer={{ name: dealerName, warranty_years: dealerWarrantyYears }}
-        timezoneName={timezoneName}
-      />
+      <DemandPrintHost>
+        <FinanceDemandsList
+          activeDemands={activeDemands}
+          completedDemands={completedDemands}
+          currentUserId={user.id}
+          duplicateStockNumbers={duplicateStockNumbers}
+          dealer={{ name: dealerName, warranty_years: dealerWarrantyYears }}
+          timezoneName={timezoneName}
+        />
+      </DemandPrintHost>
     </div>
   )
 }

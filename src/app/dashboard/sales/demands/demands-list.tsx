@@ -6,6 +6,7 @@ import { getEffectiveTimezone, getTodayRangeInTimezone } from '@/lib/timezone-de
 import { Filter, X } from 'lucide-react'
 import { demandMatchesSmartSearch } from '@/lib/demand-smart-search'
 import { DemandPrintButton } from '@/components/demand-print-button'
+import { toHandoffDemand } from '@/lib/demand-handoff-print-utils'
 
 interface Demand {
   id: string
@@ -31,12 +32,6 @@ interface DemandsListProps {
   timezoneName?: string | null
   duplicateStockNumbers?: string[]
   dealer: { name: string; warranty_years: number | null }
-}
-
-function toDemandNumber(value: number | string | undefined): number | null {
-  if (value == null) return null
-  const n = typeof value === 'number' ? value : Number(value)
-  return Number.isFinite(n) ? n : null
 }
 
 export function DemandsList({ demands, timezoneName = null, duplicateStockNumbers = [], dealer }: DemandsListProps) {
@@ -249,24 +244,7 @@ export function DemandsList({ demands, timezoneName = null, duplicateStockNumber
                     )}
                     <div className="mt-3 flex justify-end">
                       <DemandPrintButton
-                        demand={{
-                          id: demand.id,
-                          demand_number: toDemandNumber(demand.demand_number),
-                          customer_firstname: demand.customer_firstname,
-                          customer_lastname: demand.customer_lastname,
-                          customer_phone: demand.customer_phone ?? '',
-                          customer_address: demand.customer_address ?? null,
-                          vehicle_make: demand.vehicle_make,
-                          vehicle_model: demand.vehicle_model,
-                          vehicle_year: demand.vehicle_year,
-                          stock_number: demand.stock_number ?? '',
-                          vin_last6: demand.vin_last6 ?? null,
-                          camera_model: demand.camera_model ?? null,
-                          appointment_date: demand.appointment_date,
-                          comment: demand.comment ?? null,
-                          status: demand.status,
-                          created_at: demand.created_at,
-                        }}
+                        demand={toHandoffDemand(demand)}
                         dealer={dealer}
                         timezoneName={timezoneName}
                       />

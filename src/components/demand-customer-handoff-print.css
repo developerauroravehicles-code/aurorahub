@@ -9,6 +9,7 @@
   font-size: 11pt;
   line-height: 1.45;
   pointer-events: none;
+  visibility: hidden;
 }
 
 .demand-handoff-sheet {
@@ -75,6 +76,11 @@
 .demand-handoff-value {
   font-size: 10.5pt;
   color: #18181b;
+}
+
+.demand-handoff-notes {
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 
 .demand-handoff-warranty ul {
@@ -175,145 +181,5 @@
 @media (max-width: 640px) {
   .demand-handoff-qr-grid {
     grid-template-columns: 1fr;
-  }
-}
-
-@media print {
-  @page {
-    size: letter;
-    margin: 0.45in;
-  }
-
-  html,
-  body {
-    height: auto !important;
-    overflow: visible !important;
-    background: #fff !important;
-  }
-
-  body * {
-    visibility: hidden;
-  }
-
-  .demand-handoff-print-root.demand-handoff-print-active,
-  .demand-handoff-print-root.demand-handoff-print-active * {
-    visibility: visible;
-  }
-
-  .demand-handoff-print-root.demand-handoff-print-active {
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 100%;
-    padding: 0;
-    margin: 0;
-    box-sizing: border-box;
-    pointer-events: auto;
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
-  }
-
-  .demand-handoff-sheet {
-    max-width: none;
-    margin: 0;
-    break-inside: avoid;
-    page-break-inside: avoid;
-  }
-
-  .demand-handoff-header {
-    padding-bottom: 8px;
-    margin-bottom: 10px;
-    break-after: avoid;
-    page-break-after: avoid;
-  }
-
-  .demand-handoff-header h1 {
-    font-size: 17pt;
-  }
-
-  .demand-handoff-header p {
-    font-size: 9pt;
-    margin: 2px 0 0;
-  }
-
-  .demand-handoff-section {
-    margin-bottom: 8px;
-    break-inside: avoid;
-    page-break-inside: avoid;
-  }
-
-  .demand-handoff-section-title {
-    font-size: 10pt;
-    margin: 0 0 4px;
-    break-after: avoid;
-    page-break-after: avoid;
-  }
-
-  .demand-handoff-grid {
-    gap: 4px 16px;
-    break-inside: avoid;
-    page-break-inside: avoid;
-  }
-
-  .demand-handoff-row {
-    break-inside: avoid;
-    page-break-inside: avoid;
-  }
-
-  .demand-handoff-label {
-    font-size: 7.5pt;
-    line-height: 1.35;
-    padding-top: 1px;
-  }
-
-  .demand-handoff-value {
-    font-size: 9.5pt;
-  }
-
-  .demand-handoff-warranty ul {
-    margin: 2px 0 0;
-    font-size: 8.5pt;
-  }
-
-  .demand-handoff-warranty li {
-    margin-bottom: 1px;
-  }
-
-  .demand-handoff-qr-grid {
-    gap: 6px;
-    margin-top: 2px;
-    break-inside: avoid;
-    page-break-inside: avoid;
-  }
-
-  .demand-handoff-qr-card {
-    padding: 4px 3px;
-    gap: 3px;
-    break-inside: avoid;
-    page-break-inside: avoid;
-  }
-
-  .demand-handoff-qr-image-wrap {
-    width: 72px;
-    height: 72px;
-  }
-
-  .demand-handoff-qr-image-wrap img,
-  .demand-handoff-qr-image {
-    width: 68px;
-    height: 68px;
-  }
-
-  .demand-handoff-footer {
-    margin-top: 8px;
-    padding-top: 8px;
-    font-size: 8pt;
-    break-inside: avoid;
-    page-break-inside: avoid;
-  }
-
-  .demand-handoff-tail {
-    break-inside: avoid;
-    page-break-inside: avoid;
   }
 }
