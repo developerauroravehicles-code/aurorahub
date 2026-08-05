@@ -5,6 +5,7 @@ import { formatInTimeZone } from 'date-fns-tz'
 import { getEffectiveTimezone } from '@/lib/timezone-defaults'
 import { Filter, X } from 'lucide-react'
 import { demandMatchesSmartSearch } from '@/lib/demand-smart-search'
+import { DemandPrintButton } from '@/components/demand-print-button'
 import { DemandActions } from './demand-actions'
 
 type DealerRow = { name: string; region_codes?: { timezones?: { name: string } } } | null
@@ -38,6 +39,14 @@ interface FinanceDemandsListProps {
   completedDemands: Demand[]
   currentUserId: string
   duplicateStockNumbers?: string[]
+  dealer: { name: string; warranty_years: number | null }
+  timezoneName: string | null
+}
+
+function toDemandNumber(value: number | string | undefined): number | null {
+  if (value == null) return null
+  const n = typeof value === 'number' ? value : Number(value)
+  return Number.isFinite(n) ? n : null
 }
 
 function getDealerTimezone(dealers: Demand['dealers']): string | null {
@@ -119,11 +128,15 @@ function DemandRow({
   demand,
   currentUserId,
   duplicateStockNumbers,
+  dealer,
+  timezoneName,
   muted = false,
 }: {
   demand: Demand
   currentUserId: string
   duplicateStockNumbers: string[]
+  dealer: { name: string; warranty_years: number | null }
+  timezoneName: string | null
   muted?: boolean
 }) {
   const isMine = demand.assigned_finance_id === currentUserId
@@ -207,33 +220,57 @@ function DemandRow({
             )}
           </p>
         </div>
-        {(isUnassigned || isMine) && demand.status !== 'completed' && (
-          <DemandActions
-            demandId={demand.id}
-            isAssigned={isMine}
-            status={demand.status}
-            demand={
-              isMine
-                ? {
-                    id: demand.id,
-                    demand_number: demand.demand_number,
-                    dealer_id: demand.dealer_id,
-                    customer_firstname: demand.customer_firstname,
-                    customer_lastname: demand.customer_lastname,
-                    customer_phone: demand.customer_phone,
-                    customer_address: demand.customer_address,
-                    vehicle_make: demand.vehicle_make,
-                    vehicle_model: demand.vehicle_model,
-                    vehicle_year: demand.vehicle_year,
-                    stock_number: demand.stock_number,
-                    camera_model: demand.camera_model,
-                    appointment_date: demand.appointment_date,
-                    assigned_specialist_id: demand.assigned_specialist_id,
-                  }
-                : undefined
-            }
+        <div className="flex flex-col items-end gap-2 shrink-0">
+          <DemandPrintButton
+            demand={{
+              id: demand.id,
+              demand_number: toDemandNumber(demand.demand_number),
+              customer_firstname: demand.customer_firstname,
+              customer_lastname: demand.customer_lastname,
+              customer_phone: demand.customer_phone,
+              customer_address: demand.customer_address,
+              vehicle_make: demand.vehicle_make,
+              vehicle_model: demand.vehicle_model,
+              vehicle_year: demand.vehicle_year,
+              stock_number: demand.stock_number ?? '',
+              vin_last6: demand.vin_last6 ?? null,
+              camera_model: demand.camera_model,
+              appointment_date: demand.appointment_date,
+              comment: demand.comment ?? null,
+              status: demand.status,
+              created_at: demand.created_at,
+            }}
+            dealer={dealer}
+            timezoneName={timezoneName}
           />
-        )}
+          {(isUnassigned || isMine) && demand.status !== 'completed' && (
+            <DemandActions
+              demandId={demand.id}
+              isAssigned={isMine}
+              status={demand.status}
+              demand={
+                isMine
+                  ? {
+                      id: demand.id,
+                      demand_number: demand.demand_number,
+                      dealer_id: demand.dealer_id,
+                      customer_firstname: demand.customer_firstname,
+                      customer_lastname: demand.customer_lastname,
+                      customer_phone: demand.customer_phone,
+                      customer_address: demand.customer_address,
+                      vehicle_make: demand.vehicle_make,
+                      vehicle_model: demand.vehicle_model,
+                      vehicle_year: demand.vehicle_year,
+                      stock_number: demand.stock_number,
+                      camera_model: demand.camera_model,
+                      appointment_date: demand.appointment_date,
+                      assigned_specialist_id: demand.assigned_specialist_id,
+                    }
+                  : undefined
+              }
+            />
+          )}
+        </div>
       </div>
     </li>
   )
@@ -244,6 +281,8 @@ export function FinanceDemandsList({
   completedDemands,
   currentUserId,
   duplicateStockNumbers = [],
+  dealer,
+  timezoneName,
 }: FinanceDemandsListProps) {
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [dateFilter, setDateFilter] = useState<string>('all')
@@ -396,6 +435,8 @@ export function FinanceDemandsList({
                     demand={demand}
                     currentUserId={currentUserId}
                     duplicateStockNumbers={duplicateStockNumbers}
+                    dealer={dealer}
+                    timezoneName={timezoneName}
                   />
                 ))}
               </ul>
@@ -424,6 +465,8 @@ export function FinanceDemandsList({
                     demand={demand}
                     currentUserId={currentUserId}
                     duplicateStockNumbers={duplicateStockNumbers}
+                    dealer={dealer}
+                    timezoneName={timezoneName}
                     muted
                   />
                 ))}

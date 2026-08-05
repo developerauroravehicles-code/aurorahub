@@ -5,6 +5,7 @@ import { formatInTimeZone, fromZonedTime } from 'date-fns-tz'
 import { getEffectiveTimezone, getTodayRangeInTimezone } from '@/lib/timezone-defaults'
 import { Filter, X } from 'lucide-react'
 import { demandMatchesSmartSearch } from '@/lib/demand-smart-search'
+import { DemandPrintButton } from '@/components/demand-print-button'
 
 interface Demand {
   id: string
@@ -14,11 +15,13 @@ interface Demand {
   customer_firstname: string
   customer_lastname: string
   customer_phone?: string | null
+  customer_address?: string | null
   vin_last6?: string | null
   vehicle_year: number
   vehicle_make: string
   vehicle_model: string
   stock_number?: string | null
+  camera_model?: string | null
   appointment_date: string
   comment?: string | null
 }
@@ -27,9 +30,16 @@ interface DemandsListProps {
   demands: Demand[]
   timezoneName?: string | null
   duplicateStockNumbers?: string[]
+  dealer: { name: string; warranty_years: number | null }
 }
 
-export function DemandsList({ demands, timezoneName = null, duplicateStockNumbers = [] }: DemandsListProps) {
+function toDemandNumber(value: number | string | undefined): number | null {
+  if (value == null) return null
+  const n = typeof value === 'number' ? value : Number(value)
+  return Number.isFinite(n) ? n : null
+}
+
+export function DemandsList({ demands, timezoneName = null, duplicateStockNumbers = [], dealer }: DemandsListProps) {
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [dateFilter, setDateFilter] = useState<string>('all')
   const [searchValue, setSearchValue] = useState<string>('')
@@ -237,6 +247,30 @@ export function DemandsList({ demands, timezoneName = null, duplicateStockNumber
                     {demand.comment && (
                       <p className="mt-1 text-sm text-zinc-500 dark:text-gray-400 italic">Comment: {demand.comment}</p>
                     )}
+                    <div className="mt-3 flex justify-end">
+                      <DemandPrintButton
+                        demand={{
+                          id: demand.id,
+                          demand_number: toDemandNumber(demand.demand_number),
+                          customer_firstname: demand.customer_firstname,
+                          customer_lastname: demand.customer_lastname,
+                          customer_phone: demand.customer_phone ?? '',
+                          customer_address: demand.customer_address ?? null,
+                          vehicle_make: demand.vehicle_make,
+                          vehicle_model: demand.vehicle_model,
+                          vehicle_year: demand.vehicle_year,
+                          stock_number: demand.stock_number ?? '',
+                          vin_last6: demand.vin_last6 ?? null,
+                          camera_model: demand.camera_model ?? null,
+                          appointment_date: demand.appointment_date,
+                          comment: demand.comment ?? null,
+                          status: demand.status,
+                          created_at: demand.created_at,
+                        }}
+                        dealer={dealer}
+                        timezoneName={timezoneName}
+                      />
+                    </div>
                   </div>
                 </li>
               )

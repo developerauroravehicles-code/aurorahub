@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { Plus } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { getDuplicateStockNumbers } from '@/lib/demand-stock'
+import { getTimezoneFromDealer } from '@/lib/dealer-timezone'
 import { FinanceDemandsList } from './finance-demands-list'
 
 const EMPTY_DEALER = '00000000-0000-0000-0000-000000000000'
@@ -60,6 +61,20 @@ export default async function FinanceDemandsPage() {
   const completedDemands = completedDemandsRaw?.map(transformDemand) || []
   const duplicateStockNumbers = Array.from(await getDuplicateStockNumbers())
 
+  let dealerName = 'Dealer'
+  let dealerWarrantyYears: number | null = null
+  let timezoneName: string | null = null
+  if (dealerId) {
+    const { data: dealerRow } = await supabase
+      .from('dealers')
+      .select('name, warranty_years, region_codes(timezone_id, timezones(name))')
+      .eq('id', dealerId)
+      .single()
+    dealerName = dealerRow?.name ?? 'Dealer'
+    dealerWarrantyYears = dealerRow?.warranty_years ?? null
+    timezoneName = getTimezoneFromDealer(dealerRow as Parameters<typeof getTimezoneFromDealer>[0]) ?? null
+  }
+
   return (
     <div className="space-y-8">
       <div className="flex flex-wrap items-start justify-between gap-4">
@@ -86,6 +101,8 @@ export default async function FinanceDemandsPage() {
         completedDemands={completedDemands}
         currentUserId={user.id}
         duplicateStockNumbers={duplicateStockNumbers}
+        dealer={{ name: dealerName, warranty_years: dealerWarrantyYears }}
+        timezoneName={timezoneName}
       />
     </div>
   )
