@@ -6,7 +6,9 @@ import { ChevronRight, Package, MapPin } from 'lucide-react'
 import type { InventoryStockAlert, InventoryStockSummary } from '@/lib/inventory-stock-alerts'
 import type { InventoryAlertRule } from '@/lib/inventory-alert-rules'
 import type { InventoryTreeLevel } from '@/lib/inventory-v2/types'
+import type { SpecialistStockSummaryRow } from '@/lib/inventory-v2/specialist-stock'
 import { InventoryAlertsPanel, InventoryDashboardPanel } from './inventory-overview-panels'
+import { InventorySpecialistsPanel } from './inventory-specialists-panel'
 import {
   postDealerToSpecialistTransfer,
   postInventoryAdjustment,
@@ -20,7 +22,7 @@ import {
   upsertInventoryThreshold,
 } from './actions'
 
-type TabId = 'dashboard' | 'alerts' | 'stock' | 'movements' | 'pricing' | 'setup'
+type TabId = 'dashboard' | 'alerts' | 'stock' | 'specialists' | 'movements' | 'pricing' | 'setup'
 
 type Camera = { id: string; name: string }
 type Province = { id: string; code: string; name: string }
@@ -184,6 +186,7 @@ export function InventoryDashboard({
   summary,
   customRules,
   nationalLocationId,
+  specialistStock,
   initialTab,
 }: {
   provinces: Province[]
@@ -201,6 +204,7 @@ export function InventoryDashboard({
   summary: InventoryStockSummary
   customRules: InventoryAlertRule[]
   nationalLocationId: string | null
+  specialistStock: SpecialistStockSummaryRow[]
   initialTab?: TabId
 }) {
   const router = useRouter()
@@ -458,6 +462,7 @@ export function InventoryDashboard({
               label: summary.warningCount > 0 ? `Alerts (${summary.warningCount})` : 'Alerts',
             },
             { id: 'stock' as const, label: 'Stok ağacı' },
+            { id: 'specialists' as const, label: 'Specialists' },
             { id: 'movements' as const, label: 'Movements' },
             { id: 'pricing' as const, label: 'Pricing' },
             { id: 'setup' as const, label: 'Setup geography' },
@@ -811,6 +816,14 @@ export function InventoryDashboard({
             )}
           </aside>
         </div>
+      )}
+
+      {tab === 'specialists' && (
+        <InventorySpecialistsPanel
+          specialistStock={specialistStock}
+          dealers={dealers}
+          cameras={cameras}
+        />
       )}
 
       {tab === 'movements' && (

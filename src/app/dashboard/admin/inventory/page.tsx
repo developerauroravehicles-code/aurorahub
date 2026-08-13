@@ -1,9 +1,10 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { fetchInventoryStockAlerts } from '@/lib/inventory-stock-alerts'
+import { fetchSpecialistStockSummary } from '@/lib/inventory-v2/specialist-stock'
 import { InventoryDashboard } from './inventory-dashboard'
 
-const VALID_TABS = new Set(['dashboard', 'alerts', 'stock', 'movements', 'pricing', 'setup'])
+const VALID_TABS = new Set(['dashboard', 'alerts', 'stock', 'specialists', 'movements', 'pricing', 'setup'])
 
 export default async function InventoryPage({
   searchParams,
@@ -96,6 +97,7 @@ export default async function InventoryPage({
   }))
 
   const { alerts, summary, customRules } = inventoryAlertsRes
+  const specialistStock = await fetchSpecialistStockSummary(supabase)
 
   return (
     <div className="space-y-8 pb-12">
@@ -103,7 +105,8 @@ export default async function InventoryPage({
         <h1 className="text-2xl font-semibold text-zinc-900 dark:text-white mb-2">Inventory</h1>
         <p className="text-zinc-500 dark:text-gray-400">
           <strong>Dashboard</strong> genel görünüm; <strong>Alerts</strong> uyarılar (e-posta + bildirim);
-          <strong> Stok ağacı</strong> ile Kanada → Eyalet → Şehir → İç bölge → Bayi.
+          <strong> Stok ağacı</strong> ile Kanada → Eyalet → Şehir → İç bölge → Bayi;
+          <strong> Specialists</strong> ile çalışan saha stok atama ve takibi.
         </p>
       </div>
       <InventoryDashboard
@@ -143,7 +146,8 @@ export default async function InventoryPage({
         summary={summary}
         customRules={customRules}
         nationalLocationId={nationalLocRes.data?.id ?? null}
-        initialTab={initialTab as 'dashboard' | 'alerts' | 'stock' | 'movements' | 'pricing' | 'setup'}
+        specialistStock={specialistStock}
+        initialTab={initialTab as 'dashboard' | 'alerts' | 'stock' | 'specialists' | 'movements' | 'pricing' | 'setup'}
       />
     </div>
   )

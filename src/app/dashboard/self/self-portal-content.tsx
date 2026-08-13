@@ -85,6 +85,7 @@ export function SelfPortalContent({
   payments,
   payEstimate,
   expenseClaims,
+  cameraStock,
   equipment,
   certifications,
   complianceDocuments,
@@ -100,6 +101,7 @@ export function SelfPortalContent({
   payments: { id: string; amount: number; period_start: string | null; period_end: string | null; status: string; paid_at: string | null; payment_type: string | null; completed_count?: number | null }[]
   payEstimate: SpecialistCompensationSnapshot | null
   expenseClaims: SpecialistExpenseClaim[]
+  cameraStock: { camera_model_id: string; model_name: string; quantity: number }[]
   equipment: { id: string; item_name?: string | null; serial_number?: string | null; assigned_at: string; condition?: string | null; equipment_types?: { name: string } | null }[]
   certifications: { id: string; certification_type: string; name?: string | null; institution?: string | null; issue_date: string; expiry_date: string | null; status?: string | null }[]
   complianceDocuments: { id: string; document_type: string | null; title: string | null; expiry_date: string | null; verified_at: string | null; document_url: string | null }[]
@@ -557,34 +559,62 @@ export function SelfPortalContent({
       )}
 
       {activeTab === 'equipment' && (
-        <div className="bg-zinc-200/50 dark:bg-white/5 rounded-lg border border-zinc-200 dark:border-gray-800 p-6">
-          <h2 className="text-lg font-semibold text-zinc-900 dark:text-white mb-4">Assigned Equipment</h2>
-          {equipment.length === 0 ? (
-            <p className="text-zinc-500 dark:text-gray-500">No equipment assigned.</p>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-zinc-200 dark:divide-gray-800 text-sm">
-                <thead>
-                  <tr>
-                    <th className="px-4 py-2 text-left text-zinc-500 dark:text-gray-400">Item</th>
-                    <th className="px-4 py-2 text-left text-zinc-500 dark:text-gray-400">Serial</th>
-                    <th className="px-4 py-2 text-left text-zinc-500 dark:text-gray-400">Assigned</th>
-                    <th className="px-4 py-2 text-left text-zinc-500 dark:text-gray-400">Condition</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-zinc-200 dark:divide-gray-800">
-                  {equipment.map((e) => (
-                    <tr key={e.id}>
-                      <td className="px-4 py-2 text-zinc-900 dark:text-white">{(e.equipment_types as { name?: string } | null)?.name ?? e.item_name ?? '—'}</td>
-                      <td className="px-4 py-2 text-zinc-500 dark:text-gray-400">{e.serial_number ?? '—'}</td>
-                      <td className="px-4 py-2 text-zinc-500 dark:text-gray-400">{new Date(e.assigned_at).toLocaleDateString()}</td>
-                      <td className="px-4 py-2 text-zinc-500 dark:text-gray-400">{e.condition ?? '—'}</td>
+        <div className="space-y-6">
+          <div className="bg-zinc-200/50 dark:bg-white/5 rounded-lg border border-zinc-200 dark:border-gray-800 p-6">
+            <h2 className="text-lg font-semibold text-zinc-900 dark:text-white mb-4">Field Camera Stock</h2>
+            {cameraStock.length === 0 ? (
+              <p className="text-zinc-500 dark:text-gray-500">No field camera stock assigned.</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-zinc-200 dark:divide-gray-800 text-sm">
+                  <thead>
+                    <tr>
+                      <th className="px-4 py-2 text-left text-zinc-500 dark:text-gray-400">Model</th>
+                      <th className="px-4 py-2 text-left text-zinc-500 dark:text-gray-400">Quantity</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+                  </thead>
+                  <tbody className="divide-y divide-zinc-200 dark:divide-gray-800">
+                    {cameraStock.map((row) => (
+                      <tr key={row.camera_model_id}>
+                        <td className="px-4 py-2 text-zinc-900 dark:text-white">{row.model_name}</td>
+                        <td className="px-4 py-2 text-zinc-900 dark:text-white tabular-nums">{row.quantity}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+
+          <div className="bg-zinc-200/50 dark:bg-white/5 rounded-lg border border-zinc-200 dark:border-gray-800 p-6">
+            <h2 className="text-lg font-semibold text-zinc-900 dark:text-white mb-4">Assigned Equipment</h2>
+            {equipment.length === 0 ? (
+              <p className="text-zinc-500 dark:text-gray-500">No equipment assigned.</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-zinc-200 dark:divide-gray-800 text-sm">
+                  <thead>
+                    <tr>
+                      <th className="px-4 py-2 text-left text-zinc-500 dark:text-gray-400">Item</th>
+                      <th className="px-4 py-2 text-left text-zinc-500 dark:text-gray-400">Serial</th>
+                      <th className="px-4 py-2 text-left text-zinc-500 dark:text-gray-400">Assigned</th>
+                      <th className="px-4 py-2 text-left text-zinc-500 dark:text-gray-400">Condition</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-zinc-200 dark:divide-gray-800">
+                    {equipment.map((e) => (
+                      <tr key={e.id}>
+                        <td className="px-4 py-2 text-zinc-900 dark:text-white">{(e.equipment_types as { name?: string } | null)?.name ?? e.item_name ?? '—'}</td>
+                        <td className="px-4 py-2 text-zinc-500 dark:text-gray-400">{e.serial_number ?? '—'}</td>
+                        <td className="px-4 py-2 text-zinc-500 dark:text-gray-400">{new Date(e.assigned_at).toLocaleDateString()}</td>
+                        <td className="px-4 py-2 text-zinc-500 dark:text-gray-400">{e.condition ?? '—'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
         </div>
       )}
 

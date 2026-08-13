@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { SelfPortalContent } from './self-portal-content'
 import { fetchSpecialistCompensationSnapshot } from '@/lib/specialist-compensation-snapshot'
+import { fetchMyFieldCameraStock } from '@/lib/inventory-v2/specialist-stock'
 import { getMyExpenseClaims } from './expense-actions'
 
 export const dynamic = 'force-dynamic'
@@ -75,6 +76,9 @@ export default async function SelfPortalPage() {
   const expenseClaimsResult =
     profile.role === 'specialist' ? await getMyExpenseClaims() : { claims: [] as never[] }
 
+  const cameraStock =
+    profile.role === 'specialist' ? await fetchMyFieldCameraStock(supabase) : []
+
   return (
     <div className="min-w-0 max-w-full space-y-8">
       <div>
@@ -88,6 +92,7 @@ export default async function SelfPortalPage() {
         payments={(paymentsRes.data ?? []) as Payments}
         payEstimate={payEstimate}
         expenseClaims={expenseClaimsResult.claims ?? []}
+        cameraStock={cameraStock}
         equipment={normEquipment}
         certifications={(certsRes.data ?? []) as Parameters<typeof SelfPortalContent>[0]['certifications']}
         complianceDocuments={(complianceDocsRes.data ?? []) as Parameters<typeof SelfPortalContent>[0]['complianceDocuments']}
