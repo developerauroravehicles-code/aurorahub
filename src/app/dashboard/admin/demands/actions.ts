@@ -8,7 +8,7 @@ import { logDemandChange, type DemandStatus } from '@/lib/demand-logger'
 import { sendSMS } from '@/lib/twilio'
 import { logSmsSent } from '@/lib/sms-logger'
 import { getSmsSettings } from '@/lib/sms-resolver'
-import { resolveCancellationTemplate } from '@/lib/sms-resolver'
+import { buildCustomerSmsMessage, buildSpecialistSmsMessage } from '@/lib/sms-message-builder'
 import { validateAppointmentSlot } from '@/app/dashboard/system-management/calendar/actions'
 import { getTimezoneFromDealer } from '@/lib/dealer-timezone'
 import { wallDateToAppointmentIso } from '@/lib/external-demand-date'
@@ -356,7 +356,7 @@ export async function updateDemandByAuroraManager(
 
   const { data: demand } = await supabase
     .from('demands')
-    .select('dealer_id, status, appointment_date, customer_phone, customer_firstname, customer_lastname, assigned_specialist_id, is_external, demand_number, dealers(region_codes(timezone_id, timezones(name)))')
+    .select('dealer_id, status, appointment_date, customer_phone, customer_firstname, customer_lastname, assigned_specialist_id, is_external, demand_number, customer_address, vehicle_year, vehicle_make, vehicle_model, vin_last6, stock_number, dealers(region_codes(timezone_id, timezones(name)), name, address)')
     .eq('id', demandId)
     .single()
 
@@ -444,16 +444,21 @@ export async function updateDemandByAuroraManager(
     const smsSettings = await getSmsSettings()
     const rn = smsSettings.rescheduling_notice
     if (rn.enabled) {
+      const dealerRow = demand.dealers as { name?: string; address?: string; region_codes?: { timezones?: { name: string } } } | null
       const timezoneName = getTimezoneFromDealer(demand.dealers as Parameters<typeof getTimezoneFromDealer>[0]) ?? undefined
-      const message = resolveCancellationTemplate(rn.template, {
-        phone: smsSettings.contactPhone,
+      const dealerCtx = { name: dealerRow?.name, address: dealerRow?.address, timezoneName }
+      const demandWithNewDate = { ...demand, appointment_date: appointmentDate }
+      const customerMessage = buildCustomerSmsMessage('rescheduling_notice', rn, demandWithNewDate, dealerCtx, {
+        contactPhone: smsSettings.contactPhone,
         signature: smsSettings.signature,
-        appointmentDate: newAppointmentDate,
-        timezoneName,
+      })
+      const specialistMessage = buildSpecialistSmsMessage('rescheduling_notice', rn, demandWithNewDate, dealerCtx, {
+        contactPhone: smsSettings.contactPhone,
+        signature: smsSettings.signature,
       })
       if (options.sendToCustomer && rn.sendToCustomer && demand.customer_phone) {
         try {
-          const result = await sendSMS(demand.customer_phone, message)
+          const result = await sendSMS(demand.customer_phone, customerMessage)
           if (result.success) {
             logSmsSent({
               phoneNumber: demand.customer_phone,
@@ -462,7 +467,7 @@ export async function updateDemandByAuroraManager(
               demandId,
               messageType: 'rescheduling_notice',
               triggeredBy: 'system',
-              messageContent: message,
+              messageContent: customerMessage,
             }).catch(() => {})
           }
         } catch (e) {
@@ -477,7 +482,7 @@ export async function updateDemandByAuroraManager(
             .eq('id', demand.assigned_specialist_id)
             .single()
           if (specialist?.phone) {
-            const result = await sendSMS(specialist.phone, message)
+            const result = await sendSMS(specialist.phone, specialistMessage)
             if (result.success) {
               logSmsSent({
                 phoneNumber: specialist.phone,
@@ -486,7 +491,7 @@ export async function updateDemandByAuroraManager(
                 demandId,
                 messageType: 'rescheduling_notice',
                 triggeredBy: 'system',
-                messageContent: message,
+                messageContent: specialistMessage,
               }).catch(() => {})
             }
           }

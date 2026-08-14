@@ -21,6 +21,8 @@ type CustomerSummaryRow = {
   latest_warranty_end: string | null
   last_sms_at: string | null
   last_sms_body: string | null
+  last_sms_status: string | null
+  last_sms_error: string | null
 }
 
 export default async function CustomersPage() {

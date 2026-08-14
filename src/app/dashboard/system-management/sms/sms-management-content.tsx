@@ -4,8 +4,10 @@ import { useState, useEffect, useCallback } from 'react'
 import {
   type SMSSettings,
   type SMSTriggerType,
+  type SMSLifecycleTriggerType,
   DEFAULT_SMS_SETTINGS,
   SMS_PLACEHOLDERS,
+  SMS_LIFECYCLE_TRIGGER_LABELS,
 } from '@/lib/sms-settings'
 import { formatInTimeZone } from 'date-fns-tz'
 import { SYSTEM_DEFAULT_TIMEZONE } from '@/lib/timezone-defaults'
@@ -40,14 +42,19 @@ export function SMSManagementContent() {
   const [initialSettings, setInitialSettings] = useState<SMSSettings | null>(null)
 
   const loadSettings = useCallback(async () => {
-    const res = await getSmsSettingsAction()
-    if (res.settings) {
-      setSettings(res.settings)
-      setInitialSettings(res.settings)
-    } else if (res.error) {
-      setMessage({ type: 'error', text: res.error })
+    try {
+      const res = await getSmsSettingsAction()
+      if (res.settings) {
+        setSettings(res.settings)
+        setInitialSettings(res.settings)
+      } else if (res.error) {
+        setMessage({ type: 'error', text: res.error })
+      }
+    } catch {
+      setMessage({ type: 'error', text: 'Failed to load SMS settings.' })
+    } finally {
+      setLoading(false)
     }
-    setLoading(false)
   }, [])
 
   useEffect(() => {
@@ -55,9 +62,17 @@ export function SMSManagementContent() {
   }, [loadSettings])
 
   useEffect(() => {
-    getSmsLogs({}).then((res) => {
-      if (res.logs) setSmsLogs(res.logs)
-    })
+    getSmsLogs({})
+      .then((res) => {
+        if (res.logs) setSmsLogs(res.logs)
+        if (res.error) setMessage({ type: 'error', text: res.error })
+        else if (res.schemaWarning) {
+          setMessage({ type: 'error', text: `${res.schemaWarning} Status tracking requires this migration.` })
+        }
+      })
+      .catch(() => {
+        setMessage({ type: 'error', text: 'Failed to load SMS logs.' })
+      })
   }, [])
 
   const saveSettings = async () => {
@@ -78,6 +93,7 @@ export function SMSManagementContent() {
     : false
 
   const triggerKeys = Object.keys(TRIGGER_LABELS) as SMSTriggerType[]
+  const lifecycleKeys = Object.keys(SMS_LIFECYCLE_TRIGGER_LABELS) as SMSLifecycleTriggerType[]
   const expandAll = () => setExpandedTriggers([...triggerKeys])
   const collapseAll = () => setExpandedTriggers([])
   const toggleTrigger = (t: SMSTriggerType) => {
@@ -87,6 +103,13 @@ export function SMSManagementContent() {
   }
 
   const updateTrigger = (key: SMSTriggerType, updates: Partial<SMSSettings[SMSTriggerType]>) => {
+    setSettings((prev) => ({
+      ...prev,
+      [key]: { ...prev[key], ...updates },
+    }))
+  }
+
+  const updateLifecycleTrigger = (key: SMSLifecycleTriggerType, updates: Partial<SMSSettings[SMSLifecycleTriggerType]>) => {
     setSettings((prev) => ({
       ...prev,
       [key]: { ...prev[key], ...updates },
@@ -438,8 +461,20 @@ export function SMSManagementContent() {
                       onChange={(e) => updateTrigger(trigger, { template: e.target.value })}
                       rows={8}
                       className="w-full border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 text-zinc-900 dark:text-white rounded px-3 py-2 text-sm font-mono focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]"
-                      placeholder="Enter message template..."
+                      placeholder="Enter customer message template..."
                     />
+                    <div className="space-y-2 pt-2">
+                      <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300">
+                        Specialist message template
+                      </label>
+                      <textarea
+                        value={s.specialistTemplate ?? ''}
+                        onChange={(e) => updateTrigger(trigger, { specialistTemplate: e.target.value })}
+                        rows={6}
+                        className="w-full border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 text-zinc-900 dark:text-white rounded px-3 py-2 text-sm font-mono focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]"
+                        placeholder="Vehicle/VIN/stock/customer/dealer info for specialist..."
+                      />
+                    </div>
                     <div className="flex flex-wrap items-center gap-4 text-xs text-zinc-500 dark:text-gray-400">
                       <span title="Character and segment count for preview">
                         {previewText.length} chars · {segmentInfo} segment{segmentInfo !== 1 ? 's' : ''}
@@ -457,6 +492,52 @@ export function SMSManagementContent() {
                   </div>
                 </div>
               )}
+            </div>
+          )
+        })}
+      </div>
+
+      {/* Lifecycle SMS triggers */}
+      <div className="space-y-4">
+        <h4 className="text-md font-semibold text-zinc-900 dark:text-white">Lifecycle SMS (Automated Daily)</h4>
+        <p className="text-sm text-zinc-500 dark:text-gray-400">
+          Post-completion and warranty messages sent by the daily cron job. Use {'{{portal_link}}'} for customer portal URLs.
+        </p>
+        {lifecycleKeys.map((trigger) => {
+          const s = settings[trigger] ?? DEFAULT_SMS_SETTINGS[trigger]
+          return (
+            <div key={trigger} className="bg-zinc-100/90 dark:bg-black/30 rounded-lg border border-zinc-200 dark:border-gray-800 p-4 space-y-3">
+              <div className="flex items-center gap-3">
+                <span className="font-medium text-zinc-900 dark:text-white">{SMS_LIFECYCLE_TRIGGER_LABELS[trigger]}</span>
+                <span className={`text-xs px-2 py-0.5 rounded ${s.enabled ? 'bg-green-900/50 text-green-300' : 'bg-gray-700 text-zinc-500 dark:text-gray-400'}`}>
+                  {s.enabled ? 'Enabled' : 'Disabled'}
+                </span>
+              </div>
+              {s.description && <p className="text-sm text-zinc-500 dark:text-gray-400">{s.description}</p>}
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={s.enabled}
+                  onChange={(e) => updateLifecycleTrigger(trigger, { enabled: e.target.checked })}
+                  className="rounded border-zinc-300 dark:border-gray-600 bg-white dark:bg-black/50 text-[#C27E00] focus:ring-[#C27E00]"
+                />
+                <span className="text-sm text-zinc-600 dark:text-gray-300">Enable this SMS</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={s.sendToCustomer}
+                  onChange={(e) => updateLifecycleTrigger(trigger, { sendToCustomer: e.target.checked })}
+                  className="rounded border-zinc-300 dark:border-gray-600 bg-white dark:bg-black/50 text-[#C27E00] focus:ring-[#C27E00]"
+                />
+                <span className="text-sm text-zinc-600 dark:text-gray-300">Send to customer</span>
+              </label>
+              <textarea
+                value={s.template}
+                onChange={(e) => updateLifecycleTrigger(trigger, { template: e.target.value })}
+                rows={5}
+                className="w-full border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 text-zinc-900 dark:text-white rounded px-3 py-2 text-sm font-mono"
+              />
             </div>
           )
         })}
@@ -525,13 +606,14 @@ export function SMSManagementContent() {
                 <th className="px-4 py-3 text-zinc-500 dark:text-gray-400 font-medium">Recipient</th>
                 <th className="px-4 py-3 text-zinc-500 dark:text-gray-400 font-medium">Phone</th>
                 <th className="px-4 py-3 text-zinc-500 dark:text-gray-400 font-medium">Message type</th>
+                <th className="px-4 py-3 text-zinc-500 dark:text-gray-400 font-medium">Status</th>
                 <th className="px-4 py-3 text-zinc-500 dark:text-gray-400 font-medium">Trigger</th>
                 <th className="px-4 py-3 text-zinc-500 dark:text-gray-400 font-medium w-24">Message</th>
               </tr>
             </thead>
             <tbody>
               {smsLogs.length === 0 && !logsLoading ? (
-                <tr><td colSpan={6} className="px-4 py-6 text-center text-zinc-500 dark:text-gray-500">No logs yet. Send an SMS or click &quot;Apply filters&quot; to load.</td></tr>
+                <tr><td colSpan={7} className="px-4 py-6 text-center text-zinc-500 dark:text-gray-500">No logs yet. Send an SMS or click &quot;Apply filters&quot; to load.</td></tr>
               ) : (
                 smsLogs.map((log) => (
                   <tr key={log.id} className="border-t border-zinc-200 dark:border-gray-800 hover:bg-zinc-200/50 dark:bg-white/5">
@@ -544,6 +626,15 @@ export function SMSManagementContent() {
                     </td>
                     <td className="px-4 py-2 text-zinc-500 dark:text-gray-400 font-mono text-xs">{log.phone_number}</td>
                     <td className="px-4 py-2 text-zinc-600 dark:text-gray-300">{log.message_type.replace(/_/g, ' ')}</td>
+                    <td className="px-4 py-2">
+                      {log.delivery_status === 'failed' ? (
+                        <span className="text-xs px-2 py-0.5 rounded bg-red-900/50 text-red-300" title={log.error_message ?? undefined}>
+                          Failed
+                        </span>
+                      ) : (
+                        <span className="text-xs px-2 py-0.5 rounded bg-green-900/50 text-green-300">Sent</span>
+                      )}
+                    </td>
                     <td className="px-4 py-2">
                       <span className={`text-xs px-2 py-0.5 rounded ${log.triggered_by === 'manual' ? 'bg-[#C27E00]/30 text-[#C27E00]' : 'bg-gray-700 text-zinc-500 dark:text-gray-400'}`}>
                         {log.triggered_by}

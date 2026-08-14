@@ -7,7 +7,7 @@ import { dispatchWebhooks } from '@/lib/webhook-dispatch'
 import { sendSMS } from '@/lib/twilio'
 import { logSmsSent } from '@/lib/sms-logger'
 import { getSmsSettings } from '@/lib/sms-resolver'
-import { resolveAppointmentCreatedTemplate, resolveCancellationTemplate, resolveReminderTemplate } from '@/lib/sms-resolver'
+import { buildCustomerSmsMessage, buildSpecialistSmsMessage } from '@/lib/sms-message-builder'
 import { validateAppointmentSlot } from '@/app/dashboard/system-management/calendar/actions'
 import { getTimezoneFromDealer } from '@/lib/dealer-timezone'
 import { lookupCameraModelId } from '@/lib/camera-model-resolve'
@@ -78,7 +78,7 @@ export async function approveDemand(demandId: string, sendSMSToCustomer: boolean
   // Check if user is finance and demand is assigned to them
   const { data: demand } = await supabase
     .from('demands')
-    .select('assigned_finance_id, assigned_specialist_id, status, dealer_id, customer_phone, customer_firstname, customer_lastname, appointment_date, customer_address')
+    .select('assigned_finance_id, assigned_specialist_id, status, dealer_id, customer_phone, customer_firstname, customer_lastname, appointment_date, customer_address, vehicle_year, vehicle_make, vehicle_model, vin_last6, stock_number')
     .eq('id', demandId)
     .single()
 
@@ -175,20 +175,22 @@ export async function approveDemand(demandId: string, sendSMSToCustomer: boolean
 
   // Send SMS to customer if requested and enabled in settings
   const adminForSms = createAdminClient()
+  const { data: dealerForSms } = await supabase
+    .from('dealers')
+    .select('name, address, region_codes(timezone_id, timezones(name))')
+    .eq('id', demand.dealer_id)
+    .single()
+  const timezoneName = (dealerForSms?.region_codes as { timezones?: { name: string } } | null)?.timezones?.name
+  const dealerCtx = {
+    name: dealerForSms?.name,
+    address: dealerForSms?.address,
+    timezoneName,
+  }
+
   if (ac.enabled && ac.sendToCustomer && sendSMSToCustomer && demand.customer_phone) {
     try {
-      const { data: dealer } = await supabase
-        .from('dealers')
-        .select('name, address, region_codes(timezone_id, timezones(name))')
-        .eq('id', demand.dealer_id)
-        .single()
-      const appointmentDate = new Date(demand.appointment_date)
-      const location = demand.customer_address || dealer?.address || dealer?.name || 'Authorized Dealer'
-      const timezoneName = (dealer?.region_codes as any)?.timezones?.name || undefined
-      const message = resolveAppointmentCreatedTemplate(ac.template, {
-        appointmentDate,
-        address: location,
-        timezoneName,
+      const message = buildCustomerSmsMessage('appointment_created', ac, demand, dealerCtx, {
+        contactPhone: smsSettings.contactPhone,
         signature: smsSettings.signature,
       })
       const result = await sendSMS(demand.customer_phone, message)
@@ -218,18 +220,8 @@ export async function approveDemand(demandId: string, sendSMSToCustomer: boolean
   const specialistIdToNotify = assignedSpecialistId || demand.assigned_specialist_id
   if (ac.enabled && ac.sendToSpecialist && sendSMSToSpecialist && specialistIdToNotify) {
     try {
-      const { data: dealer } = await supabase
-        .from('dealers')
-        .select('name, address, region_codes(timezone_id, timezones(name))')
-        .eq('id', demand.dealer_id)
-        .single()
-      const appointmentDate = new Date(demand.appointment_date)
-      const location = demand.customer_address || dealer?.address || dealer?.name || 'Authorized Dealer'
-      const timezoneName = (dealer?.region_codes as any)?.timezones?.name || undefined
-      const message = resolveAppointmentCreatedTemplate(ac.template, {
-        appointmentDate,
-        address: location,
-        timezoneName,
+      const message = buildSpecialistSmsMessage('appointment_created', ac, demand, dealerCtx, {
+        contactPhone: smsSettings.contactPhone,
         signature: smsSettings.signature,
       })
       const { data: specialist } = await supabase
@@ -265,18 +257,8 @@ export async function approveDemand(demandId: string, sendSMSToCustomer: boolean
         .eq('role', 'aurora_manager')
         .not('phone', 'is', null)
       if (auroraManagers?.length) {
-        const { data: dealer } = await supabase
-          .from('dealers')
-          .select('name, address, region_codes(timezone_id, timezones(name))')
-          .eq('id', demand.dealer_id)
-          .single()
-        const appointmentDate = new Date(demand.appointment_date)
-        const location = demand.customer_address || dealer?.address || dealer?.name || 'Authorized Dealer'
-        const timezoneName = (dealer?.region_codes as { timezones?: { name: string } })?.timezones?.name || undefined
-        const message = resolveAppointmentCreatedTemplate(ac.template, {
-          appointmentDate,
-          address: location,
-          timezoneName,
+        const message = buildCustomerSmsMessage('appointment_created', ac, demand, dealerCtx, {
+          contactPhone: smsSettings.contactPhone,
           signature: smsSettings.signature,
         })
         for (const am of auroraManagers) {
@@ -315,7 +297,7 @@ export async function cancelDemand(demandId: string) {
   // Check if demand is assigned to current user
   const { data: demand } = await supabase
     .from('demands')
-    .select('assigned_finance_id, status, appointment_date, customer_phone, customer_firstname, customer_lastname, assigned_specialist_id')
+    .select('assigned_finance_id, status, appointment_date, customer_phone, customer_firstname, customer_lastname, assigned_specialist_id, customer_address, vehicle_year, vehicle_make, vehicle_model, vin_last6, stock_number, dealer_id, dealers(name, address, region_codes(timezone_id, timezones(name)))')
     .eq('id', demandId)
     .single()
 
@@ -357,13 +339,20 @@ export async function cancelDemand(demandId: string) {
   const smsSettings = await getSmsSettings()
   const cn = smsSettings.cancellation_notice
   if (cn.enabled && (cn.sendToCustomer || cn.sendToSpecialist)) {
-    const message = resolveCancellationTemplate(cn.template, {
-      phone: smsSettings.contactPhone,
+    const dealerRow = (demand as { dealers?: { name?: string; address?: string; region_codes?: { timezones?: { name: string } } } }).dealers
+    const timezoneName = dealerRow?.region_codes?.timezones?.name
+    const dealerCtx = { name: dealerRow?.name, address: dealerRow?.address, timezoneName }
+    const customerMessage = buildCustomerSmsMessage('cancellation_notice', cn, demand, dealerCtx, {
+      contactPhone: smsSettings.contactPhone,
+      signature: smsSettings.signature,
+    })
+    const specialistMessage = buildSpecialistSmsMessage('cancellation_notice', cn, demand, dealerCtx, {
+      contactPhone: smsSettings.contactPhone,
       signature: smsSettings.signature,
     })
     if (cn.sendToCustomer && demand.customer_phone) {
       try {
-        const result = await sendSMS(demand.customer_phone, message)
+        const result = await sendSMS(demand.customer_phone, customerMessage)
         if (result.success) {
           logSmsSent({
             phoneNumber: demand.customer_phone,
@@ -372,7 +361,7 @@ export async function cancelDemand(demandId: string) {
             demandId,
             messageType: 'cancellation_notice',
             triggeredBy: 'system',
-            messageContent: message,
+            messageContent: customerMessage,
           }).catch(() => {})
         }
       } catch (smsError) {
@@ -387,7 +376,7 @@ export async function cancelDemand(demandId: string) {
           .eq('id', (demand as { assigned_specialist_id?: string }).assigned_specialist_id)
           .single()
         if (specialist?.phone) {
-          const result = await sendSMS(specialist.phone, message)
+          const result = await sendSMS(specialist.phone, specialistMessage)
           if (result.success) {
             logSmsSent({
               phoneNumber: specialist.phone,
@@ -396,7 +385,7 @@ export async function cancelDemand(demandId: string) {
               demandId,
               messageType: 'cancellation_notice',
               triggeredBy: 'system',
-              messageContent: message,
+              messageContent: specialistMessage,
             }).catch(() => {})
           }
         }
@@ -431,7 +420,7 @@ export async function updateDemand(demandId: string, formData: FormData) {
   // Check if demand is assigned to current user
   const { data: demand } = await supabase
     .from('demands')
-    .select('assigned_finance_id, status, appointment_date, customer_phone, customer_firstname, customer_lastname, dealer_id, assigned_specialist_id, demand_number, dealers(region_codes(timezone_id, timezones(name)))')
+    .select('assigned_finance_id, status, appointment_date, customer_phone, customer_firstname, customer_lastname, dealer_id, assigned_specialist_id, demand_number, customer_address, vehicle_year, vehicle_make, vehicle_model, vin_last6, stock_number, dealers(region_codes(timezone_id, timezones(name)), name, address)')
     .eq('id', demandId)
     .single()
 
@@ -525,16 +514,21 @@ export async function updateDemand(demandId: string, formData: FormData) {
   const smsSettings = await getSmsSettings()
   const rn = smsSettings.rescheduling_notice
   if (rn.enabled && appointmentDateChanged && (rn.sendToCustomer || rn.sendToSpecialist)) {
+    const dealerRow = (demand.dealers as { name?: string; address?: string; region_codes?: { timezones?: { name: string } } } | null)
     const timezoneName = getTimezoneFromDealer(demand.dealers as Parameters<typeof getTimezoneFromDealer>[0]) ?? undefined
-    const message = resolveCancellationTemplate(rn.template, {
-      phone: smsSettings.contactPhone,
+    const dealerCtx = { name: dealerRow?.name, address: dealerRow?.address, timezoneName }
+    const demandWithNewDate = { ...demand, appointment_date: appointmentDate }
+    const customerMessage = buildCustomerSmsMessage('rescheduling_notice', rn, demandWithNewDate, dealerCtx, {
+      contactPhone: smsSettings.contactPhone,
       signature: smsSettings.signature,
-      appointmentDate: new Date(appointmentDate),
-      timezoneName,
+    })
+    const specialistMessage = buildSpecialistSmsMessage('rescheduling_notice', rn, demandWithNewDate, dealerCtx, {
+      contactPhone: smsSettings.contactPhone,
+      signature: smsSettings.signature,
     })
     if (rn.sendToCustomer && demand.customer_phone) {
       try {
-        const result = await sendSMS(demand.customer_phone, message)
+        const result = await sendSMS(demand.customer_phone, customerMessage)
         if (result.success) {
           logSmsSent({
             phoneNumber: demand.customer_phone,
@@ -543,7 +537,7 @@ export async function updateDemand(demandId: string, formData: FormData) {
             demandId,
             messageType: 'rescheduling_notice',
             triggeredBy: 'system',
-            messageContent: message,
+            messageContent: customerMessage,
           }).catch(() => {})
         }
       } catch (smsError) {
@@ -558,7 +552,7 @@ export async function updateDemand(demandId: string, formData: FormData) {
           .eq('id', (demand as { assigned_specialist_id?: string }).assigned_specialist_id)
           .single()
         if (specialist?.phone) {
-          const result = await sendSMS(specialist.phone, message)
+          const result = await sendSMS(specialist.phone, specialistMessage)
           if (result.success) {
             logSmsSent({
               phoneNumber: specialist.phone,
@@ -567,7 +561,7 @@ export async function updateDemand(demandId: string, formData: FormData) {
               demandId,
               messageType: 'rescheduling_notice',
               triggeredBy: 'system',
-              messageContent: message,
+              messageContent: specialistMessage,
             }).catch(() => {})
           }
         }

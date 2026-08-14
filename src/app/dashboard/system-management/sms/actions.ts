@@ -6,13 +6,9 @@ import { requirePermission } from '@/lib/permissions'
 import { canUseSmsFeatures } from '@/lib/inventory-manager-access'
 import type { SMSSettings } from '@/lib/sms-settings'
 import { sendSMS } from '@/lib/twilio'
-import { logSmsSent } from '@/lib/sms-logger'
+import { buildCustomerSmsMessage, buildSpecialistSmsMessage } from '@/lib/sms-message-builder'
+import { logSmsAttempt, twilioErrorMessage, querySmsLogs } from '@/lib/sms-logger'
 import { getSmsSettings } from '@/lib/sms-resolver'
-import {
-  resolveAppointmentCreatedTemplate,
-  resolveCancellationTemplate,
-  resolveReminderTemplate,
-} from '@/lib/sms-resolver'
 import { getTimezoneFromDealer } from '@/lib/dealer-timezone'
 import { formatInTimeZone } from 'date-fns-tz'
 import { SYSTEM_DEFAULT_TIMEZONE } from '@/lib/timezone-defaults'
@@ -69,31 +65,41 @@ export interface SmsLogEntry {
   message_type: string
   triggered_by: string
   message_content: string | null
+  delivery_status?: string | null
+  error_message?: string | null
 }
 
 export async function getSmsSettingsAction(): Promise<{ settings?: SMSSettings; error?: string }> {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { error: 'Unauthorized' }
+  try {
+    const supabase = await createClient()
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+    if (!user) return { error: 'Unauthorized' }
 
-  const perm = await requirePermission('comm.sms.view')
-  if (perm !== true) return { error: perm.error }
+    const perm = await requirePermission('comm.sms.view')
+    if (perm !== true) return { error: perm.error }
 
-  const settings = await getSmsSettings(supabase)
-  return { settings }
+    const settings = await getSmsSettings(supabase)
+    return { settings }
+  } catch (err) {
+    console.error('getSmsSettingsAction failed:', err)
+    return { error: err instanceof Error ? err.message : 'Failed to load SMS settings' }
+  }
 }
 
 export async function saveSmsSettingsAction(settings: SMSSettings): Promise<{ error?: string }> {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { error: 'Unauthorized' }
+  try {
+    const supabase = await createClient()
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+    if (!user) return { error: 'Unauthorized' }
 
-  const perm = await requirePermission('comm.sms.save')
-  if (perm !== true) return { error: perm.error }
+    const perm = await requirePermission('comm.sms.save')
+    if (perm !== true) return { error: perm.error }
 
-  const { error } = await supabase
-    .from('system_settings')
-    .upsert(
+    const { error } = await supabase.from('system_settings').upsert(
       {
         key: 'sms_settings',
         value: JSON.stringify(settings),
@@ -101,42 +107,36 @@ export async function saveSmsSettingsAction(settings: SMSSettings): Promise<{ er
       },
       { onConflict: 'key' }
     )
-  if (error) return { error: error.message }
-  return {}
+    if (error) return { error: error.message }
+    return {}
+  } catch (err) {
+    console.error('saveSmsSettingsAction failed:', err)
+    return { error: err instanceof Error ? err.message : 'Failed to save SMS settings' }
+  }
 }
 
 export async function getSmsLogs(filters?: {
   dateFrom?: string
   dateTo?: string
   customerName?: string
-}): Promise<{ error?: string; logs?: SmsLogEntry[] }> {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { error: 'Unauthorized' }
+}): Promise<{ error?: string; logs?: SmsLogEntry[]; schemaWarning?: string }> {
+  try {
+    const supabase = await createClient()
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+    if (!user) return { error: 'Unauthorized' }
 
-  const perm = await requirePermission('comm.sms.logs')
-  if (perm !== true) return { error: perm.error }
+    const perm = await requirePermission('comm.sms.logs')
+    if (perm !== true) return { error: perm.error }
 
-  let query = supabase
-    .from('sms_logs')
-    .select('id, sent_at, phone_number, recipient_type, recipient_name, demand_id, message_type, triggered_by, message_content')
-    .order('sent_at', { ascending: false })
-    .limit(200)
-
-  if (filters?.dateFrom) {
-    query = query.gte('sent_at', `${filters.dateFrom}T00:00:00.000Z`)
+    const { data, error, schemaWarning } = await querySmsLogs(supabase, filters)
+    if (error) return { error }
+    return { logs: (data ?? []) as unknown as SmsLogEntry[], schemaWarning }
+  } catch (err) {
+    console.error('getSmsLogs failed:', err)
+    return { error: err instanceof Error ? err.message : 'Failed to load SMS logs' }
   }
-  if (filters?.dateTo) {
-    query = query.lte('sent_at', `${filters.dateTo}T23:59:59.999Z`)
-  }
-  if (filters?.customerName?.trim()) {
-    const term = filters.customerName.trim().toLowerCase()
-    query = query.ilike('recipient_name', `%${term}%`)
-  }
-
-  const { data, error } = await query
-  if (error) return { error: error.message }
-  return { logs: (data ?? []) as SmsLogEntry[] }
 }
 
 export async function getDemandsForManualSms(): Promise<{ error?: string; demands?: DemandOption[] }> {
@@ -189,6 +189,7 @@ export async function sendManualSms(
   messageType: SMSTriggerType,
   recipient: 'customer' | 'specialist'
 ): Promise<{ success: boolean; error?: string }> {
+  try {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { success: false, error: 'Unauthorized' }
@@ -203,7 +204,7 @@ export async function sendManualSms(
 
   const { data: demand, error: demandError } = await supabase
     .from('demands')
-    .select('customer_phone, customer_firstname, customer_lastname, customer_address, appointment_date, dealer_id, assigned_specialist_id, dealers(region_codes(timezone_id, timezones(name)))')
+    .select('customer_phone, customer_firstname, customer_lastname, customer_address, appointment_date, dealer_id, assigned_specialist_id, vehicle_year, vehicle_make, vehicle_model, vin_last6, stock_number, dealers(name, address, region_codes(timezone_id, timezones(name)))')
     .eq('id', demandId)
     .single()
 
@@ -238,53 +239,25 @@ export async function sendManualSms(
   if (!phone) return { success: false, error: 'No phone number to send to' }
 
   const timezoneName = getTimezoneFromDealer(demand.dealers as Parameters<typeof getTimezoneFromDealer>[0]) ?? undefined
-  const address = demand.customer_address || 'the specified location'
+  const dealerRow = demand.dealers as { name?: string; address?: string } | null
+  const dealerCtx = { name: dealerRow?.name, address: dealerRow?.address, timezoneName }
   const appointmentDate = new Date(demand.appointment_date)
   const now = new Date()
   const diffInHours = Math.floor((appointmentDate.getTime() - now.getTime()) / (1000 * 60 * 60))
   const hoursText = diffInHours === 1 ? '1 hour' : diffInHours <= 0 ? 'soon' : `${diffInHours} hours`
 
-  let message: string
-  switch (messageType) {
-    case 'appointment_created':
-      message = resolveAppointmentCreatedTemplate(trigger.template, {
-        appointmentDate,
-        address,
-        timezoneName,
-        signature: smsSettings.signature,
-      })
-      break
-    case 'cancellation_notice':
-      message = resolveCancellationTemplate(trigger.template, {
-        phone: smsSettings.contactPhone,
-        signature: smsSettings.signature,
-      })
-      break
-    case 'rescheduling_notice':
-      message = resolveCancellationTemplate(trigger.template, {
-        phone: smsSettings.contactPhone,
-        signature: smsSettings.signature,
-        appointmentDate: new Date(demand.appointment_date),
-        timezoneName: timezoneName ?? undefined,
-      })
-      break
-    case 'four_hour_reminder':
-      message = resolveReminderTemplate(trigger.template, {
-        hoursText,
-        address,
-        signature: smsSettings.signature,
-      })
-      break
-    case 'twenty_four_hour_reminder':
-      message = resolveReminderTemplate(trigger.template, {
-        hoursText: '24 hours',
-        address,
-        signature: smsSettings.signature,
-      })
-      break
-    default:
-      return { success: false, error: 'Invalid message type' }
-  }
+  const message =
+    recipient === 'specialist'
+      ? buildSpecialistSmsMessage(messageType, trigger, demand, dealerCtx, {
+          contactPhone: smsSettings.contactPhone,
+          signature: smsSettings.signature,
+          hoursText: messageType === 'twenty_four_hour_reminder' ? '24 hours' : hoursText,
+        })
+      : buildCustomerSmsMessage(messageType, trigger, demand, dealerCtx, {
+          contactPhone: smsSettings.contactPhone,
+          signature: smsSettings.signature,
+          hoursText: messageType === 'twenty_four_hour_reminder' ? '24 hours' : hoursText,
+        })
 
   const result = await sendSMS(phone, message)
   if (result.success) {
@@ -295,7 +268,7 @@ export async function sendManualSms(
       const { data: spec } = await supabase.from('profiles').select('full_name').eq('id', demand.assigned_specialist_id).single()
       recipientName = (spec as { full_name?: string } | null)?.full_name
     }
-    logSmsSent({
+    logSmsAttempt({
       phoneNumber: phone,
       recipientType: recipient,
       recipientName,
@@ -303,14 +276,37 @@ export async function sendManualSms(
       messageType,
       triggeredBy: 'manual',
       messageContent: message,
+      twilioSid: result.success && 'sid' in result ? result.sid : undefined,
     }).catch(() => {})
 
-    // Notify all Aurora Managers if any templates remain unsent for this demand (customer)
     notifyAuroraManagersIfSmsPending(demandId, messageType).catch(() => {})
 
     return { success: true }
   }
-  return { success: false, error: (result as { error?: unknown }).error?.toString?.() ?? 'Failed to send SMS' }
+
+  logSmsAttempt({
+    phoneNumber: phone,
+    recipientType: recipient,
+    recipientName:
+      recipient === 'customer'
+        ? `${demand.customer_firstname} ${demand.customer_lastname}`.trim() || undefined
+        : undefined,
+    demandId,
+    messageType,
+    triggeredBy: 'manual',
+    messageContent: message,
+    deliveryStatus: 'failed',
+    errorMessage: result.success === false ? result.errorMessage : twilioErrorMessage(result),
+  }).catch(() => {})
+
+  return {
+    success: false,
+    error: result.success === false ? result.errorMessage : 'Failed to send SMS',
+  }
+  } catch (err) {
+    console.error('sendManualSms failed:', err)
+    return { success: false, error: err instanceof Error ? err.message : 'Failed to send SMS' }
+  }
 }
 
 /**

@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { requirePermission } from '@/lib/permissions'
 import { canUseSmsFeatures } from '@/lib/inventory-manager-access'
 import { sendSMS } from '@/lib/twilio'
-import { logSmsSent } from '@/lib/sms-logger'
+import { logSmsAttempt, twilioErrorMessage } from '@/lib/sms-logger'
 import { getSmsSettings } from '@/lib/sms-resolver'
 
 const MAX_BODY_LENGTH = 1600
@@ -109,22 +109,27 @@ export async function sendCustomerDirectorySms(params: {
       if (result.success) {
         sentCount += 1
         const recipientName = r.displayName?.trim() || undefined
-        logSmsSent({
+        logSmsAttempt({
           phoneNumber: r.phone,
           recipientType: 'customer',
           recipientName,
           messageType: 'customer_directory_manual',
           triggeredBy: 'manual',
           messageContent: bodyPart,
+          twilioSid: 'sid' in result ? result.sid : undefined,
         }).catch(() => {})
       } else {
-        const e = (result as { error?: unknown }).error
-        let err = 'Send failed'
-        if (e && typeof e === 'object' && 'message' in e && typeof (e as { message: unknown }).message === 'string') {
-          err = (e as { message: string }).message
-        } else if (e != null) {
-          err = String(e)
-        }
+        const err = result.errorMessage ?? twilioErrorMessage(result.error)
+        logSmsAttempt({
+          phoneNumber: r.phone,
+          recipientType: 'customer',
+          recipientName: r.displayName?.trim() || undefined,
+          messageType: 'customer_directory_manual',
+          triggeredBy: 'manual',
+          messageContent: bodyPart,
+          deliveryStatus: 'failed',
+          errorMessage: err,
+        }).catch(() => {})
         failed.push({ phone: r.phone, error: err })
       }
     }

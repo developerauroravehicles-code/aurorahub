@@ -3,20 +3,43 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { sendSMS } from '@/lib/twilio'
 import { isWithinHoursBeforeWindow } from '@/lib/sms-messages'
 import { getSmsSettings } from '@/lib/sms-resolver'
-import { resolveReminderTemplate } from '@/lib/sms-resolver'
 import { getTimezoneFromDealer } from '@/lib/dealer-timezone'
-import { logSmsSent } from '@/lib/sms-logger'
+import { logSmsAttempt } from '@/lib/sms-logger'
 import { getReminderAutomationConfig, getReminder24hAutomationConfig } from '@/lib/automation-settings'
 import { notifyAuroraManagersSmsFailed } from '@/lib/notify-sms-failed'
+import { buildCustomerSmsMessage, buildSpecialistSmsMessage } from '@/lib/sms-message-builder'
 
-const DEMAND_SELECT = 'id, appointment_date, customer_phone, customer_firstname, customer_lastname, customer_address, status, dealer_id, assigned_specialist_id, reminder_sent_at, reminder_24h_sent_at, dealers(region_codes(timezone_id, timezones(name)))'
+const DEMAND_SELECT =
+  'id, appointment_date, customer_phone, customer_firstname, customer_lastname, customer_address, status, dealer_id, assigned_specialist_id, reminder_sent_at, reminder_24h_sent_at, vehicle_year, vehicle_make, vehicle_model, vin_last6, stock_number, dealers(name, address, region_codes(timezone_id, timezones(name)))'
+
+type DemandRow = {
+  id: string
+  appointment_date: string
+  customer_phone?: string | null
+  customer_firstname?: string | null
+  customer_lastname?: string | null
+  customer_address?: string | null
+  assigned_specialist_id?: string | null
+  vehicle_year?: number | null
+  vehicle_make?: string | null
+  vehicle_model?: string | null
+  vin_last6?: string | null
+  stock_number?: string | null
+  dealers?: { name?: string; address?: string; region_codes?: { timezones?: { name: string } } } | null
+}
+
+function dealerContext(demand: DemandRow) {
+  const timezoneName = getTimezoneFromDealer(demand.dealers as Parameters<typeof getTimezoneFromDealer>[0]) ?? undefined
+  return {
+    name: demand.dealers?.name,
+    address: demand.dealers?.address,
+    timezoneName,
+  }
+}
 
 /**
  * API Route for sending reminder SMS
  * Called by cron every hour at the top of the hour.
- * Sends 24h reminder and 4h reminder (configurable 2/4/6h) before each appointment.
- * Requires CRON_SECRET in env; Vercel sends it as Authorization: Bearer <secret>.
- * Query param ?secret=<CRON_SECRET> also accepted for external cron services.
  */
 export async function GET(request: Request) {
   const expectedSecret = process.env.CRON_SECRET
@@ -51,10 +74,6 @@ export async function GET(request: Request) {
     let sentCount = 0
     let errorCount = 0
 
-    // --- 24-hour reminder pass ---
-    // Window filter is isWithinHoursBeforeWindow(..., 24) → real time until appointment ∈ (23.5h, 24.5h].
-    // DB prefilter must INCLUDE that interval: appointments roughly 22h–26h out (same idea as 4h pass using now..now+7h).
-    // BUGFIX: Previously used [now+24h, now+31h], which EXCLUDED 23.5h–24h — those never matched and 24h SMS was skipped.
     if (reminder24hConfig.enabled && (reminder24hConfig.sendToCustomer || reminder24hConfig.sendToSpecialist)) {
       const lower24 = new Date(now.getTime() + 22 * 60 * 60 * 1000)
       const upper24 = new Date(now.getTime() + 26 * 60 * 60 * 1000)
@@ -70,21 +89,20 @@ export async function GET(request: Request) {
       if (!err24h && demands24h?.length) {
         const smsSettings = await getSmsSettings(supabase)
         const rh24 = smsSettings.twenty_four_hour_reminder
-        const address = (d: { customer_address?: string | null }) => d.customer_address || 'the specified location'
 
-        for (const demand of demands24h) {
+        for (const raw of demands24h) {
+          const demand = raw as DemandRow
           const appointmentDate = new Date(demand.appointment_date)
           if (!isWithinHoursBeforeWindow(appointmentDate, 24)) continue
 
-          const canCustomer =
-            reminder24hConfig.sendToCustomer && !!(demand as { customer_phone?: string | null }).customer_phone
+          const canCustomer = reminder24hConfig.sendToCustomer && !!demand.customer_phone
           let specialistForSend: { phone: string; full_name: string | null } | null = null
-          if (reminder24hConfig.sendToSpecialist && (demand as { assigned_specialist_id?: string }).assigned_specialist_id) {
+          if (reminder24hConfig.sendToSpecialist && demand.assigned_specialist_id) {
             try {
               const { data: specialist } = await supabase
                 .from('profiles')
                 .select('phone, full_name')
-                .eq('id', (demand as { assigned_specialist_id?: string }).assigned_specialist_id!)
+                .eq('id', demand.assigned_specialist_id)
                 .single()
               if (specialist?.phone) specialistForSend = { phone: specialist.phone, full_name: specialist.full_name }
             } catch {
@@ -93,7 +111,6 @@ export async function GET(request: Request) {
           }
           if (!canCustomer && !specialistForSend) continue
 
-          // Atomic claim: only one cron instance can claim this demand
           const { data: claimed24h } = await supabase
             .from('demands')
             .update({ reminder_24h_sent_at: new Date().toISOString() })
@@ -101,28 +118,35 @@ export async function GET(request: Request) {
             .is('reminder_24h_sent_at', null)
             .select('id')
             .single()
-          if (!claimed24h) continue // Another instance already claimed it
+          if (!claimed24h) continue
 
-          const message = resolveReminderTemplate(rh24.template, {
-            hoursText: '24 hours',
-            address: address(demand),
+          const dealerCtx = dealerContext(demand)
+          const customerMessage = buildCustomerSmsMessage('twenty_four_hour_reminder', rh24, demand, dealerCtx, {
+            contactPhone: smsSettings.contactPhone,
             signature: smsSettings.signature,
+            hoursText: '24 hours',
+          })
+          const specialistMessage = buildSpecialistSmsMessage('twenty_four_hour_reminder', rh24, demand, dealerCtx, {
+            contactPhone: smsSettings.contactPhone,
+            signature: smsSettings.signature,
+            hoursText: '24 hours',
           })
 
-          if (canCustomer) {
+          if (canCustomer && demand.customer_phone) {
             try {
-              const result = await sendSMS((demand as { customer_phone: string }).customer_phone, message)
+              const result = await sendSMS(demand.customer_phone, customerMessage)
               if (result.success) {
                 sentCount++
-                logSmsSent(
+                logSmsAttempt(
                   {
                     phoneNumber: demand.customer_phone,
                     recipientType: 'customer',
-                    recipientName: `${(demand as { customer_firstname?: string }).customer_firstname} ${(demand as { customer_lastname?: string }).customer_lastname}`.trim(),
+                    recipientName: `${demand.customer_firstname ?? ''} ${demand.customer_lastname ?? ''}`.trim(),
                     demandId: demand.id,
                     messageType: 'twenty_four_hour_reminder',
                     triggeredBy: 'system',
-                    messageContent: message,
+                    messageContent: customerMessage,
+                    twilioSid: result.success && 'sid' in result ? result.sid : undefined,
                   },
                   supabase
                 ).catch(() => {})
@@ -138,10 +162,10 @@ export async function GET(request: Request) {
 
           if (specialistForSend) {
             try {
-              const result = await sendSMS(specialistForSend.phone, message)
+              const result = await sendSMS(specialistForSend.phone, specialistMessage)
               if (result.success) {
                 sentCount++
-                logSmsSent(
+                logSmsAttempt(
                   {
                     phoneNumber: specialistForSend.phone,
                     recipientType: 'specialist',
@@ -149,7 +173,8 @@ export async function GET(request: Request) {
                     demandId: demand.id,
                     messageType: 'twenty_four_hour_reminder',
                     triggeredBy: 'system',
-                    messageContent: message,
+                    messageContent: specialistMessage,
+                    twilioSid: result.success && 'sid' in result ? result.sid : undefined,
                   },
                   supabase
                 ).catch(() => {})
@@ -158,13 +183,10 @@ export async function GET(request: Request) {
               errorCount++
             }
           }
-
-          // reminder_24h_sent_at already set by atomic claim above
         }
       }
     }
 
-    // --- 4-hour reminder pass (existing) ---
     if (reminderConfig.enabled) {
       const sevenHoursFromNow = new Date(now.getTime() + 7 * 60 * 60 * 1000)
 
@@ -181,12 +203,12 @@ export async function GET(request: Request) {
         const smsSettings = await getSmsSettings(supabase)
         const rh = smsSettings.four_hour_reminder
 
-        for (const demand of demands) {
+        for (const raw of demands) {
+          const demand = raw as DemandRow
           const appointmentDate = new Date(demand.appointment_date)
           if (!isWithinHoursBeforeWindow(appointmentDate, reminderConfig.hoursBefore)) continue
           if (!reminderConfig.sendToCustomer && !reminderConfig.sendToSpecialist) continue
 
-          // Atomic claim: only one cron instance can claim this demand
           const { data: claimed4h } = await supabase
             .from('demands')
             .update({ reminder_sent_at: new Date().toISOString() })
@@ -194,32 +216,35 @@ export async function GET(request: Request) {
             .is('reminder_sent_at', null)
             .select('id')
             .single()
-          if (!claimed4h) continue // Another instance already claimed it
+          if (!claimed4h) continue
 
           const hoursText = reminderConfig.hoursBefore === 1 ? '1 hour' : `${reminderConfig.hoursBefore} hours`
-          const address = demand.customer_address || 'the specified location'
-          const message = resolveReminderTemplate(rh.template, {
-            hoursText,
-            address,
+          const dealerCtx = dealerContext(demand)
+          const customerMessage = buildCustomerSmsMessage('four_hour_reminder', rh, demand, dealerCtx, {
+            contactPhone: smsSettings.contactPhone,
             signature: smsSettings.signature,
+            hoursText,
           })
-
-          let sentForThisDemand = false
+          const specialistMessage = buildSpecialistSmsMessage('four_hour_reminder', rh, demand, dealerCtx, {
+            contactPhone: smsSettings.contactPhone,
+            signature: smsSettings.signature,
+            hoursText,
+          })
 
           if (reminderConfig.sendToCustomer && demand.customer_phone) {
             try {
-              const result = await sendSMS(demand.customer_phone, message)
+              const result = await sendSMS(demand.customer_phone, customerMessage)
               if (result.success) {
                 sentCount++
-                sentForThisDemand = true
-                logSmsSent({
+                logSmsAttempt({
                   phoneNumber: demand.customer_phone,
                   recipientType: 'customer',
-                  recipientName: `${(demand as { customer_firstname?: string }).customer_firstname} ${(demand as { customer_lastname?: string }).customer_lastname}`.trim(),
+                  recipientName: `${demand.customer_firstname ?? ''} ${demand.customer_lastname ?? ''}`.trim(),
                   demandId: demand.id,
                   messageType: 'four_hour_reminder',
                   triggeredBy: 'system',
-                  messageContent: message,
+                  messageContent: customerMessage,
+                  twilioSid: result.success && 'sid' in result ? result.sid : undefined,
                 }, supabase).catch(() => {})
               } else {
                 errorCount++
@@ -231,33 +256,33 @@ export async function GET(request: Request) {
             }
           }
 
-          if (reminderConfig.sendToSpecialist && (demand as { assigned_specialist_id?: string }).assigned_specialist_id) {
+          if (reminderConfig.sendToSpecialist && demand.assigned_specialist_id) {
             try {
               const { data: specialist } = await supabase
                 .from('profiles')
                 .select('phone, full_name')
-                .eq('id', (demand as { assigned_specialist_id?: string }).assigned_specialist_id)
+                .eq('id', demand.assigned_specialist_id)
                 .single()
               if (specialist?.phone) {
-                const result = await sendSMS(specialist.phone, message)
+                const result = await sendSMS(specialist.phone, specialistMessage)
                 if (result.success) {
                   sentCount++
-                  sentForThisDemand = true
-                  logSmsSent({
+                  logSmsAttempt({
                     phoneNumber: specialist.phone,
                     recipientType: 'specialist',
                     recipientName: specialist.full_name ?? undefined,
                     demandId: demand.id,
                     messageType: 'four_hour_reminder',
                     triggeredBy: 'system',
-                    messageContent: message,
+                    messageContent: specialistMessage,
+                    twilioSid: result.success && 'sid' in result ? result.sid : undefined,
                   }, supabase).catch(() => {})
                 } else errorCount++
               }
-            } catch { errorCount++ }
+            } catch {
+              errorCount++
+            }
           }
-
-          // reminder_sent_at already set by atomic claim above
         }
       }
     }
@@ -276,4 +301,3 @@ export async function GET(request: Request) {
     )
   }
 }
-

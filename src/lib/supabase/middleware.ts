@@ -49,6 +49,7 @@ export async function updateSession(request: NextRequest) {
   // Cron API routes use CRON_SECRET; skip auth entirely - return immediately
   const cronPaths = [
     '/api/send-reminders',
+    '/api/send-lifecycle-sms',
     '/api/send-scheduled-reports',
     '/api/check-low-stock',
     '/api/inventory-stock-notify',

@@ -20,6 +20,8 @@ export type CustomerDirectoryRow = {
   latest_warranty_end: string | null
   last_sms_at: string | null
   last_sms_body: string | null
+  last_sms_status: string | null
+  last_sms_error: string | null
 }
 
 const SMS_MAX_CHARS = 1600
@@ -332,10 +334,30 @@ export function CustomersDirectoryList({
                   <div className="hidden w-56 shrink-0 lg:block">
                     {hasSms ? (
                       <div>
-                        <p className="text-xs font-medium text-zinc-700 dark:text-gray-300">
-                          {smsDate}
-                          <span className="ml-1 font-normal text-zinc-400 dark:text-gray-500">({smsRelative})</span>
-                        </p>
+                        <div className="flex items-center gap-2">
+                          <p className="text-xs font-medium text-zinc-700 dark:text-gray-300">
+                            {smsDate}
+                            <span className="ml-1 font-normal text-zinc-400 dark:text-gray-500">({smsRelative})</span>
+                          </p>
+                          {row.last_sms_status === 'failed' ? (
+                            <span
+                              className="text-[10px] font-semibold uppercase tracking-wide text-red-600 dark:text-red-400"
+                              title={row.last_sms_error ?? undefined}
+                            >
+                              Failed
+                            </span>
+                          ) : (
+                            <span className="text-[10px] font-semibold uppercase tracking-wide text-green-600 dark:text-green-400">
+                              Sent
+                            </span>
+                          )}
+                        </div>
+                        {row.last_sms_status === 'failed' && row.last_sms_error && (
+                          <p className="mt-0.5 truncate text-xs text-red-600 dark:text-red-400" title={row.last_sms_error}>
+                            {row.last_sms_error.slice(0, 72)}
+                            {row.last_sms_error.length > 72 ? '…' : ''}
+                          </p>
+                        )}
                         {smsTruncated && (
                           <p
                             className="mt-0.5 truncate text-xs text-zinc-500 dark:text-gray-400"
