@@ -277,6 +277,8 @@ export async function createPerCompletedTier(formData: {
   })
   if (error) return { error: error.message }
   revalidatePath('/dashboard/hr/payroll')
+  revalidatePath('/dashboard/admin/employees')
+  revalidatePath('/dashboard/self')
   return { success: true }
 }
 
@@ -296,6 +298,8 @@ export async function updatePerCompletedTier(
   const { error } = await supabase.from('compensation_per_completed').update(update).eq('id', id)
   if (error) return { error: error.message }
   revalidatePath('/dashboard/hr/payroll')
+  revalidatePath('/dashboard/admin/employees')
+  revalidatePath('/dashboard/self')
   return { success: true }
 }
 
@@ -305,6 +309,8 @@ export async function deletePerCompletedTier(id: string) {
   const { error } = await supabase.from('compensation_per_completed').delete().eq('id', id)
   if (error) return { error: error.message }
   revalidatePath('/dashboard/hr/payroll')
+  revalidatePath('/dashboard/admin/employees')
+  revalidatePath('/dashboard/self')
   return { success: true }
 }
 

@@ -4,16 +4,9 @@ import { assignWorkToMe, completeDemand } from './actions'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { DemandServiceType, SERVICE_TYPE_LABELS } from '@/lib/demand-pricing'
-import type { DelayFeeTier } from '@/lib/specialist-compensation'
 import { Loader2, X } from 'lucide-react'
 
 const SERVICE_OPTIONS: DemandServiceType[] = ['installation', 'transfer', 'removal']
-
-const DELAY_OPTIONS: { value: DelayFeeTier; label: string; hint: string }[] = [
-  { value: 'none', label: 'No delay', hint: '' },
-  { value: '30min', label: '30 minutes ($20 USD)', hint: 'Customer late or vehicle not ready' },
-  { value: '60min', label: '1 hour ($30 USD)', hint: 'Customer late or vehicle not ready' },
-]
 
 export function WorkActions({
   demandId,
@@ -28,7 +21,6 @@ export function WorkActions({
   const [directComplete, setDirectComplete] = useState(false)
   const [showModal, setShowModal] = useState(false)
   const [serviceType, setServiceType] = useState<DemandServiceType>('installation')
-  const [delayFeeTier, setDelayFeeTier] = useState<DelayFeeTier>('none')
   const [vinInput, setVinInput] = useState('')
   const [error, setError] = useState<string | null>(null)
   const router = useRouter()
@@ -47,7 +39,6 @@ export function WorkActions({
   const openCompleteModal = () => {
     setError(null)
     setServiceType('installation')
-    setDelayFeeTier('none')
     if (directComplete && vinLast6) {
       setVinInput(vinLast6.trim())
     } else {
@@ -77,7 +68,6 @@ export function WorkActions({
     setError(null)
     const result = await completeDemand(demandId, {
       serviceType,
-      delayFeeTier,
       vinLast6: resolvedVin,
       skipVinCheck: skipVinCheck || undefined,
     })
@@ -170,42 +160,6 @@ export function WorkActions({
                       />
                       <span className="text-sm font-medium text-zinc-900 dark:text-white">
                         {SERVICE_TYPE_LABELS[opt]}
-                      </span>
-                    </label>
-                  ))}
-                </div>
-              </fieldset>
-
-              <fieldset>
-                <legend className="block text-sm font-medium text-zinc-700 dark:text-gray-300 mb-1">
-                  Wait delay
-                </legend>
-                <p className="text-xs text-zinc-500 dark:text-gray-400 mb-2">
-                  Customer arrived late or dealer did not have the vehicle ready.
-                </p>
-                <div className="space-y-2">
-                  {DELAY_OPTIONS.map((opt) => (
-                    <label
-                      key={opt.value}
-                      className={`flex items-start gap-3 rounded-lg border px-3 py-2 cursor-pointer ${
-                        delayFeeTier === opt.value
-                          ? 'border-[#C27E00]/60 bg-[#C27E00]/10'
-                          : 'border-zinc-200 dark:border-gray-700 hover:bg-zinc-50 dark:hover:bg-white/5'
-                      }`}
-                    >
-                      <input
-                        type="radio"
-                        name="delayFeeTier"
-                        value={opt.value}
-                        checked={delayFeeTier === opt.value}
-                        onChange={() => setDelayFeeTier(opt.value)}
-                        className="mt-0.5 text-[#C27E00] focus:ring-[#C27E00]"
-                      />
-                      <span className="text-sm text-zinc-900 dark:text-white">
-                        <span className="font-medium">{opt.label}</span>
-                        {opt.hint ? (
-                          <span className="block text-xs text-zinc-500 dark:text-gray-400">{opt.hint}</span>
-                        ) : null}
                       </span>
                     </label>
                   ))}

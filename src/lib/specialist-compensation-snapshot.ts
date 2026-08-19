@@ -2,7 +2,9 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import {
   computeSpecialistPayEstimate,
   currentMonthPeriod,
+  SPECIALIST_RATES,
   type SpecialistCompensationSnapshot,
+  type SpecialistPayRates,
 } from '@/lib/specialist-compensation'
 
 export type PeriodStatsRow = {
@@ -29,6 +31,66 @@ function manualItemsFromStats(
     return [{ id: 'manual-total', label: 'Manual adjustments', amount: total, notes: '', created_at: '' }]
   }
   return []
+}
+
+function personnelSalaryRates(
+  salaryAmount: number | null | undefined,
+  salaryType: string | null | undefined
+): Partial<SpecialistPayRates> | null {
+  if (salaryAmount == null || !Number.isFinite(Number(salaryAmount)) || Number(salaryAmount) <= 0) {
+    return null
+  }
+  const amount = Number(salaryAmount)
+  if (salaryType === 'per_installation') {
+    return { baseAmountCad: amount }
+  }
+  return null
+}
+
+export async function fetchSpecialistPayRates(
+  supabase: SupabaseClient,
+  profileId: string,
+  periodStart: string,
+  periodEnd: string
+): Promise<SpecialistPayRates> {
+  const rates: SpecialistPayRates = { ...SPECIALIST_RATES }
+
+  const { data: personnel } = await supabase
+    .from('personnel')
+    .select('id, salary_amount, salary_type')
+    .eq('profile_id', profileId)
+    .maybeSingle()
+
+  if (!personnel) return rates
+
+  const { data: tiers } = await supabase
+    .from('compensation_per_completed')
+    .select('base_completed, base_amount, per_completed_amount, effective_from, effective_to')
+    .eq('personnel_id', personnel.id)
+    .lte('effective_from', periodEnd)
+    .or(`effective_to.is.null,effective_to.gte.${periodStart}`)
+    .order('effective_from', { ascending: false })
+    .limit(1)
+
+  const activeTier = tiers?.[0]
+  if (activeTier) {
+    return {
+      ...rates,
+      baseCompleted: Number(activeTier.base_completed),
+      baseAmountCad: Number(activeTier.base_amount),
+      perExtraCad: Number(activeTier.per_completed_amount),
+    }
+  }
+
+  const salaryOverride = personnelSalaryRates(
+    personnel.salary_amount as number | null,
+    personnel.salary_type as string | null
+  )
+  if (salaryOverride) {
+    return { ...rates, ...salaryOverride }
+  }
+
+  return rates
 }
 
 async function loadApprovedExpenseClaims(
@@ -59,7 +121,8 @@ export function buildSpecialistCompensationSnapshot(
   end: string,
   stats: PeriodStatsRow | undefined,
   manualItems: SpecialistCompensationSnapshot['manual_items'],
-  expenseClaims: { id: string; label: string; amount: number }[]
+  expenseClaims: { id: string; label: string; amount: number }[],
+  rates: SpecialistPayRates = SPECIALIST_RATES
 ): SpecialistCompensationSnapshot {
   const resolvedManual = manualItemsFromStats(stats, manualItems)
   const resolvedClaims =
@@ -84,6 +147,7 @@ export function buildSpecialistCompensationSnapshot(
     expenseReimbTotal: Number(stats?.expense_reimbursement_total ?? 0),
     expenseClaims: resolvedClaims,
     manualItems: resolvedManual.map((m) => ({ id: m.id, label: m.label, amount: m.amount })),
+    rates,
   })
 
   return {
@@ -119,7 +183,7 @@ export async function fetchSpecialistCompensationSnapshot(
 
   const stats = (statsRows as PeriodStatsRow[] | null)?.[0]
 
-  const [manualRows, expenseClaims] = await Promise.all([
+  const [manualRows, expenseClaims, rates] = await Promise.all([
     supabase
       .from('specialist_manual_payroll_items')
       .select('id, label, amount, notes, created_at')
@@ -128,6 +192,7 @@ export async function fetchSpecialistCompensationSnapshot(
       .eq('period_end', end)
       .order('created_at', { ascending: false }),
     loadApprovedExpenseClaims(supabase, profileId, start, end),
+    fetchSpecialistPayRates(supabase, profileId, start, end),
   ])
 
   const manualItems = (manualRows.data ?? []).map((r) => ({
@@ -138,5 +203,5 @@ export async function fetchSpecialistCompensationSnapshot(
     created_at: r.created_at,
   }))
 
-  return buildSpecialistCompensationSnapshot(profileId, start, end, stats, manualItems, expenseClaims)
+  return buildSpecialistCompensationSnapshot(profileId, start, end, stats, manualItems, expenseClaims, rates)
 }

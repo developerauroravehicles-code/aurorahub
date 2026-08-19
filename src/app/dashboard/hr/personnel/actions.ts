@@ -114,6 +114,8 @@ export async function updatePersonnel(id: string, formData: Record<string, strin
   if (error) return { error: error.message }
   revalidatePath('/dashboard/hr/personnel')
   revalidatePath(`/dashboard/hr/personnel/${id}`)
+  revalidatePath('/dashboard/admin/employees')
+  revalidatePath('/dashboard/self')
   return { success: true }
 }
 

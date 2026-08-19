@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { Suspense, useCallback, useEffect } from 'react'
-import { useSearchParams } from 'next/navigation'
+import { useParams, useSearchParams } from 'next/navigation'
 import { RefreshCw, RotateCcw, SearchX, X, Link2Off } from 'lucide-react'
 import { FixedThemeToggle } from '@/components/fixed-theme-toggle'
 import { usePortalLookup } from './hooks/use-portal-lookup'
@@ -25,6 +25,7 @@ function ResultsSkeleton() {
 
 function CustomerPortalInner() {
   const searchParams = useSearchParams()
+  const params = useParams()
   const tokenSession = usePortalTokenSession()
   const vinLookup = usePortalLookup()
   const phoneLookup = usePortalPhoneLookup()
@@ -37,7 +38,9 @@ function CustomerPortalInner() {
     : vinLookup.vin
 
   useEffect(() => {
-    const tokenFromUrl = searchParams.get('token')
+    const tokenFromQuery = searchParams.get('token')
+    const tokenFromPath = typeof params?.token === 'string' ? params.token : null
+    const tokenFromUrl = tokenFromQuery ?? tokenFromPath
     if (tokenFromUrl) {
       void tokenSession.validateAndStore(tokenFromUrl)
       return
@@ -48,7 +51,7 @@ function CustomerPortalInner() {
       }
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams])
+  }, [searchParams, params])
 
   useEffect(() => {
     if (isTokenMode && tokenSession.phone && !phoneLookup.queried) {

@@ -3,6 +3,7 @@ import { logSmsSent } from '@/lib/sms-logger'
 import { getSmsSettings } from '@/lib/sms-resolver'
 import { sendSMS } from '@/lib/twilio'
 import { diagnosisLabel } from '@/lib/customer-service-record-utils'
+import { getPortalPublicOrigin } from '@/lib/customer-portal-token'
 import type { CustomerServiceRecord } from '@/types/customer-service-record'
 
 export type SendServiceRecordPendingSmsResult =
@@ -21,10 +22,7 @@ export function buildServiceRecordPendingSmsBody(
   const diagnosis = diagnosisLabel(record.diagnosis_code, record.diagnosis_other)
   const ref = record.demand_number ? `#${record.demand_number}` : ''
   const sig = signature.trim() || 'Aurora Vehicles Incorporation'
-  const portalBase =
-    process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, '') ??
-    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'https://aurorahub.app')
-  const portalUrl = `${portalBase}/customer-portal`
+  const portalUrl = `${getPortalPublicOrigin()}/customer-portal`
 
   return `Service Request — Review Needed
 
