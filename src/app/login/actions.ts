@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { logIdentityEvent } from '@/lib/identity-audit'
+import { assertUserCanSignIn, formatLoginAuthError } from '@/lib/user-login-access'
 import { z } from 'zod'
 import { normalizeEmail } from '@/lib/email-normalize'
 
@@ -33,7 +34,7 @@ export async function login(prevState: ActionState, formData: FormData) {
   })
 
   if (error) {
-    return { error: error.message }
+    return { error: formatLoginAuthError(error.message) }
   }
 
   const { data: user } = await supabase.auth.getUser()
@@ -82,6 +83,18 @@ export async function login(prevState: ActionState, formData: FormData) {
       await supabase.auth.signOut()
       return { error: 'Dealer code does not match your account.' }
     }
+  }
+
+  const accessCheck = await assertUserCanSignIn(user.user.id)
+  if (accessCheck.error) {
+    await supabase.auth.signOut()
+    await logIdentityEvent({
+      eventType: 'login_failed',
+      userId: user.user.id,
+      email: user.user.email ?? undefined,
+      metadata: { reason: accessCheck.error },
+    })
+    return { error: accessCheck.error }
   }
 
   const h = await headers()

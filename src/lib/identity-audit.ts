@@ -8,6 +8,8 @@ export type IdentityEventType =
   | 'logout'
   | 'password_reset'
   | 'role_change'
+  | 'account_disabled'
+  | 'account_enabled'
 
 interface LogIdentityEventParams {
   eventType: IdentityEventType

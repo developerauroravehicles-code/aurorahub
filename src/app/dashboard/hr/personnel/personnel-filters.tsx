@@ -19,6 +19,7 @@ const STATUSES = [
   { value: 'onboarding', label: 'Onboarding' },
   { value: 'pending_verification', label: 'Pending Verification' },
   { value: 'suspended', label: 'Suspended' },
+  { value: 'terminated', label: 'Terminated' },
 ]
 
 export function PersonnelFilters({

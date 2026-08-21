@@ -16,6 +16,7 @@ const STATUS_LABELS: Record<string, string> = {
   suspended: 'Suspended',
   onboarding: 'Onboarding',
   pending_verification: 'Pending Verification',
+  terminated: 'Terminated',
 }
 
 export default async function PersonnelPage({
@@ -90,6 +91,7 @@ export default async function PersonnelPage({
                     <span className={`px-2 py-1 rounded text-xs border ${
                       p.status === 'active' ? 'bg-green-900/50 text-green-300 border-green-800' :
                       p.status === 'onboarding' ? 'bg-yellow-900/50 text-yellow-300 border-yellow-800' :
+                      p.status === 'terminated' ? 'bg-red-950/60 text-red-300 border-red-900' :
                       p.status === 'suspended' ? 'bg-red-900/50 text-red-300 border-red-800' :
                       'bg-gray-800 text-zinc-600 dark:text-gray-300 border-zinc-300 dark:border-gray-700'
                     }`}>

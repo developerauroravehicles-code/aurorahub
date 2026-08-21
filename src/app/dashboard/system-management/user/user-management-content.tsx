@@ -3,9 +3,9 @@
 import { useActionState, useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { createUser, getProfileForEdit, updateUser, deleteUser, createLoginForPersonnel } from '../actions'
+import { createUser, getProfileForEdit, updateUser, deleteUser, createLoginForPersonnel, setUserLoginAccess } from '../actions'
 import { ResetPasswordButton } from '@/app/dashboard/admin/employees/reset-password-button'
-import { Pencil, Trash2, X, Loader2, UserPlus, KeyRound, Eye, EyeOff, Check } from 'lucide-react'
+import { Pencil, Trash2, X, Loader2, UserPlus, KeyRound, Eye, EyeOff, Check, Ban, ShieldCheck } from 'lucide-react'
 import type { Dealer } from '@/types/system-management'
 import { EmailInput } from '@/components/email-input'
 import { normalizeEmail } from '@/lib/email-normalize'
@@ -390,6 +390,68 @@ function CreateLoginButton({
   )
 }
 
+function ToggleLoginAccessButton({
+  userId,
+  userName,
+  loginDisabled,
+  currentUserRole,
+  onSuccess,
+}: {
+  userId: string
+  userName: string
+  loginDisabled: boolean
+  currentUserRole?: string
+  onSuccess: () => void
+}) {
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  if (currentUserRole !== 'it') return null
+
+  async function handleToggle() {
+    const enabling = loginDisabled
+    const confirmMsg = enabling
+      ? `Enable login for ${userName}?`
+      : `Disable login for ${userName}? They will be signed out and cannot sign in until re-enabled.`
+    if (!confirm(confirmMsg)) return
+
+    setLoading(true)
+    setError(null)
+    const result = await setUserLoginAccess(userId, enabling)
+    setLoading(false)
+    if (result.error) {
+      setError(result.error)
+      return
+    }
+    onSuccess()
+  }
+
+  return (
+    <div className="inline-flex flex-col items-end">
+      <button
+        type="button"
+        onClick={() => void handleToggle()}
+        disabled={loading}
+        className={`p-1 transition-colors disabled:opacity-50 ${
+          loginDisabled
+            ? 'text-amber-500 hover:text-green-400'
+            : 'text-zinc-500 dark:text-gray-400 hover:text-amber-500'
+        }`}
+        title={loginDisabled ? 'Enable login' : 'Disable login'}
+      >
+        {loading ? (
+          <Loader2 className="w-4 h-4 animate-spin" />
+        ) : loginDisabled ? (
+          <ShieldCheck className="w-4 h-4" />
+        ) : (
+          <Ban className="w-4 h-4" />
+        )}
+      </button>
+      {error ? <span className="text-[10px] text-red-400 max-w-[120px] text-right">{error}</span> : null}
+    </div>
+  )
+}
+
 function DeleteUserButton({
   userId,
   userName,
@@ -487,6 +549,7 @@ function UserList({
               <th className="px-4 py-2 text-left">Role</th>
               <th className="px-4 py-2 text-left">Phone</th>
               <th className="px-4 py-2 text-left">Dealer</th>
+              <th className="px-4 py-2 text-left">Login</th>
               <th className="px-4 py-2 text-right">Actions</th>
             </tr>
           </thead>
@@ -515,6 +578,15 @@ function UserList({
                       <span className="text-zinc-900 dark:text-white">{profile.dealers.name}</span>
                     ) : (
                       <span className="text-zinc-500 dark:text-gray-500">Platform</span>
+                    )}
+                  </td>
+                  <td className="px-4 py-2">
+                    {isPersonnelOnly ? (
+                      <span className="text-zinc-500 dark:text-gray-500">—</span>
+                    ) : profile._loginDisabled ? (
+                      <span className="text-xs font-medium text-amber-500">Disabled</span>
+                    ) : (
+                      <span className="text-xs font-medium text-green-600 dark:text-green-400">Active</span>
                     )}
                   </td>
                   <td className="px-4 py-2 text-right">
@@ -549,6 +621,13 @@ function UserList({
                           <Pencil className="w-4 h-4" />
                         </button>
                         <ResetPasswordButton userId={profile.id} userName={profile.full_name} />
+                        <ToggleLoginAccessButton
+                          userId={profile.id}
+                          userName={profile.full_name ?? 'this user'}
+                          loginDisabled={Boolean(profile._loginDisabled)}
+                          currentUserRole={currentUserRole}
+                          onSuccess={onRefresh}
+                        />
                         <DeleteUserButton
                           userId={profile.id}
                           userName={profile.full_name ?? 'this user'}
@@ -561,7 +640,7 @@ function UserList({
               )
             })}
             {profiles.length === 0 && (
-              <tr><td colSpan={5} className="px-4 py-4 text-center text-zinc-500 dark:text-gray-500">No profiles found.</td></tr>
+              <tr><td colSpan={6} className="px-4 py-4 text-center text-zinc-500 dark:text-gray-500">No profiles found.</td></tr>
             )}
           </tbody>
         </table>

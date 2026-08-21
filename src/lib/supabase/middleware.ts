@@ -84,6 +84,22 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
+  if (user && request.nextUrl.pathname.startsWith('/dashboard')) {
+    try {
+      const { assertUserCanSignIn } = await import('@/lib/user-login-access')
+      const accessCheck = await assertUserCanSignIn(user.id)
+      if (accessCheck.error) {
+        await supabase.auth.signOut()
+        const url = request.nextUrl.clone()
+        url.pathname = '/login'
+        url.searchParams.set('reason', 'access_revoked')
+        return NextResponse.redirect(url)
+      }
+    } catch (accessError) {
+      console.error('Login access check failed:', accessError)
+    }
+  }
+
   // If user is logged in and trying to access login page, redirect to dashboard
   if (user && request.nextUrl.pathname.startsWith('/login')) {
     const url = request.nextUrl.clone()

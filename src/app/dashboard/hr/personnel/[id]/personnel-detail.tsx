@@ -3,7 +3,7 @@
 import { format } from 'date-fns'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { updatePersonnel, createCertification, updateCertificationStatus, updateInstallerProfile } from '../actions'
+import { updatePersonnel, createCertification, updateCertificationStatus, updateInstallerProfile, terminateEmployment } from '../actions'
 import { EmailInput } from '@/components/email-input'
 import { normalizeEmail } from '@/lib/email-normalize'
 
@@ -122,6 +122,13 @@ export function PersonnelDetail({
   const router = useRouter()
   const [editing, setEditing] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [showTerminateModal, setShowTerminateModal] = useState(false)
+  const [terminateLoading, setTerminateLoading] = useState(false)
+  const [terminateError, setTerminateError] = useState<string | null>(null)
+  const [terminateEndDate, setTerminateEndDate] = useState(
+    new Date().toISOString().slice(0, 10)
+  )
+  const [terminateReason, setTerminateReason] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [showCertForm, setShowCertForm] = useState(false)
   const [certLoading, setCertLoading] = useState(false)
@@ -573,19 +580,104 @@ export function PersonnelDetail({
             <span className={`inline-block mt-2 px-2 py-1 rounded text-xs ${
               person.status === 'active' ? 'bg-green-900/50 text-green-300' :
               person.status === 'onboarding' ? 'bg-yellow-900/50 text-yellow-300' :
+              person.status === 'terminated' ? 'bg-red-900/50 text-red-300' :
               'bg-gray-800 text-zinc-600 dark:text-gray-300'
             }`}>
               {person.status as string}
             </span>
+            {person.status === 'terminated' && person.end_date ? (
+              <p className="text-sm text-red-400 mt-2">
+                End date: {format(new Date(person.end_date as string), 'PPP')}
+              </p>
+            ) : null}
           </div>
         </div>
-        <button
-          onClick={() => setEditing(true)}
-          className="px-4 py-2 rounded-md bg-[#C27E00] text-white font-medium hover:bg-[#a06900]"
-        >
-          Edit
-        </button>
+        <div className="flex flex-col sm:flex-row gap-2">
+          {person.status !== 'terminated' ? (
+            <button
+              type="button"
+              onClick={() => setShowTerminateModal(true)}
+              className="px-4 py-2 rounded-md border border-red-700/50 text-red-400 font-medium hover:bg-red-950/30"
+            >
+              End employment
+            </button>
+          ) : null}
+          {person.status !== 'terminated' ? (
+            <button
+              onClick={() => setEditing(true)}
+              className="px-4 py-2 rounded-md bg-[#C27E00] text-white font-medium hover:bg-[#a06900]"
+            >
+              Edit
+            </button>
+          ) : null}
+        </div>
       </div>
+
+      {showTerminateModal ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-900/60 dark:bg-black/80 backdrop-blur-sm p-4">
+          <div className="bg-[#1a1a1a] border border-zinc-200 dark:border-gray-800 rounded-lg p-6 w-full max-w-md shadow-xl space-y-4">
+            <h3 className="text-lg font-semibold text-zinc-900 dark:text-white">End employment</h3>
+            <p className="text-sm text-zinc-500 dark:text-gray-400">
+              This marks {String(person.full_name)} as terminated and disables their system login if they have an account.
+            </p>
+            <div>
+              <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300 mb-1">Last day</label>
+              <input
+                type="date"
+                value={terminateEndDate}
+                onChange={(e) => setTerminateEndDate(e.target.value)}
+                className="block w-full rounded-md border border-zinc-300 dark:border-gray-700 bg-zinc-200/50 dark:bg-white/5 px-3 py-2 text-zinc-900 dark:text-white sm:text-sm"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300 mb-1">Reason (optional)</label>
+              <textarea
+                value={terminateReason}
+                onChange={(e) => setTerminateReason(e.target.value)}
+                rows={3}
+                className="block w-full rounded-md border border-zinc-300 dark:border-gray-700 bg-zinc-200/50 dark:bg-white/5 px-3 py-2 text-zinc-900 dark:text-white sm:text-sm"
+                placeholder="e.g. Resignation, contract ended"
+              />
+            </div>
+            {terminateError ? <p className="text-sm text-red-400">{terminateError}</p> : null}
+            <div className="flex gap-2 pt-2">
+              <button
+                type="button"
+                disabled={terminateLoading}
+                onClick={async () => {
+                  setTerminateLoading(true)
+                  setTerminateError(null)
+                  const result = await terminateEmployment(
+                    String(person.id),
+                    terminateEndDate,
+                    terminateReason
+                  )
+                  setTerminateLoading(false)
+                  if (result.error) {
+                    setTerminateError(result.error)
+                    return
+                  }
+                  setShowTerminateModal(false)
+                  router.refresh()
+                }}
+                className="flex-1 rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50"
+              >
+                {terminateLoading ? 'Saving...' : 'Confirm end employment'}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowTerminateModal(false)
+                  setTerminateError(null)
+                }}
+                className="rounded-md border border-zinc-300 dark:border-gray-600 px-4 py-2 text-sm text-zinc-600 dark:text-gray-300 hover:bg-zinc-200/50 dark:bg-white/5"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {section('Contact & Address', (
@@ -605,6 +697,10 @@ export function PersonnelDetail({
             <p><span className="text-zinc-500 dark:text-gray-500">Dealer:</span> {String((person.dealers as { name?: string })?.name ?? 'Platform')}</p>
             <p><span className="text-zinc-500 dark:text-gray-500">Manager:</span> {String((person as { _managerName?: string })._managerName ?? '—')}</p>
             <p><span className="text-zinc-500 dark:text-gray-500">Start Date:</span> {person.start_date ? format(new Date(person.start_date as string), 'PPP') : '—'}</p>
+            <p><span className="text-zinc-500 dark:text-gray-500">End Date:</span> {person.end_date ? format(new Date(person.end_date as string), 'PPP') : '—'}</p>
+            {person.termination_reason ? (
+              <p><span className="text-zinc-500 dark:text-gray-500">Termination reason:</span> {String(person.termination_reason)}</p>
+            ) : null}
             <p><span className="text-zinc-500 dark:text-gray-500">Work Arrangement:</span> {String(WORK_ARRANGEMENTS.find((w) => w.value === person.work_arrangement)?.label ?? person.work_arrangement ?? '—')}</p>
             <p><span className="text-zinc-500 dark:text-gray-500">Salary:</span> {salaryDisplay}</p>
           </div>

@@ -79,6 +79,19 @@ export async function updatePersonnel(id: string, formData: Record<string, strin
     return { error: 'Unauthorized' }
   }
 
+  const { data: existing } = await supabase
+    .from('personnel')
+    .select('status')
+    .eq('id', id)
+    .single()
+
+  if (existing?.status === 'terminated') {
+    return { error: 'This record is terminated. Reinstate via HR before editing.' }
+  }
+  if (formData.status === 'terminated') {
+    return { error: 'Use the End employment action to terminate this person.' }
+  }
+
   const { error } = await supabase.from('personnel').update({
     worker_type: formData.worker_type,
     worker_classification: formData.worker_classification,
@@ -116,6 +129,71 @@ export async function updatePersonnel(id: string, formData: Record<string, strin
   revalidatePath(`/dashboard/hr/personnel/${id}`)
   revalidatePath('/dashboard/admin/employees')
   revalidatePath('/dashboard/self')
+  return { success: true }
+}
+
+export async function terminateEmployment(
+  personnelId: string,
+  endDate: string,
+  reason?: string
+): Promise<{ error?: string; success?: boolean }> {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { error: 'Not authenticated' }
+
+  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+  if (profile?.role !== 'hr' && profile?.role !== 'aurora_manager') {
+    return { error: 'Unauthorized' }
+  }
+
+  if (!endDate?.trim()) return { error: 'End date is required.' }
+
+  const { data: person } = await supabase
+    .from('personnel')
+    .select('id, full_name, status, profile_id')
+    .eq('id', personnelId)
+    .single()
+
+  if (!person) return { error: 'Personnel record not found.' }
+  if (person.status === 'terminated') return { error: 'Employment already ended for this person.' }
+
+  const trimmedReason = (reason ?? '').trim().slice(0, 500)
+
+  const { error } = await supabase
+    .from('personnel')
+    .update({
+      status: 'terminated',
+      end_date: endDate,
+      termination_reason: trimmedReason || null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', personnelId)
+
+  if (error) return { error: error.message }
+
+  await supabase.from('personnel_timeline').insert({
+    personnel_id: personnelId,
+    event_type: 'terminated',
+    title: 'Employment ended',
+    description: trimmedReason || null,
+    created_by: user.id,
+  })
+
+  if (person.profile_id) {
+    const { setUserLoginEnabled } = await import('@/lib/user-login-access')
+    const loginResult = await setUserLoginEnabled(person.profile_id, false)
+    if (loginResult.error) {
+      console.error('Login disable failed after termination:', loginResult.error)
+    }
+  }
+
+  revalidatePath('/dashboard/hr/personnel')
+  revalidatePath(`/dashboard/hr/personnel/${personnelId}`)
+  revalidatePath('/dashboard/hr/employees')
+  revalidatePath('/dashboard/identity/users')
+  revalidatePath('/dashboard/admin/employees')
   return { success: true }
 }
 

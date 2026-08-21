@@ -98,6 +98,24 @@ export async function getSystemData(): Promise<SystemData> {
     return bCreated.localeCompare(aCreated)
   })
 
+  const loginStatusByUserId = new Map<string, boolean>()
+  await Promise.all(
+    (rawProfiles || []).map(async (p) => {
+      const id = String(p.id)
+      const { data } = await supabaseAdmin.auth.admin.getUserById(id)
+      const banned = Boolean(
+        data.user?.banned_until && new Date(data.user.banned_until).getTime() > Date.now()
+      )
+      loginStatusByUserId.set(id, banned)
+    })
+  )
+
+  const profilesWithLoginStatus = profiles.map((p) => {
+    const id = String(p.id ?? '')
+    if (id.startsWith('personnel-') || p._source === 'personnel') return p
+    return { ...p, _loginDisabled: loginStatusByUserId.get(id) ?? false }
+  })
+
   // Fetch camera models with dealer assignments
   const { data: cameras, error: camerasError } = await supabaseAdmin
     .from('camera_models')
@@ -123,7 +141,7 @@ export async function getSystemData(): Promise<SystemData> {
 
   return {
     dealers: dealers || [],
-    profiles: profiles as unknown as Profile[],
+    profiles: profilesWithLoginStatus as unknown as Profile[],
     cameras: cameras || [],
     projectUrl: process.env.NEXT_PUBLIC_SUPABASE_URL,
     errors: {
@@ -536,6 +554,59 @@ export async function deleteUser(userId: string) {
   revalidatePath('/dashboard/hr/employees')
   revalidatePath('/dashboard/hr/personnel')
   return { success: 'User deleted successfully.' }
+}
+
+async function verifyItOnly() {
+  const { createClient } = await import('@/lib/supabase/server')
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { error: 'Unauthorized' as const, userId: null as string | null }
+
+  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+  if (profile?.role !== 'it') {
+    return { error: 'Only IT can manage login access' as const, userId: null as string | null }
+  }
+  return { error: null, userId: user.id }
+}
+
+export async function setUserLoginAccess(
+  userId: string,
+  enabled: boolean
+): Promise<{ error?: string; success?: string }> {
+  const auth = await verifyItOnly()
+  if (auth.error || !auth.userId) return { error: auth.error ?? 'Unauthorized' }
+  if (userId === auth.userId && !enabled) {
+    return { error: 'You cannot disable your own login.' }
+  }
+
+  const supabaseAdmin = getAdminClient()
+  const { data: targetProfile } = await supabaseAdmin
+    .from('profiles')
+    .select('id, full_name')
+    .eq('id', userId)
+    .maybeSingle()
+  if (!targetProfile) return { error: 'User not found.' }
+
+  const { setUserLoginEnabled } = await import('@/lib/user-login-access')
+  const result = await setUserLoginEnabled(userId, enabled)
+  if (result.error) return { error: result.error }
+
+  const { logIdentityEvent } = await import('@/lib/identity-audit')
+  await logIdentityEvent({
+    eventType: enabled ? 'account_enabled' : 'account_disabled',
+    userId,
+    metadata: { actor_id: auth.userId },
+  })
+
+  revalidatePath('/dashboard/identity/users')
+  revalidatePath('/dashboard/system-management/user')
+  return {
+    success: enabled
+      ? `Login enabled for ${targetProfile.full_name ?? 'user'}.`
+      : `Login disabled for ${targetProfile.full_name ?? 'user'}.`,
+  }
 }
 
 export async function createCameraModel(prevState: ActionState, formData: FormData) {
