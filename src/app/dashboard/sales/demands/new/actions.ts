@@ -232,8 +232,6 @@ export async function getTakenSlots(
   return appointments
 }
 
-export { getPoolSlotContext } from '@/app/dashboard/system-management/calendar/actions'
-
 /**
  * Check if a specific slot is fully booked for the dealer's scheduling pool.
  */
