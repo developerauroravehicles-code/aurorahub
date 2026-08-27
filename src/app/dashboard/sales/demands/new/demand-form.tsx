@@ -3,9 +3,10 @@
 import { useActionState, useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { CheckCircle, Printer } from 'lucide-react'
-import { createDemand, getTakenSlots, type CreateDemandState } from './actions'
+import { createDemand, getPoolSlotContext, type CreateDemandState } from './actions'
 import { getDealerBlocksForDate } from '@/app/dashboard/system-management/calendar/actions'
 import { getGlobalSlotMinutes, getSlotMinutesFromConfig, CALENDAR_DEFAULTS } from '@/lib/calendar-defaults'
+import { countOverlapsAtSlot } from '@/lib/scheduling-pool'
 import { formatInTimeZone, toDate } from 'date-fns-tz'
 import { SYSTEM_DEFAULT_TIMEZONE } from '@/lib/timezone-defaults'
 import { pad2 } from '@/lib/calendar-wall-date'
@@ -60,6 +61,7 @@ export function DemandForm({ cameraModels, defaultAddress = '', timezoneName: pr
   const [selectedDate, setSelectedDate] = useState<string>('')
   const [availableSlots, setAvailableSlots] = useState<string[]>([])
   const [takenSlots, setTakenSlots] = useState<string[]>([])
+  const [poolCapacity, setPoolCapacity] = useState(1)
   const [dealerBlocks, setDealerBlocks] = useState<{ start_minutes: number; end_minutes: number }[]>([])
   const [selectedSlot, setSelectedSlot] = useState<string>('')
   const [selectedCamera, setSelectedCamera] = useState<string>('')
@@ -76,12 +78,16 @@ export function DemandForm({ cameraModels, defaultAddress = '', timezoneName: pr
   const [customModel, setCustomModel] = useState<string>('')
 
   useEffect(() => {
-    if (selectedDate) {
-      getTakenSlots(selectedDate + 'T00:00:00', dealerId ?? undefined, timezoneName ?? undefined).then(setTakenSlots)
+    if (selectedDate && dealerId) {
+      getPoolSlotContext(dealerId, selectedDate).then(({ appointments, capacity }) => {
+        setTakenSlots(appointments)
+        setPoolCapacity(capacity)
+      })
     } else {
       setTakenSlots([])
+      setPoolCapacity(1)
     }
-  }, [selectedDate, dealerId, timezoneName])
+  }, [selectedDate, dealerId])
 
   useEffect(() => {
     if (dealerId && selectedDate) {
@@ -467,7 +473,11 @@ export function DemandForm({ cameraModels, defaultAddress = '', timezoneName: pr
               setSelectedSlot('')
             }}
             selectedPacificYmd={selectedDate}
-            getTakenSlots={(dateStr) => getTakenSlots(dateStr, dealerId ?? undefined, timezoneName ?? undefined)}
+            getTakenSlots={(dateStr) =>
+              dealerId
+                ? getPoolSlotContext(dealerId, dateStr).then((ctx) => ctx.appointments)
+                : Promise.resolve([])
+            }
           />
         </div>
 
@@ -489,13 +499,12 @@ export function DemandForm({ cameraModels, defaultAddress = '', timezoneName: pr
                 // No retrospective appointments: exclude past slots for today (Pacific)
                 if (selectedDate === todayInPacific && slotStart <= nowMs) return false
 
-                const isTaken = takenSlots.some(takenSlot => {
-                    const takenTime = new Date(takenSlot)
-                    const takenStart = takenTime.getTime()
-                    const takenEnd = takenStart + appointmentDurationMinutes * 60 * 1000
-                    return slotStart < takenEnd && slotEnd > takenStart
-                })
-                if (isTaken) return false
+                const overlapCount = countOverlapsAtSlot(
+                  slotStart,
+                  slotEnd,
+                  takenSlots.map((appointment_date) => ({ appointment_date }))
+                )
+                if (overlapCount >= poolCapacity) return false
 
                 // Dealer calendar blocks: slot time in PT vs block [start_minutes, end_minutes] (blocks in PT)
                 if (dealerBlocks.length > 0) {

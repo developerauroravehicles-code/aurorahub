@@ -12,6 +12,8 @@ import {
   isDemandServiceType,
   resolveCameraModelIdForDemand,
 } from '@/lib/demand-pricing'
+import { isSpecialistDoubleBooked } from '@/lib/scheduling-pool'
+import { isBarcodeModeEnabled, consumeBarcodeForDemand, validateSpecialistBarcode } from '@/lib/inventory-barcodes'
 
 export async function assignWorkToMe(demandId: string) {
   const supabase = await createClient()
@@ -33,7 +35,7 @@ export async function assignWorkToMe(demandId: string) {
   // Check if demand is already assigned
   const { data: demand } = await supabase
     .from('demands')
-    .select('assigned_specialist_id, status, dealer_id')
+    .select('assigned_specialist_id, status, dealer_id, appointment_date')
     .eq('id', demandId)
     .single()
 
@@ -61,6 +63,18 @@ export async function assignWorkToMe(demandId: string) {
 
   if (demand.status !== 'approved') {
     return { error: 'Only approved work can be assigned' }
+  }
+
+  if (demand.appointment_date) {
+    const doubleBooked = await isSpecialistDoubleBooked(
+      supabase,
+      user.id,
+      demand.appointment_date,
+      demandId
+    )
+    if (doubleBooked) {
+      return { error: 'You already have another appointment at this time.' }
+    }
   }
 
   // Assign work to current user
@@ -93,6 +107,11 @@ type CompleteDemandOptions = {
   vinLast6?: string
   skipVinCheck?: boolean
   delayFeeTier?: DelayFeeTier
+  barcodeCode?: string
+}
+
+export async function getWorkBarcodeModeEnabled() {
+  return isBarcodeModeEnabled()
 }
 
 export async function completeDemand(demandId: string, options: CompleteDemandOptions) {
@@ -112,7 +131,7 @@ export async function completeDemand(demandId: string, options: CompleteDemandOp
 
   const { data: demand } = await supabase
     .from('demands')
-    .select('assigned_specialist_id, status, vin_last6, dealer_id, camera_model_id, camera_model, customer_phone')
+    .select('assigned_specialist_id, status, vin_last6, dealer_id, camera_model_id, camera_model, customer_phone, appointment_date')
     .eq('id', demandId)
     .single()
 
@@ -135,17 +154,54 @@ export async function completeDemand(demandId: string, options: CompleteDemandOp
   }
 
   if (!demand.assigned_specialist_id) {
+    if (demand.appointment_date) {
+      const doubleBooked = await isSpecialistDoubleBooked(
+        supabase,
+        user.id,
+        demand.appointment_date,
+        demandId
+      )
+      if (doubleBooked) {
+        return { error: 'You already have another appointment at this time.' }
+      }
+    }
     await supabase
       .from('demands')
       .update({ assigned_specialist_id: user.id })
       .eq('id', demandId)
   }
 
-  // Pricing table is manager-only in RLS; use service role so completion can resolve invoice amount.
   const admin = createAdminClient()
+  const barcodeMode = await isBarcodeModeEnabled(supabase)
+  let cameraModelIdFromBarcode: string | null = null
+  let validatedBarcodeCode: string | null = null
+
+  if (barcodeMode) {
+    if (!options.barcodeCode?.trim()) {
+      return { error: 'Barcode scan is required to complete this job.' }
+    }
+    if (!demand.dealer_id) {
+      return { error: 'Demand has no dealer assigned.' }
+    }
+
+    const { valid, error: barcodeError } = await validateSpecialistBarcode(
+      supabase,
+      options.barcodeCode!.trim()
+    )
+    if (!valid) return { error: barcodeError ?? 'Invalid barcode' }
+    validatedBarcodeCode = options.barcodeCode.trim()
+
+    const { data: lookupRows } = await supabase.rpc('lookup_specialist_barcode_for_completion', {
+      p_code: validatedBarcodeCode.toUpperCase(),
+    })
+    const lookup = Array.isArray(lookupRows) ? lookupRows[0] : lookupRows
+    cameraModelIdFromBarcode = lookup?.camera_model_id ?? null
+  }
+
+  const pricingCameraModelId = cameraModelIdFromBarcode ?? demand.camera_model_id
   const pricingResult = await calculateDemandInvoiceAmount(admin, {
     dealerId: demand.dealer_id,
-    cameraModelId: demand.camera_model_id,
+    cameraModelId: pricingCameraModelId,
     cameraModelName: demand.camera_model,
     serviceType: options.serviceType,
   })
@@ -153,11 +209,22 @@ export async function completeDemand(demandId: string, options: CompleteDemandOp
     return { error: pricingResult.error }
   }
 
-  const resolvedCameraModelId = await resolveCameraModelIdForDemand(
-    supabase,
-    demand.camera_model_id,
-    demand.camera_model
-  )
+  if (barcodeMode && validatedBarcodeCode && demand.dealer_id) {
+    const consumeResult = await consumeBarcodeForDemand(supabase, admin, {
+      code: validatedBarcodeCode,
+      demandId,
+      specialistId: user.id,
+      dealerId: demand.dealer_id,
+      actorId: user.id,
+      serviceType: options.serviceType,
+    })
+    if (consumeResult.error) return { error: consumeResult.error }
+    cameraModelIdFromBarcode = consumeResult.cameraModelId ?? cameraModelIdFromBarcode
+  }
+
+  const resolvedCameraModelId =
+    cameraModelIdFromBarcode ??
+    (await resolveCameraModelIdForDemand(supabase, demand.camera_model_id, demand.camera_model))
 
   const { error } = await supabase
     .from('demands')
@@ -169,10 +236,12 @@ export async function completeDemand(demandId: string, options: CompleteDemandOp
       invoice_total_amount: pricingResult.amount,
       ...(resolvedCameraModelId && !demand.camera_model_id
         ? { camera_model_id: resolvedCameraModelId }
-        : {}),
+        : cameraModelIdFromBarcode
+          ? { camera_model_id: cameraModelIdFromBarcode }
+          : {}),
     })
     .eq('id', demandId)
-  
+
   if (error) return { error: error.message }
 
   addDemandToDailyBatch(admin, demandId).catch(() => {})
@@ -219,6 +288,7 @@ export async function completeDemand(demandId: string, options: CompleteDemandOp
   revalidatePath('/dashboard/specialist/work')
   revalidatePath('/dashboard/admin/invoices')
   revalidatePath('/dashboard/admin/daily-invoices')
+  revalidatePath('/dashboard/admin/inventory')
   revalidatePath('/dashboard')
   return { success: true }
 }

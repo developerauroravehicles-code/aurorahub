@@ -9,6 +9,9 @@ import type { InventoryTreeLevel } from '@/lib/inventory-v2/types'
 import type { SpecialistStockSummaryRow } from '@/lib/inventory-v2/specialist-stock'
 import { InventoryAlertsPanel, InventoryDashboardPanel } from './inventory-overview-panels'
 import { InventorySpecialistsPanel } from './inventory-specialists-panel'
+import { InventoryBarcodePanel } from './inventory-barcode-panel'
+import type { BarcodeSettings } from '@/lib/inventory-barcodes'
+import type { BarcodeTraceRow } from '@/lib/inventory-barcodes/trace'
 import {
   postDealerToSpecialistTransfer,
   postInventoryAdjustment,
@@ -22,7 +25,7 @@ import {
   upsertInventoryThreshold,
 } from './actions'
 
-type TabId = 'dashboard' | 'alerts' | 'stock' | 'specialists' | 'movements' | 'pricing' | 'setup'
+type TabId = 'dashboard' | 'alerts' | 'stock' | 'specialists' | 'movements' | 'pricing' | 'setup' | 'barcode'
 
 type Camera = { id: string; name: string }
 type Province = { id: string; code: string; name: string }
@@ -188,6 +191,9 @@ export function InventoryDashboard({
   nationalLocationId,
   specialistStock,
   initialTab,
+  barcodeSettings,
+  barcodeTemplates,
+  barcodeRegistry,
 }: {
   provinces: Province[]
   cities: City[]
@@ -206,6 +212,15 @@ export function InventoryDashboard({
   nationalLocationId: string | null
   specialistStock: SpecialistStockSummaryRow[]
   initialTab?: TabId
+  barcodeSettings: BarcodeSettings
+  barcodeTemplates: {
+    id: string
+    name: string
+    code: string
+    description: string | null
+    items?: { id: string; camera_model_id: string; quantity: number; camera_models?: { name: string } | null }[]
+  }[]
+  barcodeRegistry: BarcodeTraceRow[]
 }) {
   const router = useRouter()
   const [tab, setTab] = useState<TabId>(initialTab ?? 'dashboard')
@@ -466,6 +481,7 @@ export function InventoryDashboard({
             { id: 'movements' as const, label: 'Movements' },
             { id: 'pricing' as const, label: 'Pricing' },
             { id: 'setup' as const, label: 'Setup geography' },
+            { id: 'barcode' as const, label: 'Barcode' },
           ] as const
         ).map((t) => (
           <button
@@ -823,6 +839,18 @@ export function InventoryDashboard({
           specialistStock={specialistStock}
           dealers={dealers}
           cameras={cameras}
+          barcodeModeEnabled={barcodeSettings.enabled}
+        />
+      )}
+
+      {tab === 'barcode' && (
+        <InventoryBarcodePanel
+          settings={barcodeSettings}
+          templates={barcodeTemplates}
+          registry={barcodeRegistry}
+          cameras={cameras}
+          dealers={dealers.map((d) => ({ id: d.id, name: d.name }))}
+          specialists={specialists}
         />
       )}
 

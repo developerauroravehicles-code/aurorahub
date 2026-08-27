@@ -12,16 +12,19 @@ export function WorkActions({
   demandId,
   isAssigned,
   vinLast6,
+  barcodeModeEnabled = false,
 }: {
   demandId: string
   isAssigned: boolean
   vinLast6?: string | null
+  barcodeModeEnabled?: boolean
 }) {
   const [loading, setLoading] = useState(false)
   const [directComplete, setDirectComplete] = useState(false)
   const [showModal, setShowModal] = useState(false)
   const [serviceType, setServiceType] = useState<DemandServiceType>('installation')
   const [vinInput, setVinInput] = useState('')
+  const [barcodeInput, setBarcodeInput] = useState('')
   const [error, setError] = useState<string | null>(null)
   const router = useRouter()
 
@@ -39,6 +42,7 @@ export function WorkActions({
   const openCompleteModal = () => {
     setError(null)
     setServiceType('installation')
+    setBarcodeInput('')
     if (directComplete && vinLast6) {
       setVinInput(vinLast6.trim())
     } else {
@@ -64,12 +68,18 @@ export function WorkActions({
       resolvedVin = entered
     }
 
+    if (barcodeModeEnabled && !barcodeInput.trim()) {
+      setError('Scan or enter the product barcode to complete this job.')
+      return
+    }
+
     setLoading(true)
     setError(null)
     const result = await completeDemand(demandId, {
       serviceType,
       vinLast6: resolvedVin,
       skipVinCheck: skipVinCheck || undefined,
+      barcodeCode: barcodeModeEnabled ? barcodeInput.trim() : undefined,
     })
     setLoading(false)
     if (result?.error) {
@@ -192,6 +202,25 @@ export function WorkActions({
                 <p className="text-sm text-amber-700 dark:text-amber-300">
                   No VIN on file — completion will proceed without VIN verification.
                 </p>
+              )}
+
+              {barcodeModeEnabled && (
+                <div>
+                  <label className="block text-sm font-medium text-zinc-700 dark:text-gray-300 mb-1">
+                    Product barcode *
+                  </label>
+                  <input
+                    type="text"
+                    value={barcodeInput}
+                    onChange={(e) => setBarcodeInput(e.target.value.toUpperCase())}
+                    autoComplete="off"
+                    placeholder="Scan barcode…"
+                    className="w-full rounded-md border border-zinc-300 dark:border-gray-700 bg-zinc-50 dark:bg-gray-900 px-3 py-2 text-sm text-zinc-900 dark:text-white font-mono focus:border-[#C27E00] focus:outline-none focus:ring-1 focus:ring-[#C27E00]"
+                  />
+                  <p className="text-xs text-zinc-500 mt-1">
+                    Scan any unit barcode assigned to your field stock.
+                  </p>
+                </div>
               )}
 
               {error && (

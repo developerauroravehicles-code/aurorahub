@@ -4,12 +4,14 @@ import { createClient } from '@/lib/supabase/server'
 import { logDemandChange } from '@/lib/demand-logger'
 import { dispatchWebhooks } from '@/lib/webhook-dispatch'
 import { z } from 'zod'
-import { fromZonedTime, formatInTimeZone } from 'date-fns-tz'
-import { validateAppointmentSlot } from '@/app/dashboard/system-management/calendar/actions'
+import { validateAppointmentSlot, getPoolSlotContext } from '@/app/dashboard/system-management/calendar/actions'
 import { getTimezoneFromDealer } from '@/lib/dealer-timezone'
 import { SYSTEM_DEFAULT_TIMEZONE } from '@/lib/timezone-defaults'
 import { lookupCameraModelId } from '@/lib/camera-model-resolve'
 import { notifyAuroraManagersIfDuplicateStock } from '@/lib/notify-duplicate-stock'
+import {
+  isSlotAvailableForDealer,
+} from '@/lib/scheduling-pool'
 
 async function getDealerTimezone(dealerId: string | null): Promise<string | null> {
   if (!dealerId) return null
@@ -114,9 +116,9 @@ export async function createDemand(prevState: CreateDemandState, formData: FormD
   }
 
   const timezoneName = await getDealerTimezone(profile.dealer_id)
-  const slotTaken = await isTimeSlotTaken(data.appointmentDate, profile.dealer_id, timezoneName)
+  const slotTaken = !(await isSlotAvailableForDealer(supabase, profile.dealer_id, data.appointmentDate))
   if (slotTaken) {
-      return { error: 'This time slot is already booked. Please select another time.' }
+      return { error: 'This time slot is fully booked for your service area. Please select another time.' }
   }
 
   const cameraModelId = await lookupCameraModelId(supabase, data.cameraModel)
@@ -146,8 +148,8 @@ export async function createDemand(prevState: CreateDemandState, formData: FormD
   if (error) {
       console.error('Demand creation error:', error)
       // Check if error is related to overlapping appointments
-      if (error.message && error.message.includes('time slot is already booked')) {
-          return { error: 'This time slot is already booked. Please select another time.' }
+      if (error.message && (error.message.includes('time slot is already booked') || error.message.includes('fully booked'))) {
+          return { error: 'This time slot is fully booked for your service area. Please select another time.' }
       }
       return { error: error.message || 'Failed to create demand. Please check your permissions.' }
   }
@@ -217,111 +219,40 @@ export async function createDemand(prevState: CreateDemandState, formData: FormD
 }
 
 /**
- * Get appointment times already taken on a date (across ALL dealers).
- * When any dealer books a slot, it is hidden from all other dealers - shared system.
- * Appointments are stored as Pacific Time (PT). dateStr is in Pacific (from calendar).
+ * Get appointment times in the dealer's scheduling pool on a date.
+ * Pool-scoped: distant service areas do not block each other.
  */
 export async function getTakenSlots(
   dateStr: string,
-  _dealerId?: string | null,
+  dealerId?: string | null,
   _timezoneName?: string | null
 ) {
-  const supabase = await createClient()
-  const match = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})/)
-  const y = match ? parseInt(match[1], 10) : 0
-  const m = match ? parseInt(match[2], 10) : 1
-  const d = match ? parseInt(match[3], 10) : 1
-
-  const startInPT = new Date(y, m - 1, d, 0, 0, 0)
-  const endInPT = new Date(y, m - 1, d, 23, 59, 59, 999)
-  const start = fromZonedTime(startInPT, SYSTEM_DEFAULT_TIMEZONE).toISOString()
-  const end = fromZonedTime(endInPT, SYSTEM_DEFAULT_TIMEZONE).toISOString()
-
-  const { data } = await supabase
-    .from('demands')
-    .select('appointment_date')
-    .gte('appointment_date', start)
-    .lte('appointment_date', end)
-    .neq('status', 'cancelled')
-
-  if (!data || data.length === 0) return []
-  return data.map((r: { appointment_date: string }) => r.appointment_date)
+  if (!dealerId) return []
+  const { appointments } = await getPoolSlotContext(dealerId, dateStr.slice(0, 10))
+  return appointments
 }
 
+export { getPoolSlotContext } from '@/app/dashboard/system-management/calendar/actions'
+
 /**
- * Check if a specific slot overlaps with any existing appointment
- * Returns true if the slot is blocked (overlaps with an existing appointment)
+ * Check if a specific slot is fully booked for the dealer's scheduling pool.
  */
-export async function isSlotBlocked(slotDate: string): Promise<boolean> {
-    const supabase = await createClient()
-    
-    const slotTime = new Date(slotDate)
-    const slotStart = new Date(slotTime)
-    const slotEnd = new Date(slotTime.getTime() + 75 * 60 * 1000) // 75 minutes
-    
-    // Get all non-cancelled, non-external appointments
-    const { data, error } = await supabase
-        .from('demands')
-        .select('appointment_date')
-        .neq('status', 'cancelled')
-        .or('is_external.is.null,is_external.eq.false')
-    
-    if (error || !data || data.length === 0) {
-        return false
-    }
-    
-    // Check for overlap with any existing appointment
-    for (const demand of data) {
-        const existingStart = new Date(demand.appointment_date)
-        const existingEnd = new Date(existingStart.getTime() + 75 * 60 * 1000) // 75 minutes
-        
-        // Check if slots overlap
-        if (slotStart < existingEnd && slotEnd > existingStart) {
-            return true // Slot is blocked
-        }
-    }
-    
-    return false // Slot is available
+export async function isSlotBlocked(slotDate: string, dealerId?: string | null): Promise<boolean> {
+  if (!dealerId) return false
+  const supabase = await createClient()
+  return !(await isSlotAvailableForDealer(supabase, dealerId, slotDate))
 }
 
 /**
- * Check if a specific time slot is already taken (by ANY dealer).
- * Shared system: one slot taken = blocked for all dealers. Appointments are 75 minutes.
+ * Check if a specific time slot is fully booked in the dealer's scheduling pool.
  */
 export async function isTimeSlotTaken(
   appointmentDate: string,
-  _dealerId: string | null,
+  dealerId: string | null,
   _timezoneName?: string | null
 ): Promise<boolean> {
-    const supabase = await createClient()
-    const requestedTime = new Date(appointmentDate)
-    const requestedStart = requestedTime.getTime()
-    const requestedEnd = requestedStart + 75 * 60 * 1000
-
-    const dateStr = formatInTimeZone(requestedTime, SYSTEM_DEFAULT_TIMEZONE, 'yyyy-MM-dd')
-    const [y, mo, d] = dateStr.split('-').map(Number)
-    const dayStart = fromZonedTime(new Date(y, mo - 1, d, 0, 0, 0), SYSTEM_DEFAULT_TIMEZONE).toISOString()
-    const dayEnd = fromZonedTime(new Date(y, mo - 1, d, 23, 59, 59, 999), SYSTEM_DEFAULT_TIMEZONE).toISOString()
-
-    const { data, error } = await supabase
-        .from('demands')
-        .select('appointment_date')
-        .gte('appointment_date', dayStart)
-        .lte('appointment_date', dayEnd)
-        .neq('status', 'cancelled')
-        .or('is_external.is.null,is_external.eq.false')
-
-    if (error) {
-        console.error('Error checking time slot:', error)
-        return false
-    }
-    if (!data || data.length === 0) return false
-
-    for (const demand of data) {
-        const existingStart = new Date(demand.appointment_date).getTime()
-        const existingEnd = existingStart + 75 * 60 * 1000
-        if (requestedStart < existingEnd && requestedEnd > existingStart) return true
-    }
-    return false
+  if (!dealerId) return false
+  const supabase = await createClient()
+  return !(await isSlotAvailableForDealer(supabase, dealerId, appointmentDate))
 }
 

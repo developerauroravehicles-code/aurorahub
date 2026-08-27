@@ -13,6 +13,7 @@ import { getTimezoneFromDealer } from '@/lib/dealer-timezone'
 import { lookupCameraModelId } from '@/lib/camera-model-resolve'
 import { notifyAuroraManagersSmsFailed } from '@/lib/notify-sms-failed'
 import { notifyAuroraManagersIfDuplicateStock } from '@/lib/notify-duplicate-stock'
+import { isSpecialistDoubleBooked } from '@/lib/scheduling-pool'
 
 export async function assignDemandToMe(demandId: string) {
   const supabase = await createClient()
@@ -126,6 +127,20 @@ export async function approveDemand(demandId: string, sendSMSToCustomer: boolean
       .single()
     if (dealerSpecialist) {
       assignedSpecialistId = dealerSpecialist.id
+    }
+  }
+
+  if (assignedSpecialistId) {
+    if (demand.appointment_date) {
+      const doubleBooked = await isSpecialistDoubleBooked(
+        supabase,
+        assignedSpecialistId,
+        demand.appointment_date,
+        demandId
+      )
+      if (doubleBooked) {
+        assignedSpecialistId = null
+      }
     }
   }
 
@@ -462,7 +477,9 @@ export async function updateDemand(demandId: string, formData: FormData) {
   }
 
   if (demand.dealer_id) {
-    const validation = await validateAppointmentSlot(demand.dealer_id, appointmentDate)
+    const validation = await validateAppointmentSlot(demand.dealer_id, appointmentDate, {
+      excludeDemandId: demandId,
+    })
     if (!validation.valid) {
       return { error: validation.error ?? 'Selected appointment time is not available for this dealer.' }
     }

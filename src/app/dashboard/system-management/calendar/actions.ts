@@ -7,6 +7,18 @@ import { formatInTimeZone, toDate } from 'date-fns-tz'
 import { SYSTEM_DEFAULT_TIMEZONE } from '@/lib/timezone-defaults'
 import { pad2 } from '@/lib/calendar-wall-date'
 import { getSlotMinutesFromConfig, CALENDAR_DEFAULTS } from '@/lib/calendar-defaults'
+import {
+  countOverlapsAtSlot,
+  getDemandsInPoolForDay,
+  getPoolCapacity,
+  getPoolIdForDealer,
+  isSlotAvailableForDealer,
+} from '@/lib/scheduling-pool'
+import {
+  assignSpecialistToPool,
+  removeSpecialistFromPool,
+  syncDealerSchedulingPoolSpecialists,
+} from '@/lib/specialist-dealer-assignments'
 
 export async function createCalendarSetting(formData: FormData) {
   const supabase = await createClient()
@@ -192,28 +204,36 @@ export async function getCalendarBlocksInRange(fromDate: string, toDate: string)
 }
 
 /**
- * Get appointment times already taken on a date (all demands including external).
- * Shared system - one slot taken = blocked for all. Uses Pacific Time (PT).
+ * Get appointment times in the dealer's scheduling pool on a date.
+ * Used for calendar indicators and slot filtering (pool-scoped, not global).
  */
-export async function getTakenSlots(dateStr: string): Promise<string[]> {
+export async function getTakenSlots(dateStr: string, dealerId?: string | null): Promise<string[]> {
   const supabase = await createClient()
   const match = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})$/)
   if (!match) return []
-  const y = parseInt(match[1], 10)
-  const m = parseInt(match[2], 10)
-  const d = parseInt(match[3], 10)
-  const isoDay = `${y}-${pad2(m)}-${pad2(d)}`
-  const start = toDate(`${isoDay}T00:00:00`, { timeZone: SYSTEM_DEFAULT_TIMEZONE }).toISOString()
-  const end = toDate(`${isoDay}T23:59:59.999`, { timeZone: SYSTEM_DEFAULT_TIMEZONE }).toISOString()
-  const { data } = await supabase
-    .from('demands')
-    .select('appointment_date')
-    .gte('appointment_date', start)
-    .lte('appointment_date', end)
-    .neq('status', 'cancelled')
-    .or('is_external.is.null,is_external.eq.false')
-  if (!data || data.length === 0) return []
-  return data.map((r: { appointment_date: string }) => r.appointment_date)
+
+  if (!dealerId) {
+    const y = parseInt(match[1], 10)
+    const m = parseInt(match[2], 10)
+    const d = parseInt(match[3], 10)
+    const isoDay = `${y}-${pad2(m)}-${pad2(d)}`
+    const start = toDate(`${isoDay}T00:00:00`, { timeZone: SYSTEM_DEFAULT_TIMEZONE }).toISOString()
+    const end = toDate(`${isoDay}T23:59:59.999`, { timeZone: SYSTEM_DEFAULT_TIMEZONE }).toISOString()
+    const { data } = await supabase
+      .from('demands')
+      .select('appointment_date')
+      .gte('appointment_date', start)
+      .lte('appointment_date', end)
+      .neq('status', 'cancelled')
+      .or('is_external.is.null,is_external.eq.false')
+    return (data ?? []).map((r: { appointment_date: string }) => r.appointment_date)
+  }
+
+  const poolId = await getPoolIdForDealer(supabase, dealerId)
+  if (!poolId) return []
+
+  const appointments = await getDemandsInPoolForDay(supabase, poolId, dateStr)
+  return appointments.map((r) => r.appointment_date)
 }
 
 /** Get blocks for a single date (for demand form slot filtering). */
@@ -340,13 +360,13 @@ export async function deleteCalendarBlock(blockId: string): Promise<{ success: b
 }
 
 /**
- * Validate that an appointment slot is allowed for a dealer: within dealer hours and not blocked.
- * Used by createDemand and any flow that books appointments. Single calendar system.
+ * Validate that an appointment slot is allowed for a dealer: within dealer hours, not blocked,
+ * and pool capacity not exceeded.
  */
 export async function validateAppointmentSlot(
   dealerId: string,
   appointmentDateISO: string,
-  options?: { allowPast?: boolean }
+  options?: { allowPast?: boolean; excludeDemandId?: string | null }
 ): Promise<{ valid: boolean; error?: string }> {
   const supabase = await createClient()
   const slotTime = new Date(appointmentDateISO)
@@ -417,6 +437,16 @@ export async function validateAppointmentSlot(
     if (slotDateInPacific === todayInPacific && slotTime.getTime() <= now.getTime()) {
       return { valid: false, error: 'This time slot has already passed. Please select a future time.' }
     }
+  }
+
+  const slotAvailable = await isSlotAvailableForDealer(
+    supabase,
+    dealerId,
+    appointmentDateISO,
+    options?.excludeDemandId
+  )
+  if (!slotAvailable) {
+    return { valid: false, error: 'This time slot is fully booked for your service area. Please select another time.' }
   }
 
   return { valid: true }
@@ -495,29 +525,18 @@ export async function getAvailableSlotsForEdit(
     return !inBlock
   })
 
-  const startOfDayISO = toDate(`${isoDay}T00:00:00`, { timeZone: ptTz }).toISOString()
-  const endOfDayISO = toDate(`${isoDay}T23:59:59.999`, { timeZone: ptTz }).toISOString()
-  let query = supabase
-    .from('demands')
-    .select('appointment_date')
-    .gte('appointment_date', startOfDayISO)
-    .lte('appointment_date', endOfDayISO)
-    .neq('status', 'cancelled')
-  if (excludeDemandId) {
-    query = query.neq('id', excludeDemandId)
-  }
-  const { data: taken } = await query
-  const takenSet = new Set((taken || []).map((r: { appointment_date: string }) => r.appointment_date))
+  const poolId = await getPoolIdForDealer(supabase, dealerId)
+  const poolAppointments = poolId
+    ? await getDemandsInPoolForDay(supabase, poolId, dateStr, excludeDemandId)
+    : []
+  const poolCapacity = poolId ? await getPoolCapacity(supabase, poolId) : 1
   const durationMs = duration * 60 * 1000
+
   availableSlots = availableSlots.filter(slot => {
     const slotStart = new Date(slot).getTime()
     const slotEnd = slotStart + durationMs
-    for (const takenDate of takenSet) {
-      const tStart = new Date(takenDate).getTime()
-      const tEnd = tStart + durationMs
-      if (slotStart < tEnd && slotEnd > tStart) return false
-    }
-    return true
+    const overlapCount = countOverlapsAtSlot(slotStart, slotEnd, poolAppointments)
+    return overlapCount < poolCapacity
   })
 
   // Filter out past slots for today - system base = Pacific (PT)
@@ -528,5 +547,248 @@ export async function getAvailableSlotsForEdit(
   }
 
   return { slots: availableSlots, timezoneName }
+}
+
+// --- Scheduling pools (regional slot capacity) ---
+
+async function ensureCalendarManager() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { supabase: null as null, error: 'Unauthorized' }
+
+  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+  if (!profile || !['aurora_manager', 'it'].includes(profile.role)) {
+    return { supabase: null as null, error: 'Only Aurora Managers or IT can manage scheduling pools' }
+  }
+
+  return { supabase, error: null as null }
+}
+
+export async function getSchedulingPoolsWithStats() {
+  const supabase = await createClient()
+  const { data: pools } = await supabase
+    .from('scheduling_pools')
+    .select('id, code, name, description, is_active, created_at')
+    .order('name')
+
+  const { data: dealers } = await supabase
+    .from('dealers')
+    .select('id, name, scheduling_pool_id')
+
+  const { data: specialistLinks } = await supabase
+    .from('specialist_dealers')
+    .select('specialist_id, dealer_id')
+
+  const specialistIdsInPools = new Set(
+    (specialistLinks ?? []).map((l) => l.specialist_id)
+  )
+  const { data: specialistProfiles } = specialistIdsInPools.size
+    ? await supabase
+        .from('profiles')
+        .select('id, full_name')
+        .in('id', [...specialistIdsInPools])
+    : { data: [] as { id: string; full_name: string | null }[] }
+
+  const profileNameById = new Map(
+    (specialistProfiles ?? []).map((p) => [p.id, p.full_name ?? 'Unknown'])
+  )
+
+  return (pools ?? []).map((pool) => {
+    const poolDealerIds = (dealers ?? [])
+      .filter((d) => d.scheduling_pool_id === pool.id)
+      .map((d) => d.id)
+    const poolSpecialistIds = [
+      ...new Set(
+        (specialistLinks ?? [])
+          .filter((l) => poolDealerIds.includes(l.dealer_id))
+          .map((l) => l.specialist_id)
+      ),
+    ]
+    return {
+      ...pool,
+      dealer_count: poolDealerIds.length,
+      specialist_count: Math.max(poolSpecialistIds.length, 1),
+      specialists: poolSpecialistIds.map((id) => ({
+        id,
+        full_name: profileNameById.get(id) ?? 'Unknown',
+      })),
+      dealers: (dealers ?? []).filter((d) => d.scheduling_pool_id === pool.id),
+    }
+  })
+}
+
+export async function createSchedulingPool(formData: FormData) {
+  const auth = await ensureCalendarManager()
+  if (!auth.supabase) return { success: false, error: auth.error ?? 'Unauthorized' }
+
+  const code = String(formData.get('code') ?? '').trim().toUpperCase()
+  const name = String(formData.get('name') ?? '').trim()
+  const description = String(formData.get('description') ?? '').trim() || null
+
+  if (!code || !name) return { success: false, error: 'Code and name are required' }
+
+  const { error } = await auth.supabase.from('scheduling_pools').insert({
+    code,
+    name,
+    description,
+  })
+
+  if (error) return { success: false, error: error.message }
+  revalidatePath('/dashboard/configuration/calendar')
+  return { success: true }
+}
+
+export async function updateSchedulingPool(
+  poolId: string,
+  code: string,
+  name: string,
+  description: string | null,
+  isActive: boolean
+) {
+  const auth = await ensureCalendarManager()
+  if (!auth.supabase) return { success: false, error: auth.error ?? 'Unauthorized' }
+
+  const trimmedName = name.trim()
+  if (!trimmedName) return { success: false, error: 'Name is required' }
+
+  const { data: existing } = await auth.supabase
+    .from('scheduling_pools')
+    .select('code')
+    .eq('id', poolId)
+    .maybeSingle()
+
+  if (!existing) return { success: false, error: 'Pool not found' }
+
+  const isDefault = existing.code === 'DEFAULT'
+  const nextCode = isDefault ? 'DEFAULT' : code.trim().toUpperCase()
+  if (!isDefault && !nextCode) return { success: false, error: 'Code is required' }
+
+  const { error } = await auth.supabase
+    .from('scheduling_pools')
+    .update({
+      code: nextCode,
+      name: trimmedName,
+      description: description?.trim() || null,
+      is_active: isDefault ? true : isActive,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', poolId)
+
+  if (error) return { success: false, error: error.message }
+  revalidatePath('/dashboard/configuration/calendar')
+  return { success: true }
+}
+
+export async function deleteSchedulingPool(poolId: string) {
+  const auth = await ensureCalendarManager()
+  if (!auth.supabase) return { success: false, error: auth.error ?? 'Unauthorized' }
+
+  const defaultPool = await auth.supabase
+    .from('scheduling_pools')
+    .select('id')
+    .eq('code', 'DEFAULT')
+    .maybeSingle()
+
+  if (defaultPool.data?.id) {
+    await auth.supabase
+      .from('dealers')
+      .update({ scheduling_pool_id: defaultPool.data.id })
+      .eq('scheduling_pool_id', poolId)
+  }
+
+  const { error } = await auth.supabase.from('scheduling_pools').delete().eq('id', poolId)
+  if (error) return { success: false, error: error.message }
+  revalidatePath('/dashboard/configuration/calendar')
+  return { success: true }
+}
+
+export async function assignDealerToSchedulingPool(dealerId: string, poolId: string | null) {
+  const auth = await ensureCalendarManager()
+  if (!auth.supabase) return { success: false, error: auth.error ?? 'Unauthorized' }
+
+  const { data: dealer } = await auth.supabase
+    .from('dealers')
+    .select('scheduling_pool_id')
+    .eq('id', dealerId)
+    .maybeSingle()
+
+  const previousPoolId = dealer?.scheduling_pool_id ?? null
+
+  const { error } = await auth.supabase
+    .from('dealers')
+    .update({ scheduling_pool_id: poolId })
+    .eq('id', dealerId)
+
+  if (error) return { success: false, error: error.message }
+
+  const syncResult = await syncDealerSchedulingPoolSpecialists(
+    auth.supabase,
+    dealerId,
+    previousPoolId,
+    poolId
+  )
+  if (!syncResult.success) return syncResult
+
+  revalidatePath('/dashboard/configuration/calendar')
+  revalidatePath('/dashboard/admin/employees')
+  return { success: true }
+}
+
+export async function assignSpecialistToSchedulingPool(poolId: string, specialistId: string) {
+  const auth = await ensureCalendarManager()
+  if (!auth.supabase) return { success: false, error: auth.error ?? 'Unauthorized' }
+
+  const result = await assignSpecialistToPool(auth.supabase, poolId, specialistId)
+  if (!result.success) return result
+
+  revalidatePath('/dashboard/configuration/calendar')
+  revalidatePath('/dashboard/admin/employees')
+  revalidatePath(`/dashboard/admin/employees/${specialistId}`)
+  return { success: true }
+}
+
+export async function removeSpecialistFromSchedulingPool(poolId: string, specialistId: string) {
+  const auth = await ensureCalendarManager()
+  if (!auth.supabase) return { success: false, error: auth.error ?? 'Unauthorized' }
+
+  const result = await removeSpecialistFromPool(auth.supabase, poolId, specialistId)
+  if (!result.success) return result
+
+  revalidatePath('/dashboard/configuration/calendar')
+  revalidatePath('/dashboard/admin/employees')
+  revalidatePath(`/dashboard/admin/employees/${specialistId}`)
+  return { success: true }
+}
+
+export async function getPlatformSpecialists() {
+  const supabase = await createClient()
+  const { data } = await supabase
+    .from('profiles')
+    .select('id, full_name')
+    .eq('role', 'specialist')
+    .order('full_name')
+
+  return (data ?? []).map((p) => ({
+    id: p.id,
+    full_name: p.full_name ?? 'Unknown',
+  }))
+}
+
+export async function getPoolSlotContext(dealerId: string, dateStr: string) {
+  const supabase = await createClient()
+  const poolId = await getPoolIdForDealer(supabase, dealerId)
+  if (!poolId) {
+    return { appointments: [] as string[], capacity: 1 }
+  }
+
+  const [appointments, capacity] = await Promise.all([
+    getDemandsInPoolForDay(supabase, poolId, dateStr),
+    getPoolCapacity(supabase, poolId),
+  ])
+
+  return {
+    appointments: appointments.map((a) => a.appointment_date),
+    capacity,
+  }
 }
 

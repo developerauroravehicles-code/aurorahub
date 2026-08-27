@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { getDuplicateStockNumbers } from '@/lib/demand-stock'
 import { WorkActions } from './work-actions'
+import { getWorkBarcodeModeEnabled } from './actions'
 import { formatInTimeZone } from 'date-fns-tz'
 import { getEffectiveTimezone } from '@/lib/timezone-defaults'
 
@@ -183,6 +184,7 @@ export default async function SpecialistWorkPage() {
     }
 
     const duplicateStockNumbers = Array.from(await getDuplicateStockNumbers())
+    const barcodeModeEnabled = await getWorkBarcodeModeEnabled()
 
     const getDealerTimezone = (d: { dealers?: { region_codes?: { timezones?: { name: string } } } | null }) =>
       (d.dealers as { region_codes?: { timezones?: { name: string } } } | null)?.region_codes?.timezones?.name ?? null
@@ -213,7 +215,14 @@ export default async function SpecialistWorkPage() {
                                 accentColor="assigned"
                                 formatAppointment={formatAppointment}
                                 getDealerTimezone={getDealerTimezone}
-                                actions={<WorkActions demandId={demand.id} isAssigned={true} vinLast6={demand.vin_last6} />}
+                                actions={
+                                  <WorkActions
+                                    demandId={demand.id}
+                                    isAssigned={true}
+                                    vinLast6={demand.vin_last6}
+                                    barcodeModeEnabled={barcodeModeEnabled}
+                                  />
+                                }
                                 duplicateStockNumbers={duplicateStockNumbers}
                             />
                         ))}

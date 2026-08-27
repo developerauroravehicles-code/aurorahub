@@ -2,7 +2,23 @@ import { createClient } from '@/lib/supabase/server'
 import { SystemManagementTabs } from '../system-management-tabs'
 import { SystemManagementTitle } from '../system-management-title'
 import { CalendarManagementContent } from './calendar-management-content'
-import { createCalendarSetting, updateCalendarSetting, deleteCalendarSetting, getCalendarBlocksInRange, createCalendarBlock, createCalendarBlocks, deleteCalendarBlock } from './actions'
+import {
+  createCalendarSetting,
+  updateCalendarSetting,
+  deleteCalendarSetting,
+  getCalendarBlocksInRange,
+  createCalendarBlock,
+  createCalendarBlocks,
+  deleteCalendarBlock,
+  getSchedulingPoolsWithStats,
+  createSchedulingPool,
+  updateSchedulingPool,
+  deleteSchedulingPool,
+  assignDealerToSchedulingPool,
+  assignSpecialistToSchedulingPool,
+  removeSpecialistFromSchedulingPool,
+  getPlatformSpecialists,
+} from './actions'
 
 export const dynamic = 'force-dynamic'
 
@@ -18,8 +34,11 @@ export default async function CalendarManagementPage() {
   // Fetch all dealers
   const { data: dealers } = await supabase
     .from('dealers')
-    .select('id, name')
+    .select('id, name, scheduling_pool_id')
     .order('name')
+
+  const schedulingPools = await getSchedulingPoolsWithStats()
+  const specialists = await getPlatformSpecialists()
 
   const today = new Date().toISOString().slice(0, 10)
   const endDate = new Date()
@@ -40,12 +59,20 @@ export default async function CalendarManagementPage() {
             settings={settings || []}
             dealers={dealers || []}
             blocks={blocks}
+            schedulingPools={schedulingPools}
+            specialists={specialists}
             createCalendarSetting={createCalendarSetting}
             updateCalendarSetting={updateCalendarSetting}
             deleteCalendarSetting={deleteCalendarSetting}
             createCalendarBlock={createCalendarBlock}
             createCalendarBlocks={createCalendarBlocks}
             deleteCalendarBlock={deleteCalendarBlock}
+            createSchedulingPool={createSchedulingPool}
+            updateSchedulingPool={updateSchedulingPool}
+            deleteSchedulingPool={deleteSchedulingPool}
+            assignDealerToSchedulingPool={assignDealerToSchedulingPool}
+            assignSpecialistToSchedulingPool={assignSpecialistToSchedulingPool}
+            removeSpecialistFromSchedulingPool={removeSpecialistFromSchedulingPool}
           />
         </div>
       </div>

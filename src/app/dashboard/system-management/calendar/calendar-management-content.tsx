@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { Trash2, CalendarX2, Clock, Plus, Edit } from 'lucide-react'
 import { createCalendarBlock, createCalendarBlocks, deleteCalendarBlock } from './actions'
 import { getGlobalSlotMinutes, getSlotMinutesFromConfig, CALENDAR_DEFAULTS } from '@/lib/calendar-defaults'
+import { SchedulingPoolsPanel } from './scheduling-pools-panel'
 
 interface CalendarBlock {
   id: string
@@ -30,18 +31,54 @@ interface CalendarSetting {
 interface Dealer {
   id: string
   name: string
+  scheduling_pool_id?: string | null
+}
+
+type SchedulingPoolRow = {
+  id: string
+  code: string
+  name: string
+  description: string | null
+  is_active: boolean
+  dealer_count: number
+  specialist_count: number
+  specialists: { id: string; full_name: string }[]
+  dealers: { id: string; name: string; scheduling_pool_id?: string | null }[]
 }
 
 interface CalendarManagementContentProps {
   settings: CalendarSetting[]
   dealers: Dealer[]
   blocks: CalendarBlock[]
+  schedulingPools: SchedulingPoolRow[]
+  specialists: { id: string; full_name: string }[]
   createCalendarSetting: (formData: FormData) => Promise<{ success: boolean; error?: string }>
   updateCalendarSetting: (settingId: string, startHour: number, endHour: number, slotIntervalMinutes: number, appointmentDurationMinutes: number) => Promise<{ success: boolean; error?: string }>
   deleteCalendarSetting: (settingId: string) => Promise<{ success: boolean; error?: string }>
   createCalendarBlock: (formData: FormData) => Promise<{ success: boolean; error?: string }>
   createCalendarBlocks: (dealerId: string, blockDate: string, blocks: { start_minutes: number; end_minutes: number }[]) => Promise<{ success: boolean; error?: string }>
   deleteCalendarBlock: (blockId: string) => Promise<{ success: boolean; error?: string }>
+  createSchedulingPool: (formData: FormData) => Promise<{ success: boolean; error?: string }>
+  updateSchedulingPool: (
+    poolId: string,
+    code: string,
+    name: string,
+    description: string | null,
+    isActive: boolean
+  ) => Promise<{ success: boolean; error?: string }>
+  deleteSchedulingPool: (poolId: string) => Promise<{ success: boolean; error?: string }>
+  assignDealerToSchedulingPool: (
+    dealerId: string,
+    poolId: string | null
+  ) => Promise<{ success: boolean; error?: string }>
+  assignSpecialistToSchedulingPool: (
+    poolId: string,
+    specialistId: string
+  ) => Promise<{ success: boolean; error?: string }>
+  removeSpecialistFromSchedulingPool: (
+    poolId: string,
+    specialistId: string
+  ) => Promise<{ success: boolean; error?: string }>
 }
 
 /** Global calendar slots (09:00–16:30, 90 min interval). Same as demand form. */
@@ -97,12 +134,20 @@ export function CalendarManagementContent({
   settings = [],
   dealers,
   blocks,
+  schedulingPools,
+  specialists,
   createCalendarSetting,
   updateCalendarSetting,
   deleteCalendarSetting,
   createCalendarBlock,
   createCalendarBlocks,
-  deleteCalendarBlock
+  deleteCalendarBlock,
+  createSchedulingPool,
+  updateSchedulingPool,
+  deleteSchedulingPool,
+  assignDealerToSchedulingPool,
+  assignSpecialistToSchedulingPool,
+  removeSpecialistFromSchedulingPool,
 }: CalendarManagementContentProps) {
   const [showAddHoursFor, setShowAddHoursFor] = useState<{ dealerId: string; dayType: DayType } | null>(null)
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -249,6 +294,18 @@ export function CalendarManagementContent({
           {blockSuccess}
         </div>
       )}
+
+      <SchedulingPoolsPanel
+        pools={schedulingPools}
+        dealers={dealers}
+        specialists={specialists}
+        createSchedulingPool={createSchedulingPool}
+        updateSchedulingPool={updateSchedulingPool}
+        deleteSchedulingPool={deleteSchedulingPool}
+        assignDealerToSchedulingPool={assignDealerToSchedulingPool}
+        assignSpecialistToSchedulingPool={assignSpecialistToSchedulingPool}
+        removeSpecialistFromSchedulingPool={removeSpecialistFromSchedulingPool}
+      />
 
       {/* Single global calendar – default; dealers can override hours below */}
       <div className="mb-6 p-4 rounded-lg bg-[#C27E00]/10 border border-[#C27E00]/30">

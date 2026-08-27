@@ -2,87 +2,69 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
+import {
+  assignSpecialistToDealers,
+  removeSpecialistFromDealers,
+} from '@/lib/specialist-dealer-assignments'
 
-export async function assignDealerToSpecialist(specialistId: string, dealerId: string) {
+async function ensureCanManageSpecialistAssignments() {
   const supabase = await createClient()
-  
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { success: false, error: 'Unauthorized' }
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { supabase: null as null, error: 'Unauthorized' }
 
-  // Check if user is Aurora Manager
   const { data: profile } = await supabase
     .from('profiles')
     .select('role')
     .eq('id', user.id)
     .single()
 
-  if (!profile || profile.role !== 'aurora_manager') {
-    return { success: false, error: 'Only Aurora Managers can assign dealers to specialists' }
+  if (!profile || !['aurora_manager', 'it'].includes(profile.role)) {
+    return {
+      supabase: null as null,
+      error: 'Only Aurora Managers or IT can manage specialist assignments',
+    }
   }
 
-  // Check if assignment already exists
-  const { data: existing } = await supabase
+  return { supabase, error: null as null }
+}
+
+export async function assignDealerToSpecialist(specialistId: string, dealerId: string) {
+  const auth = await ensureCanManageSpecialistAssignments()
+  if (!auth.supabase) return { success: false, error: auth.error ?? 'Unauthorized' }
+
+  const { data: existing } = await auth.supabase
     .from('specialist_dealers')
     .select('id')
     .eq('specialist_id', specialistId)
     .eq('dealer_id', dealerId)
-    .single()
+    .maybeSingle()
 
   if (existing) {
     return { success: false, error: 'This dealer is already assigned to this specialist' }
   }
 
-  // Create assignment
-  const { error } = await supabase
-    .from('specialist_dealers')
-    .insert({
-      specialist_id: specialistId,
-      dealer_id: dealerId
-    })
-
-  if (error) {
-    console.error('Error assigning dealer:', error)
-    return { success: false, error: error.message }
-  }
+  const result = await assignSpecialistToDealers(auth.supabase, specialistId, [dealerId])
+  if (!result.success) return result
 
   revalidatePath(`/dashboard/admin/employees/${specialistId}`)
   revalidatePath('/dashboard/admin/employees')
-  
+  revalidatePath('/dashboard/configuration/calendar')
+
   return { success: true }
 }
 
 export async function removeDealerFromSpecialist(specialistId: string, dealerId: string) {
-  const supabase = await createClient()
-  
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { success: false, error: 'Unauthorized' }
+  const auth = await ensureCanManageSpecialistAssignments()
+  if (!auth.supabase) return { success: false, error: auth.error ?? 'Unauthorized' }
 
-  // Check if user is Aurora Manager
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('role')
-    .eq('id', user.id)
-    .single()
-
-  if (!profile || profile.role !== 'aurora_manager') {
-    return { success: false, error: 'Only Aurora Managers can remove dealer assignments' }
-  }
-
-  // Remove assignment
-  const { error } = await supabase
-    .from('specialist_dealers')
-    .delete()
-    .eq('specialist_id', specialistId)
-    .eq('dealer_id', dealerId)
-
-  if (error) {
-    console.error('Error removing dealer assignment:', error)
-    return { success: false, error: error.message }
-  }
+  const result = await removeSpecialistFromDealers(auth.supabase, specialistId, [dealerId])
+  if (!result.success) return result
 
   revalidatePath(`/dashboard/admin/employees/${specialistId}`)
   revalidatePath('/dashboard/admin/employees')
-  
+  revalidatePath('/dashboard/configuration/calendar')
+
   return { success: true }
 }
-

@@ -16,6 +16,7 @@ import { ptDatetimeLocalToISO, SYSTEM_DEFAULT_TIMEZONE } from '@/lib/timezone-de
 import { lookupCameraModelId } from '@/lib/camera-model-resolve'
 import { addDemandToDailyBatch, ptDateFromIso } from '@/lib/daily-dealer-invoices'
 import { assertDealerDemandAccess, canEditDemandCoreFields, getInventoryManagerDealerId } from '@/lib/inventory-manager-access'
+import { isSpecialistDoubleBooked } from '@/lib/scheduling-pool'
 
 type DemandEditProfile = {
   role: string
@@ -58,9 +59,21 @@ export async function updateAssignedSpecialist(
 
   const { data: demand } = await supabase
     .from('demands')
-    .select('status')
+    .select('status, appointment_date')
     .eq('id', demandId)
     .single()
+
+  if (specialistId && demand?.appointment_date) {
+    const doubleBooked = await isSpecialistDoubleBooked(
+      supabase,
+      specialistId,
+      demand.appointment_date,
+      demandId
+    )
+    if (doubleBooked) {
+      return { success: false, error: 'This specialist already has another appointment at that time.' }
+    }
+  }
 
   const { error } = await supabase
     .from('demands')
@@ -399,7 +412,9 @@ export async function updateDemandByAuroraManager(
   if (!appointmentDate) return { error: 'Appointment date is required' }
 
   if (demand.dealer_id && !isExternal) {
-    const validation = await validateAppointmentSlot(demand.dealer_id, appointmentDate)
+    const validation = await validateAppointmentSlot(demand.dealer_id, appointmentDate, {
+      excludeDemandId: demandId,
+    })
     if (!validation.valid) {
       return { error: validation.error ?? 'Selected appointment time is not available.' }
     }

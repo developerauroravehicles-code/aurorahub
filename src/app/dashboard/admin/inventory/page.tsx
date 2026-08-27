@@ -2,9 +2,19 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { fetchInventoryStockAlerts } from '@/lib/inventory-stock-alerts'
 import { fetchSpecialistStockSummary } from '@/lib/inventory-v2/specialist-stock'
+import { getBarcodeSettings, fetchBarcodeRegistry, fetchSetTemplates } from '@/lib/inventory-barcodes'
 import { InventoryDashboard } from './inventory-dashboard'
 
-const VALID_TABS = new Set(['dashboard', 'alerts', 'stock', 'specialists', 'movements', 'pricing', 'setup'])
+const VALID_TABS = new Set([
+  'dashboard',
+  'alerts',
+  'stock',
+  'specialists',
+  'movements',
+  'pricing',
+  'setup',
+  'barcode',
+])
 
 export default async function InventoryPage({
   searchParams,
@@ -98,6 +108,11 @@ export default async function InventoryPage({
 
   const { alerts, summary, customRules } = inventoryAlertsRes
   const specialistStock = await fetchSpecialistStockSummary(supabase)
+  const barcodeSettings = await getBarcodeSettings(supabase)
+  const [barcodeTemplates, barcodeRegistry] = await Promise.all([
+    fetchSetTemplates(supabase),
+    fetchBarcodeRegistry(supabase, { limit: 300 }),
+  ])
 
   return (
     <div className="space-y-8 pb-12">
@@ -147,7 +162,20 @@ export default async function InventoryPage({
         customRules={customRules}
         nationalLocationId={nationalLocRes.data?.id ?? null}
         specialistStock={specialistStock}
-        initialTab={initialTab as 'dashboard' | 'alerts' | 'stock' | 'specialists' | 'movements' | 'pricing' | 'setup'}
+        barcodeSettings={barcodeSettings}
+        barcodeTemplates={barcodeTemplates}
+        barcodeRegistry={barcodeRegistry}
+        initialTab={
+          initialTab as
+            | 'dashboard'
+            | 'alerts'
+            | 'stock'
+            | 'specialists'
+            | 'movements'
+            | 'pricing'
+            | 'setup'
+            | 'barcode'
+        }
       />
     </div>
   )

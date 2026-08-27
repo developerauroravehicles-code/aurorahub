@@ -1,9 +1,7 @@
 /**
- * Single global calendar for the system.
- * All dealers share one Pacific (PT) slot grid; dealer timezone is used for display only.
- *
- * Default: 09:00 - 16:30, 90 min interval between slots, 75 min appointment duration.
- * Slots: 09:00, 10:30, 12:00, 13:30, 15:00 (last slot ends 16:15).
+ * Shared Pacific (PT) slot grid per scheduling pool.
+ * Dealers in the same pool share capacity (= specialist count in that pool).
+ * Different pools (e.g. distant service areas) book independently.
  */
 
 export const CALENDAR_DEFAULTS = {

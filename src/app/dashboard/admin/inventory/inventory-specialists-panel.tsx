@@ -1,10 +1,11 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useState, useTransition, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { ChevronDown, ChevronRight, Users } from 'lucide-react'
+import { ChevronDown, ChevronRight, Users, ScanLine } from 'lucide-react'
 import type { SpecialistStockSummaryRow } from '@/lib/inventory-v2/specialist-stock'
 import { postDealerToSpecialistTransfer } from './actions'
+import { scanAssignBarcodeToSpecialist } from './inventory-barcode-actions'
 
 type Camera = { id: string; name: string }
 type Dealer = { id: string; name: string }
@@ -24,15 +25,20 @@ export function InventorySpecialistsPanel({
   specialistStock,
   dealers,
   cameras,
+  barcodeModeEnabled = false,
 }: {
   specialistStock: SpecialistStockSummaryRow[]
   dealers: Dealer[]
   cameras: Camera[]
+  barcodeModeEnabled?: boolean
 }) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
   const [message, setMessage] = useState<{ type: 'ok' | 'err'; text: string } | null>(null)
   const [expandedId, setExpandedId] = useState<string | null>(null)
+  const [scanDealerId, setScanDealerId] = useState('')
+  const [scanSpecialistId, setScanSpecialistId] = useState('')
+  const scanInputRef = useRef<HTMLInputElement>(null)
 
   const totalSpecialists = specialistStock.length
   const totalUnits = specialistStock.reduce((s, r) => s + r.total_units, 0)
@@ -49,6 +55,26 @@ export function InventorySpecialistsPanel({
         setMessage({ type: 'err', text: result.error })
       } else {
         setMessage({ type: 'ok', text: 'Transfer recorded.' })
+        router.refresh()
+      }
+    })
+  }
+
+  function runScan(code: string) {
+    if (!scanDealerId || !scanSpecialistId || !code.trim()) return
+    setMessage(null)
+    startTransition(async () => {
+      const fd = new FormData()
+      fd.set('dealer_id', scanDealerId)
+      fd.set('specialist_id', scanSpecialistId)
+      fd.set('code', code.trim())
+      const result = await scanAssignBarcodeToSpecialist(fd)
+      if (result.error) {
+        setMessage({ type: 'err', text: result.error })
+      } else {
+        setMessage({ type: 'ok', text: `Assigned ${code.trim()}.` })
+        if (scanInputRef.current) scanInputRef.current.value = ''
+        scanInputRef.current?.focus()
         router.refresh()
       }
     })
@@ -85,59 +111,114 @@ export function InventorySpecialistsPanel({
         </div>
       )}
 
-      <form
-        className="rounded-xl border border-zinc-200 dark:border-gray-800 p-4 space-y-3"
-        onSubmit={(e) => {
-          e.preventDefault()
-          runAction(() => postDealerToSpecialistTransfer(new FormData(e.currentTarget)))
-        }}
-      >
-        <h3 className="font-medium text-zinc-900 dark:text-white flex items-center gap-2">
-          <Users className="h-4 w-4 text-[#C27E00]" />
-          Assign cameras to specialist
-        </h3>
-        <p className="text-xs text-zinc-500">
-          Transfers stock from dealer to specialist field inventory. Completed installations consume from both dealer and specialist stock.
-        </p>
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
-          <select name="dealer_id" required className={`${inputClass} w-full`}>
-            <option value="">Dealer…</option>
-            {dealers.map((d) => (
-              <option key={d.id} value={d.id}>
-                {d.name}
-              </option>
-            ))}
-          </select>
-          <select name="specialist_profile_id" required className={`${inputClass} w-full`}>
-            <option value="">Specialist…</option>
-            {specialistStock.map((s) => (
-              <option key={s.specialist_id} value={s.specialist_id}>
-                {s.specialist_name}
-              </option>
-            ))}
-          </select>
-          <select name="camera_model_id" required className={`${inputClass} w-full`}>
-            <option value="">Camera model…</option>
-            {cameras.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </select>
+      {barcodeModeEnabled ? (
+        <div className="rounded-xl border border-[#C27E00]/30 bg-[#C27E00]/5 p-4 space-y-3">
+          <h3 className="font-medium text-zinc-900 dark:text-white flex items-center gap-2">
+            <ScanLine className="h-4 w-4 text-[#C27E00]" />
+            Assign cameras to specialist (barcode scan)
+          </h3>
+          <p className="text-xs text-zinc-500">
+            Scan unit barcodes to transfer from dealer to specialist field stock. Use the Barcode tab for dealer
+            assignment or bulk generation.
+          </p>
+          <div className="grid sm:grid-cols-2 gap-3">
+            <select
+              value={scanDealerId}
+              onChange={(e) => setScanDealerId(e.target.value)}
+              required
+              className={`${inputClass} w-full`}
+            >
+              <option value="">Dealer…</option>
+              {dealers.map((d) => (
+                <option key={d.id} value={d.id}>
+                  {d.name}
+                </option>
+              ))}
+            </select>
+            <select
+              value={scanSpecialistId}
+              onChange={(e) => setScanSpecialistId(e.target.value)}
+              required
+              className={`${inputClass} w-full`}
+            >
+              <option value="">Specialist…</option>
+              {specialistStock.map((s) => (
+                <option key={s.specialist_id} value={s.specialist_id}>
+                  {s.specialist_name}
+                </option>
+              ))}
+            </select>
+          </div>
           <input
-            name="quantity"
-            type="number"
-            min={1}
-            defaultValue={1}
-            required
-            className={`${inputClass} w-full`}
-            placeholder="Qty"
+            ref={scanInputRef}
+            type="text"
+            autoComplete="off"
+            placeholder="Scan barcode…"
+            disabled={pending || !scanDealerId || !scanSpecialistId}
+            className={`${inputClass} w-full font-mono`}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault()
+                runScan((e.target as HTMLInputElement).value)
+              }
+            }}
           />
         </div>
-        <button type="submit" disabled={pending} className={btnPrimary}>
-          Transfer to specialist
-        </button>
-      </form>
+      ) : (
+        <form
+          className="rounded-xl border border-zinc-200 dark:border-gray-800 p-4 space-y-3"
+          onSubmit={(e) => {
+            e.preventDefault()
+            runAction(() => postDealerToSpecialistTransfer(new FormData(e.currentTarget)))
+          }}
+        >
+          <h3 className="font-medium text-zinc-900 dark:text-white flex items-center gap-2">
+            <Users className="h-4 w-4 text-[#C27E00]" />
+            Assign cameras to specialist
+          </h3>
+          <p className="text-xs text-zinc-500">
+            Transfers stock from dealer to specialist field inventory. Completed installations consume from both dealer and specialist stock.
+          </p>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            <select name="dealer_id" required className={`${inputClass} w-full`}>
+              <option value="">Dealer…</option>
+              {dealers.map((d) => (
+                <option key={d.id} value={d.id}>
+                  {d.name}
+                </option>
+              ))}
+            </select>
+            <select name="specialist_profile_id" required className={`${inputClass} w-full`}>
+              <option value="">Specialist…</option>
+              {specialistStock.map((s) => (
+                <option key={s.specialist_id} value={s.specialist_id}>
+                  {s.specialist_name}
+                </option>
+              ))}
+            </select>
+            <select name="camera_model_id" required className={`${inputClass} w-full`}>
+              <option value="">Camera model…</option>
+              {cameras.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+            <input
+              name="quantity"
+              type="number"
+              min={1}
+              defaultValue={1}
+              required
+              className={`${inputClass} w-full`}
+              placeholder="Qty"
+            />
+          </div>
+          <button type="submit" disabled={pending} className={btnPrimary}>
+            Transfer to specialist
+          </button>
+        </form>
+      )}
 
       <div className="rounded-xl border border-zinc-200 dark:border-gray-800 overflow-hidden">
         <div className="px-4 py-3 border-b border-zinc-200 dark:border-gray-800 bg-zinc-50/80 dark:bg-white/[0.02]">
