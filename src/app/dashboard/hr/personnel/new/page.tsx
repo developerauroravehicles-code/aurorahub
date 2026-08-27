@@ -1,10 +1,14 @@
 import { createClient } from '@/lib/supabase/server'
 import { PersonnelForm } from '../personnel-form'
+import { fetchOrgDepartmentTree } from '@/lib/hr-org-structure'
 
 export default async function NewPersonnelPage() {
   const supabase = await createClient()
-  const { data: regions } = await supabase.from('hr_regions').select('id, name').order('name')
-  const { data: dealers } = await supabase.from('dealers').select('id, name').order('name')
+  const [{ data: regions }, { data: dealers }, orgTree] = await Promise.all([
+    supabase.from('hr_regions').select('id, name').order('name'),
+    supabase.from('dealers').select('id, name').order('name'),
+    fetchOrgDepartmentTree(supabase),
+  ])
 
   const { data: activeManagers } = await supabase
     .from('personnel')
@@ -39,6 +43,7 @@ export default async function NewPersonnelPage() {
         regions={regions || []}
         dealers={dealers || []}
         managers={managers}
+        orgTree={orgTree}
       />
     </div>
   )

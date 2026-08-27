@@ -6,6 +6,9 @@ import { useRouter } from 'next/navigation'
 import { updatePersonnel, createCertification, updateCertificationStatus, updateInstallerProfile, terminateEmployment } from '../actions'
 import { EmailInput } from '@/components/email-input'
 import { normalizeEmail } from '@/lib/email-normalize'
+import { OrgStructureFields } from '../org-structure-fields'
+import { orgRoleLabel, type OrgDepartmentTree } from '@/lib/hr-org-structure'
+import { formInputClassName, formLabelClassName, formSelectClassName } from '@/lib/form-field-styles'
 
 const PLATFORM_ROLE_LABELS: Record<string, string> = {
   specialist: 'Technical Support',
@@ -110,6 +113,7 @@ export function PersonnelDetail({
   dealers,
   managers,
   installerProfile,
+  orgTree,
 }: {
   person: Record<string, unknown>
   certifications: Record<string, unknown>[]
@@ -118,10 +122,12 @@ export function PersonnelDetail({
   dealers: { id: string; name: string }[]
   managers: { id: string; full_name: string | null }[]
   installerProfile?: Record<string, unknown> | null
+  orgTree: OrgDepartmentTree
 }) {
   const router = useRouter()
   const [editing, setEditing] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [dealerId, setDealerId] = useState(String(person.dealer_id ?? ''))
   const [showTerminateModal, setShowTerminateModal] = useState(false)
   const [terminateLoading, setTerminateLoading] = useState(false)
   const [terminateError, setTerminateError] = useState<string | null>(null)
@@ -136,10 +142,9 @@ export function PersonnelDetail({
   const [editingInstaller, setEditingInstaller] = useState(false)
   const [installerLoading, setInstallerLoading] = useState(false)
 
-  const inputClass =
-    'w-full rounded-md bg-zinc-200/50 dark:bg-white/5 border border-zinc-300 dark:border-gray-700 text-zinc-900 dark:text-white placeholder:text-zinc-500 dark:placeholder:text-gray-500 px-3 py-2 text-sm focus:ring-1 focus:ring-[#C27E00]'
-  const selectClass = 'w-full rounded-md bg-zinc-200 dark:bg-gray-900 border border-zinc-300 dark:border-gray-700 text-white px-3 py-2 text-sm focus:ring-1 focus:ring-[#C27E00] focus:outline-none [&>option]:bg-zinc-200 dark:bg-gray-900 [&>option]:text-white'
-  const labelClass = 'block text-sm text-zinc-500 dark:text-gray-400 mb-1'
+  const inputClass = formInputClassName
+  const selectClass = formSelectClassName
+  const labelClass = formLabelClassName
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -216,34 +221,62 @@ export function PersonnelDetail({
           {section('Professional', (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className={labelClass}>Position</label>
-                <input name="position" className={inputClass} defaultValue={String(person.position ?? '')} />
-              </div>
-              <div>
-                <label className={labelClass}>Role</label>
-                <select name="platform_role" className={selectClass} style={{ colorScheme: 'light' }} defaultValue={String(person.platform_role ?? '')}>
-                  {PLATFORM_ROLES.map((r) => <option key={r.value || 'empty'} value={r.value}>{r.label}</option>)}
+                <label className={labelClass}>Dealer</label>
+                <select
+                  name="dealer_id"
+                  className={selectClass}
+                  value={dealerId}
+                  onChange={(e) => setDealerId(e.target.value)}
+                >
+                  <option value="">Platform</option>
+                  {dealers.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
                 </select>
               </div>
+              {!dealerId ? (
+                <div className="md:col-span-2">
+                  <OrgStructureFields
+                    key={`org-${String(person.department_id ?? '')}-${String(person.org_role_id ?? '')}`}
+                    tree={orgTree}
+                    isPlatform
+                    layout="row"
+                    initialDepartmentId={person.department_id as string | null}
+                    initialOrgRoleId={person.org_role_id as string | null}
+                    selectClass={selectClass}
+                    labelClass={labelClass}
+                  />
+                </div>
+              ) : null}
+              <div>
+                <label className={labelClass}>Platform access role</label>
+                <select name="platform_role" className={selectClass} defaultValue={String(person.platform_role ?? '')}>
+                  {PLATFORM_ROLES.map((r) => <option key={r.value || 'empty'} value={r.value}>{r.label}</option>)}
+                </select>
+                <p className="text-xs text-zinc-500 dark:text-gray-500 mt-1">System login permission (separate from job title).</p>
+              </div>
+              {!dealerId ? (
+                <div>
+                  <label className={labelClass}>Additional title note</label>
+                  <input name="position" className={inputClass} defaultValue={String(person.position ?? '')} placeholder="Optional" />
+                  <p className="text-xs text-zinc-500 dark:text-gray-500 mt-1">Free-text note only; use Job Title above for org structure.</p>
+                </div>
+              ) : (
+                <div>
+                  <label className={labelClass}>Position / title</label>
+                  <input name="position" className={inputClass} defaultValue={String(person.position ?? '')} placeholder="e.g. Sales Representative" />
+                </div>
+              )}
               <div>
                 <label className={labelClass}>Region</label>
-                <select name="region_id" className={selectClass} style={{ colorScheme: 'light' }} defaultValue={String(person.region_id ?? '')}>
+                <select name="region_id" className={selectClass} defaultValue={String(person.region_id ?? '')}>
                   <option value="">—</option>
                   {regions.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
                 </select>
               </div>
               <div>
                 <label className={labelClass}>Assigned Manager</label>
-                <select name="assigned_manager_id" className={selectClass} style={{ colorScheme: 'light' }} defaultValue={String(person.assigned_manager_id ?? '')}>
+                <select name="assigned_manager_id" className={selectClass} defaultValue={String(person.assigned_manager_id ?? '')}>
                   <option value="">—</option>
                   {managers.map((m) => <option key={m.id} value={m.id}>{m.full_name ?? 'Unnamed'}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className={labelClass}>Dealer</label>
-                <select name="dealer_id" className={selectClass} style={{ colorScheme: 'light' }} defaultValue={String(person.dealer_id ?? '')}>
-                  <option value="">Platform</option>
-                  {dealers.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
                 </select>
               </div>
               <div>
@@ -252,31 +285,31 @@ export function PersonnelDetail({
               </div>
               <div>
                 <label className={labelClass}>Contract Type</label>
-                <select name="contract_type" className={selectClass} style={{ colorScheme: 'light' }} defaultValue={String(person.contract_type ?? '')}>
+                <select name="contract_type" className={selectClass} defaultValue={String(person.contract_type ?? '')}>
                   {CONTRACT_TYPES.map((c) => <option key={c.value || 'empty'} value={c.value}>{c.label}</option>)}
                 </select>
               </div>
               <div>
                 <label className={labelClass}>Work Arrangement</label>
-                <select name="work_arrangement" className={selectClass} style={{ colorScheme: 'light' }} defaultValue={String(person.work_arrangement ?? '')}>
+                <select name="work_arrangement" className={selectClass} defaultValue={String(person.work_arrangement ?? '')}>
                   {WORK_ARRANGEMENTS.map((w) => <option key={w.value || 'empty'} value={w.value}>{w.label}</option>)}
                 </select>
               </div>
               <div>
                 <label className={labelClass}>Province</label>
-                <select name="province" className={selectClass} style={{ colorScheme: 'light' }} defaultValue={String(person.province ?? '')}>
+                <select name="province" className={selectClass} defaultValue={String(person.province ?? '')}>
                   {PROVINCES.map((p) => <option key={p.value || 'empty'} value={p.value}>{p.label}</option>)}
                 </select>
               </div>
               <div>
                 <label className={labelClass}>Worker Type</label>
-                <select name="worker_type" className={selectClass} style={{ colorScheme: 'light' }} defaultValue={String(person.worker_type ?? '')}>
+                <select name="worker_type" className={selectClass} defaultValue={String(person.worker_type ?? '')}>
                   {WORKER_TYPES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
                 </select>
               </div>
               <div>
                 <label className={labelClass}>Status</label>
-                <select name="status" className={selectClass} style={{ colorScheme: 'light' }} defaultValue={String(person.status ?? '')}>
+                <select name="status" className={selectClass} defaultValue={String(person.status ?? '')}>
                   {STATUSES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
                 </select>
               </div>
@@ -291,26 +324,26 @@ export function PersonnelDetail({
               </div>
               <div>
                 <label className={labelClass}>SIN Verified</label>
-                <select name="sin_verified" className={selectClass} style={{ colorScheme: 'light' }} defaultValue={person.sin_verified === true ? 'true' : 'false'}>
+                <select name="sin_verified" className={selectClass} defaultValue={person.sin_verified === true ? 'true' : 'false'}>
                   <option value="false">No</option>
                   <option value="true">Yes</option>
                 </select>
               </div>
               <div>
                 <label className={labelClass}>Work Permit / Visa Status</label>
-                <select name="work_permit_status" className={selectClass} style={{ colorScheme: 'light' }} defaultValue={String(person.work_permit_status ?? '')}>
+                <select name="work_permit_status" className={selectClass} defaultValue={String(person.work_permit_status ?? '')}>
                   {STATUS_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
                 </select>
               </div>
               <div>
                 <label className={labelClass}>Driver License</label>
-                <select name="driver_license" className={selectClass} style={{ colorScheme: 'light' }} defaultValue={String(person.driver_license ?? '')}>
+                <select name="driver_license" className={selectClass} defaultValue={String(person.driver_license ?? '')}>
                   {STATUS_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
                 </select>
               </div>
               <div>
                 <label className={labelClass}>Background Check Status</label>
-                <select name="background_check_status" className={selectClass} style={{ colorScheme: 'light' }} defaultValue={String(person.background_check_status ?? '')}>
+                <select name="background_check_status" className={selectClass} defaultValue={String(person.background_check_status ?? '')}>
                   {STATUS_OPTIONS.filter(o => o.value !== 'Valid').map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
                 </select>
               </div>
@@ -333,13 +366,13 @@ export function PersonnelDetail({
               </div>
               <div>
                 <label className={labelClass}>Type</label>
-                <select name="salary_type" className={selectClass} style={{ colorScheme: 'light' }} defaultValue={String(person.salary_type ?? '')}>
+                <select name="salary_type" className={selectClass} defaultValue={String(person.salary_type ?? '')}>
                   {SALARY_TYPES.map((s) => <option key={s.value || 'empty'} value={s.value}>{s.label}</option>)}
                 </select>
               </div>
               <div>
                 <label className={labelClass}>Currency</label>
-                <select name="salary_currency" className={selectClass} style={{ colorScheme: 'light' }} defaultValue={String(person.salary_currency ?? 'CAD')}>
+                <select name="salary_currency" className={selectClass} defaultValue={String(person.salary_currency ?? 'CAD')}>
                   <option value="CAD">CAD</option>
                   <option value="USD">USD</option>
                 </select>
@@ -405,7 +438,7 @@ export function PersonnelDetail({
                   </div>
                   <div>
                     <label className={labelClass}>Status</label>
-                    <select name="cert_status" className={selectClass} style={{ colorScheme: 'light' }} defaultValue="awaiting">
+                    <select name="cert_status" className={selectClass} defaultValue="awaiting">
                       {CERTIFICATION_STATUSES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
                     </select>
                   </div>
@@ -437,8 +470,7 @@ export function PersonnelDetail({
                         await updateCertificationStatus(c.id as string, newStatus, person.id as string)
                         router.refresh()
                       }}
-                      className="ml-2 text-xs rounded px-2 py-0.5 bg-gray-800 text-zinc-600 dark:text-gray-300 border border-zinc-300 dark:border-gray-600 focus:ring-1 focus:ring-[#C27E00] [&>option]:bg-zinc-200 dark:bg-gray-900"
-                      style={{ colorScheme: 'light' }}
+                      className={`ml-2 text-xs rounded px-2 py-0.5 border border-zinc-300 dark:border-gray-600 focus:ring-1 focus:ring-[#C27E00] ${formSelectClassName}`}
                     >
                       {CERTIFICATION_STATUSES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
                     </select>
@@ -491,7 +523,7 @@ export function PersonnelDetail({
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div>
                       <label className={labelClass}>Experience Level</label>
-                      <select name="exp_level" className={selectClass} style={{ colorScheme: 'light' }} defaultValue={String(installerProfile.experience_level ?? '')}>
+                      <select name="exp_level" className={selectClass} defaultValue={String(installerProfile.experience_level ?? '')}>
                         <option value="">—</option>
                         <option value="entry">Entry</option>
                         <option value="intermediate">Intermediate</option>
@@ -501,7 +533,7 @@ export function PersonnelDetail({
                     </div>
                     <div>
                       <label className={labelClass}>Status</label>
-                      <select name="inst_status" className={selectClass} style={{ colorScheme: 'light' }} defaultValue={String(installerProfile.installer_status ?? 'active')}>
+                      <select name="inst_status" className={selectClass} defaultValue={String(installerProfile.installer_status ?? 'active')}>
                         <option value="active">Active</option>
                         <option value="onboarding">Onboarding</option>
                         <option value="suspended">Suspended</option>
@@ -562,6 +594,8 @@ export function PersonnelDetail({
   const salaryDisplay = person.salary_amount != null
     ? `${person.salary_currency || 'CAD'} ${Number(person.salary_amount).toLocaleString()}${person.salary_type ? ` (${person.salary_type})` : ''}`
     : '—'
+
+  const orgDisplay = orgRoleLabel(person, orgTree)
 
   return (
     <div className="space-y-6">
@@ -691,8 +725,17 @@ export function PersonnelDetail({
 
         {section('Professional', (
           <div className="space-y-2 text-sm">
-            <p><span className="text-zinc-500 dark:text-gray-500">Position:</span> {String(person.position ?? '—')}</p>
-            <p><span className="text-zinc-500 dark:text-gray-500">Role:</span> {String(PLATFORM_ROLE_LABELS[person.platform_role as string] ?? person.platform_role ?? '—')}</p>
+            {!person.dealer_id ? (
+              <>
+                <p><span className="text-zinc-500 dark:text-gray-500">Main Department:</span> {orgDisplay.mainDepartment}</p>
+                <p><span className="text-zinc-500 dark:text-gray-500">Sub-department:</span> {orgDisplay.subDepartment}</p>
+                <p><span className="text-zinc-500 dark:text-gray-500">Job Title:</span> {orgDisplay.jobTitle}</p>
+              </>
+            ) : null}
+            {person.position ? (
+              <p><span className="text-zinc-500 dark:text-gray-500">Additional title note:</span> {String(person.position)}</p>
+            ) : null}
+            <p><span className="text-zinc-500 dark:text-gray-500">Platform access role:</span> {String(PLATFORM_ROLE_LABELS[person.platform_role as string] ?? person.platform_role ?? '—')}</p>
             <p><span className="text-zinc-500 dark:text-gray-500">Region:</span> {String((person.hr_regions as { name?: string })?.name ?? '—')}</p>
             <p><span className="text-zinc-500 dark:text-gray-500">Dealer:</span> {String((person.dealers as { name?: string })?.name ?? 'Platform')}</p>
             <p><span className="text-zinc-500 dark:text-gray-500">Manager:</span> {String((person as { _managerName?: string })._managerName ?? '—')}</p>
@@ -770,7 +813,7 @@ export function PersonnelDetail({
                   </div>
                   <div>
                     <label className={labelClass}>Status</label>
-                    <select name="cert_status" className={selectClass} style={{ colorScheme: 'light' }} defaultValue="awaiting">
+                    <select name="cert_status" className={selectClass} defaultValue="awaiting">
                       {CERTIFICATION_STATUSES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
                     </select>
                   </div>
@@ -802,8 +845,7 @@ export function PersonnelDetail({
                         await updateCertificationStatus(c.id as string, newStatus, person.id as string)
                         router.refresh()
                       }}
-                      className="ml-2 text-xs rounded px-2 py-0.5 bg-gray-800 text-zinc-600 dark:text-gray-300 border border-zinc-300 dark:border-gray-600 focus:ring-1 focus:ring-[#C27E00] [&>option]:bg-zinc-200 dark:bg-gray-900"
-                      style={{ colorScheme: 'light' }}
+                      className={`ml-2 text-xs rounded px-2 py-0.5 border border-zinc-300 dark:border-gray-600 focus:ring-1 focus:ring-[#C27E00] ${formSelectClassName}`}
                     >
                       {CERTIFICATION_STATUSES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
                     </select>
@@ -856,7 +898,7 @@ export function PersonnelDetail({
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div>
                       <label className={labelClass}>Experience Level</label>
-                      <select name="exp_level" className={selectClass} style={{ colorScheme: 'light' }} defaultValue={String(installerProfile.experience_level ?? '')}>
+                      <select name="exp_level" className={selectClass} defaultValue={String(installerProfile.experience_level ?? '')}>
                         <option value="">—</option>
                         <option value="entry">Entry</option>
                         <option value="intermediate">Intermediate</option>
@@ -866,7 +908,7 @@ export function PersonnelDetail({
                     </div>
                     <div>
                       <label className={labelClass}>Status</label>
-                      <select name="inst_status" className={selectClass} style={{ colorScheme: 'light' }} defaultValue={String(installerProfile.installer_status ?? 'active')}>
+                      <select name="inst_status" className={selectClass} defaultValue={String(installerProfile.installer_status ?? 'active')}>
                         <option value="active">Active</option>
                         <option value="onboarding">Onboarding</option>
                         <option value="suspended">Suspended</option>

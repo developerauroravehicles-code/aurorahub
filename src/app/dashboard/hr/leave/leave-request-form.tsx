@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createLeaveRequest } from './actions'
+import { formSelectClassName } from '@/lib/form-field-styles'
 
 const LEAVE_TYPES = [
   { value: 'vacation', label: 'Vacation' },
@@ -57,8 +58,7 @@ export function LeaveRequestForm({
           <select
             name="profile_id"
             required
-            className="w-full rounded-md bg-zinc-200 dark:bg-gray-900 border border-zinc-300 dark:border-gray-700 text-white px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#C27E00] [&>option]:bg-zinc-200 dark:bg-gray-900 [&>option]:text-white"
-            style={{ colorScheme: 'light' }}
+            className={formSelectClassName}
           >
             <option value="">Select employee</option>
             {employees.map((emp) => (
@@ -74,8 +74,7 @@ export function LeaveRequestForm({
             <select
               name="leave_type"
               required
-              className="w-full rounded-md bg-zinc-200 dark:bg-gray-900 border border-zinc-300 dark:border-gray-700 text-white px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#C27E00] [&>option]:bg-zinc-200 dark:bg-gray-900 [&>option]:text-white"
-              style={{ colorScheme: 'light' }}
+              className={formSelectClassName}
             >
               {LEAVE_TYPES.map((t) => (
                 <option key={t.value} value={t.value}>

@@ -5,6 +5,7 @@ import { createClient } from '@supabase/supabase-js'
 import type { SystemData, Profile } from '@/types/system-management'
 import { normalizeEmail } from '@/lib/email-normalize'
 import { parseWarrantyYearsFromForm } from '@/lib/warranty-period'
+import { parsePersonnelOrgFields } from '@/lib/hr-org-structure'
 
 // Helper to get a fresh admin client every time with explicit schema
 function getAdminClient() {
@@ -60,15 +61,55 @@ export async function getSystemData(): Promise<SystemData> {
     .select('*, dealers(name, code)')
     .order('created_at', { ascending: false })
 
+  const profileIds = (rawProfiles || []).map((p) => String(p.id))
+  const personnelByProfileId = new Map<string, Record<string, unknown>>()
+  if (profileIds.length > 0) {
+    const { data: personnelRows } = await supabaseAdmin
+      .from('personnel')
+      .select(`
+        profile_id,
+        department_id,
+        org_role_id,
+        hr_departments(name, parent_id),
+        hr_org_roles(name)
+      `)
+      .in('profile_id', profileIds)
+
+    for (const row of personnelRows || []) {
+      personnelByProfileId.set(String(row.profile_id), row as Record<string, unknown>)
+    }
+  }
+
   // Fetch platform personnel WITHOUT profile (created by HR, no login yet)
   const { data: personnelOnly } = await supabaseAdmin
     .from('personnel')
-    .select('id, full_name, phone, email, platform_role, created_at')
+    .select(`
+      id,
+      full_name,
+      phone,
+      email,
+      platform_role,
+      created_at,
+      department_id,
+      org_role_id,
+      hr_departments(name, parent_id),
+      hr_org_roles(name)
+    `)
     .is('dealer_id', null)
     .is('profile_id', null)
     .order('created_at', { ascending: false })
 
-  const merged: Array<Record<string, unknown>> = [...(rawProfiles || [])]
+  const merged: Array<Record<string, unknown>> = (rawProfiles || []).map((p) => {
+    const personnel = personnelByProfileId.get(String(p.id))
+    if (!personnel) return p as Record<string, unknown>
+    return {
+      ...p,
+      department_id: personnel.department_id,
+      org_role_id: personnel.org_role_id,
+      hr_departments: personnel.hr_departments,
+      hr_org_roles: personnel.hr_org_roles,
+    }
+  })
   ;(personnelOnly || []).forEach((p) => {
     merged.push({
       id: `personnel-${p.id}`,
@@ -80,6 +121,10 @@ export async function getSystemData(): Promise<SystemData> {
       dealers_name: null,
       dealers_code: null,
       created_at: p.created_at,
+      department_id: p.department_id,
+      org_role_id: p.org_role_id,
+      hr_departments: p.hr_departments,
+      hr_org_roles: p.hr_org_roles,
       _source: 'personnel',
       _personnelId: p.id,
       _personnelEmail: p.email,
@@ -254,6 +299,37 @@ export async function createUser(prevState: ActionState, formData: FormData) {
 
   if (!email || !password || !role) return { error: 'Missing required fields' }
 
+  // Resolve dealer before creating auth user
+  let dealerId: string | null = null
+  const normalizedCode = dealerCode?.trim().toUpperCase()
+
+  if (dealerCode && normalizedCode === 'HQ') {
+    dealerId = null
+  } else if (dealerCode) {
+    const { data: dealer } = await supabaseAdmin
+      .from('dealers')
+      .select('id')
+      .ilike('code', dealerCode.trim())
+      .single()
+    if (dealer) dealerId = dealer.id
+    else return { error: 'Dealer code not found.' }
+  }
+
+  const orgFields = parsePersonnelOrgFields(
+    {
+      dealer_id: dealerId ?? undefined,
+      department_id: formData.get('department_id') as string | undefined,
+      org_role_id: formData.get('org_role_id') as string | undefined,
+    },
+    true
+  )
+  if ('error' in orgFields) return { error: orgFields.error }
+
+  const inventoryManagerValidation = await validateInventoryManagerRoleAssignment(role, dealerId)
+  if (inventoryManagerValidation.error) {
+    return { error: inventoryManagerValidation.error }
+  }
+
   // 1. Create Auth User
   const { data: userData, error: authError } = await supabaseAdmin.auth.admin.createUser({
     email,
@@ -271,32 +347,7 @@ export async function createUser(prevState: ActionState, formData: FormData) {
   }
   if (!userData.user) return { error: 'Failed to create user' }
 
-  // 2. Find Dealer ID (or Platform: HQ = dealer_id null)
-  let dealerId: string | null = null
-  const normalizedCode = dealerCode?.trim().toUpperCase()
-
-  if (dealerCode && normalizedCode === 'HQ') {
-    dealerId = null
-  } else if (dealerCode) {
-    const { data: dealer } = await supabaseAdmin
-      .from('dealers')
-      .select('id')
-      .ilike('code', dealerCode.trim())
-      .single()
-    if (dealer) dealerId = dealer.id
-    else {
-      await supabaseAdmin.auth.admin.deleteUser(userData.user.id)
-      return { error: 'Dealer code not found. User created but rolled back.' }
-    }
-  }
-
-  const inventoryManagerValidation = await validateInventoryManagerRoleAssignment(role, dealerId)
-  if (inventoryManagerValidation.error) {
-    await supabaseAdmin.auth.admin.deleteUser(userData.user.id)
-    return { error: inventoryManagerValidation.error }
-  }
-
-  // 3. Create Profile
+  // 2. Create Profile
   const { error: profileError } = await supabaseAdmin.from('profiles').insert({
     id: userData.user.id,
     role: role as UserRole,
@@ -330,6 +381,8 @@ export async function createUser(prevState: ActionState, formData: FormData) {
         phone: phone || null,
         email: email,
         platform_role: platformRole,
+        department_id: orgFields.department_id,
+        org_role_id: orgFields.org_role_id,
       })
       if (personnelError) {
         console.error('Personnel sync failed (user created):', personnelError)
@@ -425,13 +478,21 @@ export async function getProfileForEdit(userId: string) {
 
   if (profileError || !profile) return { error: 'Profile not found', profile: null }
 
+  const { data: personnel } = await supabaseAdmin
+    .from('personnel')
+    .select('department_id, org_role_id')
+    .eq('profile_id', userId)
+    .maybeSingle()
+
   const { data: authUser, error: authError } = await supabaseAdmin.auth.admin.getUserById(userId)
   const email = authError ? undefined : authUser?.user?.email
 
   return {
     profile: {
       ...profile,
-      email
+      email,
+      department_id: personnel?.department_id ?? null,
+      org_role_id: personnel?.org_role_id ?? null,
     },
     error: null
   }
@@ -465,6 +526,16 @@ export async function updateUser(prevState: ActionState, formData: FormData) {
     if (dealer) dealerId = dealer.id
     else return { error: 'Dealer code not found.' }
   }
+
+  const orgFields = parsePersonnelOrgFields(
+    {
+      dealer_id: dealerId ?? undefined,
+      department_id: formData.get('department_id') as string | undefined,
+      org_role_id: formData.get('org_role_id') as string | undefined,
+    },
+    false
+  )
+  if ('error' in orgFields) return { error: orgFields.error }
 
   const inventoryManagerValidation = await validateInventoryManagerRoleAssignment(role, dealerId)
   if (inventoryManagerValidation.error) {
@@ -505,6 +576,8 @@ export async function updateUser(prevState: ActionState, formData: FormData) {
       phone: phone?.trim() || null,
       platform_role: platformRole,
       dealer_id: dealerId,
+      department_id: orgFields.department_id,
+      org_role_id: orgFields.org_role_id,
       updated_at: new Date().toISOString(),
     })
     .eq('profile_id', userId)

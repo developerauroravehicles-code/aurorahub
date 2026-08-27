@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { normalizeEmail } from '@/lib/email-normalize'
+import { parsePersonnelOrgFields } from '@/lib/hr-org-structure'
 
 export async function createPersonnel(formData: Record<string, string | undefined>) {
   const supabase = await createClient()
@@ -15,6 +16,9 @@ export async function createPersonnel(formData: Record<string, string | undefine
   }
 
   const workerId = formData.worker_id || `WRK-${Date.now().toString(36).toUpperCase()}`
+  const orgFields = parsePersonnelOrgFields(formData, true)
+  if ('error' in orgFields) return { error: orgFields.error }
+
   const { data: inserted, error } = await supabase.from('personnel').insert({
     worker_id: workerId,
     worker_type: formData.worker_type || 'employee',
@@ -33,7 +37,8 @@ export async function createPersonnel(formData: Record<string, string | undefine
     driver_license: formData.driver_license,
     background_check_status: formData.background_check_status,
     position: formData.position,
-    department_id: formData.department_id || null,
+    department_id: orgFields.department_id,
+    org_role_id: orgFields.org_role_id,
     platform_role: formData.platform_role || null,
     region_id: formData.region_id || null,
     assigned_manager_id: formData.assigned_manager_id || null,
@@ -41,7 +46,7 @@ export async function createPersonnel(formData: Record<string, string | undefine
     contract_type: formData.contract_type || null,
     work_arrangement: formData.work_arrangement || null,
     province: formData.province || null,
-    dealer_id: formData.dealer_id || null,
+    dealer_id: orgFields.dealer_id,
     salary_amount: formData.salary_amount ? parseFloat(formData.salary_amount) : null,
     salary_currency: formData.salary_currency || null,
     salary_type: formData.salary_type || null,
@@ -92,6 +97,9 @@ export async function updatePersonnel(id: string, formData: Record<string, strin
     return { error: 'Use the End employment action to terminate this person.' }
   }
 
+  const orgFields = parsePersonnelOrgFields(formData, false)
+  if ('error' in orgFields) return { error: orgFields.error }
+
   const { error } = await supabase.from('personnel').update({
     worker_type: formData.worker_type,
     worker_classification: formData.worker_classification,
@@ -109,7 +117,8 @@ export async function updatePersonnel(id: string, formData: Record<string, strin
     driver_license: formData.driver_license,
     background_check_status: formData.background_check_status,
     position: formData.position,
-    department_id: formData.department_id || null,
+    department_id: orgFields.department_id,
+    org_role_id: orgFields.org_role_id,
     platform_role: formData.platform_role || null,
     region_id: formData.region_id || null,
     assigned_manager_id: formData.assigned_manager_id || null,
@@ -117,7 +126,7 @@ export async function updatePersonnel(id: string, formData: Record<string, strin
     contract_type: formData.contract_type || null,
     work_arrangement: formData.work_arrangement || null,
     province: formData.province || null,
-    dealer_id: formData.dealer_id || null,
+    dealer_id: orgFields.dealer_id,
     salary_amount: formData.salary_amount ? parseFloat(formData.salary_amount) : null,
     salary_currency: formData.salary_currency || null,
     salary_type: formData.salary_type || null,

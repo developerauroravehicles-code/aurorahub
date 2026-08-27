@@ -4,6 +4,9 @@ import { useState } from 'react'
 import { createPersonnel } from './actions'
 import { EmailInput } from '@/components/email-input'
 import { useRouter } from 'next/navigation'
+import { OrgStructureFields } from './org-structure-fields'
+import type { OrgDepartmentTree } from '@/lib/hr-org-structure'
+import { formInputClassName, formLabelClassName, formSelectClassName } from '@/lib/form-field-styles'
 
 const WORKER_TYPES = [
   { value: 'employee', label: 'Employee' },
@@ -68,16 +71,19 @@ export function PersonnelForm({
   regions,
   dealers,
   managers,
+  orgTree,
   initialData,
 }: {
   regions: { id: string; name: string }[]
   dealers: { id: string; name: string }[]
   managers: { id: string; full_name: string | null }[]
+  orgTree: OrgDepartmentTree
   initialData?: Record<string, unknown>
 }) {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [dealerId, setDealerId] = useState('')
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -96,10 +102,9 @@ export function PersonnelForm({
     else router.push('/dashboard/hr/personnel')
   }
 
-  const inputClass =
-    'w-full rounded-md bg-zinc-200/50 dark:bg-white/5 border border-zinc-300 dark:border-gray-700 text-zinc-900 dark:text-white placeholder:text-zinc-500 dark:placeholder:text-gray-500 px-3 py-2 text-sm focus:ring-1 focus:ring-[#C27E00]'
-  const selectClass = 'w-full rounded-md bg-zinc-200 dark:bg-gray-900 border border-zinc-300 dark:border-gray-700 text-white px-3 py-2 text-sm focus:ring-1 focus:ring-[#C27E00] focus:outline-none [&>option]:bg-zinc-200 dark:bg-gray-900 [&>option]:text-white'
-  const labelClass = 'block text-sm text-zinc-500 dark:text-gray-400 mb-1'
+  const inputClass = formInputClassName
+  const selectClass = formSelectClassName
+  const labelClass = formLabelClassName
 
   return (
     <form onSubmit={handleSubmit} className="space-y-8">
@@ -117,13 +122,13 @@ export function PersonnelForm({
           </div>
           <div>
             <label className={labelClass}>Worker Type</label>
-            <select name="worker_type" className={selectClass} defaultValue="employee" style={{ colorScheme: 'light' }}>
+            <select name="worker_type" className={selectClass} defaultValue="employee">
               {WORKER_TYPES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
             </select>
           </div>
           <div>
             <label className={labelClass}>Status</label>
-            <select name="status" className={selectClass} defaultValue="onboarding" style={{ colorScheme: 'light' }}>
+            <select name="status" className={selectClass} defaultValue="onboarding">
               {STATUSES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
             </select>
           </div>
@@ -160,14 +165,14 @@ export function PersonnelForm({
           </div>
           <div>
             <label className={labelClass}>SIN Verified</label>
-            <select name="sin_verified" className={selectClass} style={{ colorScheme: 'light' }}>
+            <select name="sin_verified" className={selectClass}>
               <option value="false">No</option>
               <option value="true">Yes</option>
             </select>
           </div>
           <div>
             <label className={labelClass}>Work Permit / Visa Status</label>
-            <select name="work_permit_status" className={selectClass} style={{ colorScheme: 'light' }}>
+            <select name="work_permit_status" className={selectClass}>
               <option value="">—</option>
               <option value="N/A">N/A</option>
               <option value="OK">OK</option>
@@ -178,7 +183,7 @@ export function PersonnelForm({
           </div>
           <div>
             <label className={labelClass}>Driver License</label>
-            <select name="driver_license" className={selectClass} style={{ colorScheme: 'light' }}>
+            <select name="driver_license" className={selectClass}>
               <option value="">—</option>
               <option value="N/A">N/A</option>
               <option value="OK">OK</option>
@@ -189,7 +194,7 @@ export function PersonnelForm({
           </div>
           <div>
             <label className={labelClass}>Background Check Status</label>
-            <select name="background_check_status" className={selectClass} style={{ colorScheme: 'light' }}>
+            <select name="background_check_status" className={selectClass}>
               <option value="">—</option>
               <option value="N/A">N/A</option>
               <option value="OK">OK</option>
@@ -205,25 +210,54 @@ export function PersonnelForm({
         <h2 className="text-lg font-semibold text-zinc-900 dark:text-white mb-4">Professional Information</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className={labelClass}>Position</label>
-            <input name="position" className={inputClass} />
+            <label className={labelClass}>Dealer (for dealer staff / installers)</label>
+            <select
+              name="dealer_id"
+              className={selectClass}
+              value={dealerId}
+              onChange={(e) => setDealerId(e.target.value)}
+            >
+              <option value="">Platform</option>
+              {dealers.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
+            </select>
+          </div>
+          <div className="md:col-span-2">
+            <OrgStructureFields
+              tree={orgTree}
+              isPlatform={!dealerId}
+              layout="row"
+              selectClass={selectClass}
+              labelClass={labelClass}
+              requireOrgFields
+            />
           </div>
           <div>
-            <label className={labelClass}>Role</label>
-            <select name="platform_role" className={selectClass} style={{ colorScheme: 'light' }}>
+            <label className={labelClass}>Platform access role</label>
+            <select name="platform_role" className={selectClass}>
               {PLATFORM_ROLES.map((r) => <option key={r.value || 'empty'} value={r.value}>{r.label}</option>)}
             </select>
           </div>
+          {!dealerId ? (
+            <div>
+              <label className={labelClass}>Additional title note</label>
+              <input name="position" className={inputClass} placeholder="Optional" />
+            </div>
+          ) : (
+            <div>
+              <label className={labelClass}>Position / title</label>
+              <input name="position" className={inputClass} placeholder="e.g. Sales Representative" />
+            </div>
+          )}
           <div>
             <label className={labelClass}>Region</label>
-            <select name="region_id" className={selectClass} style={{ colorScheme: 'light' }}>
+            <select name="region_id" className={selectClass}>
               <option value="">—</option>
               {regions.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
             </select>
           </div>
           <div>
             <label className={labelClass}>Assigned Manager</label>
-            <select name="assigned_manager_id" className={selectClass} style={{ colorScheme: 'light' }}>
+            <select name="assigned_manager_id" className={selectClass}>
               <option value="">—</option>
               {managers.map((m) => <option key={m.id} value={m.id}>{m.full_name ?? 'Unnamed'}</option>)}
             </select>
@@ -234,29 +268,22 @@ export function PersonnelForm({
           </div>
           <div>
             <label className={labelClass}>Contract Type</label>
-            <select name="contract_type" className={selectClass} style={{ colorScheme: 'light' }}>
+            <select name="contract_type" className={selectClass}>
               <option value="">—</option>
               {CONTRACT_TYPES.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
             </select>
           </div>
           <div>
             <label className={labelClass}>Work Arrangement</label>
-            <select name="work_arrangement" className={selectClass} style={{ colorScheme: 'light' }}>
+            <select name="work_arrangement" className={selectClass}>
               {WORK_ARRANGEMENTS.map((w) => <option key={w.value || 'empty'} value={w.value}>{w.label}</option>)}
             </select>
           </div>
           <div>
             <label className={labelClass}>Province</label>
-            <select name="province" className={selectClass} style={{ colorScheme: 'light' }}>
+            <select name="province" className={selectClass}>
               <option value="">—</option>
               {PROVINCES.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
-            </select>
-          </div>
-          <div>
-            <label className={labelClass}>Dealer (for dealer staff / installers)</label>
-            <select name="dealer_id" className={selectClass} style={{ colorScheme: 'light' }}>
-              <option value="">Platform</option>
-              {dealers.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
             </select>
           </div>
         </div>
@@ -272,13 +299,13 @@ export function PersonnelForm({
           </div>
           <div>
             <label className={labelClass}>Type</label>
-            <select name="salary_type" className={selectClass} style={{ colorScheme: 'light' }}>
+            <select name="salary_type" className={selectClass}>
               {SALARY_TYPES.map((s) => <option key={s.value || 'empty'} value={s.value}>{s.label}</option>)}
             </select>
           </div>
           <div>
             <label className={labelClass}>Currency</label>
-            <select name="salary_currency" className={selectClass} style={{ colorScheme: 'light' }}>
+            <select name="salary_currency" className={selectClass}>
               <option value="CAD">CAD</option>
               <option value="USD">USD</option>
             </select>

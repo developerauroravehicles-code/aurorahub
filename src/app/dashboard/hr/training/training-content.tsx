@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { formSelectClassName } from '@/lib/form-field-styles'
 import {
   createTrainingProgram,
   updateTrainingProgram,
@@ -374,7 +375,7 @@ function ProgramForm({
       </div>
       <div>
         <label className="block text-xs text-zinc-500 dark:text-gray-400 mb-1">Category</label>
-        <select name="category" defaultValue={program?.category ?? ''} className="w-full rounded bg-zinc-200 dark:bg-gray-900 border border-zinc-300 dark:border-gray-700 px-3 py-2 text-zinc-900 dark:text-white text-sm [&>option]:bg-zinc-200 dark:bg-gray-900">
+        <select name="category" defaultValue={program?.category ?? ''} className={formSelectClassName}>
           <option value="">—</option>
           {PROGRAM_CATEGORIES.map((cat) => (
             <option key={cat} value={cat}>
@@ -433,7 +434,7 @@ function CompletionForm({
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         <div>
           <label className="block text-xs text-zinc-500 dark:text-gray-400 mb-1">Personnel</label>
-          <select name="personnel_id" required className="w-full rounded bg-zinc-200 dark:bg-gray-900 border border-zinc-300 dark:border-gray-700 px-3 py-2 text-zinc-900 dark:text-white text-sm [&>option]:bg-zinc-200 dark:bg-gray-900" style={{ colorScheme: 'light' }}>
+          <select name="personnel_id" required className={formSelectClassName}>
             <option value="">Select...</option>
             {personnel.map((p) => (
               <option key={p.id} value={p.id}>
@@ -444,7 +445,7 @@ function CompletionForm({
         </div>
         <div>
           <label className="block text-xs text-zinc-500 dark:text-gray-400 mb-1">Program</label>
-          <select name="program_id" required className="w-full rounded bg-zinc-200 dark:bg-gray-900 border border-zinc-300 dark:border-gray-700 px-3 py-2 text-zinc-900 dark:text-white text-sm [&>option]:bg-zinc-200 dark:bg-gray-900" style={{ colorScheme: 'light' }}>
+          <select name="program_id" required className={formSelectClassName}>
             <option value="">Select...</option>
             {programs.map((p) => (
               <option key={p.id} value={p.id}>
@@ -504,7 +505,7 @@ function CertificationForm({
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         <div>
           <label className="block text-xs text-zinc-500 dark:text-gray-400 mb-1">Personnel</label>
-          <select name="personnel_id" required className="w-full rounded bg-zinc-200 dark:bg-gray-900 border border-zinc-300 dark:border-gray-700 px-3 py-2 text-zinc-900 dark:text-white text-sm [&>option]:bg-zinc-200 dark:bg-gray-900" style={{ colorScheme: 'light' }}>
+          <select name="personnel_id" required className={formSelectClassName}>
             <option value="">Select...</option>
             {personnel.map((p) => (
               <option key={p.id} value={p.id}>
@@ -515,7 +516,7 @@ function CertificationForm({
         </div>
         <div>
           <label className="block text-xs text-zinc-500 dark:text-gray-400 mb-1">Type</label>
-          <select name="certification_type" className="w-full rounded bg-zinc-200 dark:bg-gray-900 border border-zinc-300 dark:border-gray-700 px-3 py-2 text-zinc-900 dark:text-white text-sm [&>option]:bg-zinc-200 dark:bg-gray-900" style={{ colorScheme: 'light' }}>
+          <select name="certification_type" className={formSelectClassName}>
             {Object.entries(CERT_TYPES).map(([v, l]) => (
               <option key={v} value={v}>
                 {l}
@@ -541,7 +542,7 @@ function CertificationForm({
         </div>
         <div>
           <label className="block text-xs text-zinc-500 dark:text-gray-400 mb-1">Status</label>
-          <select name="status" className="w-full rounded bg-zinc-200 dark:bg-gray-900 border border-zinc-300 dark:border-gray-700 px-3 py-2 text-zinc-900 dark:text-white text-sm [&>option]:bg-zinc-200 dark:bg-gray-900" style={{ colorScheme: 'light' }}>
+          <select name="status" className={formSelectClassName}>
             {Object.entries(CERT_STATUSES).map(([v, l]) => (
               <option key={v} value={v}>
                 {l}

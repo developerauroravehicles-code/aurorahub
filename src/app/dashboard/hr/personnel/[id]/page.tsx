@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { PersonnelDetail } from './personnel-detail'
+import { fetchOrgDepartmentTree } from '@/lib/hr-org-structure'
 
 export const dynamic = 'force-dynamic'
 
@@ -31,10 +32,11 @@ export default async function PersonnelDetailPage({ params }: { params: Promise<
   const { id } = await params
   const supabase = await createClient()
 
-  const [personRes, regionsRes, dealersRes, managers, certificationsRes, timelineRes, installerRes] = await Promise.all([
+  const [personRes, regionsRes, dealersRes, managers, certificationsRes, timelineRes, installerRes, orgTree] =
+    await Promise.all([
     supabase
       .from('personnel')
-      .select(`*, dealers(name), hr_departments(name), hr_regions(name)`)
+      .select(`*, dealers(name), hr_departments(name, parent_id), hr_regions(name), hr_org_roles(name)`)
       .eq('id', id)
       .single(),
     supabase.from('hr_regions').select('id, name').order('name'),
@@ -43,6 +45,7 @@ export default async function PersonnelDetailPage({ params }: { params: Promise<
     supabase.from('personnel_certifications').select('*').eq('personnel_id', id).order('expiry_date', { ascending: true }),
     supabase.from('personnel_timeline').select('*').eq('personnel_id', id).order('created_at', { ascending: false }).limit(20),
     supabase.from('installer_profiles_with_completion').select('*').eq('personnel_id', id).maybeSingle(),
+    fetchOrgDepartmentTree(supabase),
   ])
 
   const { data: person } = personRes
@@ -74,6 +77,7 @@ export default async function PersonnelDetailPage({ params }: { params: Promise<
         dealers={dealersRes.data || []}
         managers={managers}
         installerProfile={installerRes.data}
+        orgTree={orgTree}
       />
     </div>
   )

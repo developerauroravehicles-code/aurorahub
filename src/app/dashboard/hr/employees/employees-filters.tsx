@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { formSelectClassName } from '@/lib/form-field-styles'
 
 // Platform roles only (dealer_id = null)
 const ROLES = [
@@ -32,8 +33,7 @@ export function EmployeesFilters({
         <select
           value={currentRole ?? ''}
           onChange={(e) => handleFilterChange(e.target.value)}
-          className="rounded-md bg-zinc-200 dark:bg-gray-900 border border-zinc-300 dark:border-gray-700 text-white px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#C27E00] [&>option]:bg-zinc-200 dark:bg-gray-900 [&>option]:text-white"
-          style={{ colorScheme: 'light' }}
+          className={formSelectClassName}
         >
           {ROLES.map((r) => (
             <option key={r.value || 'all'} value={r.value}>

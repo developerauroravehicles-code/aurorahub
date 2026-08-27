@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { getSystemData } from '@/app/dashboard/system-management/actions'
 import { UserManagementContent } from '@/app/dashboard/system-management/user/user-management-content'
+import { fetchOrgDepartmentTree } from '@/lib/hr-org-structure'
 
 export const dynamic = 'force-dynamic'
 
@@ -11,7 +12,10 @@ export default async function IdentityUsersPage() {
     ? await supabase.from('profiles').select('role').eq('id', user.id).single()
     : { data: null }
 
-  const { profiles, errors, dealers } = await getSystemData()
+  const [{ profiles, errors, dealers }, orgTree] = await Promise.all([
+    getSystemData(),
+    fetchOrgDepartmentTree(supabase),
+  ])
 
   return (
     <div className="space-y-8">
@@ -24,6 +28,7 @@ export default async function IdentityUsersPage() {
           profiles={profiles}
           errors={errors}
           dealers={dealers || []}
+          orgTree={orgTree}
           currentUserRole={profile?.role}
         />
       </div>

@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import { EmployeesFilters } from './employees-filters'
+import { fetchOrgDepartmentTree, orgRoleLabel } from '@/lib/hr-org-structure'
 
 const ROLE_LABELS: Record<string, string> = {
   sales: 'Sales',
@@ -32,14 +33,22 @@ export default async function HREmployeesPage({
   // Platform employees from personnel registry (master HR source)
   let query = supabase
     .from('personnel')
-    .select('id, worker_id, full_name, platform_role, worker_type, phone, email, position, status, created_at')
+    .select(`
+      id, worker_id, full_name, platform_role, worker_type, phone, email, position, status, created_at,
+      department_id, org_role_id,
+      hr_departments(name, parent_id),
+      hr_org_roles(name)
+    `)
     .is('dealer_id', null)
 
   if (params.role) {
     query = query.eq('platform_role', params.role)
   }
 
-  const { data: rawEmployees } = await query.order('created_at', { ascending: false })
+  const [{ data: rawEmployees }, orgTree] = await Promise.all([
+    query.order('created_at', { ascending: false }),
+    fetchOrgDepartmentTree(supabase),
+  ])
 
   // IT role at end; others by full_name. Newest created first within each group.
   const employees = [...(rawEmployees || [])].sort((a, b) => {
@@ -75,14 +84,17 @@ export default async function HREmployeesPage({
             <thead>
               <tr>
                 <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500 dark:text-gray-400 uppercase">Name</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500 dark:text-gray-400 uppercase">Role / Type</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500 dark:text-gray-400 uppercase">Position</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500 dark:text-gray-400 uppercase">Platform access role</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500 dark:text-gray-400 uppercase">Department</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500 dark:text-gray-400 uppercase">Job Title</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500 dark:text-gray-400 uppercase">Phone</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500 dark:text-gray-400 uppercase">Status</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-200 dark:divide-gray-800">
-              {employees?.map((e) => (
+              {employees?.map((e) => {
+                const org = orgRoleLabel(e, orgTree)
+                return (
                 <tr key={e.id} className="hover:bg-zinc-200/50 dark:bg-white/5 transition-colors">
                   <td className="px-4 py-3">
                     <Link
@@ -98,7 +110,10 @@ export default async function HREmployeesPage({
                     </span>
                   </td>
                   <td className="px-4 py-3">
-                    <span className="text-sm text-zinc-500 dark:text-gray-400">{e.position || '—'}</span>
+                    <span className="text-sm text-zinc-500 dark:text-gray-400">{org.subDepartment}</span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className="text-sm text-zinc-500 dark:text-gray-400">{org.jobTitle}</span>
                   </td>
                   <td className="px-4 py-3">
                     <span className="text-sm text-zinc-500 dark:text-gray-400">{e.phone || '—'}</span>
@@ -107,7 +122,7 @@ export default async function HREmployeesPage({
                     <span className="text-sm text-zinc-500 dark:text-gray-400 capitalize">{e.status || '—'}</span>
                   </td>
                 </tr>
-              ))}
+              )})}
             </tbody>
           </table>
         </div>

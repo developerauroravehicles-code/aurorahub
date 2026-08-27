@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { clsx } from 'clsx'
-import { LogOut, LayoutDashboard, FileText, Users, Settings, Receipt, CalendarDays, Briefcase, ClipboardList, Wrench, GraduationCap, Clock, DollarSign, Shield, ShieldCheck, TrendingUp, Package, BarChart3, UserCircle, Cpu, MapPin, Building2, Camera, Database, Mail, Zap, Image, BookOpen, MessageSquare, Ticket, ChevronDown, ChevronRight, UserCog, Webhook, Globe, Plug, Activity, Bell, ListTodo, History, UsersRound, MessageCircle, Video } from 'lucide-react'
+import { LogOut, LayoutDashboard, FileText, Users, Settings, Receipt, CalendarDays, Briefcase, ClipboardList, Wrench, GraduationCap, Clock, DollarSign, Shield, ShieldCheck, TrendingUp, Package, BarChart3, UserCircle, Cpu, MapPin, Building2, Camera, Database, Mail, Zap, Image, BookOpen, MessageSquare, Ticket, ChevronDown, ChevronRight, UserCog, Webhook, Globe, Plug, Activity, Bell, ListTodo, History, UsersRound, MessageCircle, Video, PanelLeftClose, X } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
@@ -17,6 +17,7 @@ interface Profile {
   role: string
   full_name?: string | null
   dealer_id?: string | null
+  jobTitle?: string | null
 }
 
 interface NavLink {
@@ -33,11 +34,15 @@ interface NavSection {
 export function Sidebar({ 
   profile, 
   timezoneName = null, 
-  timezoneDisplayName 
+  timezoneDisplayName,
+  onToggleCollapse,
+  onCloseMobile,
 }: { 
   profile: Profile
   timezoneName?: string | null
   timezoneDisplayName?: string
+  onToggleCollapse?: () => void
+  onCloseMobile?: () => void
 }) {
   const pathname = usePathname()
   const router = useRouter()
@@ -64,6 +69,13 @@ export function Sidebar({
   }
 
   const role = normalizeUserRole(profile.role)
+  const roleLabel =
+    role === 'specialist'
+      ? 'Technical Support'
+      : role === 'inventory_manager'
+        ? 'Inventory Manager'
+        : role?.replace(/_/g, ' ') ?? ''
+  const subtitle = profile.jobTitle?.trim() || roleLabel
   const links: NavLink[] = [
     { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   ]
@@ -245,7 +257,32 @@ export function Sidebar({
   }
 
   return (
-    <div className="flex h-full w-64 shrink-0 flex-col border-r border-zinc-200 bg-zinc-50 text-zinc-900 dark:border-gray-800 dark:bg-black dark:text-white">
+    <div className="flex h-full w-64 flex-col border-r border-zinc-200 bg-zinc-50 text-zinc-900 dark:border-gray-800 dark:bg-black dark:text-white">
+      <div className="flex shrink-0 items-center justify-between border-b border-zinc-200 px-4 py-3 dark:border-gray-800">
+        <span className="text-sm font-semibold text-zinc-900 dark:text-white">AuroraHub</span>
+        <div className="flex items-center gap-1">
+          {onCloseMobile ? (
+            <button
+              type="button"
+              onClick={onCloseMobile}
+              className="rounded-md p-1.5 text-zinc-500 hover:bg-zinc-200 hover:text-zinc-900 dark:text-gray-400 dark:hover:bg-white/10 dark:hover:text-white md:hidden"
+              aria-label="Close menu"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          ) : null}
+          {onToggleCollapse ? (
+            <button
+              type="button"
+              onClick={onToggleCollapse}
+              className="hidden rounded-md p-1.5 text-zinc-500 hover:bg-zinc-200 hover:text-zinc-900 dark:text-gray-400 dark:hover:bg-white/10 dark:hover:text-white md:flex"
+              aria-label="Collapse sidebar"
+            >
+              <PanelLeftClose className="h-5 w-5" />
+            </button>
+          ) : null}
+        </div>
+      </div>
       <div className="flex flex-1 flex-col overflow-y-auto">
         {/* Dealer Clock - Top of Sidebar */}
         {timezoneName && (
@@ -423,12 +460,8 @@ export function Sidebar({
         <div className="flex items-start justify-between gap-3 mb-6">
           <div className="min-w-0">
             <p className="text-sm font-medium text-zinc-900 dark:text-white">{profile.full_name || 'User'}</p>
-            <p className="text-xs font-medium text-zinc-500 dark:text-gray-500 capitalize">
-              {role === 'specialist'
-                ? 'Technical Support'
-                : role === 'inventory_manager'
-                  ? 'Inventory Manager'
-                  : role?.replace(/_/g, ' ')}
+            <p className="text-xs font-medium text-zinc-500 dark:text-gray-400 truncate">
+              {subtitle}
             </p>
           </div>
           <ThemeToggle className="shrink-0" />

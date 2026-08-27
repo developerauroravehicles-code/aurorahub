@@ -9,8 +9,22 @@ import { Pencil, Trash2, X, Loader2, UserPlus, KeyRound, Eye, EyeOff, Check, Ban
 import type { Dealer } from '@/types/system-management'
 import { EmailInput } from '@/components/email-input'
 import { normalizeEmail } from '@/lib/email-normalize'
+import { OrgStructureFields } from '@/app/dashboard/hr/personnel/org-structure-fields'
+import { orgRoleLabel, type OrgDepartmentTree } from '@/lib/hr-org-structure'
+import { formLabelClassName, formSelectClassName } from '@/lib/form-field-styles'
 
-function UserForm({ dealers, currentUserRole }: { dealers: Dealer[]; currentUserRole?: string }) {
+const selectClass = formSelectClassName
+const labelClass = formLabelClassName
+
+function UserForm({
+  dealers,
+  orgTree,
+  currentUserRole,
+}: {
+  dealers: Dealer[]
+  orgTree: OrgDepartmentTree
+  currentUserRole?: string
+}) {
   const [state, formAction, isPending] = useActionState(createUser, null)
   const [dealerCode, setDealerCode] = useState('')
 
@@ -71,41 +85,49 @@ function UserForm({ dealers, currentUserRole }: { dealers: Dealer[]; currentUser
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="space-y-1">
-          <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300">Role</label>
+          <label className={labelClass}>Platform access role</label>
           <select
             name="role"
-            className="block w-full rounded-md border border-zinc-300 dark:border-gray-700 bg-zinc-200/50 dark:bg-white/5 px-3 py-2 text-zinc-900 dark:text-white focus:border-[#C27E00] focus:outline-none focus:ring-1 focus:ring-[#C27E00] sm:text-sm"
+            className={selectClass}
           >
-            <option value="sales" className="bg-zinc-50 dark:bg-black text-zinc-900 dark:text-white">Sales</option>
-            <option value="finance" className="bg-zinc-50 dark:bg-black text-zinc-900 dark:text-white">Finance</option>
-            <option value="specialist" className="bg-zinc-50 dark:bg-black text-zinc-900 dark:text-white">Technical Support</option>
-            <option value="aurora_manager" className="bg-zinc-50 dark:bg-black text-zinc-900 dark:text-white">Aurora Manager</option>
-            <option value="general_manager" className="bg-zinc-50 dark:bg-black text-zinc-900 dark:text-white">General Manager</option>
-            <option value="hr" className="bg-zinc-50 dark:bg-black text-zinc-900 dark:text-white">HR</option>
-            <option value="it" className="bg-zinc-50 dark:bg-black text-zinc-900 dark:text-white">IT</option>
+            <option value="sales">Sales</option>
+            <option value="finance">Finance</option>
+            <option value="specialist">Technical Support</option>
+            <option value="aurora_manager">Aurora Manager</option>
+            <option value="general_manager">General Manager</option>
+            <option value="hr">HR</option>
+            <option value="it">IT</option>
             {currentUserRole === 'it' && (
-              <option value="inventory_manager" className="bg-zinc-50 dark:bg-black text-zinc-900 dark:text-white">Inventory Manager</option>
+              <option value="inventory_manager">Inventory Manager</option>
             )}
           </select>
         </div>
 
         <div className="space-y-1">
-          <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300">Dealer / Platform</label>
+          <label className={labelClass}>Dealer / Platform</label>
           <select
             name="dealerCode"
             required
             value={dealerCode}
             onChange={(e) => setDealerCode(e.target.value)}
-            className="block w-full rounded-md border border-zinc-300 dark:border-gray-700 bg-zinc-200/50 dark:bg-white/5 px-3 py-2 text-zinc-900 dark:text-white focus:border-[#C27E00] focus:outline-none focus:ring-1 focus:ring-[#C27E00] sm:text-sm"
+            className={selectClass}
           >
-            <option value="" className="bg-zinc-50 dark:bg-black">— Select —</option>
-            <option value="HQ" className="bg-zinc-50 dark:bg-black">Platform (HQ)</option>
+            <option value="">— Select —</option>
+            <option value="HQ">Platform (HQ)</option>
             {dealers.map((d) => (
-              <option key={d.id} value={d.code} className="bg-zinc-50 dark:bg-black">{d.name} ({d.code})</option>
+              <option key={d.id} value={d.code}>{d.name} ({d.code})</option>
             ))}
           </select>
         </div>
       </div>
+
+      <OrgStructureFields
+        tree={orgTree}
+        isPlatform={dealerCode === 'HQ'}
+        selectClass={selectClass}
+        labelClass={labelClass}
+        requireOrgFields
+      />
 
       <button
         type="submit"
@@ -121,12 +143,14 @@ function UserForm({ dealers, currentUserRole }: { dealers: Dealer[]; currentUser
 function EditUserModal({
   userId,
   dealers,
+  orgTree,
   currentUserRole,
   onClose,
   onSuccess
 }: {
   userId: string
   dealers: Dealer[]
+  orgTree: OrgDepartmentTree
   currentUserRole?: string
   onClose: () => void
   onSuccess: () => void
@@ -138,8 +162,11 @@ function EditUserModal({
     email?: string
     role: string
     dealer_id: string | null
-    dealers?: { code: string; name: string } | null
+    department_id?: string | null
+    org_role_id?: string | null
+    dealers?: { code: string; name: string } | { code: string; name: string }[] | null
   } | null>(null)
+  const [dealerCode, setDealerCode] = useState('')
   const [loading, setLoading] = useState(true)
   const [fetchError, setFetchError] = useState<string | null>(null)
   const [state, formAction, isPending] = useActionState(updateUser, null)
@@ -149,7 +176,22 @@ function EditUserModal({
     getProfileForEdit(userId).then((res) => {
       if (cancelled) return
       if (res.error && !res.profile) setFetchError(res.error)
-      else if (res.profile) setProfile(res.profile as any)
+      else if (res.profile) {
+        const p = res.profile as {
+          id: string
+          full_name: string | null
+          phone: string | null
+          email?: string
+          role: string
+          dealer_id: string | null
+          department_id?: string | null
+          org_role_id?: string | null
+          dealers?: { code: string; name: string } | { code: string; name: string }[] | null
+        }
+        setProfile(p)
+        const dealerRel = Array.isArray(p.dealers) ? p.dealers[0] : p.dealers
+        setDealerCode(p.dealer_id ? (dealerRel?.code ?? '') : 'HQ')
+      }
       setLoading(false)
     })
     return () => { cancelled = true }
@@ -163,7 +205,7 @@ function EditUserModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-900/60 dark:bg-black/80 backdrop-blur-sm p-4">
-      <div className="bg-[#1a1a1a] border border-zinc-200 dark:border-gray-800 rounded-lg p-6 w-full max-w-md shadow-xl">
+      <div className="bg-[#1a1a1a] border border-zinc-200 dark:border-gray-800 rounded-lg p-6 w-full max-w-lg shadow-xl">
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-lg font-semibold text-zinc-900 dark:text-white">Edit User</h3>
           <button type="button" onClick={onClose} className="text-zinc-500 dark:text-gray-400 hover:text-zinc-900 dark:text-white">
@@ -210,38 +252,47 @@ function EditUserModal({
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300 mb-1">Role</label>
+              <label className={`${labelClass} mb-1`}>Platform access role</label>
               <select
                 name="role"
                 defaultValue={profile.role}
-                className="block w-full rounded-md border border-zinc-300 dark:border-gray-700 bg-zinc-200/50 dark:bg-white/5 px-3 py-2 text-zinc-900 dark:text-white sm:text-sm focus:border-[#C27E00] focus:ring-1 focus:ring-[#C27E00]"
+                className={selectClass}
               >
-                <option value="sales" className="bg-zinc-50 dark:bg-black">Sales</option>
-                <option value="finance" className="bg-zinc-50 dark:bg-black">Finance</option>
-                <option value="specialist" className="bg-zinc-50 dark:bg-black">Technical Support</option>
-                <option value="aurora_manager" className="bg-zinc-50 dark:bg-black">Aurora Manager</option>
-                <option value="general_manager" className="bg-zinc-50 dark:bg-black">General Manager</option>
-                <option value="hr" className="bg-zinc-50 dark:bg-black">HR</option>
-                <option value="it" className="bg-zinc-50 dark:bg-black">IT</option>
+                <option value="sales">Sales</option>
+                <option value="finance">Finance</option>
+                <option value="specialist">Technical Support</option>
+                <option value="aurora_manager">Aurora Manager</option>
+                <option value="general_manager">General Manager</option>
+                <option value="hr">HR</option>
+                <option value="it">IT</option>
                 {(currentUserRole === 'it' || profile.role === 'inventory_manager') && (
-                  <option value="inventory_manager" className="bg-zinc-50 dark:bg-black">Inventory Manager</option>
+                  <option value="inventory_manager">Inventory Manager</option>
                 )}
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300 mb-1">Dealer / Platform</label>
+              <label className={`${labelClass} mb-1`}>Dealer / Platform</label>
               <select
                 name="dealerCode"
-                defaultValue={profile.dealer_id ? ((profile.dealers as any)?.code ?? '') : 'HQ'}
-                className="block w-full rounded-md border border-zinc-300 dark:border-gray-700 bg-zinc-200/50 dark:bg-white/5 px-3 py-2 text-zinc-900 dark:text-white sm:text-sm focus:border-[#C27E00] focus:ring-1 focus:ring-[#C27E00]"
+                value={dealerCode}
+                onChange={(e) => setDealerCode(e.target.value)}
+                className={selectClass}
               >
-                <option value="" className="bg-zinc-50 dark:bg-black">— None —</option>
-                <option value="HQ" className="bg-zinc-50 dark:bg-black">Platform (HQ)</option>
+                <option value="">— None —</option>
+                <option value="HQ">Platform (HQ)</option>
                 {dealers.map((d) => (
-                  <option key={d.id} value={d.code} className="bg-zinc-50 dark:bg-black">{d.name} ({d.code})</option>
+                  <option key={d.id} value={d.code}>{d.name} ({d.code})</option>
                 ))}
               </select>
             </div>
+            <OrgStructureFields
+              tree={orgTree}
+              isPlatform={dealerCode === 'HQ'}
+              initialDepartmentId={profile.department_id}
+              initialOrgRoleId={profile.org_role_id}
+              selectClass={selectClass}
+              labelClass={`${labelClass} mb-1`}
+            />
             {state?.error && <p className="text-red-400 text-sm">{state.error}</p>}
             <div className="flex gap-2 pt-2">
               <button
@@ -526,12 +577,14 @@ function UserList({
   profiles,
   errors,
   dealers,
+  orgTree,
   currentUserRole,
   onRefresh
 }: {
   profiles: any[]
   errors: any
   dealers: Dealer[]
+  orgTree: OrgDepartmentTree
   currentUserRole?: string
   onRefresh: () => void
 }) {
@@ -546,7 +599,9 @@ function UserList({
           <thead className="bg-zinc-200/50 dark:bg-white/5">
             <tr>
               <th className="px-4 py-2 text-left">Name</th>
-              <th className="px-4 py-2 text-left">Role</th>
+              <th className="px-4 py-2 text-left">Access role</th>
+              <th className="px-4 py-2 text-left">Sub-department</th>
+              <th className="px-4 py-2 text-left">Job title</th>
               <th className="px-4 py-2 text-left">Phone</th>
               <th className="px-4 py-2 text-left">Dealer</th>
               <th className="px-4 py-2 text-left">Login</th>
@@ -557,6 +612,8 @@ function UserList({
             {profiles.map((profile: any) => {
               const isPersonnelOnly = profile.id?.startsWith?.('personnel-') || profile._source === 'personnel'
               const personnelId = profile._personnelId
+              const isPlatform = !profile.dealers && !profile.dealer_id
+              const org = isPlatform ? orgRoleLabel(profile, orgTree) : null
               return (
                 <tr key={profile.id}>
                   <td className="px-4 py-2 font-medium text-zinc-900 dark:text-white">
@@ -572,6 +629,8 @@ function UserList({
                     )}
                   </td>
                   <td className="px-4 py-2 capitalize">{profile.role === 'specialist' ? 'Technical Support' : String(profile.role || '—').replace('_', ' ')}</td>
+                  <td className="px-4 py-2">{org?.subDepartment ?? '—'}</td>
+                  <td className="px-4 py-2">{org?.jobTitle ?? '—'}</td>
                   <td className="px-4 py-2">{profile.phone || '-'}</td>
                   <td className="px-4 py-2">
                     {profile.dealers ? (
@@ -640,7 +699,7 @@ function UserList({
               )
             })}
             {profiles.length === 0 && (
-              <tr><td colSpan={6} className="px-4 py-4 text-center text-zinc-500 dark:text-gray-500">No profiles found.</td></tr>
+              <tr><td colSpan={8} className="px-4 py-4 text-center text-zinc-500 dark:text-gray-500">No profiles found.</td></tr>
             )}
           </tbody>
         </table>
@@ -649,6 +708,7 @@ function UserList({
         <EditUserModal
           userId={editingUserId}
           dealers={dealers}
+          orgTree={orgTree}
           currentUserRole={currentUserRole}
           onClose={() => setEditingUserId(null)}
           onSuccess={onRefresh}
@@ -662,11 +722,13 @@ export function UserManagementContent({
   profiles,
   errors,
   dealers,
+  orgTree,
   currentUserRole
 }: {
   profiles: any[]
   errors: any
   dealers: Dealer[]
+  orgTree: OrgDepartmentTree
   currentUserRole?: string
 }) {
   const router = useRouter()
@@ -675,12 +737,13 @@ export function UserManagementContent({
       <div>
         <h3 className="text-lg font-semibold text-zinc-900 dark:text-white mb-2">Create New User</h3>
         <p className="text-sm text-zinc-500 dark:text-gray-400 mb-4">Add a new user to the system</p>
-        <UserForm dealers={dealers} currentUserRole={currentUserRole} />
+        <UserForm dealers={dealers} orgTree={orgTree} currentUserRole={currentUserRole} />
       </div>
       <UserList
         profiles={profiles}
         errors={errors || {}}
         dealers={dealers}
+        orgTree={orgTree}
         currentUserRole={currentUserRole}
         onRefresh={() => router.refresh()}
       />

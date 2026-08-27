@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { updateRecruitmentPositionStatus, fillRecruitmentPosition } from './actions'
+import { formSelectClassName } from '@/lib/form-field-styles'
 
 const STATUS_OPTIONS = [
   { value: 'open', label: 'Open' },
@@ -46,8 +47,7 @@ export function RecruitmentPositionActions({
         value={status}
         onChange={(e) => handleStatusChange(e.target.value)}
         disabled={loading}
-        className="rounded bg-zinc-200 dark:bg-gray-900 border border-zinc-300 dark:border-gray-700 text-white text-xs px-2 py-1 focus:outline-none focus:ring-1 focus:ring-[#C27E00] disabled:opacity-50 [&>option]:bg-zinc-200 dark:bg-gray-900 [&>option]:text-white"
-        style={{ colorScheme: 'light' }}
+        className={`${formSelectClassName} text-xs px-2 py-1 disabled:opacity-50`}
       >
         {STATUS_OPTIONS.map((s) => (
           <option key={s.value} value={s.value}>
@@ -72,8 +72,7 @@ export function RecruitmentPositionActions({
               <select
                 name="employee"
                 required
-                className="w-full rounded-md bg-zinc-200 dark:bg-gray-900 border border-zinc-300 dark:border-gray-700 text-white px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#C27E00] [&>option]:bg-zinc-200 dark:bg-gray-900 [&>option]:text-white"
-                style={{ colorScheme: 'light' }}
+                className={formSelectClassName}
               >
                 <option value="">Select employee</option>
                 {employees.map((emp) => (

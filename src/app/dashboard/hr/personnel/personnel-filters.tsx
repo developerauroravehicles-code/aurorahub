@@ -2,6 +2,9 @@
 
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { formSelectClassName } from '@/lib/form-field-styles'
+
+const selectClass = `${formSelectClassName} min-w-[200px]`
 
 const WORKER_TYPES = [
   { value: '', label: 'All Types' },
@@ -53,11 +56,10 @@ export function PersonnelFilters({
         <select
           value={currentType ?? ''}
           onChange={(e) => handleChange('worker_type', e.target.value)}
-          className="rounded-md bg-zinc-200 dark:bg-gray-900 border border-zinc-300 dark:border-gray-700 text-white px-3 py-2 text-sm min-w-[200px] focus:ring-1 focus:ring-[#C27E00] focus:outline-none"
-          style={{ colorScheme: 'light' }}
+          className={selectClass}
         >
           {WORKER_TYPES.map((r) => (
-            <option key={r.value || 'all'} value={r.value} className="bg-zinc-200 dark:bg-gray-900 text-zinc-900 dark:text-white">
+            <option key={r.value || 'all'} value={r.value}>
               {r.label}
             </option>
           ))}
@@ -68,11 +70,10 @@ export function PersonnelFilters({
         <select
           value={currentStatus ?? ''}
           onChange={(e) => handleChange('status', e.target.value)}
-          className="rounded-md bg-zinc-200 dark:bg-gray-900 border border-zinc-300 dark:border-gray-700 text-white px-3 py-2 text-sm min-w-[180px] focus:ring-1 focus:ring-[#C27E00]"
-          style={{ colorScheme: 'light' }}
+          className={`${formSelectClassName} min-w-[180px]`}
         >
           {STATUSES.map((s) => (
-            <option key={s.value || 'all'} value={s.value} className="bg-zinc-200 dark:bg-gray-900 text-zinc-900 dark:text-white">{s.label}</option>
+            <option key={s.value || 'all'} value={s.value}>{s.label}</option>
           ))}
         </select>
       </div>
@@ -81,13 +82,12 @@ export function PersonnelFilters({
         <select
           value={currentDealer ?? ''}
           onChange={(e) => handleChange('dealer', e.target.value)}
-          className="rounded-md bg-zinc-200 dark:bg-gray-900 border border-zinc-300 dark:border-gray-700 text-white px-3 py-2 text-sm min-w-[160px] focus:ring-1 focus:ring-[#C27E00]"
-          style={{ colorScheme: 'light' }}
+          className={`${formSelectClassName} min-w-[160px]`}
         >
-          <option value="" className="bg-zinc-200 dark:bg-gray-900 text-zinc-900 dark:text-white">All</option>
-          <option value="platform" className="bg-zinc-200 dark:bg-gray-900 text-zinc-900 dark:text-white">Platform</option>
+          <option value="">All</option>
+          <option value="platform">Platform</option>
           {dealers.map((d) => (
-            <option key={d.id} value={d.id} className="bg-zinc-200 dark:bg-gray-900 text-zinc-900 dark:text-white">{d.name}</option>
+            <option key={d.id} value={d.id}>{d.name}</option>
           ))}
         </select>
       </div>

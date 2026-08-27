@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { createOnboardingTask } from './actions'
+import { formSelectClassName } from '@/lib/form-field-styles'
 
 export function OnboardingTaskForm({
   employees,
@@ -39,8 +40,7 @@ export function OnboardingTaskForm({
           <select
             name="profile_id"
             required
-            className="w-full rounded-md bg-zinc-200 dark:bg-gray-900 border border-zinc-300 dark:border-gray-700 text-zinc-900 dark:text-white px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#C27E00] [&>option]:bg-white dark:[&>option]:bg-gray-900 [&>option]:text-zinc-900 dark:[&>option]:text-white"
-            style={{ colorScheme: 'light' }}
+            className={formSelectClassName}
           >
             <option value="">Select employee</option>
             {employees.map((emp) => (

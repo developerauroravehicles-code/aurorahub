@@ -4,6 +4,7 @@ import { SelfPortalContent } from './self-portal-content'
 import { fetchSpecialistCompensationSnapshot } from '@/lib/specialist-compensation-snapshot'
 import { fetchMyFieldCameraStock } from '@/lib/inventory-v2/specialist-stock'
 import { getMyExpenseClaims } from './expense-actions'
+import { fetchOrgDepartmentTree, orgRoleLabel } from '@/lib/hr-org-structure'
 
 export const dynamic = 'force-dynamic'
 
@@ -30,9 +31,17 @@ export default async function SelfPortalPage() {
 
   const { data: personnel } = await supabase
     .from('personnel')
-    .select('id, full_name, phone, email, position, status, start_date, province')
+    .select(`
+      id, full_name, phone, email, position, status, start_date, province, platform_role,
+      department_id, org_role_id,
+      hr_departments(name, parent_id),
+      hr_org_roles(name)
+    `)
     .eq('profile_id', user.id)
     .single()
+
+  const orgTree = await fetchOrgDepartmentTree(supabase)
+  const orgDisplay = personnel ? orgRoleLabel(personnel, orgTree) : null
 
   const personnelId = personnel?.id
 
@@ -88,6 +97,7 @@ export default async function SelfPortalPage() {
       <SelfPortalContent
         profile={profile}
         personnel={personnel}
+        orgDisplay={orgDisplay}
         leaveRequests={leaveRes.data ?? []}
         payments={(paymentsRes.data ?? []) as Payments}
         payEstimate={payEstimate}

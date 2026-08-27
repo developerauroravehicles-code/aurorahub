@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import { PersonnelFilters } from './personnel-filters'
+import { fetchOrgDepartmentTree, orgRoleLabel } from '@/lib/hr-org-structure'
 
 const WORKER_TYPE_LABELS: Record<string, string> = {
   employee: 'Employee',
@@ -30,9 +31,11 @@ export default async function PersonnelPage({
   let query = supabase
     .from('personnel')
     .select(`
-      id, worker_id, full_name, worker_type, status, position, phone, email, start_date,
+      id, worker_id, full_name, worker_type, status, position, phone, email, start_date, dealer_id,
+      department_id, org_role_id,
       dealers(name),
-      hr_departments(name),
+      hr_departments(name, parent_id),
+      hr_org_roles(name),
       hr_regions(name)
     `)
     .order('full_name', { ascending: true })
@@ -42,8 +45,11 @@ export default async function PersonnelPage({
   if (params.dealer === 'platform') query = query.is('dealer_id', null)
   else if (params.dealer) query = query.eq('dealer_id', params.dealer)
 
-  const { data: personnel } = await query
-  const { data: dealers } = await supabase.from('dealers').select('id, name').order('name')
+  const [{ data: personnel }, { data: dealers }, orgTree] = await Promise.all([
+    query,
+    supabase.from('dealers').select('id, name').order('name'),
+    fetchOrgDepartmentTree(supabase),
+  ])
 
   return (
     <div className="space-y-8">
@@ -71,14 +77,17 @@ export default async function PersonnelPage({
                 <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500 dark:text-gray-400 uppercase">Name</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500 dark:text-gray-400 uppercase">Type</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500 dark:text-gray-400 uppercase">Status</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500 dark:text-gray-400 uppercase">Position</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500 dark:text-gray-400 uppercase">Department</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500 dark:text-gray-400 uppercase">Job Title</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500 dark:text-gray-400 uppercase">Dealer / Location</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500 dark:text-gray-400 uppercase">Start Date</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500 dark:text-gray-400 uppercase">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-200 dark:divide-gray-800">
-              {personnel?.map((p) => (
+              {personnel?.map((p) => {
+                const org = orgRoleLabel(p, orgTree)
+                return (
                 <tr key={p.id} className="hover:bg-zinc-200/50 dark:bg-white/5 transition-colors">
                   <td className="px-4 py-3 text-sm text-zinc-500 dark:text-gray-400">{p.worker_id || '—'}</td>
                   <td className="px-4 py-3">
@@ -98,7 +107,12 @@ export default async function PersonnelPage({
                       {STATUS_LABELS[p.status] ?? p.status}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-sm text-zinc-500 dark:text-gray-400">{p.position || '—'}</td>
+                  <td className="px-4 py-3 text-sm text-zinc-500 dark:text-gray-400">
+                    {p.dealer_id ? (p.position || '—') : org.subDepartment !== '—' ? org.subDepartment : '—'}
+                  </td>
+                  <td className="px-4 py-3 text-sm text-zinc-500 dark:text-gray-400">
+                    {p.dealer_id ? '—' : org.jobTitle}
+                  </td>
                   <td className="px-4 py-3 text-sm text-zinc-500 dark:text-gray-400">
                     {(p.dealers as { name?: string } | null)?.name ?? 'Platform'}
                   </td>
@@ -111,7 +125,7 @@ export default async function PersonnelPage({
                     </Link>
                   </td>
                 </tr>
-              ))}
+              )})}
             </tbody>
           </table>
         </div>

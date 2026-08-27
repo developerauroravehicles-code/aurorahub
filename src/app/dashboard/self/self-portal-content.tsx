@@ -78,9 +78,21 @@ const PAYMENT_TYPES: Record<string, string> = {
   job_based: 'Job Based',
 }
 
+const PLATFORM_ROLE_LABELS: Record<string, string> = {
+  sales: 'Sales',
+  finance: 'Finance',
+  specialist: 'Technical Support',
+  general_manager: 'General Manager',
+  aurora_manager: 'Aurora Manager',
+  hr: 'HR',
+  it: 'IT',
+  inventory_manager: 'Inventory Manager',
+}
+
 export function SelfPortalContent({
   profile,
   personnel,
+  orgDisplay,
   leaveRequests,
   payments,
   payEstimate,
@@ -96,7 +108,18 @@ export function SelfPortalContent({
   onboardingTasks,
 }: {
   profile: { full_name?: string | null; phone?: string | null; role: string }
-  personnel: { id: string; full_name?: string | null; phone?: string | null; email?: string | null; position?: string | null; status?: string | null; start_date?: string | null; province?: string | null } | null
+  personnel: {
+    id: string
+    full_name?: string | null
+    phone?: string | null
+    email?: string | null
+    position?: string | null
+    status?: string | null
+    start_date?: string | null
+    province?: string | null
+    platform_role?: string | null
+  } | null
+  orgDisplay: { mainDepartment: string; subDepartment: string; jobTitle: string } | null
   leaveRequests: { id: string; leave_type: string; start_date: string; end_date: string; status: string; notes?: string | null }[]
   payments: { id: string; amount: number; period_start: string | null; period_end: string | null; status: string; paid_at: string | null; payment_type: string | null; completed_count?: number | null }[]
   payEstimate: SpecialistCompensationSnapshot | null
@@ -179,8 +202,22 @@ export function SelfPortalContent({
               <p className="text-zinc-900 dark:text-white">{personnel?.email ?? '—'}</p>
             </div>
             <div>
-              <p className="text-xs text-zinc-500 dark:text-gray-500 uppercase">Position</p>
-              <p className="text-zinc-900 dark:text-white">{personnel?.position ?? '—'}</p>
+              <p className="text-xs text-zinc-500 dark:text-gray-500 uppercase">Main Department</p>
+              <p className="text-zinc-900 dark:text-white">{orgDisplay?.mainDepartment ?? '—'}</p>
+            </div>
+            <div>
+              <p className="text-xs text-zinc-500 dark:text-gray-500 uppercase">Sub-department</p>
+              <p className="text-zinc-900 dark:text-white">{orgDisplay?.subDepartment ?? '—'}</p>
+            </div>
+            <div>
+              <p className="text-xs text-zinc-500 dark:text-gray-500 uppercase">Job Title</p>
+              <p className="text-zinc-900 dark:text-white">{orgDisplay?.jobTitle ?? personnel?.position ?? '—'}</p>
+            </div>
+            <div>
+              <p className="text-xs text-zinc-500 dark:text-gray-500 uppercase">Platform access role</p>
+              <p className="text-zinc-900 dark:text-white">
+                {PLATFORM_ROLE_LABELS[profile.role] ?? profile.role?.replace('_', ' ') ?? '—'}
+              </p>
             </div>
             <div>
               <p className="text-xs text-zinc-500 dark:text-gray-500 uppercase">Status</p>
@@ -193,10 +230,6 @@ export function SelfPortalContent({
             <div>
               <p className="text-xs text-zinc-500 dark:text-gray-500 uppercase">Province</p>
               <p className="text-zinc-900 dark:text-white capitalize">{personnel?.province?.replace('_', ' ') ?? '—'}</p>
-            </div>
-            <div>
-              <p className="text-xs text-zinc-500 dark:text-gray-500 uppercase">Role</p>
-              <p className="text-zinc-900 dark:text-white capitalize">{profile.role?.replace('_', ' ')}</p>
             </div>
           </div>
           {personnel && (

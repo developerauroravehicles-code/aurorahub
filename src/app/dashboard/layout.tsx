@@ -30,6 +30,21 @@ export default async function DashboardLayout({ children }: { children: React.Re
       )
   }
 
+  let jobTitle: string | null = null
+  const { data: personnel } = await supabase
+    .from('personnel')
+    .select('position, hr_org_roles(name)')
+    .eq('profile_id', user.id)
+    .maybeSingle()
+
+  if (personnel) {
+    const roleRel = personnel.hr_org_roles as { name: string } | { name: string }[] | null
+    const orgRoleName = Array.isArray(roleRel) ? roleRel[0]?.name : roleRel?.name
+    jobTitle = orgRoleName ?? (personnel.position as string | null) ?? null
+  }
+
+  const profileWithJobTitle = { ...profile, jobTitle }
+
   // Sidebar clock: dealer TZ for Sales/GM, PT for HQ
   let displayTimezone: string = SYSTEM_DEFAULT_TIMEZONE
   let displayTimezoneName: string = 'Pacific Time (PT)'
@@ -52,7 +67,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   return (
     <SystemTimeProvider>
       <DashboardShell
-        profile={profile}
+        profile={profileWithJobTitle}
         timezoneName={systemTimezone}
         timezoneDisplayName={systemTimezoneDisplayName}
       >
