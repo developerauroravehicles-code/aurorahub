@@ -20,6 +20,7 @@ import {
 import { requestLeave, createITRequest } from './actions'
 import { SelfPayEstimatePanel } from './self-pay-estimate-panel'
 import { SelfExpensesPanel } from './self-expenses-panel'
+import { SelfDocumentsPanel } from './self-documents-panel'
 import type { SpecialistCompensationSnapshot } from '@/lib/specialist-compensation'
 import type { SpecialistExpenseClaim } from '@/lib/specialist-expense-claims'
 
@@ -102,6 +103,7 @@ export function SelfPortalContent({
   certifications,
   complianceDocuments,
   complianceChecklists,
+  documentAssignments = [],
   availability,
   feedback,
   leaveBlocks,
@@ -129,6 +131,7 @@ export function SelfPortalContent({
   certifications: { id: string; certification_type: string; name?: string | null; institution?: string | null; issue_date: string; expiry_date: string | null; status?: string | null }[]
   complianceDocuments: { id: string; document_type: string | null; title: string | null; expiry_date: string | null; verified_at: string | null; document_url: string | null }[]
   complianceChecklists: { id: string; item_name: string; completed: boolean; completed_at: string | null; notes: string | null }[]
+  documentAssignments?: Parameters<typeof SelfDocumentsPanel>[0]['assignments']
   availability: { id: string; day_of_week: number; start_time: string; end_time: string; is_available: boolean }[]
   feedback: { id: string; feedback_type: string | null; source: string | null; rating: number | null; comment: string | null; created_at: string }[]
   leaveBlocks: { id: string; start_date: string; end_date: string; reason?: string | null }[]
@@ -495,58 +498,66 @@ export function SelfPortalContent({
       )}
 
       {activeTab === 'documents' && (
-        <div className="bg-zinc-200/50 dark:bg-white/5 rounded-lg border border-zinc-200 dark:border-gray-800 p-6">
+        <div className="bg-zinc-200/50 dark:bg-white/5 rounded-lg border border-zinc-200 dark:border-gray-800 p-6 space-y-8">
           {(expiringDocs.length > 0 || pendingChecklists.length > 0) && (
-            <div className="mb-4 space-y-2">
-              {expiringDocs.length > 0 && <div className="bg-red-500/10 border border-red-500/30 text-red-400 px-4 py-2 rounded text-sm">{expiringDocs.length} document(s) expired</div>}
+            <div className="space-y-2">
+              {expiringDocs.length > 0 && <div className="bg-red-500/10 border border-red-500/30 text-red-400 px-4 py-2 rounded text-sm">{expiringDocs.length} legacy document(s) expired</div>}
               {pendingChecklists.length > 0 && <div className="bg-amber-500/10 border border-amber-500/30 text-amber-400 px-4 py-2 rounded text-sm">{pendingChecklists.length} pending checklist item(s)</div>}
             </div>
           )}
-          <h2 className="text-lg font-semibold text-zinc-900 dark:text-white mb-4">Compliance Documents</h2>
-          {complianceDocuments.length === 0 ? (
-            <p className="text-zinc-500 dark:text-gray-500">No compliance documents.</p>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-zinc-200 dark:divide-gray-800 text-sm">
-                <thead>
-                  <tr>
-                    <th className="px-4 py-2 text-left text-zinc-500 dark:text-gray-400">Type</th>
-                    <th className="px-4 py-2 text-left text-zinc-500 dark:text-gray-400">Title</th>
-                    <th className="px-4 py-2 text-left text-zinc-500 dark:text-gray-400">Expiry</th>
-                    <th className="px-4 py-2 text-left text-zinc-500 dark:text-gray-400">Status</th>
-                    <th className="px-4 py-2 text-left text-zinc-500 dark:text-gray-400">Link</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-zinc-200 dark:divide-gray-800">
-                  {complianceDocuments.map((d) => {
-                    const expired = d.expiry_date && d.expiry_date < today
-                    return (
-                      <tr key={d.id} className={expired ? 'bg-red-500/5' : ''}>
-                        <td className="px-4 py-2 text-zinc-600 dark:text-gray-300">{DOC_TYPES[d.document_type ?? ''] ?? d.document_type ?? '—'}</td>
-                        <td className="px-4 py-2 text-zinc-500 dark:text-gray-400">{d.title ?? '—'}</td>
-                        <td className="px-4 py-2"><span className={expired ? 'text-red-400' : 'text-zinc-500 dark:text-gray-400'}>{d.expiry_date ? new Date(d.expiry_date).toLocaleDateString() : '—'}</span></td>
-                        <td>{d.verified_at ? <span className="px-2 py-0.5 rounded text-xs bg-green-500/20 text-green-400">Verified</span> : <span className="px-2 py-0.5 rounded text-xs bg-gray-700 text-zinc-500 dark:text-gray-400">Pending</span>}</td>
-                        <td>{d.document_url ? <a href={d.document_url} target="_blank" rel="noopener noreferrer" className="text-[#C27E00] hover:underline flex items-center gap-1"><ExternalLink className="w-3 h-3" /> Link</a> : '—'}</td>
+          <div>
+            <h2 className="text-lg font-semibold text-zinc-900 dark:text-white mb-4">Assigned Documents</h2>
+            <SelfDocumentsPanel assignments={documentAssignments} />
+          </div>
+          {(complianceDocuments.length > 0 || complianceChecklists.length > 0) && (
+            <>
+              <h2 className="text-lg font-semibold text-zinc-900 dark:text-white mb-4">Legacy Compliance Records</h2>
+              {complianceDocuments.length === 0 ? (
+                <p className="text-zinc-500 dark:text-gray-500">No legacy compliance documents.</p>
+              ) : (
+                <div className="overflow-x-auto mb-6">
+                  <table className="min-w-full divide-y divide-zinc-200 dark:divide-gray-800 text-sm">
+                    <thead>
+                      <tr>
+                        <th className="px-4 py-2 text-left text-zinc-500 dark:text-gray-400">Type</th>
+                        <th className="px-4 py-2 text-left text-zinc-500 dark:text-gray-400">Title</th>
+                        <th className="px-4 py-2 text-left text-zinc-500 dark:text-gray-400">Expiry</th>
+                        <th className="px-4 py-2 text-left text-zinc-500 dark:text-gray-400">Status</th>
+                        <th className="px-4 py-2 text-left text-zinc-500 dark:text-gray-400">Link</th>
                       </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
-          <h3 className="text-md font-medium text-zinc-900 dark:text-white mt-6 mb-2">Compliance Checklists</h3>
-          {complianceChecklists.length === 0 ? (
-            <p className="text-zinc-500 dark:text-gray-500">No checklist items.</p>
-          ) : (
-            <ul className="space-y-2">
-              {complianceChecklists.map((c) => (
-                <li key={c.id} className="flex items-center gap-2">
-                  <span className={`w-4 h-4 rounded ${c.completed ? 'bg-green-500' : 'bg-amber-500'}`} />
-                  <span className={c.completed ? 'text-zinc-500 dark:text-gray-500 line-through' : 'text-zinc-900 dark:text-white'}>{c.item_name}</span>
-                  {c.completed_at && <span className="text-zinc-500 dark:text-gray-500 text-xs">({new Date(c.completed_at).toLocaleDateString()})</span>}
-                </li>
-              ))}
-            </ul>
+                    </thead>
+                    <tbody className="divide-y divide-zinc-200 dark:divide-gray-800">
+                      {complianceDocuments.map((d) => {
+                        const expired = d.expiry_date && d.expiry_date < today
+                        return (
+                          <tr key={d.id} className={expired ? 'bg-red-500/5' : ''}>
+                            <td className="px-4 py-2 text-zinc-600 dark:text-gray-300">{DOC_TYPES[d.document_type ?? ''] ?? d.document_type ?? '—'}</td>
+                            <td className="px-4 py-2 text-zinc-500 dark:text-gray-400">{d.title ?? '—'}</td>
+                            <td className="px-4 py-2"><span className={expired ? 'text-red-400' : 'text-zinc-500 dark:text-gray-400'}>{d.expiry_date ? new Date(d.expiry_date).toLocaleDateString() : '—'}</span></td>
+                            <td>{d.verified_at ? <span className="px-2 py-0.5 rounded text-xs bg-green-500/20 text-green-400">Verified</span> : <span className="px-2 py-0.5 rounded text-xs bg-gray-700 text-zinc-500 dark:text-gray-400">Pending</span>}</td>
+                            <td>{d.document_url ? <a href={d.document_url} target="_blank" rel="noopener noreferrer" className="text-[#C27E00] hover:underline flex items-center gap-1"><ExternalLink className="w-3 h-3" /> Link</a> : '—'}</td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+              <h3 className="text-md font-medium text-zinc-900 dark:text-white mt-6 mb-2">Compliance Checklists</h3>
+              {complianceChecklists.length === 0 ? (
+                <p className="text-zinc-500 dark:text-gray-500">No checklist items.</p>
+              ) : (
+                <ul className="space-y-2">
+                  {complianceChecklists.map((c) => (
+                    <li key={c.id} className="flex items-center gap-2">
+                      <span className={`w-4 h-4 rounded ${c.completed ? 'bg-green-500' : 'bg-amber-500'}`} />
+                      <span className={c.completed ? 'text-zinc-500 dark:text-gray-500 line-through' : 'text-zinc-900 dark:text-white'}>{c.item_name}</span>
+                      {c.completed_at && <span className="text-zinc-500 dark:text-gray-500 text-xs">({new Date(c.completed_at).toLocaleDateString()})</span>}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </>
           )}
         </div>
       )}

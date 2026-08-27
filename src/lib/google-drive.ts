@@ -41,14 +41,14 @@ export interface GoogleDriveSettings {
 }
 
 /** Sanitize folder name for Drive (remove invalid characters) */
-function sanitizeFolderName(name: string): string {
+export function sanitizeFolderName(name: string): string {
   return name.replace(/[<>:"/\\|?*]/g, '_').replace(/\s+/g, ' ').trim() || 'Unknown'
 }
 
 /**
  * Find or create a folder by name under parent. Returns folder ID.
  */
-async function findOrCreateFolder(
+export async function findOrCreateFolder(
   drive: ReturnType<typeof google.drive>,
   parentId: string,
   folderName: string
@@ -430,7 +430,7 @@ export type CommunicationAttachmentResult = {
   size: number
 }
 
-async function getDriveClient(settings: GoogleDriveSettings): Promise<
+export async function getDriveClient(settings: GoogleDriveSettings): Promise<
   | { error: string; drive?: undefined; rootFolderId?: undefined }
   | { drive: ReturnType<typeof google.drive>; rootFolderId: string; error?: undefined }
 > {

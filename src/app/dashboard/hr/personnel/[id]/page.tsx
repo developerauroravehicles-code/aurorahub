@@ -32,7 +32,7 @@ export default async function PersonnelDetailPage({ params }: { params: Promise<
   const { id } = await params
   const supabase = await createClient()
 
-  const [personRes, regionsRes, dealersRes, managers, certificationsRes, timelineRes, installerRes, orgTree] =
+  const [personRes, regionsRes, dealersRes, managers, certificationsRes, timelineRes, installerRes, orgTree, documentAssignmentsRes] =
     await Promise.all([
     supabase
       .from('personnel')
@@ -46,6 +46,11 @@ export default async function PersonnelDetailPage({ params }: { params: Promise<
     supabase.from('personnel_timeline').select('*').eq('personnel_id', id).order('created_at', { ascending: false }).limit(20),
     supabase.from('installer_profiles_with_completion').select('*').eq('personnel_id', id).maybeSingle(),
     fetchOrgDepartmentTree(supabase),
+    supabase.from('personnel_document_assignments').select(`
+      id, personnel_id, status, drive_file_id, signed_drive_file_id, drive_web_view_link, docusign_envelope_id, docusign_status,
+      template:compliance_document_templates(code, name, category, interaction_type),
+      personnel:personnel(full_name)
+    `).eq('personnel_id', id).order('assigned_at', { ascending: false }),
   ])
 
   const { data: person } = personRes
@@ -78,6 +83,7 @@ export default async function PersonnelDetailPage({ params }: { params: Promise<
         managers={managers}
         installerProfile={installerRes.data}
         orgTree={orgTree}
+        documentAssignments={(documentAssignmentsRes.data ?? []) as unknown as Parameters<typeof PersonnelDetail>[0]['documentAssignments']}
       />
     </div>
   )

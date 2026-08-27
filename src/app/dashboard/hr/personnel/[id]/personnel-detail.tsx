@@ -9,6 +9,7 @@ import { normalizeEmail } from '@/lib/email-normalize'
 import { OrgStructureFields } from '../org-structure-fields'
 import { orgRoleLabel, type OrgDepartmentTree } from '@/lib/hr-org-structure'
 import { formInputClassName, formLabelClassName, formSelectClassName } from '@/lib/form-field-styles'
+import { PersonnelDocumentsSection } from '../../compliance/compliance-document-panels'
 
 const PLATFORM_ROLE_LABELS: Record<string, string> = {
   specialist: 'Technical Support',
@@ -114,6 +115,7 @@ export function PersonnelDetail({
   managers,
   installerProfile,
   orgTree,
+  documentAssignments = [],
 }: {
   person: Record<string, unknown>
   certifications: Record<string, unknown>[]
@@ -123,6 +125,16 @@ export function PersonnelDetail({
   managers: { id: string; full_name: string | null }[]
   installerProfile?: Record<string, unknown> | null
   orgTree: OrgDepartmentTree
+  documentAssignments?: {
+    id: string
+    personnel_id: string
+    status: string
+    drive_web_view_link: string | null
+    docusign_envelope_id: string | null
+    docusign_status: string | null
+    template: { code: string; name: string; category: string; interaction_type: string } | null
+    personnel: { full_name: string } | null
+  }[]
 }) {
   const router = useRouter()
   const [editing, setEditing] = useState(false)
@@ -482,6 +494,13 @@ export function PersonnelDetail({
               <p className="text-zinc-500 dark:text-gray-500 text-sm mt-2">No certifications yet.</p>
             )}
           </div>
+        ))}
+
+        {section('Compliance Documents', (
+          <PersonnelDocumentsSection
+            assignments={documentAssignments}
+            personnelId={person.id as string}
+          />
         ))}
 
         {installerProfile &&
@@ -857,6 +876,13 @@ export function PersonnelDetail({
               <p className="text-zinc-500 dark:text-gray-500 text-sm mt-2">No certifications yet.</p>
             )}
           </div>
+        ))}
+
+        {section('Compliance Documents', (
+          <PersonnelDocumentsSection
+            assignments={documentAssignments}
+            personnelId={person.id as string}
+          />
         ))}
 
         {installerProfile &&

@@ -12,7 +12,12 @@ import {
   updateComplianceChecklist,
   deleteComplianceChecklist,
 } from './actions'
-import { Pencil, Trash2, Plus, FileText, CheckSquare, Loader2, ExternalLink, Check } from 'lucide-react'
+import { Pencil, Trash2, Plus, FileText, CheckSquare, Loader2, ExternalLink, Check, Layers, ClipboardList } from 'lucide-react'
+import {
+  ComplianceAssignmentsPanel,
+  ComplianceTemplatesPanel,
+} from './compliance-document-panels'
+import type { ComplianceDocumentTemplate } from '@/lib/compliance-document-types'
 
 const DOCUMENT_TYPES: Record<string, string> = {
   work_permit: 'Work Permit',
@@ -46,6 +51,8 @@ export function ComplianceContent({
   documents,
   checklists,
   personnel,
+  templates = [],
+  assignments = [],
 }: {
   documents: {
     id: string
@@ -68,9 +75,20 @@ export function ComplianceContent({
     personnel: { full_name: string } | null
   }[]
   personnel: { id: string; full_name: string }[]
+  templates?: ComplianceDocumentTemplate[]
+  assignments?: {
+    id: string
+    personnel_id: string
+    status: string
+    drive_web_view_link: string | null
+    docusign_envelope_id: string | null
+    docusign_status: string | null
+    template: { code: string; name: string; category: string; interaction_type: string } | null
+    personnel: { full_name: string } | null
+  }[]
 }) {
   const router = useRouter()
-  const [activeTab, setActiveTab] = useState<'documents' | 'checklists'>('documents')
+  const [activeTab, setActiveTab] = useState<'templates' | 'assignments' | 'documents' | 'checklists'>('assignments')
   const [showDocForm, setShowDocForm] = useState(false)
   const [editingDocId, setEditingDocId] = useState<string | null>(null)
   const [showChecklistForm, setShowChecklistForm] = useState(false)
@@ -86,7 +104,27 @@ export function ComplianceContent({
 
   return (
     <div className="space-y-6">
-      <div className="flex gap-2 border-b border-zinc-200 dark:border-gray-800 pb-2">
+      <div className="flex gap-2 border-b border-zinc-200 dark:border-gray-800 pb-2 flex-wrap">
+        <button
+          onClick={() => setActiveTab('assignments')}
+          className={`px-4 py-2 rounded-t text-sm font-medium transition-colors flex items-center gap-2 ${
+            activeTab === 'assignments'
+              ? 'bg-zinc-200 dark:bg-white/10 text-zinc-900 dark:text-white border border-b-0 border-zinc-200 dark:border-gray-800'
+              : 'text-zinc-500 dark:text-gray-400 hover:text-zinc-900 dark:text-white hover:bg-zinc-200/50 dark:bg-white/5'
+          }`}
+        >
+          <ClipboardList className="w-4 h-4" /> Assignments
+        </button>
+        <button
+          onClick={() => setActiveTab('templates')}
+          className={`px-4 py-2 rounded-t text-sm font-medium transition-colors flex items-center gap-2 ${
+            activeTab === 'templates'
+              ? 'bg-zinc-200 dark:bg-white/10 text-zinc-900 dark:text-white border border-b-0 border-zinc-200 dark:border-gray-800'
+              : 'text-zinc-500 dark:text-gray-400 hover:text-zinc-900 dark:text-white hover:bg-zinc-200/50 dark:bg-white/5'
+          }`}
+        >
+          <Layers className="w-4 h-4" /> Templates
+        </button>
         <button
           onClick={() => setActiveTab('documents')}
           className={`px-4 py-2 rounded-t text-sm font-medium transition-colors flex items-center gap-2 ${
@@ -95,7 +133,7 @@ export function ComplianceContent({
               : 'text-zinc-500 dark:text-gray-400 hover:text-zinc-900 dark:text-white hover:bg-zinc-200/50 dark:bg-white/5'
           }`}
         >
-          <FileText className="w-4 h-4" /> Documents
+          <FileText className="w-4 h-4" /> Legacy Documents
         </button>
         <button
           onClick={() => setActiveTab('checklists')}
@@ -108,6 +146,18 @@ export function ComplianceContent({
           <CheckSquare className="w-4 h-4" /> Checklists
         </button>
       </div>
+
+      {activeTab === 'templates' && (
+        <div className="bg-zinc-200/50 dark:bg-white/5 rounded-lg border border-zinc-200 dark:border-gray-800 p-6">
+          <ComplianceTemplatesPanel templates={templates} />
+        </div>
+      )}
+
+      {activeTab === 'assignments' && (
+        <div className="bg-zinc-200/50 dark:bg-white/5 rounded-lg border border-zinc-200 dark:border-gray-800 p-6">
+          <ComplianceAssignmentsPanel assignments={assignments} personnel={personnel} />
+        </div>
+      )}
 
       {activeTab === 'documents' && (
         <div className="bg-zinc-200/50 dark:bg-white/5 rounded-lg border border-zinc-200 dark:border-gray-800 p-6">

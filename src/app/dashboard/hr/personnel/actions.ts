@@ -198,6 +198,10 @@ export async function terminateEmployment(
     }
   }
 
+  const { assignOffboardingPackInternal } = await import('@/app/dashboard/hr/compliance/document-pack-actions')
+  await assignOffboardingPackInternal(supabase, personnelId, user.id)
+
+  revalidatePath('/dashboard/hr/compliance')
   revalidatePath('/dashboard/hr/personnel')
   revalidatePath(`/dashboard/hr/personnel/${personnelId}`)
   revalidatePath('/dashboard/hr/employees')

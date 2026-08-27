@@ -18,6 +18,15 @@ type LegacySettings = {
     serviceAccountPrivateKey: string
     enabled: boolean
   }
+  docusign: {
+    enabled: boolean
+    integrationKey: string
+    accountId: string
+    userId: string
+    rsaPrivateKey: string
+    baseUri: string
+    authServer: string
+  }
 }
 
 type ExternalConnection = {
@@ -47,6 +56,15 @@ export function ExternalAPIsContent() {
       clientId: '', clientSecret: '', defaultFolderId: '', refreshToken: '',
       useOAuth: false, serviceAccountEmail: '', serviceAccountPrivateKey: '', enabled: false,
     },
+    docusign: {
+      enabled: false,
+      integrationKey: '',
+      accountId: '',
+      userId: '',
+      rsaPrivateKey: '',
+      baseUri: 'https://na4.docusign.net',
+      authServer: 'account.docusign.com',
+    },
   })
   const [connections, setConnections] = useState<ExternalConnection[]>([])
   const [loading, setLoading] = useState(false)
@@ -65,11 +83,13 @@ export function ExternalAPIsContent() {
         { data: twilioData },
         { data: whatsappData },
         { data: googleDriveData },
+        { data: docusignData },
         { data: connData },
       ] = await Promise.all([
         supabase.from('system_settings').select('value').eq('key', 'twilio_settings').single(),
         supabase.from('system_settings').select('value').eq('key', 'whatsapp_settings').single(),
         supabase.from('system_settings').select('value').eq('key', 'google_drive_settings').single(),
+        supabase.from('system_settings').select('value').eq('key', 'docusign_settings').single(),
         supabase.from('external_api_connections').select('*').order('created_at'),
       ])
       if (twilioData?.value) setLegacy((s) => ({ ...s, twilio: { ...s.twilio, ...JSON.parse(twilioData.value) } }))
@@ -83,6 +103,21 @@ export function ExternalAPIsContent() {
             refreshToken: p.refreshToken ?? '', useOAuth: p.useOAuth ?? false,
             serviceAccountEmail: p.serviceAccountEmail ?? '', serviceAccountPrivateKey: p.serviceAccountPrivateKey ?? '',
             enabled: p.enabled ?? false,
+          },
+        }))
+      }
+      if (docusignData?.value) {
+        const p = JSON.parse(docusignData.value)
+        setLegacy((s) => ({
+          ...s,
+          docusign: {
+            enabled: p.enabled ?? false,
+            integrationKey: p.integrationKey ?? '',
+            accountId: p.accountId ?? '',
+            userId: p.userId ?? '',
+            rsaPrivateKey: p.rsaPrivateKey ?? '',
+            baseUri: p.baseUri ?? 'https://na4.docusign.net',
+            authServer: p.authServer ?? 'account.docusign.com',
           },
         }))
       }
@@ -392,6 +427,49 @@ export function ExternalAPIsContent() {
           })}
           {driveConnections.length === 0 && !showAddDrive && <li className="text-sm text-zinc-500 dark:text-gray-500 py-2">No additional Drive connections yet.</li>}
         </ul>
+      </div>
+
+      {/* DocuSign Production */}
+      <div className="bg-zinc-200/50 dark:bg-white/5 rounded-lg border border-zinc-200 dark:border-gray-800 p-6">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h4 className="text-md font-semibold text-zinc-900 dark:text-white mb-1">DocuSign (Production)</h4>
+            <p className="text-sm text-zinc-500 dark:text-gray-400">
+              JWT integration for employment agreements and release forms. Connect webhook: /api/docusign/webhook
+            </p>
+          </div>
+          <label className="flex items-center cursor-pointer">
+            <input type="checkbox" checked={legacy.docusign.enabled} onChange={(e) => setLegacy((s) => ({ ...s, docusign: { ...s.docusign, enabled: e.target.checked } }))} className="sr-only" />
+            <div className={`relative w-11 h-6 rounded-full transition-colors ${legacy.docusign.enabled ? 'bg-[#C27E00]' : 'bg-gray-600'}`}>
+              <div className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform ${legacy.docusign.enabled ? 'transform translate-x-5' : ''}`} />
+            </div>
+          </label>
+        </div>
+        <div className="space-y-4">
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div>
+              <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300 mb-1">Integration Key</label>
+              <input type="text" value={legacy.docusign.integrationKey} onChange={(e) => setLegacy((s) => ({ ...s, docusign: { ...s.docusign, integrationKey: e.target.value } }))} className="block w-full rounded-md border border-zinc-300 dark:border-gray-700 bg-zinc-200/50 dark:bg-white/5 px-3 py-2 text-zinc-900 dark:text-white sm:text-sm" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300 mb-1">Account ID</label>
+              <input type="text" value={legacy.docusign.accountId} onChange={(e) => setLegacy((s) => ({ ...s, docusign: { ...s.docusign, accountId: e.target.value } }))} className="block w-full rounded-md border border-zinc-300 dark:border-gray-700 bg-zinc-200/50 dark:bg-white/5 px-3 py-2 text-zinc-900 dark:text-white sm:text-sm" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300 mb-1">Impersonated User ID</label>
+              <input type="text" value={legacy.docusign.userId} onChange={(e) => setLegacy((s) => ({ ...s, docusign: { ...s.docusign, userId: e.target.value } }))} className="block w-full rounded-md border border-zinc-300 dark:border-gray-700 bg-zinc-200/50 dark:bg-white/5 px-3 py-2 text-zinc-900 dark:text-white sm:text-sm" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300 mb-1">API Base URI</label>
+              <input type="text" value={legacy.docusign.baseUri} onChange={(e) => setLegacy((s) => ({ ...s, docusign: { ...s.docusign, baseUri: e.target.value } }))} className="block w-full rounded-md border border-zinc-300 dark:border-gray-700 bg-zinc-200/50 dark:bg-white/5 px-3 py-2 text-zinc-900 dark:text-white sm:text-sm" placeholder="https://na4.docusign.net" />
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300 mb-1">RSA Private Key (PEM)</label>
+            <textarea value={legacy.docusign.rsaPrivateKey} onChange={(e) => setLegacy((s) => ({ ...s, docusign: { ...s.docusign, rsaPrivateKey: e.target.value } }))} rows={5} className="block w-full rounded-md border border-zinc-300 dark:border-gray-700 bg-zinc-200/50 dark:bg-white/5 px-3 py-2 text-zinc-900 dark:text-white font-mono text-xs sm:text-sm" placeholder="-----BEGIN RSA PRIVATE KEY-----..." />
+          </div>
+          <button onClick={() => save('docusign_settings', legacy.docusign)} disabled={loading} className="bg-[#C27E00] hover:bg-[#a06900] text-white px-4 py-2 rounded-md font-medium transition-colors disabled:opacity-50">{loading ? 'Saving...' : 'Save DocuSign Settings'}</button>
+        </div>
       </div>
     </div>
   )

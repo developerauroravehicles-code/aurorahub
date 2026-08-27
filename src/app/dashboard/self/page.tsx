@@ -5,6 +5,7 @@ import { fetchSpecialistCompensationSnapshot } from '@/lib/specialist-compensati
 import { fetchMyFieldCameraStock } from '@/lib/inventory-v2/specialist-stock'
 import { getMyExpenseClaims } from './expense-actions'
 import { fetchOrgDepartmentTree, orgRoleLabel } from '@/lib/hr-org-structure'
+import { preparePendingAssignmentsForPersonnel } from '@/app/dashboard/hr/compliance/document-pack-actions'
 
 export const dynamic = 'force-dynamic'
 
@@ -45,6 +46,10 @@ export default async function SelfPortalPage() {
 
   const personnelId = personnel?.id
 
+  if (personnelId) {
+    await preparePendingAssignmentsForPersonnel(personnelId)
+  }
+
   type Payments = Parameters<typeof SelfPortalContent>[0]['payments']
   type Equipment = Parameters<typeof SelfPortalContent>[0]['equipment']
 
@@ -55,6 +60,7 @@ export default async function SelfPortalPage() {
     certsRes,
     complianceDocsRes,
     complianceChecklistsRes,
+    documentAssignmentsRes,
     availabilityRes,
     feedbackRes,
     leaveBlocksRes,
@@ -66,6 +72,12 @@ export default async function SelfPortalPage() {
     personnelId ? supabase.from('personnel_certifications').select('id, certification_type, name, institution, issue_date, expiry_date, status').eq('personnel_id', personnelId).order('expiry_date', { ascending: false }) : Promise.resolve({ data: [] }),
     personnelId ? supabase.from('compliance_documents').select('id, document_type, title, expiry_date, verified_at, document_url').eq('personnel_id', personnelId).order('expiry_date', { ascending: false }) : Promise.resolve({ data: [] }),
     personnelId ? supabase.from('compliance_checklists').select('id, item_name, completed, completed_at, notes').eq('personnel_id', personnelId) : Promise.resolve({ data: [] }),
+    personnelId ? supabase.from('personnel_document_assignments').select(`
+      id, personnel_id, status, drive_file_id, drive_web_view_link, signed_drive_file_id,
+      acknowledged_at, scroll_completed_at, signed_at, verified_at,
+      docusign_envelope_id, docusign_status,
+      template:compliance_document_templates(code, name, category, interaction_type, requires_scroll_ack, description)
+    `).eq('personnel_id', personnelId).order('assigned_at') : Promise.resolve({ data: [] }),
     personnelId ? supabase.from('personnel_availability').select('id, day_of_week, start_time, end_time, is_available').eq('personnel_id', personnelId) : Promise.resolve({ data: [] }),
     personnelId ? supabase.from('performance_feedback').select('id, feedback_type, source, rating, comment, created_at').eq('personnel_id', personnelId).order('created_at', { ascending: false }).limit(20) : Promise.resolve({ data: [] }),
     personnelId ? supabase.from('personnel_leave_blocks').select('id, start_date, end_date, reason').eq('personnel_id', personnelId).order('start_date', { ascending: false }) : Promise.resolve({ data: [] }),
@@ -107,6 +119,7 @@ export default async function SelfPortalPage() {
         certifications={(certsRes.data ?? []) as Parameters<typeof SelfPortalContent>[0]['certifications']}
         complianceDocuments={(complianceDocsRes.data ?? []) as Parameters<typeof SelfPortalContent>[0]['complianceDocuments']}
         complianceChecklists={(complianceChecklistsRes.data ?? []) as Parameters<typeof SelfPortalContent>[0]['complianceChecklists']}
+        documentAssignments={(documentAssignmentsRes.data ?? []) as unknown as Parameters<typeof SelfPortalContent>[0]['documentAssignments']}
         availability={(availabilityRes.data ?? []) as Parameters<typeof SelfPortalContent>[0]['availability']}
         feedback={(feedbackRes.data ?? []) as Parameters<typeof SelfPortalContent>[0]['feedback']}
         leaveBlocks={(leaveBlocksRes.data ?? []) as Parameters<typeof SelfPortalContent>[0]['leaveBlocks']}
