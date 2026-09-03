@@ -10,11 +10,18 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('id, role, dealer_id, full_name, phone')
-    .eq('id', user.id)
-    .single()
+  const [{ data: profile }, { data: personnel }] = await Promise.all([
+    supabase
+      .from('profiles')
+      .select('id, role, dealer_id, full_name, phone')
+      .eq('id', user.id)
+      .single(),
+    supabase
+      .from('personnel')
+      .select('position, hr_org_roles(name)')
+      .eq('profile_id', user.id)
+      .maybeSingle(),
+  ])
 
   if (!profile) {
       // In case user exists but profile not created (should not happen in normal flow)
@@ -31,11 +38,6 @@ export default async function DashboardLayout({ children }: { children: React.Re
   }
 
   let jobTitle: string | null = null
-  const { data: personnel } = await supabase
-    .from('personnel')
-    .select('position, hr_org_roles(name)')
-    .eq('profile_id', user.id)
-    .maybeSingle()
 
   if (personnel) {
     const roleRel = personnel.hr_org_roles as { name: string } | { name: string }[] | null

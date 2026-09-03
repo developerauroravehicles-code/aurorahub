@@ -1,7 +1,6 @@
 'use server'
 
 import { headers } from 'next/headers'
-import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { logIdentityEvent } from '@/lib/identity-audit'
@@ -85,7 +84,7 @@ export async function login(prevState: ActionState, formData: FormData) {
     }
   }
 
-  const accessCheck = await assertUserCanSignIn(user.user.id)
+  const accessCheck = await assertUserCanSignIn(user.user.id, { skipCache: true })
   if (accessCheck.error) {
     await supabase.auth.signOut()
     await logIdentityEvent({
@@ -106,7 +105,6 @@ export async function login(prevState: ActionState, formData: FormData) {
     userAgent: h.get('user-agent') ?? null,
   })
 
-  revalidatePath('/', 'layout')
   redirect('/dashboard')
 }
 

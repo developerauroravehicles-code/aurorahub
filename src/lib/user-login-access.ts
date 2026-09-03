@@ -51,29 +51,50 @@ export async function setUserLoginEnabled(
     ban_duration: enabled ? 'none' : LONG_BAN_DURATION,
   })
   if (error) return { error: error.message }
+  clearUserLoginAccessCache(userId)
   return {}
 }
 
-export async function assertUserCanSignIn(userId: string): Promise<{ error?: string }> {
+const ACCESS_CHECK_TTL_MS = 90_000
+const accessCheckCache = new Map<string, { result: { error?: string }; expiresAt: number }>()
+
+export function clearUserLoginAccessCache(userId?: string) {
+  if (userId) {
+    accessCheckCache.delete(userId)
+    return
+  }
+  accessCheckCache.clear()
+}
+
+export async function assertUserCanSignIn(
+  userId: string,
+  options?: { skipCache?: boolean }
+): Promise<{ error?: string }> {
+  if (!options?.skipCache) {
+    const cached = accessCheckCache.get(userId)
+    if (cached && cached.expiresAt > Date.now()) return cached.result
+  }
+
   const admin = createAdminClient()
+  const [personnelRes, authRes] = await Promise.all([
+    admin.from('personnel').select('status').eq('profile_id', userId).maybeSingle(),
+    admin.auth.admin.getUserById(userId),
+  ])
 
-  const personnelBlock = await getPersonnelLoginBlockReason(userId)
-  if (personnelBlock === 'terminated') {
-    return { error: 'Your employment has ended. Contact HR if you believe this is an error.' }
-  }
-  if (personnelBlock === 'suspended') {
-    return { error: 'Your account is suspended. Contact HR or IT.' }
-  }
-
-  const { data, error } = await admin.auth.admin.getUserById(userId)
-  if (error || !data.user) {
-    return { error: 'Unable to verify account access.' }
-  }
-  if (isAuthUserBanned(data.user.banned_until)) {
-    return { error: LOGIN_ACCESS_DISABLED_MESSAGE }
+  let result: { error?: string } = {}
+  const status = personnelRes.data?.status
+  if (status === 'terminated') {
+    result = { error: 'Your employment has ended. Contact HR if you believe this is an error.' }
+  } else if (status === 'suspended') {
+    result = { error: 'Your account is suspended. Contact HR or IT.' }
+  } else if (authRes.error || !authRes.data.user) {
+    result = { error: 'Unable to verify account access.' }
+  } else if (isAuthUserBanned(authRes.data.user.banned_until)) {
+    result = { error: LOGIN_ACCESS_DISABLED_MESSAGE }
   }
 
-  return {}
+  accessCheckCache.set(userId, { result, expiresAt: Date.now() + ACCESS_CHECK_TTL_MS })
+  return result
 }
 
 export function loginBlockMessage(reason: LoginAccessBlockReason): string {

@@ -311,9 +311,14 @@ export async function getDashboardOverviewData(financeMonth?: string | null): Pr
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
   const from30 = thirtyDaysAgo.toISOString()
 
-  const { data: demands } = await supabase
-    .from('demands')
-    .select('id, status, demand_number, dealer_id, created_at, completed_at, updated_at, invoice_saved_at, invoice_downloaded_at, invoice_drive_uploaded_at, invoice_total_amount, invoice_financial_summary, invoice_extra_rows, dealers(name)')
+  const [{ data: demands }, { data: employees }] = await Promise.all([
+    supabase
+      .from('demands')
+      .select(
+        'id, status, demand_number, dealer_id, created_at, completed_at, updated_at, invoice_saved_at, invoice_downloaded_at, invoice_drive_uploaded_at, invoice_total_amount, invoice_financial_summary, dealers(name)'
+      ),
+    supabase.from('profiles').select('role').neq('role', 'general_manager'),
+  ])
   const demandsList = demands ?? []
 
   const demandCounts: DemandCounts = {
@@ -356,11 +361,6 @@ export async function getDashboardOverviewData(financeMonth?: string | null): Pr
     return completedAt && new Date(completedAt) >= thirtyDaysAgo
   })
   const dealerIds = new Set(recentCompleted.map(d => d.dealer_id))
-
-  const { data: employees } = await supabase
-    .from('profiles')
-    .select('role')
-    .neq('role', 'general_manager')
 
   const employeeRoleCounts: EmployeeRoleCounts = {
     sales: employees?.filter(e => e.role === 'sales').length ?? 0,

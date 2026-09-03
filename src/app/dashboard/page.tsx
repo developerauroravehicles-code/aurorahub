@@ -821,40 +821,35 @@ export default async function DashboardPage({
 
   // Aurora Manager: platform admin dashboard
   if (profile.role === 'aurora_manager') {
-    const { count: totalDealers } = await supabase
-      .from('dealers')
-      .select('*', { count: 'exact', head: true })
-
-    // Get total specialists count
-    const { count: totalSpecialists } = await supabase
-      .from('profiles')
-      .select('*', { count: 'exact', head: true })
-      .eq('role', 'specialist')
-
-    // Get all demands for statistics (with dealer timezone for appointment display)
-    const { data: allDemands } = await supabase
-      .from('demands')
-      .select('id, demand_number, status, created_at, customer_firstname, customer_lastname, vehicle_make, vehicle_model, vehicle_year, camera_model, appointment_date, dealers(region_codes(timezone_id, timezones(name)))')
-      .order('created_at', { ascending: false })
-
-    // Calculate demand statistics
-    const totalDemands = allDemands?.length || 0
-    const pendingFinance = allDemands?.filter(d => d.status === 'pending_finance').length || 0
-    const approved = allDemands?.filter(d => d.status === 'approved').length || 0
-    const completed = allDemands?.filter(d => d.status === 'completed').length || 0
-    const cancelled = allDemands?.filter(d => d.status === 'cancelled').length || 0
-
-    // Get recent demands (last 10)
-    const recentDemands = allDemands?.slice(0, 10) || []
-
-    // Dashboard overview data for widgets
     const params = await searchParams
     const { getDashboardOverviewData } = await import('./admin/dashboard/actions')
     const { fetchInventoryStockAlerts } = await import('@/lib/inventory-stock-alerts')
-    const [overviewData, inventoryStock] = await Promise.all([
-      getDashboardOverviewData(params.financeMonth ?? null),
-      fetchInventoryStockAlerts(supabase),
-    ])
+
+    const [dealersCountRes, specialistsCountRes, cameraRowsRes, recentDemandsRes, overviewData, inventoryStock] =
+      await Promise.all([
+        supabase.from('dealers').select('*', { count: 'exact', head: true }),
+        supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('role', 'specialist'),
+        supabase.from('demands').select('camera_model'),
+        supabase
+          .from('demands')
+          .select(
+            'id, demand_number, status, created_at, customer_firstname, customer_lastname, vehicle_make, vehicle_model, vehicle_year, camera_model, appointment_date'
+          )
+          .order('created_at', { ascending: false })
+          .limit(10),
+        getDashboardOverviewData(params.financeMonth ?? null),
+        fetchInventoryStockAlerts(supabase),
+      ])
+
+    const totalDealers = dealersCountRes.count
+    const totalSpecialists = specialistsCountRes.count
+    const recentDemands = recentDemandsRes.data ?? []
+    const completed = overviewData.demandCounts.completed
+    const totalDemands =
+      overviewData.demandCounts.pending_finance +
+      overviewData.demandCounts.approved +
+      completed +
+      overviewData.demandCounts.cancelled
 
     const { DemandOverview } = await import('./admin/dashboard/demand-overview')
     const { DemandTrends } = await import('./admin/dashboard/demand-trends')
@@ -898,7 +893,7 @@ export default async function DashboardPage({
 
         <InventoryStockAlertsWidget alerts={inventoryStock.alerts} summary={inventoryStock.summary} />
 
-        <CameraDistribution items={getCameraDistribution(allDemands ?? [])} />
+        <CameraDistribution items={getCameraDistribution(cameraRowsRes.data ?? [])} />
 
         {/* Demand Overview with Pie Chart */}
         <div id="demand-overview">
