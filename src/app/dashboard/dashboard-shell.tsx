@@ -6,6 +6,7 @@ import { ChevronRight, Menu } from 'lucide-react'
 import { clsx } from 'clsx'
 import { Sidebar } from './sidebar'
 import { BackgroundLogo } from '@/components/background-logo'
+import { PasswordChangePromptModal } from '@/components/password-change-prompt-modal'
 import { TimezoneProvider } from '@/contexts/timezone-context'
 
 const SIDEBAR_STORAGE_KEY = 'aurora-sidebar-expanded'
@@ -112,6 +113,7 @@ export function DashboardShell({
       </div>
 
       <BackgroundLogo />
+      <PasswordChangePromptModal />
     </div>
   )
 }

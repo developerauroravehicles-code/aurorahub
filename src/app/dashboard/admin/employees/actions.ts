@@ -108,6 +108,18 @@ export async function resetEmployeePassword(userId: string, newPassword: string)
     return { error: error.message }
   }
 
+  const now = new Date().toISOString()
+  const { getNextPasswordPromptAtAfterChange } = await import('@/lib/password-change/prompt')
+  const nextPromptAt = await getNextPasswordPromptAtAfterChange()
+
+  await supabaseAdmin
+    .from('profiles')
+    .update({
+      password_last_changed_at: now,
+      next_password_prompt_at: nextPromptAt,
+    })
+    .eq('id', userId)
+
   revalidatePath('/dashboard/admin/employees')
   revalidatePath('/dashboard/identity/users')
   return { success: true }
