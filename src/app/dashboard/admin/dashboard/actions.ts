@@ -315,7 +315,7 @@ export async function getDashboardOverviewData(financeMonth?: string | null): Pr
     supabase
       .from('demands')
       .select(
-        'id, status, demand_number, dealer_id, created_at, completed_at, updated_at, invoice_saved_at, invoice_downloaded_at, invoice_drive_uploaded_at, invoice_total_amount, invoice_financial_summary, dealers(name)'
+        'id, status, demand_number, dealer_id, created_at, completed_at, updated_at, invoice_saved_at, invoice_downloaded_at, invoice_drive_uploaded_at, invoice_total_amount, invoice_financial_summary, invoice_extra_rows, dealers(name)'
       ),
     supabase.from('profiles').select('role').neq('role', 'general_manager'),
   ])
