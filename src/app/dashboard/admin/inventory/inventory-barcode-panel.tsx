@@ -2,10 +2,11 @@
 
 import { useState, useTransition, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Barcode, Plus, Trash2, Printer, ScanLine, Package, Layers } from 'lucide-react'
+import { Barcode, Plus, Trash2, Printer, ScanLine, Package, Layers, Download } from 'lucide-react'
 import type { BarcodeSettings } from '@/lib/inventory-barcodes'
 import type { BarcodeTraceRow } from '@/lib/inventory-barcodes/trace'
 import { generateQrDataUrl } from '@/lib/generate-qr-data-url'
+import { exportBarcodesToExcel } from './barcode-excel-export'
 import {
   saveBarcodeSettingsAction,
   createBarcodeSetTemplate,
@@ -35,7 +36,15 @@ type SetTemplate = {
   }[]
 }
 
-type GeneratedBarcode = { id: string; code: string; kind: string }
+type GeneratedBarcode = {
+  id: string
+  code: string
+  kind: string
+  status?: string
+  batchId?: string
+  cameraModelId?: string | null
+  setTemplateId?: string | null
+}
 
 const inputClass =
   'rounded-md border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 px-3 py-2 text-sm text-zinc-900 dark:text-white focus:border-[#C27E00] focus:outline-none focus:ring-1 focus:ring-[#C27E00]'
@@ -78,6 +87,7 @@ export function InventoryBarcodePanel({
   const [message, setMessage] = useState<{ type: 'ok' | 'err'; text: string } | null>(null)
   const [lastGenerated, setLastGenerated] = useState<GeneratedBarcode[]>([])
   const [registrySearch, setRegistrySearch] = useState('')
+  const [selectedExportIds, setSelectedExportIds] = useState<Set<string>>(new Set())
   const [selectedBarcodeId, setSelectedBarcodeId] = useState<string | null>(null)
   const [traceEvents, setTraceEvents] = useState<
     { event_type: string; created_at: string; actor_name: string | null }[]
@@ -100,16 +110,101 @@ export function InventoryBarcodePanel({
     }
   }, [selectedBarcodeId])
 
-  function run(fn: () => Promise<{ error?: string; success?: boolean; barcodes?: GeneratedBarcode[] }>) {
+  function modelForGenerated(b: GeneratedBarcode): string {
+    if (b.kind === 'set') {
+      const template = templates.find((t) => t.id === b.setTemplateId)
+      return template ? `${template.name} (${template.code})` : ''
+    }
+    return cameras.find((c) => c.id === b.cameraModelId)?.name ?? ''
+  }
+
+  function run(
+    fn: () => Promise<{
+      error?: string
+      success?: boolean
+      barcodes?: Array<{
+        id: string
+        code: string
+        kind: string
+        status?: string
+        batch_id?: string
+        camera_model_id?: string | null
+        set_template_id?: string | null
+      }>
+    }>
+  ) {
     setMessage(null)
     startTransition(async () => {
       const res = await fn()
       if (res.error) setMessage({ type: 'err', text: res.error })
       else {
         setMessage({ type: 'ok', text: 'Saved.' })
-        if (res.barcodes?.length) setLastGenerated(res.barcodes.map((b) => ({ id: b.id, code: b.code, kind: b.kind })))
+        if (res.barcodes?.length) {
+          setLastGenerated(
+            res.barcodes.map((b) => ({
+              id: b.id,
+              code: b.code,
+              kind: b.kind,
+              status: b.status,
+              batchId: b.batch_id,
+              cameraModelId: b.camera_model_id,
+              setTemplateId: b.set_template_id,
+            }))
+          )
+        }
         router.refresh()
       }
+    })
+  }
+
+  async function exportGeneratedExcel() {
+    try {
+      await exportBarcodesToExcel(
+        lastGenerated.map((b) => ({
+          code: b.code,
+          kind: b.kind,
+          model: modelForGenerated(b),
+          status: b.status ?? 'generated',
+          batch: b.batchId ?? '',
+        }))
+      )
+    } catch (err) {
+      setMessage({ type: 'err', text: err instanceof Error ? err.message : 'Excel export failed' })
+    }
+  }
+
+  async function exportSelectedExcel() {
+    const selected = filteredRegistry.filter((r) => selectedExportIds.has(r.id))
+    if (selected.length === 0) return
+    try {
+      await exportBarcodesToExcel(
+        selected.map((r) => ({
+          code: r.code,
+          kind: r.kind,
+          model: r.camera_model_name,
+          status: r.status,
+          batch: r.batch_id,
+        }))
+      )
+    } catch (err) {
+      setMessage({ type: 'err', text: err instanceof Error ? err.message : 'Excel export failed' })
+    }
+  }
+
+  function toggleExportId(id: string) {
+    setSelectedExportIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  function toggleExportAllFiltered() {
+    setSelectedExportIds((prev) => {
+      const allSelected = filteredRegistry.length > 0 && filteredRegistry.every((r) => prev.has(r.id))
+      if (allSelected) return new Set()
+      return new Set(filteredRegistry.map((r) => r.id))
     })
   }
 
@@ -309,13 +404,22 @@ export function InventoryBarcodePanel({
             <p className="text-sm font-medium text-zinc-900 dark:text-white">
               Last generated ({lastGenerated.length})
             </p>
-            <button
-              type="button"
-              onClick={() => void printLabels(lastGenerated)}
-              className="inline-flex items-center gap-1 text-sm text-[#C27E00] hover:underline"
-            >
-              <Printer className="h-4 w-4" /> Print labels
-            </button>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => void exportGeneratedExcel()}
+                className="inline-flex items-center gap-1 text-sm text-[#C27E00] hover:underline"
+              >
+                <Download className="h-4 w-4" /> Export Excel
+              </button>
+              <button
+                type="button"
+                onClick={() => void printLabels(lastGenerated)}
+                className="inline-flex items-center gap-1 text-sm text-[#C27E00] hover:underline"
+              >
+                <Printer className="h-4 w-4" /> Print labels
+              </button>
+            </div>
           </div>
           <p className="text-xs text-zinc-500 font-mono truncate">
             {lastGenerated.map((b) => b.code).join(', ')}
@@ -522,17 +626,36 @@ export function InventoryBarcodePanel({
       <div className="rounded-xl border border-zinc-200 dark:border-gray-800 p-4 space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h3 className="font-medium text-zinc-900 dark:text-white">Barcode registry</h3>
-          <input
-            value={registrySearch}
-            onChange={(e) => setRegistrySearch(e.target.value)}
-            placeholder="Search code…"
-            className={`${inputClass} w-48`}
-          />
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              disabled={selectedExportIds.size === 0}
+              onClick={() => void exportSelectedExcel()}
+              className="inline-flex items-center gap-1 rounded-md border border-zinc-300 bg-white px-3 py-1.5 text-sm font-medium text-zinc-900 hover:border-[#C27E00]/50 hover:text-[#C27E00] disabled:pointer-events-none disabled:opacity-40 dark:border-gray-700 dark:bg-white/10 dark:text-white"
+            >
+              <Download className="h-4 w-4" /> Export selected ({selectedExportIds.size})
+            </button>
+            <input
+              value={registrySearch}
+              onChange={(e) => setRegistrySearch(e.target.value)}
+              placeholder="Search code…"
+              className={`${inputClass} w-48`}
+            />
+          </div>
         </div>
         <div className="overflow-x-auto">
           <table className="min-w-full text-sm">
             <thead>
               <tr className="text-left text-zinc-500 border-b border-zinc-200 dark:border-gray-800">
+                <th className="py-2 pr-2">
+                  <input
+                    type="checkbox"
+                    aria-label="Select all filtered barcodes"
+                    checked={filteredRegistry.length > 0 && filteredRegistry.every((r) => selectedExportIds.has(r.id))}
+                    onChange={toggleExportAllFiltered}
+                    className="rounded border-zinc-300"
+                  />
+                </th>
                 <th className="py-2 pr-3">Code</th>
                 <th className="py-2 pr-3">Kind</th>
                 <th className="py-2 pr-3">Model</th>
@@ -548,6 +671,15 @@ export function InventoryBarcodePanel({
                   className={`cursor-pointer ${selectedBarcodeId === row.id ? 'bg-[#C27E00]/10' : ''}`}
                   onClick={() => setSelectedBarcodeId(row.id === selectedBarcodeId ? null : row.id)}
                 >
+                  <td className="py-2 pr-2" onClick={(e) => e.stopPropagation()}>
+                    <input
+                      type="checkbox"
+                      aria-label={`Select ${row.code}`}
+                      checked={selectedExportIds.has(row.id)}
+                      onChange={() => toggleExportId(row.id)}
+                      className="rounded border-zinc-300"
+                    />
+                  </td>
                   <td className="py-2 pr-3 font-mono text-xs">{row.code}</td>
                   <td className="py-2 pr-3">{row.kind}</td>
                   <td className="py-2 pr-3">{row.camera_model_name ?? '—'}</td>
