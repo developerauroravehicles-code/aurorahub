@@ -648,7 +648,7 @@ export function InventoryDashboard({
                     ? ' Barkod modunda stok, Barcode sekmesinden üretim ve specialist ataması ile oluşur.'
                     : level === 'national'
                       ? ' Sağ panelden Receipt ile giriş yapın.'
-                      : level !== 'national' && level !== 'dealer'
+                      : level !== 'dealer'
                         ? ' Üst seviyeden Allocate down ile stok gönderin.'
                         : ''}
                 </p>
