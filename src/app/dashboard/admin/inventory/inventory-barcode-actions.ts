@@ -15,6 +15,7 @@ import {
   fetchSetTemplates,
   type BarcodeSettings,
 } from '@/lib/inventory-barcodes'
+import { resetNegativeBalances } from '@/lib/inventory-v2/movements'
 
 async function requireAuroraManager() {
   const supabase = await createClient()
@@ -179,16 +180,14 @@ export async function scanAssignBarcodeToSpecialist(formData: FormData) {
   if (auth.error) return { error: auth.error }
 
   const code = String(formData.get('code') ?? '').trim()
-  const dealerId = String(formData.get('dealer_id') ?? '').trim()
   const specialistId = String(formData.get('specialist_id') ?? '').trim()
 
-  if (!code || !dealerId || !specialistId) {
-    return { error: 'Barcode, dealer, and specialist are required' }
+  if (!code || !specialistId) {
+    return { error: 'Barcode and specialist are required' }
   }
 
   const result = await assignBarcodeToSpecialist(auth.supabase, {
     code,
-    dealerId,
     specialistId,
     actorId: auth.userId,
   })
@@ -215,4 +214,24 @@ export async function getBarcodeTraceEvents(barcodeId: string) {
 
   const events = await fetchBarcodeEvents(auth.supabase, barcodeId)
   return { events }
+}
+
+export async function resetNegativeStockBalancesAction(): Promise<{
+  error?: string
+  success?: boolean
+  resetCount?: number
+}> {
+  const auth = await requireAuroraManager()
+  if (auth.error) return { error: auth.error }
+
+  const result = await resetNegativeBalances(auth.supabase, {
+    note: 'Aurora Manager reset negative stock to zero',
+    createdBy: auth.userId,
+  })
+
+  if (result.error) return { error: result.error }
+
+  revalidatePath('/dashboard/admin/inventory')
+  revalidatePath('/dashboard')
+  return { success: true, resetCount: result.resetCount }
 }

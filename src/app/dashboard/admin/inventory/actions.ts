@@ -9,6 +9,7 @@ import {
   recordReturnToUpstream,
   recordTransfer,
 } from '@/lib/inventory-v2/movements'
+import { assertQuantityMovementAllowed } from '@/lib/inventory-v2/barcode-mode-guard'
 import { ensureDealerLocation, ensureSpecialistLocation } from '@/lib/inventory-v2/locations'
 
 async function requireAuroraManager() {
@@ -51,6 +52,9 @@ export async function postInventoryReceipt(formData: FormData): Promise<{ error?
   if (!toLocationId || !cameraModelId) return { error: 'Location and camera model are required' }
   if (!Number.isFinite(quantity) || quantity < 1) return { error: 'Quantity must be at least 1' }
 
+  const blocked = await assertQuantityMovementAllowed(supabase)
+  if (blocked.error) return blocked
+
   const result = await recordReceipt(supabase, {
     toLocationId,
     cameraModelId,
@@ -79,6 +83,9 @@ export async function postInventoryAllocation(formData: FormData): Promise<{ err
     return { error: 'Source, destination, and camera model are required' }
   }
   if (!Number.isFinite(quantity) || quantity < 1) return { error: 'Quantity must be at least 1' }
+
+  const blocked = await assertQuantityMovementAllowed(supabase)
+  if (blocked.error) return blocked
 
   const result = await recordAllocation(supabase, {
     fromLocationId,
@@ -109,6 +116,9 @@ export async function postInventoryTransfer(formData: FormData): Promise<{ error
     return { error: 'Source, destination, and camera model are required' }
   }
   if (!Number.isFinite(quantity) || quantity < 1) return { error: 'Quantity must be at least 1' }
+
+  const blocked = await assertQuantityMovementAllowed(supabase)
+  if (blocked.error) return blocked
 
   const result = await recordTransfer(supabase, {
     fromLocationId,
@@ -141,6 +151,9 @@ export async function postDealerToSpecialistTransfer(
     return { error: 'Dealer, specialist, and camera model are required' }
   }
   if (!Number.isFinite(quantity) || quantity < 1) return { error: 'Quantity must be at least 1' }
+
+  const blocked = await assertQuantityMovementAllowed(supabase)
+  if (blocked.error) return blocked
 
   const [{ data: dealer }, { data: specialist }] = await Promise.all([
     supabase.from('dealers').select('name').eq('id', dealerId).maybeSingle(),
@@ -212,6 +225,9 @@ export async function postInventoryReturn(formData: FormData): Promise<{ error?:
     return { error: 'Source, destination, and camera model are required' }
   }
   if (!Number.isFinite(quantity) || quantity < 1) return { error: 'Quantity must be at least 1' }
+
+  const blocked = await assertQuantityMovementAllowed(supabase)
+  if (blocked.error) return blocked
 
   const result = await recordReturnToUpstream(supabase, {
     fromLocationId,

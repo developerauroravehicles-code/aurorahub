@@ -36,7 +36,6 @@ export function InventorySpecialistsPanel({
   const [pending, startTransition] = useTransition()
   const [message, setMessage] = useState<{ type: 'ok' | 'err'; text: string } | null>(null)
   const [expandedId, setExpandedId] = useState<string | null>(null)
-  const [scanDealerId, setScanDealerId] = useState('')
   const [scanSpecialistId, setScanSpecialistId] = useState('')
   const scanInputRef = useRef<HTMLInputElement>(null)
 
@@ -61,11 +60,10 @@ export function InventorySpecialistsPanel({
   }
 
   function runScan(code: string) {
-    if (!scanDealerId || !scanSpecialistId || !code.trim()) return
+    if (!scanSpecialistId || !code.trim()) return
     setMessage(null)
     startTransition(async () => {
       const fd = new FormData()
-      fd.set('dealer_id', scanDealerId)
       fd.set('specialist_id', scanSpecialistId)
       fd.set('code', code.trim())
       const result = await scanAssignBarcodeToSpecialist(fd)
@@ -118,43 +116,27 @@ export function InventorySpecialistsPanel({
             Assign cameras to specialist (barcode scan)
           </h3>
           <p className="text-xs text-zinc-500">
-            Scan unit barcodes to transfer from dealer to specialist field stock. Use the Barcode tab for dealer
-            assignment or bulk generation.
+            Scan generated unit barcodes directly to specialist field stock. No dealer selection required.
           </p>
-          <div className="grid sm:grid-cols-2 gap-3">
-            <select
-              value={scanDealerId}
-              onChange={(e) => setScanDealerId(e.target.value)}
-              required
-              className={`${inputClass} w-full`}
-            >
-              <option value="">Dealer…</option>
-              {dealers.map((d) => (
-                <option key={d.id} value={d.id}>
-                  {d.name}
-                </option>
-              ))}
-            </select>
-            <select
-              value={scanSpecialistId}
-              onChange={(e) => setScanSpecialistId(e.target.value)}
-              required
-              className={`${inputClass} w-full`}
-            >
-              <option value="">Specialist…</option>
-              {specialistStock.map((s) => (
-                <option key={s.specialist_id} value={s.specialist_id}>
-                  {s.specialist_name}
-                </option>
-              ))}
-            </select>
-          </div>
+          <select
+            value={scanSpecialistId}
+            onChange={(e) => setScanSpecialistId(e.target.value)}
+            required
+            className={`${inputClass} w-full`}
+          >
+            <option value="">Specialist…</option>
+            {specialistStock.map((s) => (
+              <option key={s.specialist_id} value={s.specialist_id}>
+                {s.specialist_name}
+              </option>
+            ))}
+          </select>
           <input
             ref={scanInputRef}
             type="text"
             autoComplete="off"
             placeholder="Scan barcode…"
-            disabled={pending || !scanDealerId || !scanSpecialistId}
+            disabled={pending || !scanSpecialistId}
             className={`${inputClass} w-full font-mono`}
             onKeyDown={(e) => {
               if (e.key === 'Enter') {

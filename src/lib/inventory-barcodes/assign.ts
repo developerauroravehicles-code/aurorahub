@@ -94,7 +94,6 @@ export async function assignBarcodeToSpecialist(
   supabase: SupabaseClient,
   input: {
     code: string
-    dealerId: string
     specialistId: string
     actorId: string | null
   }
@@ -109,49 +108,60 @@ export async function assignBarcodeToSpecialist(
   }
   if (!barcode.camera_model_id) return { error: 'Barcode has no camera model' }
 
-  const [{ data: dealer }, { data: specialist }] = await Promise.all([
-    supabase.from('dealers').select('name').eq('id', input.dealerId).maybeSingle(),
-    supabase.from('profiles').select('full_name').eq('id', input.specialistId).maybeSingle(),
-  ])
+  const { data: specialist } = await supabase
+    .from('profiles')
+    .select('full_name')
+    .eq('id', input.specialistId)
+    .maybeSingle()
 
-  const dealerLocationId = await ensureDealerLocation(supabase, input.dealerId, dealer?.name)
   const specialistLocationId = await ensureSpecialistLocation(
     supabase,
     input.specialistId,
     specialist?.full_name
   )
-  if (!dealerLocationId || !specialistLocationId) {
-    return { error: 'Could not resolve inventory locations' }
+  if (!specialistLocationId) {
+    return { error: 'Could not resolve specialist inventory location' }
   }
 
   if (barcode.status === 'generated') {
     const receipt = await recordReceipt(supabase, {
-      toLocationId: dealerLocationId,
+      toLocationId: specialistLocationId,
       cameraModelId: barcode.camera_model_id,
       quantity: 1,
-      note: `Barcode ${barcode.code} receipt before specialist assign`,
+      note: `Barcode ${barcode.code} assigned directly to specialist`,
       createdBy: input.actorId,
     })
     if (receipt.error) return { error: receipt.error }
-  } else if (barcode.dealer_id && barcode.dealer_id !== input.dealerId) {
-    return { error: 'Barcode belongs to a different dealer' }
-  }
+  } else {
+    if (!barcode.dealer_id) {
+      return { error: 'Barcode at dealer has no dealer record; void and re-assign from generated' }
+    }
 
-  const transfer = await recordTransfer(supabase, {
-    fromLocationId: dealerLocationId,
-    toLocationId: specialistLocationId,
-    cameraModelId: barcode.camera_model_id,
-    quantity: 1,
-    note: `Barcode ${barcode.code} assigned to specialist`,
-    createdBy: input.actorId,
-  })
-  if (transfer.error) return { error: transfer.error }
+    const { data: dealer } = await supabase
+      .from('dealers')
+      .select('name')
+      .eq('id', barcode.dealer_id)
+      .maybeSingle()
+
+    const dealerLocationId = await ensureDealerLocation(supabase, barcode.dealer_id, dealer?.name)
+    if (!dealerLocationId) return { error: 'Could not resolve dealer location' }
+
+    const transfer = await recordTransfer(supabase, {
+      fromLocationId: dealerLocationId,
+      toLocationId: specialistLocationId,
+      cameraModelId: barcode.camera_model_id,
+      quantity: 1,
+      note: `Barcode ${barcode.code} assigned to specialist`,
+      createdBy: input.actorId,
+    })
+    if (transfer.error) return { error: transfer.error }
+  }
 
   const { data: updated, error } = await supabase
     .from('inventory_barcodes')
     .update({
       status: 'at_specialist',
-      dealer_id: input.dealerId,
+      dealer_id: null,
       specialist_id: input.specialistId,
       inventory_location_id: specialistLocationId,
       updated_at: new Date().toISOString(),
@@ -163,8 +173,9 @@ export async function assignBarcodeToSpecialist(
   if (error || !updated) return { error: error?.message ?? 'Failed to update barcode' }
 
   await insertBarcodeEvent(supabase, barcode.id, 'assigned_specialist', input.actorId, {
-    dealer_id: input.dealerId,
     specialist_id: input.specialistId,
+    previous_dealer_id: barcode.dealer_id,
+    direct_from_generated: barcode.status === 'generated',
   })
 
   return { barcode: updated as InventoryBarcodeRow }

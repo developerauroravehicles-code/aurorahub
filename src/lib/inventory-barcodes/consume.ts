@@ -91,19 +91,36 @@ export async function consumeBarcodeForDemand(
   if (!cameraModelId) return { error: 'Barcode has no camera model' }
 
   if (input.serviceType === 'installation') {
+    const { data: assignEvent } = await adminSupabase
+      .from('inventory_barcode_events')
+      .select('metadata')
+      .eq('barcode_id', barcode.id)
+      .eq('event_type', 'assigned_specialist')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+
+    const assignMeta = (assignEvent?.metadata ?? {}) as {
+      direct_from_generated?: boolean
+      previous_dealer_id?: string | null
+    }
+    const directToSpecialist = assignMeta.direct_from_generated === true
+
     const [{ data: dealer }, { data: specialist }] = await Promise.all([
       adminSupabase.from('dealers').select('name').eq('id', input.dealerId).maybeSingle(),
       adminSupabase.from('profiles').select('full_name').eq('id', input.specialistId).maybeSingle(),
     ])
 
-    const dealerLocationId = await ensureDealerLocation(adminSupabase, input.dealerId, dealer?.name)
+    const dealerLocationId = directToSpecialist
+      ? null
+      : await ensureDealerLocation(adminSupabase, input.dealerId, dealer?.name)
     const specialistLocationId = await ensureSpecialistLocation(
       adminSupabase,
       input.specialistId,
       specialist?.full_name
     )
 
-    if (dealerLocationId) {
+    if (!directToSpecialist && dealerLocationId) {
       const dealerConsume = await recordConsumptionMovement(adminSupabase, {
         cameraModelId,
         fromLocationId: dealerLocationId,

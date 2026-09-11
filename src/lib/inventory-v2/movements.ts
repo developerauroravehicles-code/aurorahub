@@ -133,6 +133,40 @@ export async function recordAdjustment(
   })
 }
 
+/** Bring every negative balance row to zero via adjustment movements. Does not touch barcodes. */
+export async function resetNegativeBalances(
+  supabase: SupabaseClient,
+  input?: { note?: string; createdBy?: string | null }
+): Promise<{ resetCount: number; error?: string }> {
+  const { data: rows, error: fetchError } = await supabase
+    .from('inventory_balances_v2')
+    .select('location_id, camera_model_id, quantity')
+    .lt('quantity', 0)
+
+  if (fetchError) return { resetCount: 0, error: fetchError.message }
+
+  const note = input?.note ?? 'Reset negative balance to zero'
+  let resetCount = 0
+
+  for (const row of rows ?? []) {
+    const quantity =
+      typeof row.quantity === 'string' ? parseInt(row.quantity, 10) : Number(row.quantity ?? 0)
+    if (quantity >= 0) continue
+
+    const result = await recordAdjustment(supabase, {
+      locationId: row.location_id as string,
+      cameraModelId: row.camera_model_id as string,
+      quantityDelta: Math.abs(quantity),
+      note,
+      createdBy: input?.createdBy ?? null,
+    })
+    if (result.error) return { resetCount, error: result.error }
+    resetCount++
+  }
+
+  return { resetCount }
+}
+
 export async function recordReturnToUpstream(
   supabase: SupabaseClient,
   input: {

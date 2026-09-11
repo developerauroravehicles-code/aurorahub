@@ -17,6 +17,7 @@ import {
   scanAssignBarcodeToSpecialist,
   voidBarcodeAction,
   getBarcodeTraceEvents,
+  resetNegativeStockBalancesAction,
 } from './inventory-barcode-actions'
 
 type Camera = { id: string; name: string }
@@ -542,44 +543,6 @@ export function InventoryBarcodePanel({
           onSubmit={(e) => {
             e.preventDefault()
             run(async () => {
-              const res = await scanAssignBarcodeToDealer(new FormData(e.currentTarget))
-              if (!res.error) {
-                e.currentTarget.reset()
-                dealerScanRef.current?.focus()
-              }
-              return res
-            })
-          }}
-        >
-          <h3 className="font-medium text-zinc-900 dark:text-white flex items-center gap-2">
-            <ScanLine className="h-4 w-4 text-[#C27E00]" /> Assign to dealer (scan)
-          </h3>
-          <select name="dealer_id" required className={`${inputClass} w-full`}>
-            <option value="">Dealer…</option>
-            {dealers.map((d) => (
-              <option key={d.id} value={d.id}>
-                {d.name}
-              </option>
-            ))}
-          </select>
-          <input
-            ref={dealerScanRef}
-            name="code"
-            required
-            autoComplete="off"
-            placeholder="Scan or enter barcode…"
-            className={`${inputClass} w-full font-mono`}
-          />
-          <button type="submit" disabled={pending} className={btnPrimary}>
-            Assign to dealer
-          </button>
-        </form>
-
-        <form
-          className="rounded-xl border border-zinc-200 dark:border-gray-800 p-4 space-y-3"
-          onSubmit={(e) => {
-            e.preventDefault()
-            run(async () => {
               const res = await scanAssignBarcodeToSpecialist(new FormData(e.currentTarget))
               if (!res.error) {
                 e.currentTarget.reset()
@@ -592,14 +555,9 @@ export function InventoryBarcodePanel({
           <h3 className="font-medium text-zinc-900 dark:text-white flex items-center gap-2">
             <ScanLine className="h-4 w-4 text-[#C27E00]" /> Assign to specialist (scan)
           </h3>
-          <select name="dealer_id" required className={`${inputClass} w-full`}>
-            <option value="">Dealer…</option>
-            {dealers.map((d) => (
-              <option key={d.id} value={d.id}>
-                {d.name}
-              </option>
-            ))}
-          </select>
+          <p className="text-xs text-zinc-500">
+            Scan generated barcodes directly to a specialist. No dealer step required.
+          </p>
           <select name="specialist_id" required className={`${inputClass} w-full`}>
             <option value="">Specialist…</option>
             {specialists.map((s) => (
@@ -620,6 +578,77 @@ export function InventoryBarcodePanel({
             Assign to specialist
           </button>
         </form>
+
+        <form
+          className="rounded-xl border border-zinc-200 dark:border-gray-800 p-4 space-y-3"
+          onSubmit={(e) => {
+            e.preventDefault()
+            run(async () => {
+              const res = await scanAssignBarcodeToDealer(new FormData(e.currentTarget))
+              if (!res.error) {
+                e.currentTarget.reset()
+                dealerScanRef.current?.focus()
+              }
+              return res
+            })
+          }}
+        >
+          <h3 className="font-medium text-zinc-900 dark:text-white flex items-center gap-2">
+            <ScanLine className="h-4 w-4 text-[#C27E00]" /> Assign to dealer (scan)
+          </h3>
+          <p className="text-xs text-zinc-500">Optional — only if stock should go to a dealer first.</p>
+          <select name="dealer_id" required className={`${inputClass} w-full`}>
+            <option value="">Dealer…</option>
+            {dealers.map((d) => (
+              <option key={d.id} value={d.id}>
+                {d.name}
+              </option>
+            ))}
+          </select>
+          <input
+            ref={dealerScanRef}
+            name="code"
+            required
+            autoComplete="off"
+            placeholder="Scan or enter barcode…"
+            className={`${inputClass} w-full font-mono`}
+          />
+          <button type="submit" disabled={pending} className={btnPrimary}>
+            Assign to dealer
+          </button>
+        </form>
+      </div>
+
+      <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-4 flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <p className="text-sm font-medium text-zinc-900 dark:text-white">Negative stock balances</p>
+          <p className="text-xs text-zinc-500 mt-0.5">
+            Resets quantity ledger rows below zero to 0. Barcodes are not deleted or changed.
+          </p>
+        </div>
+        <button
+          type="button"
+          disabled={pending}
+          onClick={() => {
+            if (!confirm('Reset all negative inventory balances to zero? Barcodes will not be affected.')) return
+            setMessage(null)
+            startTransition(async () => {
+              const res = await resetNegativeStockBalancesAction()
+              if (res.error) {
+                setMessage({ type: 'err', text: res.error })
+              } else {
+                setMessage({
+                  type: 'ok',
+                  text: `Reset ${res.resetCount ?? 0} negative balance row(s) to zero.`,
+                })
+                router.refresh()
+              }
+            })
+          }}
+          className="rounded-md border border-amber-500/50 px-4 py-2 text-sm font-medium text-amber-200 hover:bg-amber-500/10 disabled:opacity-50"
+        >
+          Reset negative stock to zero
+        </button>
       </div>
 
       {/* Registry */}

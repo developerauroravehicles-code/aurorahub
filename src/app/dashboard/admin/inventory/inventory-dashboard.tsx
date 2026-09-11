@@ -227,6 +227,7 @@ export function InventoryDashboard({
   const [nav, setNav] = useState<Nav>({})
   const [pending, startTransition] = useTransition()
   const [message, setMessage] = useState<{ type: 'ok' | 'err'; text: string } | null>(null)
+  const barcodeModeActive = barcodeSettings.enabled
 
   const balanceMap = useMemo(() => {
     const m = new Map<string, number>()
@@ -543,6 +544,16 @@ export function InventoryDashboard({
       {tab === 'stock' && (
         <div className="grid lg:grid-cols-[1fr_340px] gap-6">
           <div className="space-y-4">
+            {barcodeModeActive && (
+              <div className="rounded-xl border border-[#C27E00]/40 bg-[#C27E00]/10 p-4 text-sm text-zinc-800 dark:text-zinc-200">
+                <p className="font-medium text-[#C27E00]">Barcode mode active</p>
+                <p className="mt-1 text-xs text-zinc-600 dark:text-zinc-400">
+                  Stock moves through scanned barcodes (generate → assign to specialist → scan on job complete).
+                  Manual receipt, allocate, transfer, and return are disabled. Use the Barcode tab for assignments.
+                  Adjustments remain available for corrections.
+                </p>
+              </div>
+            )}
             {/* Flow pipeline */}
             <div className="rounded-xl border border-zinc-200 dark:border-gray-800 p-4 bg-zinc-50/80 dark:bg-white/[0.02]">
               <p className="text-xs uppercase tracking-wider text-zinc-500 mb-3">Stok hiyerarşisi</p>
@@ -633,8 +644,13 @@ export function InventoryDashboard({
               {stockRows.length === 0 ? (
                 <p className="text-sm text-zinc-500">
                   Bu seviyede kayıtlı stok yok.
-                  {level === 'national' && ' Sağ panelden Receipt ile giriş yapın.'}
-                  {level !== 'national' && level !== 'dealer' && ' Üst seviyeden Allocate down ile stok gönderin.'}
+                  {barcodeModeActive
+                    ? ' Barkod modunda stok, Barcode sekmesinden üretim ve specialist ataması ile oluşur.'
+                    : level === 'national'
+                      ? ' Sağ panelden Receipt ile giriş yapın.'
+                      : level !== 'national' && level !== 'dealer'
+                        ? ' Üst seviyeden Allocate down ile stok gönderin.'
+                        : ''}
                 </p>
               ) : (
                 <table className="w-full text-sm">
@@ -699,7 +715,7 @@ export function InventoryDashboard({
               </div>
             )}
 
-            {level === 'dealer' && dealer && (
+            {level === 'dealer' && dealer && !barcodeModeActive && (
               <form
                 className="rounded-xl border border-zinc-200 dark:border-gray-800 p-4 space-y-3"
                 onSubmit={(e) => {
@@ -741,13 +757,22 @@ export function InventoryDashboard({
           <aside className="space-y-4">
             <div className="rounded-lg border border-zinc-200 dark:border-gray-800 p-3 text-xs text-zinc-500 space-y-1">
               <p className="font-medium text-zinc-700 dark:text-gray-300">Sağ panel — stok işlemleri</p>
-              <p><strong>Receipt:</strong> Yeni stok girişi (genelde Kanada seviyesinde)</p>
-              <p><strong>Allocate down:</strong> Alt seviyeye aktar (Kanada→BC→Vancouver→…)</p>
-              <p><strong>Adjustment:</strong> Manuel +/− düzeltme</p>
+              {barcodeModeActive ? (
+                <>
+                  <p><strong>Barcode mode:</strong> Generate and assign on the Barcode tab.</p>
+                  <p><strong>Adjustment:</strong> Manual +/− correction only.</p>
+                </>
+              ) : (
+                <>
+                  <p><strong>Receipt:</strong> Yeni stok girişi (genelde Kanada seviyesinde)</p>
+                  <p><strong>Allocate down:</strong> Alt seviyeye aktar (Kanada→BC→Vancouver→…)</p>
+                  <p><strong>Adjustment:</strong> Manuel +/− düzeltme</p>
+                </>
+              )}
             </div>
             {currentLocationId && (
               <>
-                {(level === 'national' || level === 'province') && (
+                {!barcodeModeActive && (level === 'national' || level === 'province') && (
                   <StockForm
                     title="Receipt — stok girişi"
                     help="Yeni kameraları bu seviyeye ekler."
@@ -759,7 +784,7 @@ export function InventoryDashboard({
                   </StockForm>
                 )}
 
-                {downstreamTargets.length > 0 && (
+                {!barcodeModeActive && downstreamTargets.length > 0 && (
                   <StockForm
                     title={`Allocate down — alta dağıt (${downstreamTargets.length})`}
                     help={`Stoku bir alt seviyeye gönderir. Örn: ${guide.action}`}
@@ -777,7 +802,7 @@ export function InventoryDashboard({
                   </StockForm>
                 )}
 
-                {downstreamTargets.length === 0 && level !== 'dealer' && level !== 'national' && (
+                {!barcodeModeActive && downstreamTargets.length === 0 && level !== 'dealer' && level !== 'national' && (
                   <p className="text-xs text-amber-600 dark:text-amber-400 rounded-lg border border-amber-800/30 p-3">
                     Alta allocate edilecek hedef yok. Önce alt seviyeyi oluşturun veya kartlardan drill-down yapın.
                   </p>
@@ -794,7 +819,7 @@ export function InventoryDashboard({
                   <input type="hidden" name="location_id" value={currentLocationId} />
                 </StockForm>
 
-                {upstreamLocationId && level !== 'national' && (
+                {!barcodeModeActive && upstreamLocationId && level !== 'national' && (
                   <StockForm
                     title="Return — üst seviyeye iade"
                     help="Stoku bir üst kata geri gönderir."
