@@ -188,10 +188,21 @@ export async function addCameraToDealer(dealerId: string, cameraModelId: string)
   try {
     await verifyAuroraManager()
     const supabase = await createClient()
-    
+
+    const { data: lastRow } = await supabase
+      .from('dealer_cameras')
+      .select('sort_order')
+      .eq('dealer_id', dealerId)
+      .order('sort_order', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+
+    const nextSortOrder =
+      (typeof lastRow?.sort_order === 'number' ? lastRow.sort_order : Number(lastRow?.sort_order ?? 0)) + 10
+
     const { error } = await supabase
       .from('dealer_cameras')
-      .insert({ dealer_id: dealerId, camera_model_id: cameraModelId })
+      .insert({ dealer_id: dealerId, camera_model_id: cameraModelId, sort_order: nextSortOrder })
     
     if (error) {
       // If already exists, return success (idempotent)
@@ -208,6 +219,40 @@ export async function addCameraToDealer(dealerId: string, cameraModelId: string)
     return { success: true }
   } catch (error) {
     return { success: false, error: error instanceof Error ? error.message : 'Failed to add camera to dealer' }
+  }
+}
+
+export async function updateDealerCameraSortOrder(
+  dealerId: string,
+  cameraModelId: string,
+  sortOrder: number
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    await verifyAuroraManager()
+    const supabase = await createClient()
+
+    if (!Number.isFinite(sortOrder)) {
+      return { success: false, error: 'Sort order must be a number' }
+    }
+
+    const { error } = await supabase
+      .from('dealer_cameras')
+      .update({ sort_order: Math.round(sortOrder) })
+      .eq('dealer_id', dealerId)
+      .eq('camera_model_id', cameraModelId)
+
+    if (error) {
+      return { success: false, error: error.message }
+    }
+
+    revalidatePath('/dashboard/system-management/dealer')
+    revalidatePath('/dashboard/sales/demands/new')
+    return { success: true }
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to update camera sort order',
+    }
   }
 }
 

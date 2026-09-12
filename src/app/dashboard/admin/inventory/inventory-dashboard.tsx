@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { ChevronRight, Package, MapPin } from 'lucide-react'
+import { ChevronRight, Package, MapPin, Trash2 } from 'lucide-react'
 import type { InventoryStockAlert, InventoryStockSummary } from '@/lib/inventory-stock-alerts'
 import type { InventoryAlertRule } from '@/lib/inventory-alert-rules'
 import type { InventoryTreeLevel } from '@/lib/inventory-v2/types'
@@ -20,6 +20,7 @@ import {
   postInventoryReturn,
   createInventoryCity,
   createInventoryRegion,
+  deleteInventoryRegion,
   resetInventoryV2Data,
   upsertInventoryPricingRule,
   upsertInventoryThreshold,
@@ -948,7 +949,27 @@ export function InventoryDashboard({
                                 {inner.length > 0 ? (
                                   <ul className="text-xs text-zinc-500 ml-2 mt-0.5 space-y-0.5">
                                     {inner.map((r) => (
-                                      <li key={r.id}>↳ {r.name} ({r.code})</li>
+                                      <li key={r.id} className="flex items-center justify-between gap-2">
+                                        <span>↳ {r.name} ({r.code})</span>
+                                        <button
+                                          type="button"
+                                          disabled={pending}
+                                          title="Delete inner region"
+                                          onClick={() => {
+                                            if (
+                                              !confirm(
+                                                `Delete inner region "${r.name}" (${r.code})? Dealers must be removed first.`
+                                              )
+                                            ) {
+                                              return
+                                            }
+                                            runAction(() => deleteInventoryRegion(r.id))
+                                          }}
+                                          className="p-0.5 text-red-400 hover:text-red-300 disabled:opacity-40"
+                                        >
+                                          <Trash2 className="h-3.5 w-3.5" />
+                                        </button>
+                                      </li>
                                     ))}
                                   </ul>
                                 ) : (

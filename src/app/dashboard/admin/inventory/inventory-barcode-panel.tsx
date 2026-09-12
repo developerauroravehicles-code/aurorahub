@@ -435,13 +435,14 @@ export function InventoryBarcodePanel({
           className="grid sm:grid-cols-2 gap-3"
           onSubmit={(e) => {
             e.preventDefault()
-            const fd = new FormData(e.currentTarget)
+            const form = e.currentTarget
+            const fd = new FormData(form)
             fd.set('items_json', JSON.stringify(setItems.filter((i) => i.camera_model_id && i.quantity >= 1)))
             run(async () => {
               const res = await createBarcodeSetTemplate(fd)
               if (!res.error) {
                 setSetItems([{ camera_model_id: '', quantity: 1 }])
-                e.currentTarget.reset()
+                form.reset()
               }
               return res
             })
@@ -542,10 +543,11 @@ export function InventoryBarcodePanel({
           className="rounded-xl border border-zinc-200 dark:border-gray-800 p-4 space-y-3"
           onSubmit={(e) => {
             e.preventDefault()
+            const form = e.currentTarget
             run(async () => {
-              const res = await scanAssignBarcodeToSpecialist(new FormData(e.currentTarget))
+              const res = await scanAssignBarcodeToSpecialist(new FormData(form))
               if (!res.error) {
-                e.currentTarget.reset()
+                form.reset()
                 specialistScanRef.current?.focus()
               }
               return res
@@ -583,10 +585,11 @@ export function InventoryBarcodePanel({
           className="rounded-xl border border-zinc-200 dark:border-gray-800 p-4 space-y-3"
           onSubmit={(e) => {
             e.preventDefault()
+            const form = e.currentTarget
             run(async () => {
-              const res = await scanAssignBarcodeToDealer(new FormData(e.currentTarget))
+              const res = await scanAssignBarcodeToDealer(new FormData(form))
               if (!res.error) {
-                e.currentTarget.reset()
+                form.reset()
                 dealerScanRef.current?.focus()
               }
               return res

@@ -65,6 +65,7 @@ export interface CameraModel {
 export interface DealerCamera {
   dealer_id: string
   camera_model_id: string
+  sort_order?: number
   camera_models?: CameraModel
   dealers?: Dealer
 }

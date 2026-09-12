@@ -403,6 +403,56 @@ export async function createInventoryRegion(formData: FormData): Promise<{ error
   return { success: true }
 }
 
+export async function deleteInventoryRegion(regionId: string): Promise<{ error?: string; success?: boolean }> {
+  const auth = await requireAuroraManager()
+  if ('error' in auth && auth.error) return { error: auth.error }
+  const { supabase } = auth
+
+  if (!regionId) return { error: 'Region is required' }
+
+  const { count: dealerCount } = await supabase
+    .from('dealers')
+    .select('id', { count: 'exact', head: true })
+    .eq('inventory_region_id', regionId)
+
+  if ((dealerCount ?? 0) > 0) {
+    return {
+      error: 'This inner region still has dealers assigned. Reassign or remove those dealers first (System Management → Dealers).',
+    }
+  }
+
+  const { data: regionLocation } = await supabase
+    .from('inventory_locations')
+    .select('id')
+    .eq('location_type', 'region')
+    .eq('region_id', regionId)
+    .maybeSingle()
+
+  if (regionLocation?.id) {
+    const { data: balances } = await supabase
+      .from('inventory_balances_v2')
+      .select('camera_model_id, quantity')
+      .eq('location_id', regionLocation.id)
+
+    const hasStock = (balances ?? []).some((b) => {
+      const qty =
+        typeof b.quantity === 'string' ? parseInt(b.quantity, 10) : Number(b.quantity ?? 0)
+      return qty !== 0
+    })
+
+    if (hasStock) {
+      return { error: 'This inner region still has stock. Move or adjust stock to zero before deleting.' }
+    }
+  }
+
+  const { error } = await supabase.from('inventory_regions').delete().eq('id', regionId)
+  if (error) return { error: error.message }
+
+  revalidatePath('/dashboard/admin/inventory')
+  revalidatePath('/dashboard/system-management/dealer')
+  return { success: true }
+}
+
 export async function resetInventoryV2Data(): Promise<{
   error?: string
   success?: string

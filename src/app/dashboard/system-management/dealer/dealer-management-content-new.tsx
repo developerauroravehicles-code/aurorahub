@@ -23,7 +23,8 @@ export const DealerManagementContent = memo(function DealerManagementContent({
   cameraModels,
   updateDealerRegionCode,
   addCameraToDealer,
-  removeCameraFromDealer
+  removeCameraFromDealer,
+  updateDealerCameraSortOrder,
 }: {
   dealers: Dealer[]
   regionCodes: RegionCode[]
@@ -32,6 +33,11 @@ export const DealerManagementContent = memo(function DealerManagementContent({
   updateDealerRegionCode: (dealerId: string, regionCodeId: string | null) => Promise<{ success: boolean; error?: string }>
   addCameraToDealer: (dealerId: string, cameraModelId: string) => Promise<{ success: boolean; error?: string }>
   removeCameraFromDealer: (dealerId: string, cameraModelId: string) => Promise<{ success: boolean; error?: string }>
+  updateDealerCameraSortOrder: (
+    dealerId: string,
+    cameraModelId: string,
+    sortOrder: number
+  ) => Promise<{ success: boolean; error?: string }>
 }) {
   const router = useRouter()
   const [editingDealerId, setEditingDealerId] = useState<string | null>(null)
@@ -280,13 +286,15 @@ export const DealerManagementContent = memo(function DealerManagementContent({
                       <DealerCameraManagement 
                         dealerId={d.id} 
                         dealerName={d.name}
-                        assignedCameras={(d.dealer_cameras || []).map(dc => ({
+                        assignedCameras={(d.dealer_cameras || []).map((dc) => ({
                           camera_model_id: dc.camera_model_id,
-                          camera_models: dc.camera_models ?? null
+                          sort_order: dc.sort_order ?? 0,
+                          camera_models: dc.camera_models ?? null,
                         }))}
                         allCameras={cameraModels}
                         addCameraToDealer={addCameraToDealer}
                         removeCameraFromDealer={removeCameraFromDealer}
+                        updateDealerCameraSortOrder={updateDealerCameraSortOrder}
                       />
                       <DealerInvoiceEmailsManagement
                         dealerId={d.id}

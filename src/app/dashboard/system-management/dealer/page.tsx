@@ -2,7 +2,12 @@ import { createClient } from '@/lib/supabase/server'
 import { SystemManagementTabs } from '../system-management-tabs'
 import { SystemManagementTitle } from '../system-management-title'
 import { DealerManagementContent } from './dealer-management-content-new'
-import { updateDealerRegionCode, addCameraToDealer, removeCameraFromDealer } from '../region/actions'
+import {
+  updateDealerRegionCode,
+  addCameraToDealer,
+  removeCameraFromDealer,
+  updateDealerCameraSortOrder,
+} from '../region/actions'
 import type { Dealer, DealerInvoiceEmail } from '@/types/system-management'
 
 export const dynamic = 'force-dynamic'
@@ -30,6 +35,7 @@ export default async function DealerManagementPage() {
       inventory_regions(id, code, name, province_id, inventory_provinces(code, name)),
       dealer_cameras(
         camera_model_id,
+        sort_order,
         camera_models(id, name, is_active)
       )
     `)
@@ -59,12 +65,19 @@ export default async function DealerManagementPage() {
   // Merge region codes with dealers manually (in case join doesn't work)
   const dealersWithRegionCodes: Dealer[] = dealers?.map(dealer => {
     // Transform dealer_cameras to match DealerCamera type
-    const transformedDealerCameras = (dealer.dealer_cameras || []).map((dc: any) => ({
-      dealer_id: dealer.id,
-      camera_model_id: dc.camera_model_id,
-      camera_models: Array.isArray(dc.camera_models) ? dc.camera_models[0] : dc.camera_models,
-      dealers: undefined
-    }))
+    const transformedDealerCameras = (dealer.dealer_cameras || [])
+      .map((dc: any) => ({
+        dealer_id: dealer.id,
+        camera_model_id: dc.camera_model_id,
+        sort_order: typeof dc.sort_order === 'number' ? dc.sort_order : Number(dc.sort_order ?? 0),
+        camera_models: Array.isArray(dc.camera_models) ? dc.camera_models[0] : dc.camera_models,
+        dealers: undefined,
+      }))
+      .sort(
+        (a: { sort_order: number; camera_models?: { name: string } | null }, b: { sort_order: number; camera_models?: { name: string } | null }) =>
+          a.sort_order - b.sort_order ||
+          (a.camera_models?.name ?? '').localeCompare(b.camera_models?.name ?? '')
+      )
     
     // First try to use the joined region_codes
     if (dealer.region_codes && Array.isArray(dealer.region_codes) && dealer.region_codes.length > 0) {
@@ -146,6 +159,7 @@ export default async function DealerManagementPage() {
             updateDealerRegionCode={updateDealerRegionCode}
             addCameraToDealer={addCameraToDealer}
             removeCameraFromDealer={removeCameraFromDealer}
+            updateDealerCameraSortOrder={updateDealerCameraSortOrder}
           />
         </div>
       </div>

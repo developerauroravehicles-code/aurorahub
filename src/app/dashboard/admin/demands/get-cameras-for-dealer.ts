@@ -1,19 +1,12 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { getActiveCamerasForDealer } from '@/lib/dealer-camera-catalog'
 
-/**
- * Demand forms use the full active camera catalog. dealerId is retained for callers;
- * inventory consumption is driven by catalog match on completed demands, not by dealer_cameras.
- */
-export async function getCameraModelsForDealer(_dealerId: string) {
+/** Active cameras assigned to the given dealer, in display order. */
+export async function getCameraModelsForDealer(dealerId: string) {
+  if (!dealerId) return []
+
   const supabase = await createClient()
-
-  const { data: cameras } = await supabase
-    .from('camera_models')
-    .select('id, name')
-    .eq('is_active', true)
-    .order('name')
-
-  return cameras ?? []
+  return getActiveCamerasForDealer(supabase, dealerId)
 }
