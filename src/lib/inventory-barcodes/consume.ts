@@ -54,6 +54,45 @@ async function recordConsumptionMovement(
   return {}
 }
 
+export async function lookupUnitBarcodeAtSpecialist(
+  adminSupabase: SupabaseClient,
+  code: string,
+  specialistId: string
+): Promise<
+  | { barcodeId: string; cameraModelId: string; cameraModelName: string | null }
+  | { error: string }
+> {
+  const normalized = normalizeBarcodeCode(code)
+  if (!normalized) return { error: 'Enter a barcode' }
+  if (!specialistId) return { error: 'Select a specialist first' }
+
+  const { data: rows, error } = await adminSupabase
+    .from('inventory_barcodes')
+    .select('id, code, camera_model_id, status, specialist_id, kind, camera_models(name)')
+    .eq('kind', 'unit')
+    .eq('status', 'at_specialist')
+    .eq('specialist_id', specialistId)
+
+  if (error) return { error: error.message }
+
+  const match = (rows ?? []).find(
+    (b) => normalizeBarcodeCode(String(b.code ?? '')) === normalized
+  )
+  if (!match) {
+    return { error: 'Invalid barcode or not on the selected specialist field stock' }
+  }
+  if (!match.camera_model_id) return { error: 'Barcode has no camera model' }
+
+  const modelJoin = match.camera_models as { name?: string } | { name?: string }[] | null
+  const modelName = Array.isArray(modelJoin) ? modelJoin[0]?.name : modelJoin?.name
+
+  return {
+    barcodeId: match.id,
+    cameraModelId: match.camera_model_id as string,
+    cameraModelName: modelName ?? null,
+  }
+}
+
 export async function consumeBarcodeForDemand(
   userSupabase: SupabaseClient,
   adminSupabase: SupabaseClient,
@@ -64,26 +103,41 @@ export async function consumeBarcodeForDemand(
     dealerId: string
     actorId: string | null
     serviceType: DemandServiceType
+    /** Aurora Manager completing external demand — resolve barcode on assigned specialist stock. */
+    adminResolveForSpecialist?: boolean
   }
 ): Promise<{ barcode?: InventoryBarcodeRow; cameraModelId?: string; error?: string }> {
   const normalized = normalizeBarcodeCode(input.code)
 
-  const { data: lookupRows, error: lookupError } = await userSupabase.rpc(
-    'lookup_specialist_barcode_for_completion',
-    { p_code: normalized }
-  )
+  let barcodeId: string | null = null
 
-  if (lookupError) return { error: lookupError.message }
+  if (input.adminResolveForSpecialist) {
+    const resolved = await lookupUnitBarcodeAtSpecialist(
+      adminSupabase,
+      normalized,
+      input.specialistId
+    )
+    if ('error' in resolved) return { error: resolved.error }
+    barcodeId = resolved.barcodeId
+  } else {
+    const { data: lookupRows, error: lookupError } = await userSupabase.rpc(
+      'lookup_specialist_barcode_for_completion',
+      { p_code: normalized }
+    )
 
-  const lookup = Array.isArray(lookupRows) ? lookupRows[0] : lookupRows
-  if (!lookup?.barcode_id) {
-    return { error: 'Invalid barcode or not assigned to you' }
+    if (lookupError) return { error: lookupError.message }
+
+    const lookup = Array.isArray(lookupRows) ? lookupRows[0] : lookupRows
+    if (!lookup?.barcode_id) {
+      return { error: 'Invalid barcode or not assigned to you' }
+    }
+    barcodeId = lookup.barcode_id
   }
 
   const { data: barcode } = await adminSupabase
     .from('inventory_barcodes')
     .select('*')
-    .eq('id', lookup.barcode_id)
+    .eq('id', barcodeId)
     .single()
 
   if (!barcode) return { error: 'Barcode not found' }
@@ -180,6 +234,7 @@ export async function consumeBarcodesForDemand(
     dealerId: string
     actorId: string | null
     serviceType: DemandServiceType
+    adminResolveForSpecialist?: boolean
   }
 ): Promise<{ cameraModelIds: string[]; error?: string }> {
   const unique: string[] = []
@@ -208,6 +263,7 @@ export async function consumeBarcodesForDemand(
       dealerId: input.dealerId,
       actorId: input.actorId,
       serviceType: input.serviceType,
+      adminResolveForSpecialist: input.adminResolveForSpecialist,
     })
     if (result.error) {
       return {

@@ -222,6 +222,70 @@ export async function addCameraToDealer(dealerId: string, cameraModelId: string)
   }
 }
 
+function revalidateDealerCameraBookingPaths() {
+  revalidatePath('/dashboard/system-management/dealer')
+  revalidatePath('/dashboard/system-management/cameras')
+  revalidatePath('/dashboard/sales/demands/new')
+  revalidatePath('/dashboard/finance/demands/new')
+  revalidatePath('/dashboard/admin/demands')
+}
+
+export async function reorderDealerCamera(
+  dealerId: string,
+  cameraModelId: string,
+  direction: 'up' | 'down'
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    await verifyAuroraManager()
+    const supabase = await createClient()
+
+    const { data: rows, error: fetchError } = await supabase
+      .from('dealer_cameras')
+      .select('camera_model_id, sort_order, camera_models(name)')
+      .eq('dealer_id', dealerId)
+
+    if (fetchError) return { success: false, error: fetchError.message }
+    if (!rows?.length) return { success: true }
+
+    type Row = (typeof rows)[number]
+    const sorted = [...rows].sort((a: Row, b: Row) => {
+      const ao = Number(a.sort_order ?? 0)
+      const bo = Number(b.sort_order ?? 0)
+      if (ao !== bo) return ao - bo
+      const an = (a.camera_models as { name?: string } | null)?.name ?? ''
+      const bn = (b.camera_models as { name?: string } | null)?.name ?? ''
+      return an.localeCompare(bn)
+    })
+
+    const ids = sorted.map((r) => r.camera_model_id as string)
+    const idx = ids.indexOf(cameraModelId)
+    if (idx < 0) return { success: false, error: 'Camera not assigned to this dealer' }
+
+    const targetIdx = direction === 'up' ? idx - 1 : idx + 1
+    if (targetIdx < 0 || targetIdx >= ids.length) return { success: true }
+
+    ;[ids[idx], ids[targetIdx]] = [ids[targetIdx]!, ids[idx]!]
+
+    for (let i = 0; i < ids.length; i++) {
+      const { error } = await supabase
+        .from('dealer_cameras')
+        .update({ sort_order: (i + 1) * 10 })
+        .eq('dealer_id', dealerId)
+        .eq('camera_model_id', ids[i]!)
+
+      if (error) return { success: false, error: error.message }
+    }
+
+    revalidateDealerCameraBookingPaths()
+    return { success: true }
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to reorder camera',
+    }
+  }
+}
+
 export async function updateDealerCameraSortOrder(
   dealerId: string,
   cameraModelId: string,
@@ -245,8 +309,7 @@ export async function updateDealerCameraSortOrder(
       return { success: false, error: error.message }
     }
 
-    revalidatePath('/dashboard/system-management/dealer')
-    revalidatePath('/dashboard/sales/demands/new')
+    revalidateDealerCameraBookingPaths()
     return { success: true }
   } catch (error) {
     return {

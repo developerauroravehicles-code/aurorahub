@@ -1,7 +1,7 @@
 'use client'
 
 import { useActionState, useState, useEffect, useMemo } from 'react'
-import { createExternalDemand } from './create-external-demand-actions'
+import { createExternalDemand, previewExternalDemandBarcode } from './create-external-demand-actions'
 import { getCameraModelsForDealer } from './get-cameras-for-dealer'
 import { VEHICLE_MAKES_CA } from '@/lib/vehicle-makes'
 import { getModelsForMake, getTrimsForModel } from '@/lib/vehicle-models'
@@ -36,9 +36,12 @@ interface Specialist {
   full_name: string | null
 }
 
+type ScannedBarcode = { code: string; modelName: string }
+
 interface CreateExternalDemandFormProps {
   dealers: Dealer[]
   specialists: Specialist[]
+  barcodeModeEnabled?: boolean
   onSuccess?: () => void
   onCancel?: () => void
 }
@@ -47,7 +50,13 @@ const inputClass =
   'mt-1 block w-full rounded-md border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 py-2 px-3 shadow-sm focus:border-[#C27E00] focus:outline-none focus:ring-[#C27E00] sm:text-sm text-zinc-900 dark:text-white placeholder:text-zinc-500 dark:placeholder:text-gray-500'
 const inputReadOnlyClass = inputClass + ' opacity-75 cursor-not-allowed'
 
-export function CreateExternalDemandForm({ dealers, specialists, onSuccess, onCancel }: CreateExternalDemandFormProps) {
+export function CreateExternalDemandForm({
+  dealers,
+  specialists,
+  barcodeModeEnabled = false,
+  onSuccess,
+  onCancel,
+}: CreateExternalDemandFormProps) {
   const [state, formAction, isPending] = useActionState(createExternalDemand, null)
   const [selectedDealerId, setSelectedDealerId] = useState<string>(dealers[0]?.id ?? '')
 
@@ -75,6 +84,11 @@ export function CreateExternalDemandForm({ dealers, specialists, onSuccess, onCa
   const [completeOnCreate, setCompleteOnCreate] = useState(false)
   const [serviceType, setServiceType] = useState<DemandServiceType>('installation')
   const [appointmentDate, setAppointmentDate] = useState('')
+  const [assignedSpecialistId, setAssignedSpecialistId] = useState('')
+  const [barcodeInput, setBarcodeInput] = useState('')
+  const [scannedBarcodes, setScannedBarcodes] = useState<ScannedBarcode[]>([])
+  const [scanPending, setScanPending] = useState(false)
+  const [clientError, setClientError] = useState<string | null>(null)
 
   const selectedDealer = dealers.find((d) => d.id === selectedDealerId)
   const dealerTimezone = useMemo(
@@ -99,16 +113,54 @@ export function CreateExternalDemandForm({ dealers, specialists, onSuccess, onCa
     }
   }, [state?.success, onSuccess])
 
+  async function addScannedBarcode() {
+    const raw = barcodeInput.trim()
+    if (!raw) return
+    if (scannedBarcodes.some((b) => b.code.toLowerCase() === raw.toLowerCase())) {
+      setClientError('This barcode is already in the list.')
+      setBarcodeInput('')
+      return
+    }
+    setScanPending(true)
+    setClientError(null)
+    const preview = await previewExternalDemandBarcode(assignedSpecialistId, raw)
+    setScanPending(false)
+    if ('error' in preview && preview.error) {
+      setClientError(preview.error)
+      return
+    }
+    if ('ok' in preview && preview.ok) {
+      setScannedBarcodes((prev) => [...prev, { code: preview.code, modelName: preview.modelName }])
+      setBarcodeInput('')
+    }
+  }
+
+  const showBarcodeOnComplete = barcodeModeEnabled && completeOnCreate
+
   return (
-    <form action={formAction} className="space-y-6">
+    <form
+      action={formAction}
+      className="space-y-6"
+      onSubmit={(e) => {
+        if (showBarcodeOnComplete && scannedBarcodes.length === 0) {
+          e.preventDefault()
+          setClientError('Scan at least one product barcode (Enter after each scan).')
+          return
+        }
+        if (showBarcodeOnComplete && !assignedSpecialistId) {
+          e.preventDefault()
+          setClientError('Select a specialist — barcodes are taken from their field stock.')
+        }
+      }}
+    >
       <div>
         <h2 className="text-lg font-medium text-zinc-900 dark:text-white border-b border-zinc-200 dark:border-gray-800 pb-2">Create External Demand</h2>
         <p className="text-sm text-zinc-500 dark:text-gray-400 mt-1">Date only — no slot. External demands do not affect normal demand slots. Past dates allowed for retroactive entry.</p>
       </div>
 
-      {state?.error && (
+      {(state?.error || clientError) && (
         <div className="bg-red-900/50 border border-red-800 text-red-200 p-3 rounded-md text-sm">
-          {state.error}
+          {clientError ?? state?.error}
         </div>
       )}
 
@@ -181,7 +233,13 @@ export function CreateExternalDemandForm({ dealers, specialists, onSuccess, onCa
         {specialists.length > 0 && (
           <div className="sm:col-span-2">
             <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300">Specialist</label>
-            <select name="assignedSpecialistId" className={inputClass}>
+            <select
+              name="assignedSpecialistId"
+              value={assignedSpecialistId}
+              onChange={(e) => setAssignedSpecialistId(e.target.value)}
+              required={showBarcodeOnComplete}
+              className={inputClass}
+            >
               <option value="" className="bg-white text-zinc-900 dark:bg-black dark:text-white">
                 -- No specialist assigned --
               </option>
@@ -256,6 +314,73 @@ export function CreateExternalDemandForm({ dealers, specialists, onSuccess, onCa
                 </label>
               ))}
             </div>
+          </div>
+        )}
+        {showBarcodeOnComplete && (
+          <div className="sm:col-span-2 space-y-2">
+            <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300">
+              Product barcodes *
+            </label>
+            {!assignedSpecialistId && (
+              <p className="text-xs text-amber-700 dark:text-amber-300">
+                Select a specialist above first — scans must match their field stock.
+              </p>
+            )}
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={barcodeInput}
+                onChange={(e) => setBarcodeInput(e.target.value.toUpperCase())}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault()
+                    void addScannedBarcode()
+                  }
+                }}
+                autoComplete="off"
+                disabled={scanPending || isPending || !assignedSpecialistId}
+                placeholder="Scan unit barcode, press Enter…"
+                className="flex-1 rounded-md border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 px-3 py-2 text-sm font-mono text-zinc-900 dark:text-white focus:border-[#C27E00] focus:outline-none focus:ring-1 focus:ring-[#C27E00] disabled:opacity-50"
+              />
+              <button
+                type="button"
+                disabled={scanPending || isPending || !barcodeInput.trim() || !assignedSpecialistId}
+                onClick={() => void addScannedBarcode()}
+                className="shrink-0 rounded-md border border-[#C27E00]/50 px-3 py-2 text-sm text-[#C27E00] hover:bg-[#C27E00]/10 disabled:opacity-50"
+              >
+                Add
+              </button>
+            </div>
+            <p className="text-xs text-zinc-500 dark:text-gray-500">
+              Required for Future Customer / retroactive completed installs. Scan each unit (not the set box).
+            </p>
+            {scannedBarcodes.map((b) => (
+              <input key={b.code} type="hidden" name="barcodeCodes" value={b.code} />
+            ))}
+            {scannedBarcodes.length > 0 && (
+              <ul className="space-y-1 rounded-md border border-zinc-200 dark:border-gray-800 divide-y divide-zinc-200 dark:divide-gray-800">
+                {scannedBarcodes.map((b) => (
+                  <li
+                    key={b.code}
+                    className="flex items-center justify-between gap-2 px-3 py-2 text-sm bg-zinc-50 dark:bg-black/30"
+                  >
+                    <span>
+                      <span className="font-mono text-zinc-900 dark:text-white">{b.code}</span>
+                      <span className="text-zinc-500 ml-2">{b.modelName}</span>
+                    </span>
+                    <button
+                      type="button"
+                      className="text-xs text-red-400 hover:underline"
+                      onClick={() =>
+                        setScannedBarcodes((prev) => prev.filter((x) => x.code !== b.code))
+                      }
+                    >
+                      Remove
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
         )}
         <div>

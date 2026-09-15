@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { getDuplicateStockNumbers } from '@/lib/demand-stock'
 import { getInventoryManagerDealerId, isInventoryManager } from '@/lib/inventory-manager-access'
+import { isBarcodeModeEnabled } from '@/lib/inventory-barcodes'
 import { DemandsList } from './demands-list'
 import { DemandPrintHost } from '@/components/demand-print-host'
 
@@ -80,6 +81,7 @@ export default async function AdminDemandsPage({
 
   const duplicateStockNumbersSet = await getDuplicateStockNumbers(imDealerId)
   const duplicateStockNumbers = Array.from(duplicateStockNumbersSet)
+  const barcodeModeEnabled = await isBarcodeModeEnabled(supabase)
 
   return (
     <div className="space-y-8">
@@ -96,6 +98,7 @@ export default async function AdminDemandsPage({
             canCreateExternal={canCreateExternal}
             hideDealerFilter={!!isDealerScopedAdmin}
             duplicateStockNumbers={duplicateStockNumbers}
+            barcodeModeEnabled={barcodeModeEnabled}
           />
         </DemandPrintHost>
       </div>

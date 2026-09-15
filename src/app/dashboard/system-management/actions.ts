@@ -885,6 +885,8 @@ export async function updateDealerCameraSortOrder(
   revalidatePath('/dashboard/system-management/cameras')
   revalidatePath('/dashboard/system-management/dealer')
   revalidatePath('/dashboard/sales/demands/new')
+  revalidatePath('/dashboard/finance/demands/new')
+  revalidatePath('/dashboard/admin/demands')
   return { success: 'Sort order updated' }
 }
 

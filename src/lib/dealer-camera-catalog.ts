@@ -13,6 +13,7 @@ export async function getActiveCamerasForDealer(
     .from('dealer_cameras')
     .select('sort_order, camera_models(id, name, is_active, booking_display_as_set)')
     .eq('dealer_id', dealerId)
+    .order('sort_order', { ascending: true })
 
   if (error) {
     console.error('getActiveCamerasForDealer:', error.message)

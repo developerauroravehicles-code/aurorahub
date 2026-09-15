@@ -12,6 +12,7 @@ const selectClass = `${inputClass} [&>option]:bg-white [&>option]:text-zinc-900 
 interface CameraModelOption {
   id: string
   name: string
+  label?: string
 }
 
 interface EditCameraModelFormProps {
@@ -90,7 +91,7 @@ export function EditCameraModelForm({
             <option value="">-- Select a camera model --</option>
             {cameraModels.map((camera) => (
               <option key={camera.id} value={camera.name}>
-                {camera.name}
+                {camera.label ?? camera.name}
               </option>
             ))}
             <option value="__custom__">Other (Custom)</option>

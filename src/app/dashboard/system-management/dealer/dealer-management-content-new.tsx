@@ -25,6 +25,7 @@ export const DealerManagementContent = memo(function DealerManagementContent({
   addCameraToDealer,
   removeCameraFromDealer,
   updateDealerCameraSortOrder,
+  reorderDealerCamera,
 }: {
   dealers: Dealer[]
   regionCodes: RegionCode[]
@@ -37,6 +38,11 @@ export const DealerManagementContent = memo(function DealerManagementContent({
     dealerId: string,
     cameraModelId: string,
     sortOrder: number
+  ) => Promise<{ success: boolean; error?: string }>
+  reorderDealerCamera: (
+    dealerId: string,
+    cameraModelId: string,
+    direction: 'up' | 'down'
   ) => Promise<{ success: boolean; error?: string }>
 }) {
   const router = useRouter()
@@ -295,6 +301,7 @@ export const DealerManagementContent = memo(function DealerManagementContent({
                         addCameraToDealer={addCameraToDealer}
                         removeCameraFromDealer={removeCameraFromDealer}
                         updateDealerCameraSortOrder={updateDealerCameraSortOrder}
+                        reorderDealerCamera={reorderDealerCamera}
                       />
                       <DealerInvoiceEmailsManagement
                         dealerId={d.id}

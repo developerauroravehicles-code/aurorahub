@@ -52,6 +52,7 @@ interface Demand {
 }
 
 interface DemandsListProps {
+  barcodeModeEnabled?: boolean
   demands: Demand[]
   dealers: Dealer[]
   specialists: Specialist[]
@@ -87,7 +88,16 @@ function paramsEqual(a: string, b: string): boolean {
   return true
 }
 
-export function DemandsList({ demands, dealers, specialists, selectedDealerId, canCreateExternal, hideDealerFilter, duplicateStockNumbers = [] }: DemandsListProps) {
+export function DemandsList({
+  demands,
+  dealers,
+  specialists,
+  selectedDealerId,
+  canCreateExternal,
+  hideDealerFilter,
+  duplicateStockNumbers = [],
+  barcodeModeEnabled = false,
+}: DemandsListProps) {
   const [createModalOpen, setCreateModalOpen] = useState(false)
   const router = useRouter()
 
@@ -278,6 +288,7 @@ export function DemandsList({ demands, dealers, specialists, selectedDealerId, c
               <CreateExternalDemandForm
                 dealers={dealers}
                 specialists={specialists}
+                barcodeModeEnabled={barcodeModeEnabled}
                 onSuccess={handleCreateSuccess}
                 onCancel={() => setCreateModalOpen(false)}
               />

@@ -7,6 +7,7 @@ import {
   addCameraToDealer,
   removeCameraFromDealer,
   updateDealerCameraSortOrder,
+  reorderDealerCamera,
 } from '../region/actions'
 import type { Dealer, DealerInvoiceEmail } from '@/types/system-management'
 
@@ -160,6 +161,7 @@ export default async function DealerManagementPage() {
             addCameraToDealer={addCameraToDealer}
             removeCameraFromDealer={removeCameraFromDealer}
             updateDealerCameraSortOrder={updateDealerCameraSortOrder}
+            reorderDealerCamera={reorderDealerCamera}
           />
         </div>
       </div>

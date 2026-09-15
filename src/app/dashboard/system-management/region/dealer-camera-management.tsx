@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, memo } from 'react'
 import { useRouter } from 'next/navigation'
+import { ChevronDown, ChevronUp } from 'lucide-react'
 
 interface CameraModel {
   id: string
@@ -23,6 +24,7 @@ export const DealerCameraManagement = memo(function DealerCameraManagement({
   addCameraToDealer,
   removeCameraFromDealer,
   updateDealerCameraSortOrder,
+  reorderDealerCamera,
 }: {
   dealerId: string
   dealerName: string
@@ -34,6 +36,11 @@ export const DealerCameraManagement = memo(function DealerCameraManagement({
     dealerId: string,
     cameraModelId: string,
     sortOrder: number
+  ) => Promise<{ success: boolean; error?: string }>
+  reorderDealerCamera: (
+    dealerId: string,
+    cameraModelId: string,
+    direction: 'up' | 'down'
   ) => Promise<{ success: boolean; error?: string }>
 }) {
   const [isOpen, setIsOpen] = useState(false)
@@ -97,6 +104,20 @@ export const DealerCameraManagement = memo(function DealerCameraManagement({
     }
   }
 
+  const handleReorder = async (cameraId: string, direction: 'up' | 'down') => {
+    setIsLoading(true)
+    try {
+      const result = await reorderDealerCamera(dealerId, cameraId, direction)
+      if (result.success) {
+        router.refresh()
+      } else {
+        alert(result.error || 'Failed to reorder.')
+      }
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
   const handleSortOrderBlur = async (cameraId: string, value: string, previous: number) => {
     const parsed = parseInt(value, 10)
     if (!Number.isFinite(parsed) || parsed === previous) return
@@ -130,18 +151,40 @@ export const DealerCameraManagement = memo(function DealerCameraManagement({
             Cameras for {dealerName}
           </h3>
           <p className="text-xs text-zinc-500 dark:text-gray-400 mb-3">
-            Booking order: lower number appears first for this dealer.
+            Order below matches the Camera Model dropdown on Create Demand for this dealer (Sales / Finance).
           </p>
 
           {sortedAssigned.length > 0 && (
             <div className="mb-4">
-              <p className="text-xs text-zinc-500 dark:text-gray-400 mb-2">Assigned cameras:</p>
+              <p className="text-xs text-zinc-500 dark:text-gray-400 mb-2">Assigned cameras (top = first in list):</p>
               <div className="space-y-1">
-                {sortedAssigned.map((ac) => (
+                {sortedAssigned.map((ac, index) => (
                   <div
                     key={ac.camera_model_id}
                     className="flex items-center gap-2 p-2 bg-zinc-200/50 dark:bg-white/5 rounded text-sm"
                   >
+                    <div className="flex flex-col shrink-0">
+                      <button
+                        type="button"
+                        disabled={isLoading || index === 0}
+                        onClick={() => void handleReorder(ac.camera_model_id, 'up')}
+                        className="p-0.5 rounded text-zinc-500 hover:text-[#C27E00] disabled:opacity-30"
+                        title="Move up"
+                        aria-label="Move up"
+                      >
+                        <ChevronUp className="w-4 h-4" />
+                      </button>
+                      <button
+                        type="button"
+                        disabled={isLoading || index === sortedAssigned.length - 1}
+                        onClick={() => void handleReorder(ac.camera_model_id, 'down')}
+                        className="p-0.5 rounded text-zinc-500 hover:text-[#C27E00] disabled:opacity-30"
+                        title="Move down"
+                        aria-label="Move down"
+                      >
+                        <ChevronDown className="w-4 h-4" />
+                      </button>
+                    </div>
                     <label className="sr-only" htmlFor={`sort-${dealerId}-${ac.camera_model_id}`}>
                       Sort order
                     </label>

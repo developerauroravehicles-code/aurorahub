@@ -16,6 +16,11 @@ import {
 } from '@/lib/demand-pricing'
 import { addDemandToDailyBatch } from '@/lib/daily-dealer-invoices'
 import { notifyAuroraManagersIfDuplicateStock } from '@/lib/notify-duplicate-stock'
+import {
+  consumeBarcodesForDemand,
+  isBarcodeModeEnabled,
+  lookupUnitBarcodeAtSpecialist,
+} from '@/lib/inventory-barcodes'
 
 const schema = z.object({
   dealerId: z.string().min(1, 'Dealer is required'),
@@ -38,6 +43,33 @@ const schema = z.object({
 })
 
 export type CreateExternalDemandState = { error?: string; success?: boolean; fieldErrors?: Record<string, string[]> } | null
+
+export async function previewExternalDemandBarcode(specialistId: string, code: string) {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { error: 'Unauthorized' as const }
+
+  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+  if (!profile || profile.role !== 'aurora_manager') {
+    return { error: 'Only Aurora Managers can scan barcodes here' as const }
+  }
+
+  const trimmed = code.trim()
+  if (!trimmed) return { error: 'Enter a barcode' as const }
+  if (!specialistId.trim()) return { error: 'Select a specialist before scanning barcodes' as const }
+
+  const admin = createAdminClient()
+  const resolved = await lookupUnitBarcodeAtSpecialist(admin, trimmed, specialistId.trim())
+  if ('error' in resolved) return { error: resolved.error as string }
+
+  return {
+    ok: true as const,
+    code: trimmed.toUpperCase(),
+    modelName: resolved.cameraModelName ?? 'Unit',
+  }
+}
 
 export async function createExternalDemand(prevState: CreateExternalDemandState, formData: FormData): Promise<CreateExternalDemandState> {
   const supabase = await createClient()
@@ -97,6 +129,24 @@ export async function createExternalDemand(prevState: CreateExternalDemandState,
   }
   const serviceType = completeOnCreate ? (serviceTypeRaw as DemandServiceType) : null
 
+  const barcodeMode = await isBarcodeModeEnabled(supabase)
+  const barcodeCodes = formData
+    .getAll('barcodeCodes')
+    .map((v) => String(v).trim())
+    .filter(Boolean)
+
+  if (completeOnCreate && barcodeMode) {
+    if (!data.assignedSpecialistId) {
+      return {
+        error:
+          'Select the specialist who performed the install — barcodes are consumed from their field stock.',
+      }
+    }
+    if (barcodeCodes.length === 0) {
+      return { error: 'Scan at least one product barcode (unit label) before completing.' }
+    }
+  }
+
   const cameraModelId = await lookupCameraModelId(supabase, data.cameraModel)
 
   let invoiceTotalAmount: number | undefined
@@ -147,6 +197,23 @@ export async function createExternalDemand(prevState: CreateExternalDemandState,
 
   if (completeOnCreate) {
     const admin = createAdminClient()
+
+    if (barcodeMode && serviceType && data.assignedSpecialistId && barcodeCodes.length > 0) {
+      const consumeResult = await consumeBarcodesForDemand(supabase, admin, {
+        codes: barcodeCodes,
+        demandId: demand.id,
+        specialistId: data.assignedSpecialistId,
+        dealerId: data.dealerId,
+        actorId: user.id,
+        serviceType,
+        adminResolveForSpecialist: true,
+      })
+      if (consumeResult.error) {
+        await admin.from('demands').delete().eq('id', demand.id)
+        return { error: consumeResult.error }
+      }
+    }
+
     addDemandToDailyBatch(admin, demand.id).catch(() => {})
   }
 
