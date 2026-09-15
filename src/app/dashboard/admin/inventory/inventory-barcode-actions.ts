@@ -5,7 +5,10 @@ import { revalidatePath } from 'next/cache'
 import {
   assignBarcodeToDealer,
   assignBarcodeToSpecialist,
+  activateSetForSpecialistAssignment,
+  assignUnitUnderSetToSpecialist,
   voidBarcode,
+  deleteBarcodeRecord,
   generateSetBarcodes,
   generateUnitBarcodes,
   getBarcodeSettings,
@@ -16,6 +19,7 @@ import {
   type BarcodeSettings,
 } from '@/lib/inventory-barcodes'
 import { resetNegativeBalances } from '@/lib/inventory-v2/movements'
+import { normalizeBarcodeCode } from '@/lib/inventory-barcodes/code-generator'
 
 async function requireAuroraManager() {
   const supabase = await createClient()
@@ -144,10 +148,12 @@ export async function generateSetBarcodesAction(formData: FormData) {
 
   if (!templateId) return { error: 'Set template is required' }
 
+  const settings = await getBarcodeSettings(auth.supabase)
   const result = await generateSetBarcodes(auth.supabase, {
     templateId,
     setCount,
     createdBy: auth.userId,
+    autoGenerateUnitBarcodes: settings.setAutoGenerateUnitBarcodes,
   })
 
   if (result.error) return { error: result.error }
@@ -181,9 +187,47 @@ export async function scanAssignBarcodeToSpecialist(formData: FormData) {
 
   const code = String(formData.get('code') ?? '').trim()
   const specialistId = String(formData.get('specialist_id') ?? '').trim()
+  const activeSetId = String(formData.get('active_set_id') ?? '').trim()
 
   if (!code || !specialistId) {
     return { error: 'Barcode and specialist are required' }
+  }
+
+  const settings = await getBarcodeSettings(auth.supabase)
+
+  const normalized = normalizeBarcodeCode(code)
+  const { data: row } = await auth.supabase
+    .from('inventory_barcodes')
+    .select('kind')
+    .ilike('code', normalized)
+    .maybeSingle()
+
+  if (row?.kind === 'set' && !activeSetId) {
+    const setResult = await activateSetForSpecialistAssignment(auth.supabase, {
+      code,
+      specialistId,
+      actorId: auth.userId,
+    })
+    if (setResult.error) return { error: setResult.error }
+    revalidatePath('/dashboard/admin/inventory')
+    return { success: true, setProgress: setResult.progress }
+  }
+
+  if (activeSetId) {
+    const unitResult = await assignUnitUnderSetToSpecialist(auth.supabase, {
+      unitCode: code,
+      setId: activeSetId,
+      specialistId,
+      actorId: auth.userId,
+      allowLinkLooseUnit: !settings.setAutoGenerateUnitBarcodes,
+    })
+    if (unitResult.error) return { error: unitResult.error }
+    revalidatePath('/dashboard/admin/inventory')
+    return {
+      success: true,
+      barcode: unitResult.barcode,
+      setProgress: unitResult.progress,
+    }
   }
 
   const result = await assignBarcodeToSpecialist(auth.supabase, {
@@ -202,6 +246,17 @@ export async function voidBarcodeAction(barcodeId: string) {
   if (auth.error) return { error: auth.error }
 
   const result = await voidBarcode(auth.supabase, barcodeId, auth.userId)
+  if (result.error) return { error: result.error }
+
+  revalidatePath('/dashboard/admin/inventory')
+  return { success: true }
+}
+
+export async function deleteBarcodeAction(barcodeId: string) {
+  const auth = await requireAuroraManager()
+  if (auth.error) return { error: auth.error }
+
+  const result = await deleteBarcodeRecord(auth.supabase, barcodeId, auth.userId)
   if (result.error) return { error: result.error }
 
   revalidatePath('/dashboard/admin/inventory')

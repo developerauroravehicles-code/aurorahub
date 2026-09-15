@@ -55,6 +55,7 @@ export interface CameraModel {
   description?: string | null
   stock_quantity?: number
   is_active: boolean
+  booking_display_as_set?: boolean
   image_url?: string | null
   user_manual_url?: string | null
   troubleshooting_json?: { title: string; body: string }[] | null
@@ -67,7 +68,7 @@ export interface DealerCamera {
   camera_model_id: string
   sort_order?: number
   camera_models?: CameraModel
-  dealers?: Dealer
+  dealers?: Dealer | { id: string; name: string; code?: string }
 }
 
 export type DemandServiceType = 'installation' | 'transfer' | 'removal'

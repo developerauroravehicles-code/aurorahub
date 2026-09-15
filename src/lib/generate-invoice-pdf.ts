@@ -241,18 +241,29 @@ export function buildInvoicePdf(data: InvoiceRowData): jsPDF {
     y += 2
   }
 
-  // Comments (left)
+  const summaryColWidth = 58
+  const summaryX = pageWidth - margin - summaryColWidth * 2
+  const commentsMaxWidth = Math.max(40, summaryX - margin - 8)
+
+  // Comments (left, wrapped — keeps totals block on the right clear)
   if (data.comments && data.comments !== '—') {
-    doc.setFont('helvetica', 'normal')
+    doc.setFont('helvetica', 'bold')
     doc.setFontSize(10)
-    doc.text(`Comments: ${data.comments}`, margin, y)
+    doc.text('Comments:', margin, y)
+    y += 5
+    doc.setFont('helvetica', 'normal')
+    const commentLines = doc.splitTextToSize(data.comments, commentsMaxWidth) as string[]
+    for (const line of commentLines) {
+      doc.text(line, margin, y)
+      y += 5
+    }
     y += 6
+  } else {
+    y += 4
   }
 
-  // Push financial summary lower
-  y += 20
-
   // Financial summary block (bottom right) - subtotal from extra table col2 sum, then + taxes = total
+  const summaryStartY = y + 8
   const allExtraRows = data.extraTableRows ?? []
   const col2Sum = allExtraRows.reduce((sum, r) => sum + (parseFloat((r.col2 || '0').replace(/[^0-9.-]/g, '')) || 0), 0)
   const totalFromInput = parseFloat((data.totalAmount || '$0').replace(/[^0-9.-]/g, '')) || 0
@@ -275,8 +286,6 @@ export function buildInvoicePdf(data: InvoiceRowData): jsPDF {
   const pst = fs.pstEnabled ? subtotal * (fs.pstPercent / 100) : 0
   const salesTaxAmount = fs.salesTaxEnabled ? subtotal * (fs.salesTaxPercent / 100) : 0
   const fmt = (n: number) => '$' + n.toFixed(2)
-  const summaryColWidth = 58
-  const summaryX = pageWidth - margin - summaryColWidth * 2
   const summaryRows: [string, string][] = []
   summaryRows.push(['SUBTOTAL $', fmt(subtotal)])
   if (fs.gstEnabled) summaryRows.push([`GST (${fs.gstPercent}%) $`, fmt(gst)])
@@ -287,7 +296,7 @@ export function buildInvoicePdf(data: InvoiceRowData): jsPDF {
   summaryRows.push(['TOTAL $', fmt(totalNum)])
   const totalRowIndex = summaryRows.length - 1
   autoTable(doc, {
-    startY: y,
+    startY: summaryStartY,
     head: [['', '']],
     body: summaryRows,
     showHead: 'never' as const,

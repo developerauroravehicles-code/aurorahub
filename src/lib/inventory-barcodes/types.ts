@@ -5,11 +5,14 @@
 export interface BarcodeSettings {
   enabled: boolean
   codePrefix: string
+  /** When false, set generation creates only the set label; units are linked on specialist scan. */
+  setAutoGenerateUnitBarcodes: boolean
 }
 
 export const DEFAULT_BARCODE_SETTINGS: BarcodeSettings = {
   enabled: false,
   codePrefix: 'AUR',
+  setAutoGenerateUnitBarcodes: false,
 }
 
 export const BARCODE_SETTINGS_KEY = 'barcode_settings'

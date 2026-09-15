@@ -22,7 +22,9 @@ import { RescheduleDemandButton } from '../reschedule-demand-button'
 import { DemandManualSmsPanel } from '../demand-manual-sms-panel'
 import type { SMSTriggerType } from '@/lib/sms-settings'
 import { DemandInstallationNotesSection, type InstallationNoteRow } from '../demand-installation-notes-section'
+import { DemandBarcodeChangeForm } from '../demand-barcode-change-form'
 import { SERVICE_TYPE_LABELS, DemandServiceType } from '@/lib/demand-pricing'
+import { isBarcodeModeEnabled } from '@/lib/inventory-barcodes'
 
 /** List filters (date, status, dealer) are passed on the detail URL so "Back" can restore them. */
 function demandsListHrefFromDetailSearch(
@@ -102,6 +104,18 @@ export default async function DemandDetailsPage({
 
   // Fetch demand logs (admin client - user already verified access via demand fetch)
   const admin = createAdminClient()
+  const barcodeModeEnabled = await isBarcodeModeEnabled(supabase)
+  let installedBarcodeCodes: string[] = []
+  if (barcodeModeEnabled && demand.status === 'completed') {
+    const { data: consumedRows } = await admin
+      .from('inventory_barcodes')
+      .select('code, kind')
+      .eq('demand_id', id)
+      .eq('status', 'consumed')
+      .eq('kind', 'unit')
+      .order('consumed_at', { ascending: true })
+    installedBarcodeCodes = (consumedRows ?? []).map((r) => r.code).filter(Boolean)
+  }
   const { data: logsRows } = await admin
     .from('demand_logs')
     .select('id, demand_id, actor_id, previous_status, new_status, notes, created_at')
@@ -250,6 +264,16 @@ export default async function DemandDetailsPage({
             address={demand.customer_address}
             canEdit={canEditCoreFields}
           />
+          {barcodeModeEnabled && demand.status === 'completed' && (
+            <DemandBarcodeChangeForm
+              demandId={id}
+              dealerId={demand.dealer_id ?? ''}
+              specialistId={demand.assigned_specialist_id}
+              serviceType={(demand.service_type as 'installation' | 'transfer' | 'removal') ?? 'installation'}
+              installedBarcodeCodes={installedBarcodeCodes}
+              canEdit={isAuroraManager}
+            />
+          )}
         </div>
 
         {/* Vehicle Information */}

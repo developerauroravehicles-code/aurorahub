@@ -14,6 +14,10 @@ export function parseBarcodeSettings(raw: string | null | undefined): BarcodeSet
       codePrefix: String(parsed.codePrefix ?? DEFAULT_BARCODE_SETTINGS.codePrefix)
         .trim()
         .toUpperCase() || DEFAULT_BARCODE_SETTINGS.codePrefix,
+      setAutoGenerateUnitBarcodes:
+        parsed.setAutoGenerateUnitBarcodes !== undefined
+          ? Boolean(parsed.setAutoGenerateUnitBarcodes)
+          : DEFAULT_BARCODE_SETTINGS.setAutoGenerateUnitBarcodes,
     }
   } catch {
     return { ...DEFAULT_BARCODE_SETTINGS }
@@ -49,6 +53,7 @@ export async function saveBarcodeSettings(
       String(settings.codePrefix ?? DEFAULT_BARCODE_SETTINGS.codePrefix)
         .trim()
         .toUpperCase() || DEFAULT_BARCODE_SETTINGS.codePrefix,
+    setAutoGenerateUnitBarcodes: Boolean(settings.setAutoGenerateUnitBarcodes),
   }
 
   const { error } = await supabase.from('system_settings').upsert(

@@ -26,6 +26,7 @@ import {
 interface CameraModel {
   id: string
   name: string
+  label?: string
 }
 
 interface CalendarSetting {
@@ -411,7 +412,7 @@ export function DemandForm({ cameraModels, defaultAddress = '', timezoneName: pr
                 <option value="">-- Select a camera model --</option>
                 {cameraModels.map((camera) => (
                   <option key={camera.id} value={camera.name} className="bg-zinc-50 dark:bg-black text-zinc-900 dark:text-white">
-                    {camera.name}
+                    {camera.label ?? camera.name}
                   </option>
                 ))}
                 <option value="__custom__" className="bg-zinc-50 dark:bg-black text-zinc-900 dark:text-white">Other (Custom)</option>

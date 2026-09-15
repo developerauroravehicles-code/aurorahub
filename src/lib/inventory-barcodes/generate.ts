@@ -66,6 +66,7 @@ export async function generateSetBarcodes(
     templateId: string
     setCount: number
     createdBy: string | null
+    autoGenerateUnitBarcodes?: boolean
   }
 ): Promise<{ barcodes?: InventoryBarcodeRow[]; error?: string }> {
   if (input.setCount < 1 || input.setCount > 100) {
@@ -115,6 +116,10 @@ export async function generateSetBarcodes(
       batch_id: batchId,
     })
     allCreated.push(setRow as InventoryBarcodeRow)
+
+    if (input.autoGenerateUnitBarcodes === false) {
+      continue
+    }
 
     for (const item of items) {
       for (let q = 0; q < item.quantity; q++) {

@@ -36,6 +36,7 @@ async function recordConsumptionMovement(
     .eq('reference_demand_id', input.demandId)
     .eq('movement_type', 'consumption')
     .eq('from_location_id', input.fromLocationId)
+    .eq('camera_model_id', input.cameraModelId)
     .maybeSingle()
 
   if (existing) return {}
@@ -166,6 +167,58 @@ export async function consumeBarcodeForDemand(
   )
 
   return { barcode: updated as InventoryBarcodeRow, cameraModelId }
+}
+
+/** Consume multiple unit barcodes on one completed installation (e.g. set: Nova + battery). */
+export async function consumeBarcodesForDemand(
+  userSupabase: SupabaseClient,
+  adminSupabase: SupabaseClient,
+  input: {
+    codes: string[]
+    demandId: string
+    specialistId: string
+    dealerId: string
+    actorId: string | null
+    serviceType: DemandServiceType
+  }
+): Promise<{ cameraModelIds: string[]; error?: string }> {
+  const unique: string[] = []
+  const seen = new Set<string>()
+  for (const raw of input.codes) {
+    const code = normalizeBarcodeCode(raw)
+    if (!code) continue
+    const key = code.toLowerCase()
+    if (seen.has(key)) {
+      return { cameraModelIds: [], error: `Duplicate barcode in list: ${code}` }
+    }
+    seen.add(key)
+    unique.push(code)
+  }
+
+  if (unique.length === 0) {
+    return { cameraModelIds: [], error: 'At least one product barcode is required' }
+  }
+
+  const cameraModelIds: string[] = []
+  for (const code of unique) {
+    const result = await consumeBarcodeForDemand(userSupabase, adminSupabase, {
+      code,
+      demandId: input.demandId,
+      specialistId: input.specialistId,
+      dealerId: input.dealerId,
+      actorId: input.actorId,
+      serviceType: input.serviceType,
+    })
+    if (result.error) {
+      return {
+        cameraModelIds,
+        error: `${code}: ${result.error}`,
+      }
+    }
+    if (result.cameraModelId) cameraModelIds.push(result.cameraModelId)
+  }
+
+  return { cameraModelIds }
 }
 
 export async function validateSpecialistBarcode(

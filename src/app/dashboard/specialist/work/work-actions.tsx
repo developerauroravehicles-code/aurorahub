@@ -1,12 +1,14 @@
 'use client'
 
-import { assignWorkToMe, completeDemand } from './actions'
+import { assignWorkToMe, completeDemand, previewWorkBarcode } from './actions'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { DemandServiceType, SERVICE_TYPE_LABELS } from '@/lib/demand-pricing'
 import { Loader2, X } from 'lucide-react'
 
 const SERVICE_OPTIONS: DemandServiceType[] = ['installation', 'transfer', 'removal']
+
+type ScannedBarcode = { code: string; modelName: string }
 
 export function WorkActions({
   demandId,
@@ -25,6 +27,8 @@ export function WorkActions({
   const [serviceType, setServiceType] = useState<DemandServiceType>('installation')
   const [vinInput, setVinInput] = useState('')
   const [barcodeInput, setBarcodeInput] = useState('')
+  const [scannedBarcodes, setScannedBarcodes] = useState<ScannedBarcode[]>([])
+  const [scanPending, setScanPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const router = useRouter()
 
@@ -43,12 +47,35 @@ export function WorkActions({
     setError(null)
     setServiceType('installation')
     setBarcodeInput('')
+    setScannedBarcodes([])
     if (directComplete && vinLast6) {
       setVinInput(vinLast6.trim())
     } else {
       setVinInput('')
     }
     setShowModal(true)
+  }
+
+  async function addScannedBarcode() {
+    const raw = barcodeInput.trim()
+    if (!raw) return
+    if (scannedBarcodes.some((b) => b.code.toLowerCase() === raw.toLowerCase())) {
+      setError('This barcode is already in the list.')
+      setBarcodeInput('')
+      return
+    }
+    setScanPending(true)
+    setError(null)
+    const preview = await previewWorkBarcode(raw)
+    setScanPending(false)
+    if ('error' in preview && preview.error) {
+      setError(preview.error)
+      return
+    }
+    if ('ok' in preview && preview.ok) {
+      setScannedBarcodes((prev) => [...prev, { code: preview.code, modelName: preview.modelName }])
+      setBarcodeInput('')
+    }
   }
 
   const handleComplete = async () => {
@@ -68,8 +95,8 @@ export function WorkActions({
       resolvedVin = entered
     }
 
-    if (barcodeModeEnabled && !barcodeInput.trim()) {
-      setError('Scan or enter the product barcode to complete this job.')
+    if (barcodeModeEnabled && scannedBarcodes.length === 0) {
+      setError('Scan at least one product barcode (Enter after each scan).')
       return
     }
 
@@ -79,7 +106,7 @@ export function WorkActions({
       serviceType,
       vinLast6: resolvedVin,
       skipVinCheck: skipVinCheck || undefined,
-      barcodeCode: barcodeModeEnabled ? barcodeInput.trim() : undefined,
+      barcodeCodes: barcodeModeEnabled ? scannedBarcodes.map((b) => b.code) : undefined,
     })
     setLoading(false)
     if (result?.error) {
@@ -129,7 +156,7 @@ export function WorkActions({
             role="dialog"
             aria-modal="true"
             aria-labelledby="complete-job-title"
-            className="w-full max-w-md rounded-lg border border-zinc-300 dark:border-gray-700 bg-white dark:bg-zinc-900 shadow-xl"
+            className="w-full max-w-md rounded-lg border border-zinc-300 dark:border-gray-700 bg-white dark:bg-zinc-900 shadow-xl max-h-[90vh] overflow-y-auto"
           >
             <div className="flex items-center justify-between border-b border-zinc-200 dark:border-gray-800 px-4 py-3">
               <h2 id="complete-job-title" className="text-lg font-semibold text-zinc-900 dark:text-white">
@@ -207,19 +234,60 @@ export function WorkActions({
               {barcodeModeEnabled && (
                 <div>
                   <label className="block text-sm font-medium text-zinc-700 dark:text-gray-300 mb-1">
-                    Product barcode *
+                    Product barcodes *
                   </label>
-                  <input
-                    type="text"
-                    value={barcodeInput}
-                    onChange={(e) => setBarcodeInput(e.target.value.toUpperCase())}
-                    autoComplete="off"
-                    placeholder="Scan barcode…"
-                    className="w-full rounded-md border border-zinc-300 dark:border-gray-700 bg-zinc-50 dark:bg-gray-900 px-3 py-2 text-sm text-zinc-900 dark:text-white font-mono focus:border-[#C27E00] focus:outline-none focus:ring-1 focus:ring-[#C27E00]"
-                  />
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={barcodeInput}
+                      onChange={(e) => setBarcodeInput(e.target.value.toUpperCase())}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault()
+                          void addScannedBarcode()
+                        }
+                      }}
+                      autoComplete="off"
+                      placeholder="Scan unit barcode, press Enter…"
+                      disabled={scanPending || loading}
+                      className="flex-1 rounded-md border border-zinc-300 dark:border-gray-700 bg-zinc-50 dark:bg-gray-900 px-3 py-2 text-sm text-zinc-900 dark:text-white font-mono focus:border-[#C27E00] focus:outline-none focus:ring-1 focus:ring-[#C27E00]"
+                    />
+                    <button
+                      type="button"
+                      disabled={scanPending || !barcodeInput.trim() || loading}
+                      onClick={() => void addScannedBarcode()}
+                      className="shrink-0 rounded-md border border-[#C27E00]/50 px-3 py-2 text-sm text-[#C27E00] hover:bg-[#C27E00]/10 disabled:opacity-50"
+                    >
+                      Add
+                    </button>
+                  </div>
                   <p className="text-xs text-zinc-500 mt-1">
-                    Scan any unit barcode assigned to your field stock.
+                    Scan each installed unit (e.g. Nova + battery = 2 barcodes). Do not scan the set box label.
                   </p>
+                  {scannedBarcodes.length > 0 && (
+                    <ul className="mt-2 space-y-1 rounded-md border border-zinc-200 dark:border-gray-800 divide-y divide-zinc-200 dark:divide-gray-800">
+                      {scannedBarcodes.map((b) => (
+                        <li
+                          key={b.code}
+                          className="flex items-center justify-between gap-2 px-3 py-2 text-sm bg-zinc-50 dark:bg-black/30"
+                        >
+                          <span>
+                            <span className="font-mono text-zinc-900 dark:text-white">{b.code}</span>
+                            <span className="text-zinc-500 ml-2">{b.modelName}</span>
+                          </span>
+                          <button
+                            type="button"
+                            className="text-xs text-red-400 hover:underline"
+                            onClick={() =>
+                              setScannedBarcodes((prev) => prev.filter((x) => x.code !== b.code))
+                            }
+                          >
+                            Remove
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                 </div>
               )}
 

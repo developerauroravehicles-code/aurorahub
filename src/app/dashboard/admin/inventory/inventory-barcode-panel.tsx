@@ -16,6 +16,7 @@ import {
   scanAssignBarcodeToDealer,
   scanAssignBarcodeToSpecialist,
   voidBarcodeAction,
+  deleteBarcodeAction,
   getBarcodeTraceEvents,
   resetNegativeStockBalancesAction,
 } from './inventory-barcode-actions'
@@ -90,6 +91,15 @@ export function InventoryBarcodePanel({
   const [registrySearch, setRegistrySearch] = useState('')
   const [selectedExportIds, setSelectedExportIds] = useState<Set<string>>(new Set())
   const [selectedBarcodeId, setSelectedBarcodeId] = useState<string | null>(null)
+  const [activeSetProgress, setActiveSetProgress] = useState<{
+    setId: string
+    setCode: string
+    assignedUnitCount: number
+    expectedUnitCount: number
+  } | null>(null)
+  const [setAutoGenerateUnits, setSetAutoGenerateUnits] = useState(
+    settings.setAutoGenerateUnitBarcodes ?? false
+  )
   const [traceEvents, setTraceEvents] = useState<
     { event_type: string; created_at: string; actor_name: string | null }[]
   >([])
@@ -299,24 +309,51 @@ export function InventoryBarcodePanel({
           <p className="font-medium text-zinc-900 dark:text-white">Barcode mode active</p>
           <p className="text-xs text-zinc-500">Specialists scan on complete; assignments use barcode scans.</p>
         </div>
-        <label className="inline-flex items-center gap-3 cursor-pointer">
-          <span className="text-sm text-zinc-700 dark:text-gray-300">Enabled</span>
-          <button
-            type="button"
-            role="switch"
-            aria-checked={enabled}
-            onClick={() => {
-              const next = !enabled
-              setEnabled(next)
-              run(() => saveBarcodeSettingsAction({ ...settings, enabled: next }))
-            }}
-            className={`relative w-11 h-6 rounded-full transition ${enabled ? 'bg-[#C27E00]' : 'bg-zinc-400'}`}
-          >
-            <span
-              className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white transition ${enabled ? 'translate-x-5' : ''}`}
+        <div className="flex flex-col gap-2 items-end">
+          <label className="inline-flex items-center gap-3 cursor-pointer">
+            <span className="text-sm text-zinc-700 dark:text-gray-300">Enabled</span>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={enabled}
+              onClick={() => {
+                const next = !enabled
+                setEnabled(next)
+                run(() =>
+                  saveBarcodeSettingsAction({
+                    ...settings,
+                    enabled: next,
+                    setAutoGenerateUnitBarcodes: setAutoGenerateUnits,
+                  })
+                )
+              }}
+              className={`relative w-11 h-6 rounded-full transition ${enabled ? 'bg-[#C27E00]' : 'bg-zinc-400'}`}
+            >
+              <span
+                className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white transition ${enabled ? 'translate-x-5' : ''}`}
+              />
+            </button>
+          </label>
+          <label className="inline-flex items-center gap-2 text-xs text-zinc-600 dark:text-gray-400 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={setAutoGenerateUnits}
+              onChange={(e) => {
+                const next = e.target.checked
+                setSetAutoGenerateUnits(next)
+                run(() =>
+                  saveBarcodeSettingsAction({
+                    ...settings,
+                    enabled,
+                    setAutoGenerateUnitBarcodes: next,
+                  })
+                )
+              }}
+              className="rounded border-zinc-300"
             />
-          </button>
-        </label>
+            Pre-print unit labels when generating sets
+          </label>
+        </div>
       </div>
 
       {message && (
@@ -393,6 +430,11 @@ export function InventoryBarcodePanel({
             className={`${inputClass} w-full`}
             placeholder="Number of sets"
           />
+          <p className="text-xs text-zinc-500">
+            {setAutoGenerateUnits
+              ? 'Creates set + unit labels (same batch).'
+              : 'Set label only — scan set, then scan each unit to link & assign.'}
+          </p>
           <button type="submit" disabled={pending || templates.length === 0} className={btnPrimary}>
             Generate set batch
           </button>
@@ -545,8 +587,27 @@ export function InventoryBarcodePanel({
             e.preventDefault()
             const form = e.currentTarget
             run(async () => {
-              const res = await scanAssignBarcodeToSpecialist(new FormData(form))
+              const res = (await scanAssignBarcodeToSpecialist(new FormData(form))) as {
+                error?: string
+                success?: boolean
+                setProgress?: {
+                  setId: string
+                  setCode: string
+                  assignedUnitCount: number
+                  expectedUnitCount: number
+                  complete?: boolean
+                }
+              }
               if (!res.error) {
+                if (res.setProgress) {
+                  setActiveSetProgress({
+                    setId: res.setProgress.setId,
+                    setCode: res.setProgress.setCode,
+                    assignedUnitCount: res.setProgress.assignedUnitCount,
+                    expectedUnitCount: res.setProgress.expectedUnitCount,
+                  })
+                  if (res.setProgress.complete) setActiveSetProgress(null)
+                }
                 form.reset()
                 specialistScanRef.current?.focus()
               }
@@ -558,8 +619,25 @@ export function InventoryBarcodePanel({
             <ScanLine className="h-4 w-4 text-[#C27E00]" /> Assign to specialist (scan)
           </h3>
           <p className="text-xs text-zinc-500">
-            Scan generated barcodes directly to a specialist. No dealer step required.
+            For sets: scan the <strong>set</strong> barcode first, then each <strong>unit</strong> label.
+            Standalone units can be scanned without a set.
           </p>
+          {activeSetProgress && (
+            <div className="rounded-md border border-[#C27E00]/40 bg-[#C27E00]/10 px-3 py-2 text-xs text-zinc-800 dark:text-gray-200 flex items-center justify-between gap-2">
+              <span>
+                Active set <span className="font-mono">{activeSetProgress.setCode}</span> —{' '}
+                {activeSetProgress.assignedUnitCount}/{activeSetProgress.expectedUnitCount} units assigned
+              </span>
+              <button
+                type="button"
+                className="text-[#C27E00] hover:underline shrink-0"
+                onClick={() => setActiveSetProgress(null)}
+              >
+                Clear
+              </button>
+            </div>
+          )}
+          <input type="hidden" name="active_set_id" value={activeSetProgress?.setId ?? ''} />
           <select name="specialist_id" required className={`${inputClass} w-full`}>
             <option value="">Specialist…</option>
             {specialists.map((s) => (
@@ -731,7 +809,7 @@ export function InventoryBarcodePanel({
                       '—'
                     )}
                   </td>
-                  <td className="py-2">
+                  <td className="py-2 space-x-2">
                     {row.status !== 'consumed' && row.status !== 'void' && (
                       <button
                         type="button"
@@ -742,6 +820,24 @@ export function InventoryBarcodePanel({
                         className="text-xs text-red-400 hover:underline"
                       >
                         Void
+                      </button>
+                    )}
+                    {(row.status === 'generated' || row.status === 'void') && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          if (
+                            confirm(
+                              `Permanently delete ${row.code} from the registry? Use only for mistaken generation.`
+                            )
+                          ) {
+                            run(() => deleteBarcodeAction(row.id))
+                          }
+                        }}
+                        className="text-xs text-zinc-500 hover:text-red-400 hover:underline"
+                      >
+                        Delete
                       </button>
                     )}
                   </td>

@@ -168,6 +168,7 @@ export async function getSystemData(): Promise<SystemData> {
       *,
       dealer_cameras(
         dealer_id,
+        sort_order,
         dealers(id, name, code)
       )
     `)
@@ -707,6 +708,8 @@ export async function createCameraModel(prevState: ActionState, formData: FormDa
 
   if (!name) return { error: 'Camera model name is required' }
 
+  const bookingDisplayAsSet = formData.get('bookingDisplayAsSet') === 'on'
+
   const { error } = await supabaseAdmin.from('camera_models').insert({
     name: name.trim(),
     description: description?.trim() || null,
@@ -715,6 +718,7 @@ export async function createCameraModel(prevState: ActionState, formData: FormDa
     image_url: imageUrl,
     user_manual_url: manualUrl,
     troubleshooting_json,
+    booking_display_as_set: bookingDisplayAsSet,
   })
 
   if (error) return { error: error.message }
@@ -750,6 +754,8 @@ export async function updateCameraModel(prevState: ActionState, formData: FormDa
 
   if (!id || !name) return { error: 'ID and name are required' }
 
+  const bookingDisplayAsSet = formData.get('bookingDisplayAsSet') === 'on'
+
   const { error } = await supabaseAdmin
     .from('camera_models')
     .update({
@@ -759,6 +765,7 @@ export async function updateCameraModel(prevState: ActionState, formData: FormDa
       image_url: imageUrl,
       user_manual_url: manualUrl,
       troubleshooting_json,
+      booking_display_as_set: bookingDisplayAsSet,
     })
     .eq('id', id)
 
@@ -791,9 +798,20 @@ export async function assignCameraToDealer(cameraId: string, dealerId: string) {
   await verifyAuroraManager()
   const supabaseAdmin = getAdminClient()
 
+  const { data: lastRow } = await supabaseAdmin
+    .from('dealer_cameras')
+    .select('sort_order')
+    .eq('dealer_id', dealerId)
+    .order('sort_order', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  const nextSortOrder =
+    (typeof lastRow?.sort_order === 'number' ? lastRow.sort_order : Number(lastRow?.sort_order ?? 0)) + 10
+
   const { error } = await supabaseAdmin
     .from('dealer_cameras')
-    .insert({ camera_model_id: cameraId, dealer_id: dealerId })
+    .insert({ camera_model_id: cameraId, dealer_id: dealerId, sort_order: nextSortOrder })
 
   if (error) {
     // If already exists, ignore
@@ -844,6 +862,30 @@ export async function assignCameraToAllDealers(cameraId: string) {
   revalidatePath('/dashboard/configuration/cameras')
   revalidatePath('/dashboard/system-management/dealer')
   return { success: `Assigned to ${rows.length} dealer(s).`, assigned: rows.length }
+}
+
+export async function updateDealerCameraSortOrder(
+  cameraId: string,
+  dealerId: string,
+  sortOrder: number
+): Promise<{ success?: string; error?: string }> {
+  await verifyAuroraManager()
+  const supabaseAdmin = getAdminClient()
+
+  if (!Number.isFinite(sortOrder)) return { error: 'Sort order must be a number' }
+
+  const { error } = await supabaseAdmin
+    .from('dealer_cameras')
+    .update({ sort_order: Math.round(sortOrder) })
+    .eq('camera_model_id', cameraId)
+    .eq('dealer_id', dealerId)
+
+  if (error) return { error: error.message }
+
+  revalidatePath('/dashboard/system-management/cameras')
+  revalidatePath('/dashboard/system-management/dealer')
+  revalidatePath('/dashboard/sales/demands/new')
+  return { success: 'Sort order updated' }
 }
 
 export async function removeCameraFromDealer(cameraId: string, dealerId: string) {

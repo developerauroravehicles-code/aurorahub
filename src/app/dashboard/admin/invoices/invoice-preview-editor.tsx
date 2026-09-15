@@ -270,11 +270,11 @@ export function InvoicePreviewEditor({
                 <label className="block text-xs font-medium text-zinc-500 dark:text-gray-400 mb-1">
                   Comments
                 </label>
-                <input
-                  type="text"
+                <textarea
+                  rows={4}
                   value={comments}
                   onChange={(e) => setComments(e.target.value)}
-                  className="w-full border border-zinc-300 dark:border-gray-600 bg-white dark:bg-black/50 text-zinc-900 dark:text-white rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-[#C27E00]"
+                  className="w-full border border-zinc-300 dark:border-gray-600 bg-white dark:bg-black/50 text-zinc-900 dark:text-white rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-[#C27E00] resize-y min-h-[4.5rem]"
                   placeholder="Add expenses / comments..."
                 />
               </div>

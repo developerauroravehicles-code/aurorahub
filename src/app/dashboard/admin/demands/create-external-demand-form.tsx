@@ -28,6 +28,7 @@ interface Dealer {
 interface CameraModel {
   id: string
   name: string
+  label?: string
 }
 
 interface Specialist {
@@ -442,7 +443,7 @@ export function CreateExternalDemandForm({ dealers, specialists, onSuccess, onCa
                 <option value="">-- Select --</option>
                 {cameraModels.map((c) => (
                   <option key={c.id} value={c.name} className="bg-white text-zinc-900 dark:bg-black dark:text-white">
-                    {c.name}
+                    {c.label ?? c.name}
                   </option>
                 ))}
                 <option value="__custom__" className="bg-white text-zinc-900 dark:bg-black dark:text-white">

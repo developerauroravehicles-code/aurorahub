@@ -13,7 +13,11 @@ import {
   resolveCameraModelIdForDemand,
 } from '@/lib/demand-pricing'
 import { isSpecialistDoubleBooked } from '@/lib/scheduling-pool'
-import { isBarcodeModeEnabled, consumeBarcodeForDemand, validateSpecialistBarcode } from '@/lib/inventory-barcodes'
+import {
+  isBarcodeModeEnabled,
+  consumeBarcodesForDemand,
+  validateSpecialistBarcode,
+} from '@/lib/inventory-barcodes'
 
 export async function assignWorkToMe(demandId: string) {
   const supabase = await createClient()
@@ -108,10 +112,27 @@ type CompleteDemandOptions = {
   skipVinCheck?: boolean
   delayFeeTier?: DelayFeeTier
   barcodeCode?: string
+  /** Multiple unit scans for one job (set installs, extra cameras). */
+  barcodeCodes?: string[]
 }
 
 export async function getWorkBarcodeModeEnabled() {
   return isBarcodeModeEnabled()
+}
+
+export async function previewWorkBarcode(code: string) {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { error: 'Unauthorized' as const }
+
+  const trimmed = code.trim()
+  if (!trimmed) return { error: 'Enter a barcode' as const }
+
+  const result = await validateSpecialistBarcode(supabase, trimmed)
+  if (!result.valid) return { error: result.error ?? 'Invalid barcode' }
+  return { ok: true as const, code: trimmed.toUpperCase(), modelName: result.cameraModelName ?? 'Unit' }
 }
 
 export async function completeDemand(demandId: string, options: CompleteDemandOptions) {
@@ -174,25 +195,25 @@ export async function completeDemand(demandId: string, options: CompleteDemandOp
   const admin = createAdminClient()
   const barcodeMode = await isBarcodeModeEnabled(supabase)
   let cameraModelIdFromBarcode: string | null = null
-  let validatedBarcodeCode: string | null = null
+  const barcodeCodesToConsume =
+    options.barcodeCodes?.map((c) => c.trim()).filter(Boolean) ??
+    (options.barcodeCode?.trim() ? [options.barcodeCode.trim()] : [])
 
   if (barcodeMode) {
-    if (!options.barcodeCode?.trim()) {
-      return { error: 'Barcode scan is required to complete this job.' }
+    if (barcodeCodesToConsume.length === 0) {
+      return { error: 'Scan at least one product barcode to complete this job.' }
     }
     if (!demand.dealer_id) {
       return { error: 'Demand has no dealer assigned.' }
     }
 
-    const { valid, error: barcodeError } = await validateSpecialistBarcode(
-      supabase,
-      options.barcodeCode!.trim()
-    )
-    if (!valid) return { error: barcodeError ?? 'Invalid barcode' }
-    validatedBarcodeCode = options.barcodeCode.trim()
+    for (const code of barcodeCodesToConsume) {
+      const { valid, error: barcodeError } = await validateSpecialistBarcode(supabase, code)
+      if (!valid) return { error: barcodeError ?? `Invalid barcode: ${code}` }
+    }
 
     const { data: lookupRows } = await supabase.rpc('lookup_specialist_barcode_for_completion', {
-      p_code: validatedBarcodeCode.toUpperCase(),
+      p_code: barcodeCodesToConsume[0]!.toUpperCase(),
     })
     const lookup = Array.isArray(lookupRows) ? lookupRows[0] : lookupRows
     cameraModelIdFromBarcode = lookup?.camera_model_id ?? null
@@ -209,9 +230,9 @@ export async function completeDemand(demandId: string, options: CompleteDemandOp
     return { error: pricingResult.error }
   }
 
-  if (barcodeMode && validatedBarcodeCode && demand.dealer_id) {
-    const consumeResult = await consumeBarcodeForDemand(supabase, admin, {
-      code: validatedBarcodeCode,
+  if (barcodeMode && barcodeCodesToConsume.length > 0 && demand.dealer_id) {
+    const consumeResult = await consumeBarcodesForDemand(supabase, admin, {
+      codes: barcodeCodesToConsume,
       demandId,
       specialistId: user.id,
       dealerId: demand.dealer_id,
@@ -219,7 +240,7 @@ export async function completeDemand(demandId: string, options: CompleteDemandOp
       serviceType: options.serviceType,
     })
     if (consumeResult.error) return { error: consumeResult.error }
-    cameraModelIdFromBarcode = consumeResult.cameraModelId ?? cameraModelIdFromBarcode
+    cameraModelIdFromBarcode = consumeResult.cameraModelIds[0] ?? cameraModelIdFromBarcode
   }
 
   const resolvedCameraModelId =
@@ -251,7 +272,7 @@ export async function completeDemand(demandId: string, options: CompleteDemandOp
     actorId: user.id,
     previousStatus: 'approved',
     newStatus: 'completed',
-    notes: `Demand completed (${options.serviceType}${delayFeeTier !== 'none' ? `, delay ${delayFeeTier}` : ''})`,
+    notes: `Demand completed (${options.serviceType}${delayFeeTier !== 'none' ? `, delay ${delayFeeTier}` : ''}${barcodeCodesToConsume.length ? `, barcodes: ${barcodeCodesToConsume.join(', ')}` : ''})`,
   }).catch(() => {})
 
   dispatchWebhooks(supabase, 'appointment_completed', {

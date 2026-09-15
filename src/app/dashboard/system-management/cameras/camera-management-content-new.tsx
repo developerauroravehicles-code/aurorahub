@@ -1,7 +1,16 @@
 'use client'
 
 import { useState, useEffect, useTransition, memo, useCallback } from 'react'
-import { createCameraModel, deleteCameraModel, toggleCameraModelStatus, updateCameraModel, assignCameraToDealer, assignCameraToAllDealers, removeCameraFromDealer } from '../actions'
+import {
+  createCameraModel,
+  deleteCameraModel,
+  toggleCameraModelStatus,
+  updateCameraModel,
+  assignCameraToDealer,
+  assignCameraToAllDealers,
+  removeCameraFromDealer,
+  updateDealerCameraSortOrder,
+} from '../actions'
 import { useActionState } from 'react'
 import { Trash2, Power, PowerOff, Edit2, Building2, X } from 'lucide-react'
 import { useRouter } from 'next/navigation'
@@ -142,6 +151,11 @@ export const CameraManagementContent = memo(function CameraManagementContent({ c
             />
           </div>
 
+          <label className="inline-flex items-center gap-2 text-sm text-zinc-700 dark:text-gray-300 cursor-pointer">
+            <input type="checkbox" name="bookingDisplayAsSet" className="rounded border-zinc-300" />
+            Show as <strong>Set</strong> on dealer booking forms
+          </label>
+
           <button
             type="submit"
             disabled={isPending}
@@ -214,6 +228,15 @@ export const CameraManagementContent = memo(function CameraManagementContent({ c
                         placeholder='[{"title":"Issue","body":"Fix..."}]'
                         className="block w-full rounded-md border border-zinc-300 dark:border-gray-700 bg-zinc-200 dark:bg-white/10 px-3 py-2 text-zinc-900 dark:text-white font-mono text-xs"
                       />
+                      <label className="inline-flex items-center gap-2 text-sm text-zinc-700 dark:text-gray-300 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          name="bookingDisplayAsSet"
+                          defaultChecked={Boolean(camera.booking_display_as_set)}
+                          className="rounded border-zinc-300"
+                        />
+                        Show as Set on dealer booking forms
+                      </label>
                       <div className="flex gap-2">
                         <button
                           type="submit"
@@ -239,8 +262,13 @@ export const CameraManagementContent = memo(function CameraManagementContent({ c
                     </form>
                   ) : (
                     <>
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-3 flex-wrap">
                         <h5 className="text-zinc-900 dark:text-white font-medium">{camera.name}</h5>
+                        {camera.booking_display_as_set && (
+                          <span className="px-2 py-0.5 text-xs rounded bg-purple-900/40 text-purple-200 border border-purple-700/50">
+                            Set
+                          </span>
+                        )}
                         {!camera.is_active && (
                           <span className="px-2 py-1 text-xs rounded bg-gray-800 text-zinc-500 dark:text-gray-400">
                             Inactive
@@ -347,7 +375,7 @@ export const CameraManagementContent = memo(function CameraManagementContent({ c
               <div>
                 <h3 id="dealer-assignment-title" className="text-zinc-900 dark:text-white font-semibold text-lg">Assign to Dealers</h3>
                 <p id="dealer-assignment-description" className="text-sm text-zinc-500 dark:text-gray-400 mt-1">
-                  Select multiple dealers to assign this camera model to
+                  Assign dealers and set booking order (lower number appears first on demand forms).
                 </p>
               </div>
               <button
@@ -359,8 +387,45 @@ export const CameraManagementContent = memo(function CameraManagementContent({ c
               </button>
             </div>
             <div className="space-y-4">
+              {(() => {
+                const cam = cameras.find((c) => c.id === dealerAssigningId)
+                const assigned = [...(cam?.dealer_cameras ?? [])].sort(
+                  (a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0)
+                )
+                if (assigned.length === 0) return null
+                return (
+                  <div className="rounded-lg border border-[#C27E00]/30 bg-[#C27E00]/5 p-4 space-y-2">
+                    <p className="text-sm font-medium text-zinc-900 dark:text-white">
+                      Assigned dealers — booking order
+                    </p>
+                    <p className="text-xs text-zinc-500">
+                      Order applies per dealer on Create Demand (Sales / Finance).
+                    </p>
+                    <ul className="space-y-2 max-h-48 overflow-y-auto">
+                      {assigned.map((dc) => (
+                        <AssignedDealerSortRow
+                          key={dc.dealer_id}
+                          dealerName={dc.dealers?.name ?? 'Dealer'}
+                          dealerCode={(dc.dealers as { code?: string } | undefined)?.code}
+                          sortOrder={dc.sort_order ?? 0}
+                          onSave={async (sortOrder) => {
+                            if (!dealerAssigningId) return
+                            const result = await updateDealerCameraSortOrder(
+                              dealerAssigningId,
+                              dc.dealer_id,
+                              sortOrder
+                            )
+                            if (result.error) alert(result.error)
+                            else router.refresh()
+                          }}
+                        />
+                      ))}
+                    </ul>
+                  </div>
+                )
+              })()}
               <p className="text-xs text-zinc-500 dark:text-gray-400">
-                Demand forms list all active catalog cameras. Use bulk assign to mirror this model on every dealer for reference and reports.
+                Only assigned cameras appear on that dealer&apos;s booking form. Use bulk assign to add all dealers at once.
               </p>
               <button
                 type="button"
@@ -390,6 +455,21 @@ export const CameraManagementContent = memo(function CameraManagementContent({ c
                     key={dealer.id}
                     dealer={dealer}
                     cameraId={dealerAssigningId}
+                    initialSortOrder={
+                      cameras
+                        .find((c) => c.id === dealerAssigningId)
+                        ?.dealer_cameras?.find((dc) => dc.dealer_id === dealer.id)?.sort_order ?? 0
+                    }
+                    onSortSave={async (sortOrder) => {
+                      if (!dealerAssigningId) return
+                      const result = await updateDealerCameraSortOrder(
+                        dealerAssigningId,
+                        dealer.id,
+                        sortOrder
+                      )
+                      if (result.error) alert(result.error)
+                      else router.refresh()
+                    }}
                     onAssign={async () => {
                       try {
                         setAssigningDealerId(dealer.id)
@@ -443,9 +523,62 @@ export const CameraManagementContent = memo(function CameraManagementContent({ c
   )
 })
 
-const DealerAssignmentItem = memo(function DealerAssignmentItem({ dealer, cameraId, onAssign, onRemove, isAssigning, isRemoving }: { 
+const AssignedDealerSortRow = memo(function AssignedDealerSortRow({
+  dealerName,
+  dealerCode,
+  sortOrder,
+  onSave,
+}: {
+  dealerName: string
+  dealerCode?: string
+  sortOrder: number
+  onSave: (sortOrder: number) => Promise<void>
+}) {
+  const [value, setValue] = useState(String(sortOrder))
+  const [saving, setSaving] = useState(false)
+
+  useEffect(() => {
+    setValue(String(sortOrder))
+  }, [sortOrder])
+
+  return (
+    <li className="flex items-center gap-3 text-sm">
+      <input
+        type="number"
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        onBlur={() => {
+          const parsed = parseInt(value, 10)
+          if (!Number.isFinite(parsed) || parsed === sortOrder) return
+          setSaving(true)
+          void onSave(parsed).finally(() => setSaving(false))
+        }}
+        disabled={saving}
+        className="w-16 rounded border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 px-2 py-1 text-xs tabular-nums"
+        title="Lower = first in booking dropdown"
+      />
+      <span className="text-zinc-900 dark:text-white">
+        {dealerName}
+        {dealerCode ? <span className="text-zinc-500 ml-1">({dealerCode})</span> : null}
+      </span>
+    </li>
+  )
+})
+
+const DealerAssignmentItem = memo(function DealerAssignmentItem({
+  dealer,
+  cameraId,
+  initialSortOrder,
+  onSortSave,
+  onAssign,
+  onRemove,
+  isAssigning,
+  isRemoving,
+}: {
   dealer: Dealer
   cameraId: string
+  initialSortOrder?: number
+  onSortSave: (sortOrder: number) => Promise<void>
   onAssign: () => Promise<void>
   onRemove: () => Promise<void>
   isAssigning?: boolean
@@ -453,6 +586,11 @@ const DealerAssignmentItem = memo(function DealerAssignmentItem({ dealer, camera
 }) {
   const [isAssigned, setIsAssigned] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+  const [sortOrder, setSortOrder] = useState(initialSortOrder ?? 0)
+
+  useEffect(() => {
+    setSortOrder(initialSortOrder ?? 0)
+  }, [initialSortOrder])
 
   useEffect(() => {
     // Check if camera is assigned to this dealer
@@ -460,11 +598,12 @@ const DealerAssignmentItem = memo(function DealerAssignmentItem({ dealer, camera
       const supabase = createClient()
       const { data } = await supabase
         .from('dealer_cameras')
-        .select('id')
+        .select('id, sort_order')
         .eq('camera_model_id', cameraId)
         .eq('dealer_id', dealer.id)
         .maybeSingle()
       setIsAssigned(!!data)
+      if (data?.sort_order != null) setSortOrder(Number(data.sort_order))
     }
     checkAssignment()
   }, [cameraId, dealer.id])
@@ -505,6 +644,16 @@ const DealerAssignmentItem = memo(function DealerAssignmentItem({ dealer, camera
           <span className="text-xs text-zinc-500 dark:text-gray-500">({dealer.code})</span>
         </div>
       </div>
+      {isAssigned && (
+        <input
+          type="number"
+          value={sortOrder}
+          onChange={(e) => setSortOrder(parseInt(e.target.value, 10) || 0)}
+          onBlur={() => void onSortSave(sortOrder)}
+          title="Booking order"
+          className="w-14 rounded border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 px-1.5 py-1 text-xs tabular-nums"
+        />
+      )}
       <button
         onClick={handleToggle}
         disabled={isLoading || isAssigning || isRemoving}
