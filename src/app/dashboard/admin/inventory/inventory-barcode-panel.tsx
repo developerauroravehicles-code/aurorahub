@@ -11,6 +11,7 @@ import {
   saveBarcodeSettingsAction,
   createBarcodeSetTemplate,
   deleteBarcodeSetTemplate,
+  syncSetTemplateBookingAction,
   generateUnitBarcodesAction,
   generateSetBarcodesAction,
   scanAssignBarcodeToDealer,
@@ -473,6 +474,10 @@ export function InventoryBarcodePanel({
       {/* Set templates */}
       <div className="rounded-xl border border-zinc-200 dark:border-gray-800 p-4 space-y-4">
         <h3 className="font-medium text-zinc-900 dark:text-white">Set templates</h3>
+        <p className="text-xs text-zinc-500 dark:text-gray-400">
+          Creating or syncing a template adds a <strong>Set — …</strong> option on dealer booking when that dealer
+          already has every product in the set assigned.
+        </p>
         <form
           className="grid sm:grid-cols-2 gap-3"
           onSubmit={(e) => {
@@ -566,13 +571,36 @@ export function InventoryBarcodePanel({
                     </p>
                   )}
                 </div>
-                <button
-                  type="button"
-                  onClick={() => run(() => deleteBarcodeSetTemplate(t.id))}
-                  className="p-1 text-red-400 hover:bg-red-500/10 rounded"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
+                <div className="flex items-center gap-1 shrink-0">
+                  <button
+                    type="button"
+                    title="Add Set option to dealer booking lists"
+                    onClick={() => {
+                      setMessage(null)
+                      startTransition(async () => {
+                        const res = await syncSetTemplateBookingAction(t.id)
+                        if (res.error) setMessage({ type: 'err', text: res.error })
+                        else {
+                          setMessage({
+                            type: 'ok',
+                            text: `Booking synced — ${res.dealersLinked ?? 0} dealer(s) can show Set — ${t.name}. Refresh Create Demand if open.`,
+                          })
+                          router.refresh()
+                        }
+                      })
+                    }}
+                    className="text-xs px-2 py-1 rounded border border-[#C27E00]/40 text-[#C27E00] hover:bg-[#C27E00]/10"
+                  >
+                    Sync booking
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => run(() => deleteBarcodeSetTemplate(t.id))}
+                    className="p-1 text-red-400 hover:bg-red-500/10 rounded"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
               </li>
             ))}
           </ul>

@@ -16,8 +16,10 @@ import {
   fetchBarcodeRegistry,
   fetchBarcodeEvents,
   fetchSetTemplates,
+  syncSetTemplateDealerBooking,
   type BarcodeSettings,
 } from '@/lib/inventory-barcodes'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { resetNegativeBalances } from '@/lib/inventory-v2/movements'
 import { normalizeBarcodeCode } from '@/lib/inventory-barcodes/code-generator'
 
@@ -101,8 +103,46 @@ export async function createBarcodeSetTemplate(formData: FormData) {
 
   if (itemsError) return { error: itemsError.message }
 
+  const admin = createAdminClient()
+  const sync = await syncSetTemplateDealerBooking(admin, template.id)
+  if (sync.error) {
+    return {
+      error: `Template saved but dealer booking sync failed: ${sync.error}`,
+    }
+  }
+
   revalidatePath('/dashboard/admin/inventory')
-  return { success: true }
+  revalidatePath('/dashboard/system-management/cameras')
+  revalidatePath('/dashboard/system-management/dealer')
+  revalidatePath('/dashboard/sales/demands/new')
+  revalidatePath('/dashboard/finance/demands/new')
+  revalidatePath('/dashboard/admin/demands')
+  return {
+    success: true,
+    dealersLinked: sync.dealersLinked ?? 0,
+  }
+}
+
+export async function syncSetTemplateBookingAction(templateId: string) {
+  const auth = await requireAuroraManager()
+  if (auth.error) return { error: auth.error }
+
+  const admin = createAdminClient()
+  const sync = await syncSetTemplateDealerBooking(admin, templateId)
+  if (sync.error) return { error: sync.error }
+
+  revalidatePath('/dashboard/admin/inventory')
+  revalidatePath('/dashboard/system-management/cameras')
+  revalidatePath('/dashboard/system-management/dealer')
+  revalidatePath('/dashboard/sales/demands/new')
+  revalidatePath('/dashboard/finance/demands/new')
+  revalidatePath('/dashboard/admin/demands')
+
+  return {
+    success: true,
+    dealersLinked: sync.dealersLinked ?? 0,
+    bookingCameraModelId: sync.bookingCameraModelId,
+  }
 }
 
 export async function deleteBarcodeSetTemplate(templateId: string) {

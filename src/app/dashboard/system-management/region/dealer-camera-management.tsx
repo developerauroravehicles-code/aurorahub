@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef, memo } from 'react'
+import { useState, useEffect, useRef, memo, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { ChevronDown, ChevronUp } from 'lucide-react'
 
@@ -41,12 +41,22 @@ export const DealerCameraManagement = memo(function DealerCameraManagement({
     dealerId: string,
     cameraModelId: string,
     direction: 'up' | 'down'
-  ) => Promise<{ success: boolean; error?: string }>
+  ) => Promise<{
+    success: boolean
+    error?: string
+    items?: { camera_model_id: string; sort_order: number }[]
+  }>
 }) {
   const [isOpen, setIsOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+  const [listOverride, setListOverride] = useState<AssignedCamera[] | null>(null)
+  const [actionError, setActionError] = useState<string | null>(null)
   const router = useRouter()
   const dropdownRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    setListOverride(null)
+  }, [assignedCameras, dealerId])
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -64,11 +74,36 @@ export const DealerCameraManagement = memo(function DealerCameraManagement({
     }
   }, [isOpen])
 
-  const assignedCameraIds = assignedCameras.map((ac) => ac.camera_model_id)
+  const displayAssigned = listOverride ?? assignedCameras
+  const assignedCameraIds = displayAssigned.map((ac) => ac.camera_model_id)
   const availableCameras = allCameras.filter((c) => !assignedCameraIds.includes(c.id))
-  const sortedAssigned = [...assignedCameras].sort(
-    (a, b) => a.sort_order - b.sort_order || (a.camera_models?.name ?? '').localeCompare(b.camera_models?.name ?? '')
+  const sortedAssigned = useMemo(
+    () =>
+      [...displayAssigned].sort(
+        (a, b) =>
+          a.sort_order - b.sort_order ||
+          (a.camera_models?.name ?? '').localeCompare(b.camera_models?.name ?? '')
+      ),
+    [displayAssigned]
   )
+
+  function applyReorderToList(
+    list: AssignedCamera[],
+    cameraModelId: string,
+    direction: 'up' | 'down'
+  ): AssignedCamera[] | null {
+    const sorted = [...list].sort(
+      (a, b) =>
+        a.sort_order - b.sort_order ||
+        (a.camera_models?.name ?? '').localeCompare(b.camera_models?.name ?? '')
+    )
+    const idx = sorted.findIndex((a) => a.camera_model_id === cameraModelId)
+    if (idx < 0) return null
+    const targetIdx = direction === 'up' ? idx - 1 : idx + 1
+    if (targetIdx < 0 || targetIdx >= sorted.length) return sorted
+    ;[sorted[idx], sorted[targetIdx]] = [sorted[targetIdx]!, sorted[idx]!]
+    return sorted.map((row, i) => ({ ...row, sort_order: (i + 1) * 10 }))
+  }
 
   const handleAddCamera = async (cameraId: string) => {
     setIsLoading(true)
@@ -105,14 +140,37 @@ export const DealerCameraManagement = memo(function DealerCameraManagement({
   }
 
   const handleReorder = async (cameraId: string, direction: 'up' | 'down') => {
+    setActionError(null)
+    const optimistic = applyReorderToList(displayAssigned, cameraId, direction)
+    if (!optimistic) return
+    const previous = listOverride ?? assignedCameras
+    setListOverride(optimistic)
     setIsLoading(true)
     try {
       const result = await reorderDealerCamera(dealerId, cameraId, direction)
       if (result.success) {
-        router.refresh()
+        if (result.items?.length) {
+          const byId = new Map(displayAssigned.map((a) => [a.camera_model_id, a]))
+          setListOverride(
+            result.items.map((item) => {
+              const base = byId.get(item.camera_model_id)
+              return base
+                ? { ...base, sort_order: item.sort_order }
+                : {
+                    camera_model_id: item.camera_model_id,
+                    sort_order: item.sort_order,
+                    camera_models: null,
+                  }
+            })
+          )
+        }
       } else {
-        alert(result.error || 'Failed to reorder.')
+        setListOverride(previous)
+        setActionError(result.error || 'Failed to reorder.')
       }
+    } catch (error) {
+      setListOverride(previous)
+      setActionError(error instanceof Error ? error.message : 'Failed to reorder.')
     } finally {
       setIsLoading(false)
     }
@@ -126,9 +184,14 @@ export const DealerCameraManagement = memo(function DealerCameraManagement({
     try {
       const result = await updateDealerCameraSortOrder(dealerId, cameraId, parsed)
       if (result.success) {
-        router.refresh()
+        setListOverride((prev) => {
+          const base = prev ?? assignedCameras
+          return base.map((row) =>
+            row.camera_model_id === cameraId ? { ...row, sort_order: parsed } : row
+          )
+        })
       } else {
-        alert(result.error || 'Failed to update sort order.')
+        setActionError(result.error || 'Failed to update sort order.')
       }
     } finally {
       setIsLoading(false)
@@ -153,6 +216,11 @@ export const DealerCameraManagement = memo(function DealerCameraManagement({
           <p className="text-xs text-zinc-500 dark:text-gray-400 mb-3">
             Order below matches the Camera Model dropdown on Create Demand for this dealer (Sales / Finance).
           </p>
+          {actionError && (
+            <p className="text-xs text-red-500 mb-2" role="alert">
+              {actionError}
+            </p>
+          )}
 
           {sortedAssigned.length > 0 && (
             <div className="mb-4">
@@ -167,7 +235,11 @@ export const DealerCameraManagement = memo(function DealerCameraManagement({
                       <button
                         type="button"
                         disabled={isLoading || index === 0}
-                        onClick={() => void handleReorder(ac.camera_model_id, 'up')}
+                        onClick={(e) => {
+                          e.preventDefault()
+                          e.stopPropagation()
+                          void handleReorder(ac.camera_model_id, 'up')
+                        }}
                         className="p-0.5 rounded text-zinc-500 hover:text-[#C27E00] disabled:opacity-30"
                         title="Move up"
                         aria-label="Move up"
@@ -177,7 +249,11 @@ export const DealerCameraManagement = memo(function DealerCameraManagement({
                       <button
                         type="button"
                         disabled={isLoading || index === sortedAssigned.length - 1}
-                        onClick={() => void handleReorder(ac.camera_model_id, 'down')}
+                        onClick={(e) => {
+                          e.preventDefault()
+                          e.stopPropagation()
+                          void handleReorder(ac.camera_model_id, 'down')
+                        }}
                         className="p-0.5 rounded text-zinc-500 hover:text-[#C27E00] disabled:opacity-30"
                         title="Move down"
                         aria-label="Move down"

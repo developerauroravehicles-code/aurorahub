@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { ensureDealerLocation, ensureSpecialistLocation } from '@/lib/inventory-v2/locations'
+import { ensureSpecialistLocation } from '@/lib/inventory-v2/locations'
 import type { DemandServiceType } from '@/lib/demand-pricing'
 import { normalizeBarcodeCode } from './code-generator'
 import type { InventoryBarcodeRow } from './types'
@@ -146,45 +146,19 @@ export async function consumeBarcodeForDemand(
   if (!cameraModelId) return { error: 'Barcode has no camera model' }
 
   if (input.serviceType === 'installation') {
-    const { data: assignEvent } = await adminSupabase
-      .from('inventory_barcode_events')
-      .select('metadata')
-      .eq('barcode_id', barcode.id)
-      .eq('event_type', 'assigned_specialist')
-      .order('created_at', { ascending: false })
-      .limit(1)
+    const { data: specialist } = await adminSupabase
+      .from('profiles')
+      .select('full_name')
+      .eq('id', input.specialistId)
       .maybeSingle()
 
-    const assignMeta = (assignEvent?.metadata ?? {}) as {
-      direct_from_generated?: boolean
-      previous_dealer_id?: string | null
-    }
-    const directToSpecialist = assignMeta.direct_from_generated === true
-
-    const [{ data: dealer }, { data: specialist }] = await Promise.all([
-      adminSupabase.from('dealers').select('name').eq('id', input.dealerId).maybeSingle(),
-      adminSupabase.from('profiles').select('full_name').eq('id', input.specialistId).maybeSingle(),
-    ])
-
-    const dealerLocationId = directToSpecialist
-      ? null
-      : await ensureDealerLocation(adminSupabase, input.dealerId, dealer?.name)
     const specialistLocationId = await ensureSpecialistLocation(
       adminSupabase,
       input.specialistId,
       specialist?.full_name
     )
 
-    if (!directToSpecialist && dealerLocationId) {
-      const dealerConsume = await recordConsumptionMovement(adminSupabase, {
-        cameraModelId,
-        fromLocationId: dealerLocationId,
-        demandId: input.demandId,
-        note: `Barcode ${barcode.code} consumption (dealer)`,
-      })
-      if (dealerConsume.error) return { error: dealerConsume.error }
-    }
-
+    // Physical unit is on specialist field stock; dealer was never stocked or already transferred out on assign.
     if (specialistLocationId) {
       const specialistConsume = await recordConsumptionMovement(adminSupabase, {
         cameraModelId,

@@ -1,5 +1,6 @@
 'use server'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { revalidatePath } from 'next/cache'
 import { parseWarrantyYearsFromForm } from '@/lib/warranty-period'
 
@@ -234,18 +235,22 @@ export async function reorderDealerCamera(
   dealerId: string,
   cameraModelId: string,
   direction: 'up' | 'down'
-): Promise<{ success: boolean; error?: string }> {
+): Promise<{
+  success: boolean
+  error?: string
+  items?: { camera_model_id: string; sort_order: number }[]
+}> {
   try {
     await verifyAuroraManager()
-    const supabase = await createClient()
+    const admin = createAdminClient()
 
-    const { data: rows, error: fetchError } = await supabase
+    const { data: rows, error: fetchError } = await admin
       .from('dealer_cameras')
       .select('camera_model_id, sort_order, camera_models(name)')
       .eq('dealer_id', dealerId)
 
     if (fetchError) return { success: false, error: fetchError.message }
-    if (!rows?.length) return { success: true }
+    if (!rows?.length) return { success: true, items: [] }
 
     type Row = (typeof rows)[number]
     const sorted = [...rows].sort((a: Row, b: Row) => {
@@ -262,22 +267,42 @@ export async function reorderDealerCamera(
     if (idx < 0) return { success: false, error: 'Camera not assigned to this dealer' }
 
     const targetIdx = direction === 'up' ? idx - 1 : idx + 1
-    if (targetIdx < 0 || targetIdx >= ids.length) return { success: true }
+    if (targetIdx < 0 || targetIdx >= ids.length) {
+      return {
+        success: true,
+        items: ids.map((id, i) => ({ camera_model_id: id, sort_order: (i + 1) * 10 })),
+      }
+    }
 
     ;[ids[idx], ids[targetIdx]] = [ids[targetIdx]!, ids[idx]!]
 
-    for (let i = 0; i < ids.length; i++) {
-      const { error } = await supabase
-        .from('dealer_cameras')
-        .update({ sort_order: (i + 1) * 10 })
-        .eq('dealer_id', dealerId)
-        .eq('camera_model_id', ids[i]!)
+    const newItems = ids.map((id, i) => ({ camera_model_id: id, sort_order: (i + 1) * 10 }))
 
-      if (error) return { success: false, error: error.message }
+    const updateResults = await Promise.all(
+      newItems.map((item) =>
+        admin
+          .from('dealer_cameras')
+          .update({ sort_order: item.sort_order })
+          .eq('dealer_id', dealerId)
+          .eq('camera_model_id', item.camera_model_id)
+      )
+    )
+
+    const failed = updateResults.find((r) => r.error)
+    if (failed?.error) {
+      const msg = failed.error.message
+      if (msg.includes('sort_order') && msg.includes('does not exist')) {
+        return {
+          success: false,
+          error:
+            'Database migration missing: run 20260912220000_dealer_camera_sort_order.sql on Supabase, then try again.',
+        }
+      }
+      return { success: false, error: msg }
     }
 
     revalidateDealerCameraBookingPaths()
-    return { success: true }
+    return { success: true, items: newItems }
   } catch (error) {
     return {
       success: false,
@@ -293,13 +318,13 @@ export async function updateDealerCameraSortOrder(
 ): Promise<{ success: boolean; error?: string }> {
   try {
     await verifyAuroraManager()
-    const supabase = await createClient()
+    const admin = createAdminClient()
 
     if (!Number.isFinite(sortOrder)) {
       return { success: false, error: 'Sort order must be a number' }
     }
 
-    const { error } = await supabase
+    const { error } = await admin
       .from('dealer_cameras')
       .update({ sort_order: Math.round(sortOrder) })
       .eq('dealer_id', dealerId)

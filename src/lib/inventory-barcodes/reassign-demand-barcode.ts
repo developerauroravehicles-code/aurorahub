@@ -2,7 +2,6 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { ensureSpecialistLocation } from '@/lib/inventory-v2/locations'
 import { recordAdjustment } from '@/lib/inventory-v2/movements'
 import { normalizeBarcodeCode } from './code-generator'
-import { ensureDealerLocation } from '@/lib/inventory-v2/locations'
 
 export const DEMAND_BARCODE_CHANGE_REASONS = [
   { id: 'return', label: 'Return / undo wrong scan' },
@@ -148,31 +147,6 @@ export async function changeDemandInstalledBarcode(
         reference_demand_id: input.demandId,
         note: `Barcode ${newBarcode.code} consumption (specialist) after reassignment`,
       })
-    }
-
-    const dealerLocationId = await ensureDealerLocation(
-      adminSupabase,
-      input.dealerId,
-      null
-    )
-    if (dealerLocationId) {
-      const { data: dealerMove } = await adminSupabase
-        .from('inventory_movements_v2')
-        .select('id')
-        .eq('reference_demand_id', input.demandId)
-        .eq('movement_type', 'consumption')
-        .eq('from_location_id', dealerLocationId)
-        .maybeSingle()
-      if (!dealerMove) {
-        await adminSupabase.from('inventory_movements_v2').insert({
-          camera_model_id: newBarcode.camera_model_id,
-          movement_type: 'consumption',
-          quantity: 1,
-          from_location_id: dealerLocationId,
-          reference_demand_id: input.demandId,
-          note: `Barcode ${newBarcode.code} consumption (dealer) after reassignment`,
-        })
-      }
     }
   }
 
