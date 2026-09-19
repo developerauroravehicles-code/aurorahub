@@ -2,14 +2,7 @@ import { DemandForm } from './demand-form'
 import { getCameraModels } from './get-cameras'
 import { createClient } from '@/lib/supabase/server'
 import { getTimezoneFromDealer } from '@/lib/dealer-timezone'
-
-interface CalendarSetting {
-  day_type: 'weekday' | 'saturday' | 'sunday'
-  start_hour: number
-  end_hour: number
-  slot_interval_minutes: number
-  appointment_duration_minutes: number
-}
+import { buildCalendarSettingsMap, type DealerCalendarSettingsMap } from '@/lib/dealer-calendar-day-type'
 
 export default async function NewDemandPage() {
   const cameraModels = await getCameraModels()
@@ -19,7 +12,8 @@ export default async function NewDemandPage() {
   let dealerName = ''
   let timezoneName: string | null = null
   let dealerId: string | null = null
-  let calendarSettings: { weekday?: CalendarSetting; saturday?: CalendarSetting; sunday?: CalendarSetting } = {}
+  let calendarSettings: DealerCalendarSettingsMap = {}
+  let weeklyClosedIsoDays: number[] = []
   
   if (user) {
     const { data: profile } = await supabase
@@ -40,17 +34,15 @@ export default async function NewDemandPage() {
         dealerName = dealer.name
         timezoneName = getTimezoneFromDealer(dealer as Parameters<typeof getTimezoneFromDealer>[0]) ?? null
       }
-      const { data: settings } = await supabase
-        .from('dealer_calendar_settings')
-        .select('day_type, start_hour, end_hour, slot_interval_minutes, appointment_duration_minutes')
-        .eq('dealer_id', profile.dealer_id)
-      if (settings) {
-        settings.forEach((s: CalendarSetting) => {
-          if (s.day_type === 'weekday') calendarSettings.weekday = s
-          else if (s.day_type === 'saturday') calendarSettings.saturday = s
-          else if (s.day_type === 'sunday') calendarSettings.sunday = s
-        })
-      }
+      const [{ data: settings }, { data: closedDays }] = await Promise.all([
+        supabase
+          .from('dealer_calendar_settings')
+          .select('day_type, start_hour, end_hour, slot_interval_minutes, appointment_duration_minutes')
+          .eq('dealer_id', profile.dealer_id),
+        supabase.from('dealer_weekly_closed_days').select('iso_dow').eq('dealer_id', profile.dealer_id),
+      ])
+      if (settings) calendarSettings = buildCalendarSettingsMap(settings)
+      weeklyClosedIsoDays = (closedDays || []).map(r => r.iso_dow)
     }
   }
 
@@ -63,6 +55,7 @@ export default async function NewDemandPage() {
         timezoneName={timezoneName}
         dealerId={dealerId}
         calendarSettings={calendarSettings}
+        weeklyClosedIsoDays={weeklyClosedIsoDays}
       />
     </div>
   )

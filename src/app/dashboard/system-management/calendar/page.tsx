@@ -18,6 +18,8 @@ import {
   assignSpecialistToSchedulingPool,
   removeSpecialistFromSchedulingPool,
   getPlatformSpecialists,
+  getDealerWeeklyClosedDays,
+  saveDealerWeeklyClosedDays,
 } from './actions'
 
 export const dynamic = 'force-dynamic'
@@ -45,6 +47,7 @@ export default async function CalendarManagementPage() {
   endDate.setDate(endDate.getDate() + 90)
   const toDate = endDate.toISOString().slice(0, 10)
   const blocks = await getCalendarBlocksInRange(today, toDate)
+  const weeklyClosedDays = await getDealerWeeklyClosedDays()
 
   return (
     <div className="space-y-8">
@@ -59,6 +62,7 @@ export default async function CalendarManagementPage() {
             settings={settings || []}
             dealers={dealers || []}
             blocks={blocks}
+            weeklyClosedDays={weeklyClosedDays}
             schedulingPools={schedulingPools}
             specialists={specialists}
             createCalendarSetting={createCalendarSetting}
@@ -67,6 +71,7 @@ export default async function CalendarManagementPage() {
             createCalendarBlock={createCalendarBlock}
             createCalendarBlocks={createCalendarBlocks}
             deleteCalendarBlock={deleteCalendarBlock}
+            saveDealerWeeklyClosedDays={saveDealerWeeklyClosedDays}
             createSchedulingPool={createSchedulingPool}
             updateSchedulingPool={updateSchedulingPool}
             deleteSchedulingPool={deleteSchedulingPool}

@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect, useRef, memo, useMemo } from 'react'
-import { useRouter } from 'next/navigation'
 import { ChevronDown, ChevronUp } from 'lucide-react'
 
 interface CameraModel {
@@ -51,7 +50,6 @@ export const DealerCameraManagement = memo(function DealerCameraManagement({
   const [isLoading, setIsLoading] = useState(false)
   const [listOverride, setListOverride] = useState<AssignedCamera[] | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
-  const router = useRouter()
   const dropdownRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -106,34 +104,50 @@ export const DealerCameraManagement = memo(function DealerCameraManagement({
   }
 
   const handleAddCamera = async (cameraId: string) => {
+    setActionError(null)
     setIsLoading(true)
+    const previous = listOverride ?? assignedCameras
+    const cam = allCameras.find((c) => c.id === cameraId)
+    const maxSort = Math.max(0, ...previous.map((a) => a.sort_order))
+    const optimistic: AssignedCamera[] = [
+      ...previous,
+      {
+        camera_model_id: cameraId,
+        sort_order: maxSort + 10,
+        camera_models: cam ?? null,
+      },
+    ]
+    setListOverride(optimistic)
     try {
       const result = await addCameraToDealer(dealerId, cameraId)
       if (result.success) {
-        router.refresh()
+        // keep panel open — no full-page refresh
       } else if (result.error && !result.error.includes('already assigned')) {
-        alert(result.error || 'Failed to add camera. Please try again.')
+        setListOverride(previous)
+        setActionError(result.error || 'Failed to add camera.')
       }
     } catch (error) {
-      console.error('Error adding camera:', error)
-      alert('Failed to add camera. Please try again.')
+      setListOverride(previous)
+      setActionError(error instanceof Error ? error.message : 'Failed to add camera.')
     } finally {
       setIsLoading(false)
     }
   }
 
   const handleRemoveCamera = async (cameraId: string) => {
+    setActionError(null)
     setIsLoading(true)
+    const previous = listOverride ?? assignedCameras
+    setListOverride(previous.filter((a) => a.camera_model_id !== cameraId))
     try {
       const result = await removeCameraFromDealer(dealerId, cameraId)
-      if (result.success) {
-        router.refresh()
-      } else {
-        alert(result.error || 'Failed to remove camera. Please try again.')
+      if (!result.success) {
+        setListOverride(previous)
+        setActionError(result.error || 'Failed to remove camera.')
       }
     } catch (error) {
-      console.error('Error removing camera:', error)
-      alert('Failed to remove camera. Please try again.')
+      setListOverride(previous)
+      setActionError(error instanceof Error ? error.message : 'Failed to remove camera.')
     } finally {
       setIsLoading(false)
     }

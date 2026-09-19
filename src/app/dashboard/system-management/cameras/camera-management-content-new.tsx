@@ -27,7 +27,25 @@ export const CameraManagementContent = memo(function CameraManagementContent({ c
   const [assigningDealerId, setAssigningDealerId] = useState<string | null>(null)
   const [removingDealerId, setRemovingDealerId] = useState<string | null>(null)
   const [bulkAssigning, setBulkAssigning] = useState(false)
+  const [camerasState, setCamerasState] = useState(cameras)
   const router = useRouter()
+
+  useEffect(() => {
+    setCamerasState(cameras)
+  }, [cameras])
+
+  const patchCameraDealerLinks = useCallback(
+    (cameraId: string, patch: (links: NonNullable<CameraModel['dealer_cameras']>) => NonNullable<CameraModel['dealer_cameras']>) => {
+      setCamerasState((prev) =>
+        prev.map((c) => {
+          if (c.id !== cameraId) return c
+          const links = c.dealer_cameras ?? []
+          return { ...c, dealer_cameras: patch([...links]) }
+        })
+      )
+    },
+    []
+  )
 
   useEffect(() => {
     if (editState?.success) {
@@ -177,7 +195,7 @@ export const CameraManagementContent = memo(function CameraManagementContent({ c
           <p className="text-zinc-500 dark:text-gray-400 text-center py-8">No camera models found. Create one above.</p>
         ) : (
           <div className="space-y-3">
-            {cameras.map((camera) => (
+            {camerasState.map((camera) => (
               <div
                 key={camera.id}
                 className={`flex items-center justify-between p-4 rounded-lg border ${
@@ -364,11 +382,6 @@ export const CameraManagementContent = memo(function CameraManagementContent({ c
           aria-modal="true"
           aria-labelledby="dealer-assignment-title"
           aria-describedby="dealer-assignment-description"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) {
-              setDealerAssigningId(null)
-            }
-          }}
         >
           <div className="bg-zinc-50 dark:bg-black border border-zinc-200 dark:border-gray-800 rounded-lg p-6 w-full max-w-2xl max-h-[80vh] overflow-y-auto shadow-2xl">
             <div className="flex justify-between items-center mb-4">
@@ -388,7 +401,7 @@ export const CameraManagementContent = memo(function CameraManagementContent({ c
             </div>
             <div className="space-y-4">
               {(() => {
-                const cam = cameras.find((c) => c.id === dealerAssigningId)
+                const cam = camerasState.find((c) => c.id === dealerAssigningId)
                 const assigned = [...(cam?.dealer_cameras ?? [])].sort(
                   (a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0)
                 )
@@ -416,7 +429,13 @@ export const CameraManagementContent = memo(function CameraManagementContent({ c
                               sortOrder
                             )
                             if (result.error) alert(result.error)
-                            else router.refresh()
+                            else {
+                              patchCameraDealerLinks(dealerAssigningId, (links) =>
+                                links.map((l) =>
+                                  l.dealer_id === dc.dealer_id ? { ...l, sort_order: sortOrder } : l
+                                )
+                              )
+                            }
                           }}
                         />
                       ))}
@@ -438,8 +457,25 @@ export const CameraManagementContent = memo(function CameraManagementContent({ c
                     const result = await assignCameraToAllDealers(dealerAssigningId)
                     if (result?.error) {
                       alert(result.error)
-                    } else if (result?.success) {
-                      router.refresh()
+                    } else if (result?.success && dealerAssigningId) {
+                      const cam = camerasState.find((c) => c.id === dealerAssigningId)
+                      const linked = new Set((cam?.dealer_cameras ?? []).map((d) => d.dealer_id))
+                      let nextSort =
+                        Math.max(0, ...(cam?.dealer_cameras ?? []).map((d) => d.sort_order ?? 0)) + 10
+                      patchCameraDealerLinks(dealerAssigningId, (links) => {
+                        const out = [...links]
+                        for (const d of dealers) {
+                          if (linked.has(d.id)) continue
+                          out.push({
+                            dealer_id: d.id,
+                            camera_model_id: dealerAssigningId,
+                            sort_order: nextSort,
+                            dealers: d,
+                          })
+                          nextSort += 10
+                        }
+                        return out
+                      })
                     }
                   } finally {
                     setBulkAssigning(false)
@@ -456,7 +492,7 @@ export const CameraManagementContent = memo(function CameraManagementContent({ c
                     dealer={dealer}
                     cameraId={dealerAssigningId}
                     initialSortOrder={
-                      cameras
+                      camerasState
                         .find((c) => c.id === dealerAssigningId)
                         ?.dealer_cameras?.find((dc) => dc.dealer_id === dealer.id)?.sort_order ?? 0
                     }
@@ -468,14 +504,36 @@ export const CameraManagementContent = memo(function CameraManagementContent({ c
                         sortOrder
                       )
                       if (result.error) alert(result.error)
-                      else router.refresh()
+                      else {
+                        patchCameraDealerLinks(dealerAssigningId, (links) =>
+                          links.map((l) =>
+                            l.dealer_id === dealer.id ? { ...l, sort_order: sortOrder } : l
+                          )
+                        )
+                      }
                     }}
                     onAssign={async () => {
                       try {
                         setAssigningDealerId(dealer.id)
                         const result = await assignCameraToDealer(dealerAssigningId, dealer.id)
                         if (result?.success) {
-                          router.refresh()
+                          const cam = camerasState.find((c) => c.id === dealerAssigningId)
+                          const maxSort = Math.max(
+                            0,
+                            ...(cam?.dealer_cameras ?? []).map((d) => d.sort_order ?? 0)
+                          )
+                          patchCameraDealerLinks(dealerAssigningId, (links) => {
+                            if (links.some((l) => l.dealer_id === dealer.id)) return links
+                            return [
+                              ...links,
+                              {
+                                dealer_id: dealer.id,
+                                camera_model_id: dealerAssigningId,
+                                sort_order: maxSort + 10,
+                                dealers: dealer,
+                              },
+                            ]
+                          })
                         } else {
                           if (result?.error && !result.error.includes('already assigned')) {
                             alert(result.error || 'Failed to assign camera')
@@ -492,7 +550,9 @@ export const CameraManagementContent = memo(function CameraManagementContent({ c
                         setRemovingDealerId(dealer.id)
                         const result = await removeCameraFromDealer(dealerAssigningId, dealer.id)
                         if (result?.success) {
-                          router.refresh()
+                          patchCameraDealerLinks(dealerAssigningId, (links) =>
+                            links.filter((l) => l.dealer_id !== dealer.id)
+                          )
                         } else {
                           alert(result?.error || 'Failed to remove camera')
                         }

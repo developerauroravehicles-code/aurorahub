@@ -19,6 +19,11 @@ import {
   removeSpecialistFromPool,
   syncDealerSchedulingPoolSpecialists,
 } from '@/lib/specialist-dealer-assignments'
+import {
+  buildCalendarSettingsMap,
+  DEALER_CALENDAR_DAY_TYPES,
+  resolveCalendarSettingForIsoDow,
+} from '@/lib/dealer-calendar-day-type'
 
 export async function createCalendarSetting(formData: FormData) {
   const supabase = await createClient()
@@ -44,12 +49,11 @@ export async function createCalendarSetting(formData: FormData) {
   const slotIntervalMinutes = parseInt(formData.get('slotIntervalMinutes') as string)
   const appointmentDurationMinutes = parseInt(formData.get('appointmentDurationMinutes') as string)
 
-  const validDayTypes = ['weekday', 'saturday', 'sunday'] as const
   if (!dealerId || !dayType || isNaN(startHour) || isNaN(endHour) || isNaN(slotIntervalMinutes) || isNaN(appointmentDurationMinutes)) {
     return { success: false, error: 'Missing required fields' }
   }
-  if (!validDayTypes.includes(dayType as typeof validDayTypes[number])) {
-    return { success: false, error: 'Invalid day type. Must be weekday, saturday, or sunday.' }
+  if (!(DEALER_CALENDAR_DAY_TYPES as readonly string[]).includes(dayType)) {
+    return { success: false, error: 'Invalid day type.' }
   }
 
   if (startHour >= endHour) {
@@ -261,21 +265,74 @@ export type CalendarSetting = {
   appointment_duration_minutes: number
 }
 
-/** Get calendar settings for a dealer (for external demand form). Returns weekday/saturday/sunday. */
-export async function getCalendarSettingsForDealer(dealerId: string): Promise<{ weekday?: CalendarSetting; saturday?: CalendarSetting; sunday?: CalendarSetting }> {
-  if (!dealerId) return {}
+/** Get calendar settings for a dealer (for demand forms). */
+export async function getCalendarSettingsForDealer(dealerId: string) {
+  if (!dealerId) return { settings: {}, closedIsoDays: [] as number[] }
   const supabase = await createClient()
-  const { data } = await supabase
-    .from('dealer_calendar_settings')
-    .select('day_type, start_hour, end_hour, slot_interval_minutes, appointment_duration_minutes')
+  const [{ data: settingsRows }, { data: closedRows }] = await Promise.all([
+    supabase
+      .from('dealer_calendar_settings')
+      .select('day_type, start_hour, end_hour, slot_interval_minutes, appointment_duration_minutes')
+      .eq('dealer_id', dealerId),
+    supabase.from('dealer_weekly_closed_days').select('iso_dow').eq('dealer_id', dealerId),
+  ])
+  return {
+    settings: buildCalendarSettingsMap((settingsRows || []) as CalendarSetting[]),
+    closedIsoDays: (closedRows || []).map((r: { iso_dow: number }) => r.iso_dow),
+  }
+}
+
+export async function getDealerWeeklyClosedDays(): Promise<{ dealer_id: string; iso_dow: number }[]> {
+  const supabase = await createClient()
+  const { data } = await supabase.from('dealer_weekly_closed_days').select('dealer_id, iso_dow')
+  return data || []
+}
+
+export async function saveDealerWeeklyClosedDays(
+  dealerId: string,
+  closedIsoDays: number[]
+): Promise<{ success: boolean; error?: string }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { success: false, error: 'Unauthorized' }
+
+  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+  if (!profile || !['aurora_manager', 'it'].includes(profile.role)) {
+    return { success: false, error: 'Only Aurora Managers or IT can manage calendar settings' }
+  }
+
+  const normalized = [...new Set(closedIsoDays.filter(d => d >= 1 && d <= 7))]
+
+  const { error: deleteError } = await supabase
+    .from('dealer_weekly_closed_days')
+    .delete()
     .eq('dealer_id', dealerId)
-  const out: { weekday?: CalendarSetting; saturday?: CalendarSetting; sunday?: CalendarSetting } = {}
-  ;(data || []).forEach((s: CalendarSetting) => {
-    if (s.day_type === 'weekday') out.weekday = s
-    else if (s.day_type === 'saturday') out.saturday = s
-    else if (s.day_type === 'sunday') out.sunday = s
-  })
-  return out
+  if (deleteError) return { success: false, error: deleteError.message }
+
+  if (normalized.length > 0) {
+    const { error: insertError } = await supabase.from('dealer_weekly_closed_days').insert(
+      normalized.map(iso_dow => ({ dealer_id: dealerId, iso_dow }))
+    )
+    if (insertError) return { success: false, error: insertError.message }
+  }
+
+  revalidatePath('/dashboard/configuration/calendar')
+  revalidatePath('/dashboard/system-management/calendar')
+  return { success: true }
+}
+
+async function isDealerClosedOnIsoDow(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  dealerId: string,
+  isoDow: number
+): Promise<boolean> {
+  const { data } = await supabase
+    .from('dealer_weekly_closed_days')
+    .select('iso_dow')
+    .eq('dealer_id', dealerId)
+    .eq('iso_dow', isoDow)
+    .maybeSingle()
+  return !!data
 }
 
 export async function createCalendarBlock(formData: FormData): Promise<{ success: boolean; error?: string }> {
@@ -387,15 +444,18 @@ export async function validateAppointmentSlot(
   const endMinutes = startMinutes + duration
 
   const isoDow = getISODay(toDate(`${dateStr}T12:00:00`, { timeZone: SYSTEM_DEFAULT_TIMEZONE }))
-  const dayType: 'weekday' | 'saturday' | 'sunday' =
-    isoDow === 7 ? 'sunday' : isoDow === 6 ? 'saturday' : 'weekday'
+  if (await isDealerClosedOnIsoDow(supabase, dealerId, isoDow)) {
+    return { valid: false, error: 'This dealer is closed on this day of the week.' }
+  }
 
-  const { data: settings } = await supabase
+  const { data: settingsRows } = await supabase
     .from('dealer_calendar_settings')
-    .select('start_hour, end_hour, slot_interval_minutes, appointment_duration_minutes')
+    .select('day_type, start_hour, end_hour, slot_interval_minutes, appointment_duration_minutes')
     .eq('dealer_id', dealerId)
-    .eq('day_type', dayType)
-    .maybeSingle()
+  const settings = resolveCalendarSettingForIsoDow(
+    buildCalendarSettingsMap((settingsRows || []) as CalendarSetting[]),
+    isoDow
+  )
 
   const slotStarts = settings
     ? getSlotMinutesFromConfig({
@@ -477,8 +537,9 @@ export async function getAvailableSlotsForEdit(
   const ptTz = SYSTEM_DEFAULT_TIMEZONE
   const isoDayStr = `${y}-${pad2(mo)}-${pad2(d)}`
   const isoDow = getISODay(toDate(`${isoDayStr}T12:00:00`, { timeZone: ptTz }))
-  const dayType: 'weekday' | 'saturday' | 'sunday' =
-    isoDow === 7 ? 'sunday' : isoDow === 6 ? 'saturday' : 'weekday'
+  if (await isDealerClosedOnIsoDow(supabase, dealerId, isoDow)) {
+    return { slots: [], timezoneName: null }
+  }
 
   const { data: dealer } = await supabase
     .from('dealers')
@@ -488,12 +549,14 @@ export async function getAvailableSlotsForEdit(
   const { getTimezoneFromDealer } = await import('@/lib/dealer-timezone')
   const timezoneName = getTimezoneFromDealer(dealer as Parameters<typeof getTimezoneFromDealer>[0]) ?? null
 
-  const { data: settings } = await supabase
+  const { data: settingsRows } = await supabase
     .from('dealer_calendar_settings')
-    .select('start_hour, end_hour, slot_interval_minutes, appointment_duration_minutes')
+    .select('day_type, start_hour, end_hour, slot_interval_minutes, appointment_duration_minutes')
     .eq('dealer_id', dealerId)
-    .eq('day_type', dayType)
-    .maybeSingle()
+  const settings = resolveCalendarSettingForIsoDow(
+    buildCalendarSettingsMap((settingsRows || []) as CalendarSetting[]),
+    isoDow
+  )
 
   const slotMinutes = settings
     ? getSlotMinutesFromConfig({

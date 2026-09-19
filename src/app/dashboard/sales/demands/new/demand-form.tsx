@@ -16,6 +16,11 @@ import { AppointmentCalendar } from '@/components/appointment-calendar'
 import { VEHICLE_MAKES_CA } from '@/lib/vehicle-makes'
 import { getModelsForMake, getTrimsForModel } from '@/lib/vehicle-models'
 import { getISODay } from 'date-fns'
+import {
+  isIsoDowClosed,
+  resolveCalendarSettingForIsoDow,
+  type DealerCalendarSettingsMap,
+} from '@/lib/dealer-calendar-day-type'
 import { CanadianPhoneInput } from '@/components/canadian-phone-input'
 import { DemandDocumentFillButton } from '@/components/demand-document-fill-button'
 import {
@@ -29,20 +34,13 @@ interface CameraModel {
   label?: string
 }
 
-interface CalendarSetting {
-  day_type: 'weekday' | 'saturday' | 'sunday'
-  start_hour: number
-  end_hour: number
-  slot_interval_minutes: number
-  appointment_duration_minutes: number
-}
-
 interface DemandFormProps {
   cameraModels: CameraModel[]
   defaultAddress?: string
   timezoneName?: string | null
   dealerId?: string | null
-  calendarSettings?: { weekday?: CalendarSetting; saturday?: CalendarSetting; sunday?: CalendarSetting }
+  calendarSettings?: DealerCalendarSettingsMap
+  weeklyClosedIsoDays?: number[]
 }
 
 function isDemandErrorState(
@@ -51,7 +49,14 @@ function isDemandErrorState(
   return state != null && !('success' in state && state.success)
 }
 
-export function DemandForm({ cameraModels, defaultAddress = '', timezoneName: propTimezone = null, dealerId = null, calendarSettings }: DemandFormProps) {
+export function DemandForm({
+  cameraModels,
+  defaultAddress = '',
+  timezoneName: propTimezone = null,
+  dealerId = null,
+  calendarSettings,
+  weeklyClosedIsoDays = [],
+}: DemandFormProps) {
   const router = useRouter()
   const printRef = useRef<HTMLDivElement>(null)
   const [printSheetReady, setPrintSheetReady] = useState(false)
@@ -114,8 +119,11 @@ export function DemandForm({ cameraModels, defaultAddress = '', timezoneName: pr
     const ptTz = SYSTEM_DEFAULT_TIMEZONE
     const isoDay = selectedDate
     const isoDow = getISODay(toDate(`${isoDay}T12:00:00`, { timeZone: ptTz }))
-    const dayType = isoDow === 7 ? 'sunday' : isoDow === 6 ? 'saturday' : 'weekday'
-    const setting = calendarSettings?.[dayType]
+    if (isIsoDowClosed(weeklyClosedIsoDays, isoDow)) {
+      setAvailableSlots([])
+      return
+    }
+    const setting = resolveCalendarSettingForIsoDow(calendarSettings, isoDow)
     const slotMinutes = setting
       ? getSlotMinutesFromConfig({
           startHour: setting.start_hour,
@@ -137,7 +145,7 @@ export function DemandForm({ cameraModels, defaultAddress = '', timezoneName: pr
       }
     }
     setAvailableSlots(slots)
-  }, [selectedDate, calendarSettings, systemNow])
+  }, [selectedDate, calendarSettings, weeklyClosedIsoDays, systemNow])
 
   if (state && 'success' in state && state.success) {
     const { demand, dealer, timezoneName: successTz, role } = state
@@ -484,8 +492,15 @@ export function DemandForm({ cameraModels, defaultAddress = '', timezoneName: pr
 
         {selectedDate && (() => {
             const isoDow = getISODay(toDate(`${selectedDate}T12:00:00`, { timeZone: SYSTEM_DEFAULT_TIMEZONE }))
-            const dayType = isoDow === 7 ? 'sunday' : isoDow === 6 ? 'saturday' : 'weekday'
-            const setting = calendarSettings?.[dayType]
+            if (isIsoDowClosed(weeklyClosedIsoDays, isoDow)) {
+              return (
+                <div className="space-y-2">
+                  <label className="block text-base font-medium text-zinc-600 dark:text-gray-300">Available Slots</label>
+                  <p className="text-sm text-zinc-500 dark:text-gray-400">This dealer is closed on this day of the week.</p>
+                </div>
+              )
+            }
+            const setting = resolveCalendarSettingForIsoDow(calendarSettings, isoDow)
             const appointmentDurationMinutes = setting?.appointment_duration_minutes ?? CALENDAR_DEFAULTS.appointmentDurationMinutes
             // Filter out blocked slots: past slots (today), existing appointments + dealer calendar blocks (closed days/slots)
             // Same system time as clock/calendar
