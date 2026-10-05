@@ -32,6 +32,8 @@ export type BarcodeEventType =
   | 'assigned_specialist'
   | 'consumed'
   | 'void'
+  | 'released_from_demand'
+  | 'release_consumed'
 
 export interface InventoryBarcodeRow {
   id: string

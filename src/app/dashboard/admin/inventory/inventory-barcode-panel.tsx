@@ -17,6 +17,7 @@ import {
   scanAssignBarcodeToDealer,
   scanAssignBarcodeToSpecialist,
   voidBarcodeAction,
+  releaseConsumedBarcodeAction,
   deleteBarcodeAction,
   getBarcodeTraceEvents,
   resetNegativeStockBalancesAction,
@@ -837,7 +838,37 @@ export function InventoryBarcodePanel({
                       '—'
                     )}
                   </td>
-                  <td className="py-2 space-x-2">
+                  <td className="py-2 space-x-2" onClick={(e) => e.stopPropagation()}>
+                    {row.status === 'consumed' && row.kind === 'unit' && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const reason = window.prompt(
+                            `Release ${row.code} back to specialist field stock?\n\nEnter a short reason (required):`
+                          )
+                          if (reason === null) return
+                          if (!reason.trim()) {
+                            alert('Reason is required.')
+                            return
+                          }
+                          const extra =
+                            row.demand_number
+                              ? `\n\nThis barcode was linked to demand ${row.demand_number}. Release only if the consume was a mistake.`
+                              : ''
+                          if (
+                            !confirm(
+                              `Release ${row.code} from consumed → at specialist (field stock)?${extra}`
+                            )
+                          ) {
+                            return
+                          }
+                          run(() => releaseConsumedBarcodeAction(row.id, reason.trim()))
+                        }}
+                        className="text-xs text-[#C27E00] hover:underline"
+                      >
+                        Release consumed
+                      </button>
+                    )}
                     {row.status !== 'consumed' && row.status !== 'void' && (
                       <button
                         type="button"

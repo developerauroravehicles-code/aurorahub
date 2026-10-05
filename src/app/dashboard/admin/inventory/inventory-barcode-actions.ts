@@ -17,6 +17,7 @@ import {
   fetchBarcodeEvents,
   fetchSetTemplates,
   syncSetTemplateDealerBooking,
+  releaseConsumedBarcode,
   type BarcodeSettings,
 } from '@/lib/inventory-barcodes'
 import { createAdminClient } from '@/lib/supabase/admin'
@@ -279,6 +280,22 @@ export async function scanAssignBarcodeToSpecialist(formData: FormData) {
   if (result.error) return { error: result.error }
   revalidatePath('/dashboard/admin/inventory')
   return { success: true, barcode: result.barcode }
+}
+
+export async function releaseConsumedBarcodeAction(barcodeId: string, reason: string) {
+  const auth = await requireAuroraManager()
+  if (auth.error) return { error: auth.error }
+
+  const admin = createAdminClient()
+  const result = await releaseConsumedBarcode(admin, {
+    barcodeId,
+    actorId: auth.userId!,
+    reason,
+  })
+  if (result.error) return { error: result.error }
+
+  revalidatePath('/dashboard/admin/inventory')
+  return { success: true }
 }
 
 export async function voidBarcodeAction(barcodeId: string) {
