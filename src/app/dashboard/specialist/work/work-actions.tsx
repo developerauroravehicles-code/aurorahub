@@ -3,7 +3,11 @@
 import { assignWorkToMe, completeDemand, previewWorkBarcode } from './actions'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { DemandServiceType, SERVICE_TYPE_LABELS } from '@/lib/demand-pricing'
+import {
+  DemandServiceType,
+  SERVICE_TYPE_LABELS,
+  isBarcodeRequiredForServiceType,
+} from '@/lib/demand-pricing'
 import { Loader2, X } from 'lucide-react'
 
 const SERVICE_OPTIONS: DemandServiceType[] = ['installation', 'transfer', 'removal']
@@ -95,7 +99,11 @@ export function WorkActions({
       resolvedVin = entered
     }
 
-    if (barcodeModeEnabled && scannedBarcodes.length === 0) {
+    if (
+      barcodeModeEnabled &&
+      isBarcodeRequiredForServiceType(serviceType) &&
+      scannedBarcodes.length === 0
+    ) {
       setError('Scan at least one product barcode (Enter after each scan).')
       return
     }
@@ -234,7 +242,8 @@ export function WorkActions({
               {barcodeModeEnabled && (
                 <div>
                   <label className="block text-sm font-medium text-zinc-700 dark:text-gray-300 mb-1">
-                    Product barcodes *
+                    Product barcodes
+                    {isBarcodeRequiredForServiceType(serviceType) ? ' *' : ' (optional for transfer)'}
                   </label>
                   <div className="flex gap-2">
                     <input
@@ -262,7 +271,9 @@ export function WorkActions({
                     </button>
                   </div>
                   <p className="text-xs text-zinc-500 mt-1">
-                    Scan each installed unit (e.g. Nova + battery = 2 barcodes). Do not scan the set box label.
+                    {isBarcodeRequiredForServiceType(serviceType)
+                      ? 'Scan each installed unit (e.g. Nova + battery = 2 barcodes). Do not scan the set box label.'
+                      : 'Transfer jobs may be completed without barcodes. Scan only if you need to consume field stock.'}
                   </p>
                   {scannedBarcodes.length > 0 && (
                     <ul className="mt-2 space-y-1 rounded-md border border-zinc-200 dark:border-gray-800 divide-y divide-zinc-200 dark:divide-gray-800">

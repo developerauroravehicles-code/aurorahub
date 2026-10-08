@@ -14,6 +14,7 @@ import { getTimezoneFromDealer } from '@/lib/dealer-timezone'
 import {
   DemandServiceType,
   SERVICE_TYPE_LABELS,
+  isBarcodeRequiredForServiceType,
 } from '@/lib/demand-pricing'
 
 interface Dealer {
@@ -142,11 +143,16 @@ export function CreateExternalDemandForm({
   }
 
   const showBarcodeOnComplete = barcodeModeEnabled && completeOnCreate
+  const barcodeRequiredOnComplete =
+    showBarcodeOnComplete && isBarcodeRequiredForServiceType(serviceType)
+  const specialistRequiredForBarcodes =
+    showBarcodeOnComplete &&
+    (isBarcodeRequiredForServiceType(serviceType) || scannedBarcodes.length > 0)
 
   const barcodeFields = showBarcodeOnComplete ? (
     <div className="sm:col-span-2 space-y-2 rounded-lg border border-[#C27E00]/30 bg-[#C27E00]/5 p-4">
       <label className="block text-sm font-medium text-zinc-900 dark:text-white">
-        Product barcodes *
+        Product barcodes{barcodeRequiredOnComplete ? ' *' : ' (optional for transfer)'}
       </label>
       {!assignedSpecialistId && (
         <p className="text-xs text-amber-700 dark:text-amber-300">
@@ -179,7 +185,9 @@ export function CreateExternalDemandForm({
         </button>
       </div>
       <p className="text-xs text-zinc-500 dark:text-gray-500">
-        Required for completed retroactive installs. Scan each unit label (not the set box).
+        {barcodeRequiredOnComplete
+          ? 'Required for completed retroactive installs. Scan each unit label (not the set box).'
+          : 'Optional for transfer — scan only if you want to consume specialist field stock.'}
       </p>
       {scannedBarcodes.map((b) => (
         <input key={b.code} type="hidden" name="barcodeCodes" value={b.code} />
@@ -219,12 +227,12 @@ export function CreateExternalDemandForm({
       action={formAction}
       className="space-y-6"
       onSubmit={(e) => {
-        if (showBarcodeOnComplete && scannedBarcodes.length === 0) {
+        if (barcodeRequiredOnComplete && scannedBarcodes.length === 0) {
           e.preventDefault()
           setClientError('Scan at least one product barcode (Enter after each scan).')
           return
         }
-        if (showBarcodeOnComplete && !assignedSpecialistId) {
+        if (specialistRequiredForBarcodes && !assignedSpecialistId) {
           e.preventDefault()
           setClientError('Select a specialist — barcodes are taken from their field stock.')
         }
@@ -309,14 +317,14 @@ export function CreateExternalDemandForm({
 
         <div className="sm:col-span-2">
           <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300">
-            Specialist{showBarcodeOnComplete ? ' *' : ''}
+            Specialist{specialistRequiredForBarcodes ? ' *' : ''}
           </label>
           {specialists.length > 0 ? (
             <select
               name="assignedSpecialistId"
               value={assignedSpecialistId}
               onChange={(e) => setAssignedSpecialistId(e.target.value)}
-              required={showBarcodeOnComplete}
+              required={specialistRequiredForBarcodes}
               className={inputClass}
             >
               <option value="" className="bg-white text-zinc-900 dark:bg-black dark:text-white">
@@ -337,9 +345,9 @@ export function CreateExternalDemandForm({
               </p>
             </>
           )}
-          {showBarcodeOnComplete && (
+          {specialistRequiredForBarcodes && (
             <p className="text-xs text-zinc-500 mt-1">
-              Required when entering barcodes — stock is consumed from this specialist&apos;s field inventory.
+              Required when barcodes are used — stock is consumed from this specialist&apos;s field inventory.
             </p>
           )}
         </div>

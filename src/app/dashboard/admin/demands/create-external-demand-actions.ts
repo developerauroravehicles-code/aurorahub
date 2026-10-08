@@ -12,6 +12,7 @@ import { lookupCameraModelId } from '@/lib/camera-model-resolve'
 import {
   calculateDemandInvoiceAmount,
   DemandServiceType,
+  isBarcodeRequiredForServiceType,
   isDemandServiceType,
 } from '@/lib/demand-pricing'
 import { addDemandToDailyBatch } from '@/lib/daily-dealer-invoices'
@@ -135,15 +136,20 @@ export async function createExternalDemand(prevState: CreateExternalDemandState,
     .map((v) => String(v).trim())
     .filter(Boolean)
 
-  if (completeOnCreate && barcodeMode) {
-    if (!data.assignedSpecialistId) {
-      return {
-        error:
-          'Select the specialist who performed the install — barcodes are consumed from their field stock.',
+  if (completeOnCreate && barcodeMode && serviceType) {
+    const barcodeRequired = isBarcodeRequiredForServiceType(serviceType)
+    if (barcodeRequired) {
+      if (!data.assignedSpecialistId) {
+        return {
+          error:
+            'Select the specialist who performed the install — barcodes are consumed from their field stock.',
+        }
       }
-    }
-    if (barcodeCodes.length === 0) {
-      return { error: 'Scan at least one product barcode (unit label) before completing.' }
+      if (barcodeCodes.length === 0) {
+        return { error: 'Scan at least one product barcode (unit label) before completing.' }
+      }
+    } else if (barcodeCodes.length > 0 && !data.assignedSpecialistId) {
+      return { error: 'Select the specialist whose field stock the scanned barcodes belong to.' }
     }
   }
 

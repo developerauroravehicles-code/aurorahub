@@ -9,6 +9,7 @@ import { addDemandToDailyBatch } from '@/lib/daily-dealer-invoices'
 import {
   calculateDemandInvoiceAmount,
   DemandServiceType,
+  isBarcodeRequiredForServiceType,
   isDemandServiceType,
   resolveCameraModelIdForDemand,
 } from '@/lib/demand-pricing'
@@ -200,23 +201,26 @@ export async function completeDemand(demandId: string, options: CompleteDemandOp
     (options.barcodeCode?.trim() ? [options.barcodeCode.trim()] : [])
 
   if (barcodeMode) {
-    if (barcodeCodesToConsume.length === 0) {
+    const barcodeRequired = isBarcodeRequiredForServiceType(options.serviceType)
+    if (barcodeRequired && barcodeCodesToConsume.length === 0) {
       return { error: 'Scan at least one product barcode to complete this job.' }
     }
-    if (!demand.dealer_id) {
-      return { error: 'Demand has no dealer assigned.' }
-    }
+    if (barcodeCodesToConsume.length > 0) {
+      if (!demand.dealer_id) {
+        return { error: 'Demand has no dealer assigned.' }
+      }
 
-    for (const code of barcodeCodesToConsume) {
-      const { valid, error: barcodeError } = await validateSpecialistBarcode(supabase, code)
-      if (!valid) return { error: barcodeError ?? `Invalid barcode: ${code}` }
-    }
+      for (const code of barcodeCodesToConsume) {
+        const { valid, error: barcodeError } = await validateSpecialistBarcode(supabase, code)
+        if (!valid) return { error: barcodeError ?? `Invalid barcode: ${code}` }
+      }
 
-    const { data: lookupRows } = await supabase.rpc('lookup_specialist_barcode_for_completion', {
-      p_code: barcodeCodesToConsume[0]!.toUpperCase(),
-    })
-    const lookup = Array.isArray(lookupRows) ? lookupRows[0] : lookupRows
-    cameraModelIdFromBarcode = lookup?.camera_model_id ?? null
+      const { data: lookupRows } = await supabase.rpc('lookup_specialist_barcode_for_completion', {
+        p_code: barcodeCodesToConsume[0]!.toUpperCase(),
+      })
+      const lookup = Array.isArray(lookupRows) ? lookupRows[0] : lookupRows
+      cameraModelIdFromBarcode = lookup?.camera_model_id ?? null
+    }
   }
 
   const pricingCameraModelId = cameraModelIdFromBarcode ?? demand.camera_model_id

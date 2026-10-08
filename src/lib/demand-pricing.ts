@@ -14,6 +14,11 @@ export function isDemandServiceType(value: string): value is DemandServiceType {
   return value === 'installation' || value === 'transfer' || value === 'removal'
 }
 
+/** Barcode mode: installation/removal require a scan; transfer may complete without barcodes. */
+export function isBarcodeRequiredForServiceType(serviceType: DemandServiceType): boolean {
+  return serviceType !== 'transfer'
+}
+
 type PricingInput = {
   dealerId: string | null
   cameraModelId: string | null
