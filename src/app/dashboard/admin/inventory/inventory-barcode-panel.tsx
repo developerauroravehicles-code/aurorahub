@@ -21,6 +21,7 @@ import {
   deleteBarcodeAction,
   getBarcodeTraceEvents,
   resetNegativeStockBalancesAction,
+  registerExistingBarcodeAction,
 } from './inventory-barcode-actions'
 
 type Camera = { id: string; name: string }
@@ -442,6 +443,41 @@ export function InventoryBarcodePanel({
           </button>
         </form>
       </div>
+
+      <form
+        className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-4 space-y-3"
+        onSubmit={(e) => {
+          e.preventDefault()
+          run(() => registerExistingBarcodeAction(new FormData(e.currentTarget)))
+        }}
+      >
+        <h3 className="font-medium text-zinc-900 dark:text-white">Register printed label (recovery)</h3>
+        <p className="text-xs text-zinc-600 dark:text-gray-400">
+          Use when the physical AUR sticker exists but the code is missing from the registry (deleted row or wrong
+          database). Does not print a new label — only creates the database record so assign / scan works again.
+        </p>
+        <div className="grid sm:grid-cols-2 gap-3">
+          <input
+            name="code"
+            required
+            placeholder="AUR-20260909-FWUBXC"
+            className={`${inputClass} font-mono uppercase`}
+            autoComplete="off"
+          />
+          <select name="camera_model_id" required className={inputClass}>
+            <option value="">Camera model…</option>
+            {cameras.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+        </div>
+        <input name="note" placeholder="Optional note (e.g. recovered from box label)" className={inputClass} />
+        <button type="submit" disabled={pending} className={btnPrimary}>
+          Register code
+        </button>
+      </form>
 
       {lastGenerated.length > 0 && (
         <div className="rounded-xl border border-zinc-200 dark:border-gray-800 p-4">

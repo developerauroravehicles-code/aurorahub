@@ -18,6 +18,7 @@ import {
   fetchSetTemplates,
   syncSetTemplateDealerBooking,
   releaseConsumedBarcode,
+  registerExistingUnitBarcode,
   type BarcodeSettings,
 } from '@/lib/inventory-barcodes'
 import { createAdminClient } from '@/lib/supabase/admin'
@@ -278,6 +279,26 @@ export async function scanAssignBarcodeToSpecialist(formData: FormData) {
   })
 
   if (result.error) return { error: result.error }
+  revalidatePath('/dashboard/admin/inventory')
+  return { success: true, barcode: result.barcode }
+}
+
+export async function registerExistingBarcodeAction(formData: FormData) {
+  const auth = await requireAuroraManager()
+  if (auth.error) return { error: auth.error }
+
+  const code = String(formData.get('code') ?? '').trim()
+  const cameraModelId = String(formData.get('camera_model_id') ?? '').trim()
+  const note = String(formData.get('note') ?? '').trim()
+
+  const result = await registerExistingUnitBarcode(auth.supabase, {
+    code,
+    cameraModelId,
+    actorId: auth.userId,
+    note: note || undefined,
+  })
+  if (result.error) return { error: result.error }
+
   revalidatePath('/dashboard/admin/inventory')
   return { success: true, barcode: result.barcode }
 }
