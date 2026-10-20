@@ -103,6 +103,50 @@ export async function getDemandsInPoolForDay(
   return data ?? []
 }
 
+const ACTIVE_SERVICE_RECORD_STATUSES = ['assigned', 'in_progress', 'scheduled'] as const
+
+export async function getServiceRecordsInPoolForDay(
+  supabase: SupabaseClient,
+  poolId: string,
+  dateStr: string,
+  excludeServiceRecordId?: string | null
+): Promise<{ service_appointment_at: string }[]> {
+  const match = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})/)
+  if (!match) return []
+
+  const y = parseInt(match[1], 10)
+  const m = parseInt(match[2], 10)
+  const d = parseInt(match[3], 10)
+  const start = fromZonedTime(new Date(y, m - 1, d, 0, 0, 0), SYSTEM_DEFAULT_TIMEZONE).toISOString()
+  const end = fromZonedTime(new Date(y, m - 1, d, 23, 59, 59, 999), SYSTEM_DEFAULT_TIMEZONE).toISOString()
+
+  const { data: poolDealers } = await supabase
+    .from('dealers')
+    .select('id')
+    .eq('scheduling_pool_id', poolId)
+
+  const dealerIds = (poolDealers ?? []).map((row) => row.id)
+  if (dealerIds.length === 0) return []
+
+  let query = supabase
+    .from('customer_service_records')
+    .select('service_appointment_at')
+    .in('dealer_id', dealerIds)
+    .in('status', [...ACTIVE_SERVICE_RECORD_STATUSES])
+    .not('service_appointment_at', 'is', null)
+    .gte('service_appointment_at', start)
+    .lte('service_appointment_at', end)
+
+  if (excludeServiceRecordId) {
+    query = query.neq('id', excludeServiceRecordId)
+  }
+
+  const { data } = await query
+  return (data ?? []).filter(
+    (row): row is { service_appointment_at: string } => !!row.service_appointment_at
+  )
+}
+
 export function countOverlapsAtSlot(
   slotStartMs: number,
   slotEndMs: number,
@@ -133,50 +177,95 @@ export async function countOverlappingDemandsInPool(
   return countOverlapsAtSlot(slotStart, slotEnd, appointments)
 }
 
+export async function countOverlappingAppointmentsInPool(
+  supabase: SupabaseClient,
+  poolId: string,
+  slotISO: string,
+  options?: { excludeDemandId?: string | null; excludeServiceRecordId?: string | null }
+): Promise<number> {
+  const slotTime = new Date(slotISO)
+  const dateStr = formatInTimeZone(slotTime, SYSTEM_DEFAULT_TIMEZONE, 'yyyy-MM-dd')
+  const [demands, serviceRecords] = await Promise.all([
+    getDemandsInPoolForDay(supabase, poolId, dateStr, options?.excludeDemandId),
+    getServiceRecordsInPoolForDay(supabase, poolId, dateStr, options?.excludeServiceRecordId),
+  ])
+  const appointments = [
+    ...demands.map((d) => ({ appointment_date: d.appointment_date })),
+    ...serviceRecords.map((r) => ({ appointment_date: r.service_appointment_at })),
+  ]
+  const slotStart = slotTime.getTime()
+  const slotEnd = slotStart + APPOINTMENT_DURATION_MINUTES * 60 * 1000
+  return countOverlapsAtSlot(slotStart, slotEnd, appointments)
+}
+
 export async function isSlotAvailableForDealer(
   supabase: SupabaseClient,
   dealerId: string,
   slotISO: string,
-  excludeDemandId?: string | null
+  options?: { excludeDemandId?: string | null; excludeServiceRecordId?: string | null }
 ): Promise<boolean> {
   const poolId = await getPoolIdForDealer(supabase, dealerId)
   if (!poolId) return true
 
   const [capacity, overlapCount] = await Promise.all([
     getPoolCapacity(supabase, poolId),
-    countOverlappingDemandsInPool(supabase, poolId, slotISO, excludeDemandId),
+    countOverlappingAppointmentsInPool(supabase, poolId, slotISO, options),
   ])
 
   return overlapCount < capacity
+}
+
+function overlapsSlot(
+  slotStart: number,
+  slotEnd: number,
+  appointmentIso: string
+): boolean {
+  const existingStart = new Date(appointmentIso).getTime()
+  const existingEnd = existingStart + APPOINTMENT_DURATION_MINUTES * 60 * 1000
+  return slotStart < existingEnd && slotEnd > existingStart
 }
 
 export async function isSpecialistDoubleBooked(
   supabase: SupabaseClient,
   specialistId: string,
   appointmentDateISO: string,
-  excludeDemandId?: string | null
+  options?: { excludeDemandId?: string | null; excludeServiceRecordId?: string | null }
 ): Promise<boolean> {
   const slotStart = new Date(appointmentDateISO).getTime()
   const slotEnd = slotStart + APPOINTMENT_DURATION_MINUTES * 60 * 1000
 
-  let query = supabase
+  let demandQuery = supabase
     .from('demands')
     .select('id, appointment_date')
     .eq('assigned_specialist_id', specialistId)
     .neq('status', 'cancelled')
     .or('is_external.is.null,is_external.eq.false')
 
-  if (excludeDemandId) {
-    query = query.neq('id', excludeDemandId)
+  if (options?.excludeDemandId) {
+    demandQuery = demandQuery.neq('id', options.excludeDemandId)
   }
 
-  const { data } = await query
-  if (!data?.length) return false
+  const { data: demands } = await demandQuery
+  for (const demand of demands ?? []) {
+    if (overlapsSlot(slotStart, slotEnd, demand.appointment_date)) {
+      return true
+    }
+  }
 
-  for (const demand of data) {
-    const existingStart = new Date(demand.appointment_date).getTime()
-    const existingEnd = existingStart + APPOINTMENT_DURATION_MINUTES * 60 * 1000
-    if (slotStart < existingEnd && slotEnd > existingStart) {
+  let serviceQuery = supabase
+    .from('customer_service_records')
+    .select('id, service_appointment_at')
+    .eq('assigned_specialist_id', specialistId)
+    .in('status', [...ACTIVE_SERVICE_RECORD_STATUSES])
+    .not('service_appointment_at', 'is', null)
+
+  if (options?.excludeServiceRecordId) {
+    serviceQuery = serviceQuery.neq('id', options.excludeServiceRecordId)
+  }
+
+  const { data: serviceRecords } = await serviceQuery
+  for (const row of serviceRecords ?? []) {
+    if (row.service_appointment_at && overlapsSlot(slotStart, slotEnd, row.service_appointment_at)) {
       return true
     }
   }

@@ -10,9 +10,17 @@ import {
 } from '@/lib/customer-service-record-utils'
 import { filterServiceRecords, parseServiceRecordFilters } from '@/lib/service-record-filters'
 import type { CustomerServiceRecord, ServiceRecordExpense, ServiceRecordStatus } from '@/types/customer-service-record'
-import { approveServiceRecord, rejectServiceRecord, getSpecialistsForDealer, approveServiceRecordExpense, rejectServiceRecordExpense } from './actions'
+import {
+  approveServiceRecord,
+  rejectServiceRecord,
+  getSpecialistsForDealer,
+  approveServiceRecordExpense,
+  rejectServiceRecordExpense,
+} from './actions'
+import { CreateServiceRequestModal } from './create-service-request-modal'
+import { ServiceAppointmentScheduler } from './service-appointment-scheduler'
 import { ServiceRecordsFilters } from './service-records-filters'
-import { Building2, Car, Check, ChevronRight, Loader2, Phone, User, Wrench, X } from 'lucide-react'
+import { Building2, Car, Check, ChevronRight, Loader2, Phone, Plus, User, Wrench, X } from 'lucide-react'
 
 type DealerOption = { id: string; name: string }
 
@@ -94,7 +102,9 @@ export function ServiceRecordsContent({ records, dealers, pendingExpenses, filte
   const [detailId, setDetailId] = useState<string | null>(null)
   const [activeId, setActiveId] = useState<string | null>(null)
   const [modal, setModal] = useState<'approve' | 'reject' | null>(null)
-  const [appointmentLocal, setAppointmentLocal] = useState('')
+  const [showCreateModal, setShowCreateModal] = useState(false)
+  const [appointmentIso, setAppointmentIso] = useState('')
+  const [approveDealerId, setApproveDealerId] = useState<string | null>(null)
   const [serviceLocation, setServiceLocation] = useState(DEFAULT_SERVICE_LOCATION)
   const [specialistId, setSpecialistId] = useState('')
   const [specialistOptions, setSpecialistOptions] = useState<{ id: string; full_name: string }[]>([])
@@ -140,18 +150,26 @@ export function ServiceRecordsContent({ records, dealers, pendingExpenses, filte
     setDetailId(null)
   }
 
+  function resolveDealerIdForRecord(record: CustomerServiceRecord): string | null {
+    if (record.dealer_id) return record.dealer_id
+    const match = dealers.find((d) => d.name === record.dealer_name && !d.id.startsWith('name:'))
+    return match?.id ?? null
+  }
+
   function openApprove(record: CustomerServiceRecord, fromDetail = false) {
     if (fromDetail) closeDetail()
     setActiveId(record.id)
     setModal('approve')
-    setAppointmentLocal('')
+    setAppointmentIso('')
+    setApproveDealerId(resolveDealerIdForRecord(record))
     setServiceLocation(DEFAULT_SERVICE_LOCATION)
     setSpecialistId('')
     setSpecialistOptions([])
     setError(null)
     setMessage(null)
+    const dealerId = resolveDealerIdForRecord(record)
     setLoadingSpecialists(true)
-    void getSpecialistsForDealer(record.dealer_name).then((options) => {
+    void getSpecialistsForDealer(dealerId ?? '').then((options) => {
       setSpecialistOptions(options)
       if (options.length === 1) setSpecialistId(options[0].id)
       setLoadingSpecialists(false)
@@ -192,7 +210,7 @@ export function ServiceRecordsContent({ records, dealers, pendingExpenses, filte
     if (!activeId) return
     setSubmitting(true)
     setError(null)
-    const result = await approveServiceRecord(activeId, appointmentLocal, specialistId, serviceLocation)
+    const result = await approveServiceRecord(activeId, appointmentIso, specialistId, serviceLocation)
     setSubmitting(false)
     if (result.error) {
       setError(result.error)
@@ -209,11 +227,21 @@ export function ServiceRecordsContent({ records, dealers, pendingExpenses, filte
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-zinc-900 dark:text-white">Service Records</h1>
-        <p className="text-sm text-zinc-500 dark:text-gray-400 mt-1">
-          Review customer portal service requests. Click a row to view full details.
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold text-zinc-900 dark:text-white">Service Requests</h1>
+          <p className="text-sm text-zinc-500 dark:text-gray-400 mt-1">
+            Customer portal requests and manager-scheduled service jobs. Click a row for details.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => setShowCreateModal(true)}
+          className="inline-flex items-center gap-2 rounded-lg bg-[#C27E00] px-4 py-2 text-sm font-semibold text-white hover:bg-[#a06900]"
+        >
+          <Plus className="h-4 w-4" />
+          New service request
+        </button>
       </div>
 
       {message ? (
@@ -510,9 +538,19 @@ export function ServiceRecordsContent({ records, dealers, pendingExpenses, filte
         </div>
       ) : null}
 
+      {showCreateModal ? (
+        <CreateServiceRequestModal
+          onClose={() => setShowCreateModal(false)}
+          onSuccess={() => {
+            setMessage('Service request created and scheduled.')
+            router.refresh()
+          }}
+        />
+      ) : null}
+
       {modal && activeRecord ? (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-md rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 p-5 shadow-xl space-y-4">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-4 overflow-y-auto">
+          <div className="w-full max-w-2xl rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 p-5 shadow-xl space-y-4 my-8">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <h2 className="text-lg font-semibold text-zinc-900 dark:text-white">
@@ -549,17 +587,19 @@ export function ServiceRecordsContent({ records, dealers, pendingExpenses, filte
                     ))}
                   </select>
                 </div>
-                <div>
-                  <label className="block text-xs font-medium text-zinc-700 dark:text-zinc-300 mb-1">
-                    Appointment date & time (Pacific Time)
-                  </label>
-                  <input
-                    type="datetime-local"
-                    value={appointmentLocal}
-                    onChange={(e) => setAppointmentLocal(e.target.value)}
-                    className="w-full rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-950 px-3 py-2 text-sm"
+                {approveDealerId ? (
+                  <ServiceAppointmentScheduler
+                    dealerId={approveDealerId}
+                    dealerName={activeRecord.dealer_name}
+                    appointmentIso={appointmentIso}
+                    onAppointmentIsoChange={setAppointmentIso}
                   />
-                </div>
+                ) : (
+                  <p className="text-sm text-amber-700 dark:text-amber-300">
+                    Dealer could not be resolved for calendar scheduling. Check that this record is linked to a
+                    dealer.
+                  </p>
+                )}
                 <div>
                   <label className="block text-xs font-medium text-zinc-700 dark:text-zinc-300 mb-1">
                     Service location
@@ -606,7 +646,10 @@ export function ServiceRecordsContent({ records, dealers, pendingExpenses, filte
               <button
                 type="button"
                 onClick={() => void (modal === 'approve' ? handleApprove() : handleReject())}
-                disabled={submitting || (modal === 'approve' && (!appointmentLocal || !specialistId))}
+                disabled={
+                  submitting ||
+                  (modal === 'approve' && (!appointmentIso || !specialistId || !approveDealerId))
+                }
                 className={`inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold text-white disabled:opacity-50 ${
                   modal === 'approve' ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'
                 }`}

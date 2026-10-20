@@ -75,7 +75,7 @@ export async function assignWorkToMe(demandId: string) {
       supabase,
       user.id,
       demand.appointment_date,
-      demandId
+      { excludeDemandId: demandId }
     )
     if (doubleBooked) {
       return { error: 'You already have another appointment at this time.' }
@@ -181,7 +181,7 @@ export async function completeDemand(demandId: string, options: CompleteDemandOp
         supabase,
         user.id,
         demand.appointment_date,
-        demandId
+        { excludeDemandId: demandId }
       )
       if (doubleBooked) {
         return { error: 'You already have another appointment at this time.' }

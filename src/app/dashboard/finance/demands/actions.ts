@@ -136,7 +136,7 @@ export async function approveDemand(demandId: string, sendSMSToCustomer: boolean
         supabase,
         assignedSpecialistId,
         demand.appointment_date,
-        demandId
+        { excludeDemandId: demandId }
       )
       if (doubleBooked) {
         assignedSpecialistId = null

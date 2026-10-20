@@ -68,7 +68,7 @@ export async function updateAssignedSpecialist(
       supabase,
       specialistId,
       demand.appointment_date,
-      demandId
+      { excludeDemandId: demandId }
     )
     if (doubleBooked) {
       return { success: false, error: 'This specialist already has another appointment at that time.' }

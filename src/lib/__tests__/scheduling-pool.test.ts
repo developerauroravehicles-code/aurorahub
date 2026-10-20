@@ -31,4 +31,14 @@ describe('scheduling-pool', () => {
     const capacity = 2
     expect(countOverlapsAtSlot(slotStart, slotEnd, appointments)).toBeGreaterThanOrEqual(capacity)
   })
+
+  it('counts service job appointments together with installation demands at the same slot', () => {
+    const slotStart = Date.parse('2026-08-27T17:30:00.000Z')
+    const slotEnd = slotStart + APPOINTMENT_DURATION_MINUTES * 60 * 1000
+    const combined = [
+      { appointment_date: '2026-08-27T17:30:00.000Z' },
+      { appointment_date: '2026-08-27T17:30:00.000Z' },
+    ]
+    expect(countOverlapsAtSlot(slotStart, slotEnd, combined)).toBe(2)
+  })
 })

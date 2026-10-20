@@ -12,6 +12,7 @@ import {
   getDemandsInPoolForDay,
   getPoolCapacity,
   getPoolIdForDealer,
+  getServiceRecordsInPoolForDay,
   isSlotAvailableForDealer,
 } from '@/lib/scheduling-pool'
 import {
@@ -423,7 +424,11 @@ export async function deleteCalendarBlock(blockId: string): Promise<{ success: b
 export async function validateAppointmentSlot(
   dealerId: string,
   appointmentDateISO: string,
-  options?: { allowPast?: boolean; excludeDemandId?: string | null }
+  options?: {
+    allowPast?: boolean
+    excludeDemandId?: string | null
+    excludeServiceRecordId?: string | null
+  }
 ): Promise<{ valid: boolean; error?: string }> {
   const supabase = await createClient()
   const slotTime = new Date(appointmentDateISO)
@@ -499,12 +504,10 @@ export async function validateAppointmentSlot(
     }
   }
 
-  const slotAvailable = await isSlotAvailableForDealer(
-    supabase,
-    dealerId,
-    appointmentDateISO,
-    options?.excludeDemandId
-  )
+  const slotAvailable = await isSlotAvailableForDealer(supabase, dealerId, appointmentDateISO, {
+    excludeDemandId: options?.excludeDemandId,
+    excludeServiceRecordId: options?.excludeServiceRecordId,
+  })
   if (!slotAvailable) {
     return { valid: false, error: 'This time slot is fully booked for your service area. Please select another time.' }
   }
@@ -844,13 +847,17 @@ export async function getPoolSlotContext(dealerId: string, dateStr: string) {
     return { appointments: [] as string[], capacity: 1 }
   }
 
-  const [appointments, capacity] = await Promise.all([
+  const [demands, serviceRecords, capacity] = await Promise.all([
     getDemandsInPoolForDay(supabase, poolId, dateStr),
+    getServiceRecordsInPoolForDay(supabase, poolId, dateStr),
     getPoolCapacity(supabase, poolId),
   ])
 
   return {
-    appointments: appointments.map((a) => a.appointment_date),
+    appointments: [
+      ...demands.map((a) => a.appointment_date),
+      ...serviceRecords.map((r) => r.service_appointment_at),
+    ],
     capacity,
   }
 }

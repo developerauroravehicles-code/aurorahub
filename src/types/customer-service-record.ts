@@ -41,6 +41,7 @@ export type CustomerServiceRecord = {
   customer_firstname: string
   customer_phone: string
   vehicle_summary: string
+  dealer_id: string | null
   dealer_name: string
   diagnosis_code: ServiceRecordDiagnosisCode
   diagnosis_other: string
