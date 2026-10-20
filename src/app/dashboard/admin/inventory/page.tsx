@@ -19,7 +19,7 @@ const VALID_TABS = new Set([
 export default async function InventoryPage({
   searchParams,
 }: {
-  searchParams: Promise<{ tab?: string }>
+  searchParams: Promise<{ tab?: string; specialist?: string }>
 }) {
   const supabase = await createClient()
   const {
@@ -34,6 +34,10 @@ export default async function InventoryPage({
 
   const params = await searchParams
   const initialTab = params.tab && VALID_TABS.has(params.tab) ? params.tab : 'dashboard'
+  const highlightSpecialistId =
+    params.specialist && /^[0-9a-f-]{36}$/i.test(params.specialist.trim())
+      ? params.specialist.trim()
+      : null
 
   const [
     provincesRes,
@@ -176,6 +180,7 @@ export default async function InventoryPage({
             | 'setup'
             | 'barcode'
         }
+        highlightSpecialistId={highlightSpecialistId}
       />
     </div>
   )

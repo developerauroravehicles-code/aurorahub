@@ -12,6 +12,7 @@ import {
   QuickActions,
   CameraDistribution,
   InventoryStockAlertsWidget,
+  CameraStockOverviewWidget,
 } from '@/components/dashboard'
 
 function getCameraDistribution(demands: { camera_model?: string | null }[]): { model: string; count: number }[] {
@@ -824,22 +825,34 @@ export default async function DashboardPage({
     const params = await searchParams
     const { getDashboardOverviewData } = await import('./admin/dashboard/actions')
     const { fetchInventoryStockAlerts } = await import('@/lib/inventory-stock-alerts')
+    const { fetchCameraStockOverview } = await import('@/lib/inventory-v2/camera-stock-overview')
+    const { isBarcodeModeEnabled } = await import('@/lib/inventory-barcodes')
 
-    const [dealersCountRes, specialistsCountRes, cameraRowsRes, recentDemandsRes, overviewData, inventoryStock] =
-      await Promise.all([
-        supabase.from('dealers').select('*', { count: 'exact', head: true }),
-        supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('role', 'specialist'),
-        supabase.from('demands').select('camera_model'),
-        supabase
-          .from('demands')
-          .select(
-            'id, demand_number, status, created_at, customer_firstname, customer_lastname, vehicle_make, vehicle_model, vehicle_year, camera_model, appointment_date'
-          )
-          .order('created_at', { ascending: false })
-          .limit(10),
-        getDashboardOverviewData(params.financeMonth ?? null),
-        fetchInventoryStockAlerts(supabase),
-      ])
+    const barcodeModeEnabled = await isBarcodeModeEnabled(supabase)
+
+    const [
+      dealersCountRes,
+      specialistsCountRes,
+      cameraRowsRes,
+      recentDemandsRes,
+      overviewData,
+      inventoryStock,
+      cameraStockOverview,
+    ] = await Promise.all([
+      supabase.from('dealers').select('*', { count: 'exact', head: true }),
+      supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('role', 'specialist'),
+      supabase.from('demands').select('camera_model'),
+      supabase
+        .from('demands')
+        .select(
+          'id, demand_number, status, created_at, customer_firstname, customer_lastname, vehicle_make, vehicle_model, vehicle_year, camera_model, appointment_date'
+        )
+        .order('created_at', { ascending: false })
+        .limit(10),
+      getDashboardOverviewData(params.financeMonth ?? null),
+      fetchInventoryStockAlerts(supabase),
+      fetchCameraStockOverview(supabase, { includeBarcodeCounts: barcodeModeEnabled }),
+    ])
 
     const totalDealers = dealersCountRes.count
     const totalSpecialists = specialistsCountRes.count
@@ -864,7 +877,7 @@ export default async function DashboardPage({
       <div className="space-y-10">
         <WelcomeBanner
           title="Aurora Manager Dashboard"
-          subtitle="Demands, finance, employees, dealer alerts, and inventory stock alerts"
+          subtitle="Demands, finance, employees, dealer alerts, and camera inventory"
           userName={(profile as { full_name?: string })?.full_name?.split(' ')[0]}
           timezone={SYSTEM_DEFAULT_TIMEZONE}
           userId={user.id}
@@ -879,6 +892,7 @@ export default async function DashboardPage({
             { label: 'Employee Tracking', href: '/dashboard/admin/employees' },
             { label: 'Inventory', href: '/dashboard/admin/inventory' },
             { label: 'Stock alerts', href: '#inventory-stock-alerts' },
+            { label: 'Camera stock', href: '#camera-stock-overview' },
             { label: 'Dealer Alerts', href: '#dealer-alerts' },
             { label: 'Notes & Reminders', href: '#manager-notes' },
           ]}
@@ -892,6 +906,11 @@ export default async function DashboardPage({
         </div>
 
         <InventoryStockAlertsWidget alerts={inventoryStock.alerts} summary={inventoryStock.summary} />
+
+        <CameraStockOverviewWidget
+          overview={cameraStockOverview}
+          barcodeModeEnabled={barcodeModeEnabled}
+        />
 
         <CameraDistribution items={getCameraDistribution(cameraRowsRes.data ?? [])} />
 

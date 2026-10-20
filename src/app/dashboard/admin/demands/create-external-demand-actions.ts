@@ -28,10 +28,7 @@ import {
   getActiveCameraModelById,
   lookupCameraModelId,
 } from '@/lib/camera-model-resolve'
-import {
-  resolveExternalDemandCameraAndPrice,
-  type ExternalDemandMissingPrice,
-} from './create-external-demand-pricing'
+import { resolveExternalDemandCameraAndPrice } from './create-external-demand-pricing'
 import { upsertInventoryPricingRule } from '@/app/dashboard/admin/inventory/actions'
 
 const schema = z.object({
@@ -441,5 +438,3 @@ export async function createExternalDemand(
   revalidatePath('/dashboard/admin/daily-invoices')
   return { success: true }
 }
-
-export type { ExternalDemandMissingPrice }

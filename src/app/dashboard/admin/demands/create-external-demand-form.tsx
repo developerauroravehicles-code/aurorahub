@@ -17,8 +17,8 @@ import {
   saveDealerInstallationPriceForExternalDemand,
   suggestExternalDemandCameraModel,
   validateExternalDemandBarcodes,
-  type ExternalDemandMissingPrice,
 } from './create-external-demand-actions'
+import type { ExternalDemandMissingPrice } from './external-demand-shared-types'
 import {
   clearExternalDemandDraft,
   EXTERNAL_DEMAND_RESTORE_FLAG,
@@ -31,6 +31,8 @@ import { VEHICLE_MAKES_CA } from '@/lib/vehicle-makes'
 import { getModelsForMake, getTrimsForModel } from '@/lib/vehicle-models'
 import { CanadianPhoneInput } from '@/components/canadian-phone-input'
 import { DemandDocumentFillButton } from '@/components/demand-document-fill-button'
+import { VinDecodeField } from '@/components/vin-decode-field'
+import type { DemandVehicleFieldsFromVin } from '@/lib/vin-decode/map-to-demand-vehicle'
 import { AppointmentCalendar } from '@/components/appointment-calendar'
 import { formatInTimeZone } from 'date-fns-tz'
 import { getEffectiveTimezone } from '@/lib/timezone-defaults'
@@ -350,6 +352,22 @@ export function CreateExternalDemandForm({
     setInlinePriceMessage('Price saved — submit again to create the demand.')
     setMissingPrice(null)
     setClientError(null)
+  }
+
+  function applyVinDecodeFields(fields: DemandVehicleFieldsFromVin) {
+    setVinLast6(fields.vinLast6)
+    if (fields.vehicleYear) setVehicleYear(fields.vehicleYear)
+    if (fields.selectedMake) {
+      setSelectedMake(fields.selectedMake)
+      setSelectedTrim(fields.selectedTrim)
+      if (fields.selectedModel === '__custom__') {
+        setSelectedModel('__custom__')
+        setCustomModel(fields.customModel)
+      } else if (fields.selectedModel) {
+        setSelectedModel(fields.selectedModel)
+        setCustomModel('')
+      }
+    }
   }
 
   async function addScannedBarcode() {
@@ -810,6 +828,7 @@ export function CreateExternalDemandForm({
         </div>
 
         <h3 className="col-span-full text-sm font-medium text-zinc-900 dark:text-white border-t border-zinc-200 dark:border-gray-800 pt-4 mt-4">Vehicle</h3>
+        <VinDecodeField disabled={isPending} onDecoded={applyVinDecodeFields} inputClassName={inputClass} />
         <div>
           <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300">Make *</label>
           <select

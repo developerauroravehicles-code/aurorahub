@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition, useRef } from 'react'
+import { useState, useTransition, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { ChevronDown, ChevronRight, Users, ScanLine } from 'lucide-react'
 import type { SpecialistStockSummaryRow } from '@/lib/inventory-v2/specialist-stock'
@@ -26,16 +26,19 @@ export function InventorySpecialistsPanel({
   dealers,
   cameras,
   barcodeModeEnabled = false,
+  highlightSpecialistId = null,
 }: {
   specialistStock: SpecialistStockSummaryRow[]
   dealers: Dealer[]
   cameras: Camera[]
   barcodeModeEnabled?: boolean
+  highlightSpecialistId?: string | null
 }) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
   const [message, setMessage] = useState<{ type: 'ok' | 'err'; text: string } | null>(null)
   const [expandedId, setExpandedId] = useState<string | null>(null)
+  const [flashSpecialistId, setFlashSpecialistId] = useState<string | null>(null)
   const [scanSpecialistId, setScanSpecialistId] = useState('')
   const [activeSetProgress, setActiveSetProgress] = useState<{
     setId: string
@@ -44,6 +47,18 @@ export function InventorySpecialistsPanel({
     expectedUnitCount: number
   } | null>(null)
   const scanInputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    if (!highlightSpecialistId) return
+    const row = specialistStock.find((r) => r.specialist_id === highlightSpecialistId)
+    if (!row) return
+    setExpandedId(highlightSpecialistId)
+    setFlashSpecialistId(highlightSpecialistId)
+    const el = document.getElementById(`specialist-${highlightSpecialistId}`)
+    el?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    const t = window.setTimeout(() => setFlashSpecialistId(null), 2500)
+    return () => window.clearTimeout(t)
+  }, [highlightSpecialistId, specialistStock])
 
   const totalSpecialists = specialistStock.length
   const totalUnits = specialistStock.reduce((s, r) => s + r.total_units, 0)
@@ -254,7 +269,15 @@ export function InventorySpecialistsPanel({
             {specialistStock.map((row) => {
               const expanded = expandedId === row.specialist_id
               return (
-                <li key={row.specialist_id} className="p-4">
+                <li
+                  key={row.specialist_id}
+                  id={`specialist-${row.specialist_id}`}
+                  className={`p-4 scroll-mt-24 ${
+                    flashSpecialistId === row.specialist_id
+                      ? 'ring-2 ring-[#C27E00]/60 bg-[#C27E00]/5'
+                      : ''
+                  }`}
+                >
                   <button
                     type="button"
                     onClick={() => setExpandedId(expanded ? null : row.specialist_id)}

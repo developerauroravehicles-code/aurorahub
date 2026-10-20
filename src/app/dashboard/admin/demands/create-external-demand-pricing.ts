@@ -10,14 +10,9 @@ import {
   DemandServiceType,
 } from '@/lib/demand-pricing'
 import { lookupUnitBarcodeAtSpecialist } from '@/lib/inventory-barcodes'
+import type { ExternalDemandMissingPrice } from './external-demand-shared-types'
 
-export type ExternalDemandMissingPrice = {
-  dealerId: string
-  dealerName: string
-  cameraModelId: string
-  cameraModelName: string
-  serviceType: DemandServiceType
-}
+export type { ExternalDemandMissingPrice }
 
 export async function resolveExternalDemandCameraAndPrice(
   supabase: SupabaseClient,

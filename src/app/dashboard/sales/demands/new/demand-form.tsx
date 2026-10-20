@@ -23,6 +23,8 @@ import {
 } from '@/lib/dealer-calendar-day-type'
 import { CanadianPhoneInput } from '@/components/canadian-phone-input'
 import { DemandDocumentFillButton } from '@/components/demand-document-fill-button'
+import { VinDecodeField } from '@/components/vin-decode-field'
+import type { DemandVehicleFieldsFromVin } from '@/lib/vin-decode/map-to-demand-vehicle'
 import {
   DemandCustomerHandoffPrint,
   printDemandHandoffSheet,
@@ -146,6 +148,22 @@ export function DemandForm({
     }
     setAvailableSlots(slots)
   }, [selectedDate, calendarSettings, weeklyClosedIsoDays, systemNow])
+
+  function applyVinDecodeFields(fields: DemandVehicleFieldsFromVin) {
+    setVinLast6(fields.vinLast6)
+    if (fields.vehicleYear) setVehicleYear(fields.vehicleYear)
+    if (fields.selectedMake) {
+      setSelectedMake(fields.selectedMake)
+      setSelectedTrim(fields.selectedTrim)
+      if (fields.selectedModel === '__custom__') {
+        setSelectedModel('__custom__')
+        setCustomModel(fields.customModel)
+      } else if (fields.selectedModel) {
+        setSelectedModel(fields.selectedModel)
+        setCustomModel('')
+      }
+    }
+  }
 
   if (state && 'success' in state && state.success) {
     const { demand, dealer, timezoneName: successTz, role } = state
@@ -280,6 +298,12 @@ export function DemandForm({
         </div>
 
         <h3 className="col-span-full text-xl font-semibold leading-7 text-zinc-900 dark:text-white border-b border-zinc-200 dark:border-gray-800 pb-2 mt-4">Vehicle Information</h3>
+
+        <VinDecodeField
+          disabled={isPending}
+          onDecoded={applyVinDecodeFields}
+          inputClassName="mt-1.5 block w-full rounded-md border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 py-2.5 px-3 shadow-sm focus:border-[#C27E00] focus:outline-none focus:ring-[#C27E00] text-base text-zinc-900 dark:text-white"
+        />
 
         <div>
           <label className="block text-base font-medium text-zinc-600 dark:text-gray-300">Make</label>

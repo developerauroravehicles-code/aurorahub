@@ -192,6 +192,7 @@ export function InventoryDashboard({
   nationalLocationId,
   specialistStock,
   initialTab,
+  highlightSpecialistId,
   barcodeSettings,
   barcodeTemplates,
   barcodeRegistry,
@@ -213,6 +214,7 @@ export function InventoryDashboard({
   nationalLocationId: string | null
   specialistStock: SpecialistStockSummaryRow[]
   initialTab?: TabId
+  highlightSpecialistId?: string | null
   barcodeSettings: BarcodeSettings
   barcodeTemplates: {
     id: string
@@ -866,6 +868,7 @@ export function InventoryDashboard({
           dealers={dealers}
           cameras={cameras}
           barcodeModeEnabled={barcodeSettings.enabled}
+          highlightSpecialistId={highlightSpecialistId}
         />
       )}
 
