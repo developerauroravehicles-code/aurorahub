@@ -337,25 +337,6 @@ export function InventoryBarcodePanel({
               />
             </button>
           </label>
-          <label className="inline-flex items-center gap-2 text-xs text-zinc-600 dark:text-gray-400 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={setAutoGenerateUnits}
-              onChange={(e) => {
-                const next = e.target.checked
-                setSetAutoGenerateUnits(next)
-                run(() =>
-                  saveBarcodeSettingsAction({
-                    ...settings,
-                    enabled,
-                    setAutoGenerateUnitBarcodes: next,
-                  })
-                )
-              }}
-              className="rounded border-zinc-300"
-            />
-            Pre-print unit labels when generating sets
-          </label>
         </div>
       </div>
 
@@ -405,7 +386,7 @@ export function InventoryBarcodePanel({
           </button>
         </form>
 
-        {/* Generate sets */}
+        {/* Set template → unit labels only (no set container barcodes) */}
         <form
           className="rounded-xl border border-zinc-200 dark:border-gray-800 p-4 space-y-3"
           onSubmit={(e) => {
@@ -414,7 +395,7 @@ export function InventoryBarcodePanel({
           }}
         >
           <h3 className="font-medium text-zinc-900 dark:text-white flex items-center gap-2">
-            <Layers className="h-4 w-4 text-[#C27E00]" /> Generate set barcodes
+            <Layers className="h-4 w-4 text-[#C27E00]" /> Generate unit labels for set template
           </h3>
           <select name="template_id" required className={`${inputClass} w-full`}>
             <option value="">Set template…</option>
@@ -431,15 +412,14 @@ export function InventoryBarcodePanel({
             max={100}
             defaultValue={1}
             className={`${inputClass} w-full`}
-            placeholder="Number of sets"
+            placeholder="How many installs (set quantity)"
           />
           <p className="text-xs text-zinc-500">
-            {setAutoGenerateUnits
-              ? 'Creates set + unit labels (same batch).'
-              : 'Set label only — scan set, then scan each unit to link & assign.'}
+            Creates only unit product labels for each component (e.g. Nova + battery). Set templates stay in the
+            catalog for booking/pricing — no separate set barcode stock.
           </p>
           <button type="submit" disabled={pending || templates.length === 0} className={btnPrimary}>
-            Generate set batch
+            Generate unit labels
           </button>
         </form>
       </div>
@@ -818,6 +798,10 @@ export function InventoryBarcodePanel({
             />
           </div>
         </div>
+        <p className="text-xs text-zinc-500 dark:text-gray-500">
+          Shows the latest 300 barcodes from the server. Use <strong className="font-medium">Search code</strong> to
+          find older labels (e.g. full AUR-… code from the physical sticker).
+        </p>
         <div className="overflow-x-auto">
           <table className="min-w-full text-sm">
             <thead>

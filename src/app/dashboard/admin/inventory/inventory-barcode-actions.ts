@@ -9,7 +9,7 @@ import {
   assignUnitUnderSetToSpecialist,
   voidBarcode,
   deleteBarcodeRecord,
-  generateSetBarcodes,
+  generateUnitBarcodesForSetTemplate,
   generateUnitBarcodes,
   getBarcodeSettings,
   saveBarcodeSettings,
@@ -43,10 +43,11 @@ export async function loadBarcodePanelData(search?: string) {
   const auth = await requireAuroraManager()
   if (auth.error) return { error: auth.error }
 
+  const registryLimit = search?.trim() ? 500 : 300
   const [settings, templates, registry] = await Promise.all([
     getBarcodeSettings(auth.supabase),
     fetchSetTemplates(auth.supabase),
-    fetchBarcodeRegistry(auth.supabase, { search, limit: 300 }),
+    fetchBarcodeRegistry(auth.supabase, { search, limit: registryLimit }),
   ])
 
   return { settings, templates, registry }
@@ -190,12 +191,10 @@ export async function generateSetBarcodesAction(formData: FormData) {
 
   if (!templateId) return { error: 'Set template is required' }
 
-  const settings = await getBarcodeSettings(auth.supabase)
-  const result = await generateSetBarcodes(auth.supabase, {
+  const result = await generateUnitBarcodesForSetTemplate(auth.supabase, {
     templateId,
     setCount,
     createdBy: auth.userId,
-    autoGenerateUnitBarcodes: settings.setAutoGenerateUnitBarcodes,
   })
 
   if (result.error) return { error: result.error }

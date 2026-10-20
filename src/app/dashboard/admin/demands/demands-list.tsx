@@ -12,6 +12,10 @@ import { demandMatchesSmartSearch } from '@/lib/demand-smart-search'
 import { DemandPrintButton } from '@/components/demand-print-button'
 import { getDealerPrintMeta, toHandoffDemand } from '@/lib/demand-handoff-print-utils'
 import { CreateExternalDemandForm } from './create-external-demand-form'
+import {
+  clearExternalDemandDraft,
+  EXTERNAL_DEMAND_RESTORE_FLAG,
+} from '@/lib/external-demand-form-draft'
 
 interface Dealer {
   id: string
@@ -271,7 +275,13 @@ export function DemandsList({
         {canCreateExternal && (
           <button
             type="button"
-            onClick={() => setCreateModalOpen(true)}
+            onClick={() => {
+              clearExternalDemandDraft()
+              if (typeof sessionStorage !== 'undefined') {
+                sessionStorage.removeItem(EXTERNAL_DEMAND_RESTORE_FLAG)
+              }
+              setCreateModalOpen(true)
+            }}
             className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-white bg-[#C27E00] hover:bg-[#a06900] rounded-md"
           >
             <Plus className="w-4 h-4" />
@@ -281,16 +291,30 @@ export function DemandsList({
       </div>
 
       {/* Create External Demand Modal */}
-      {createModalOpen && canCreateExternal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-900/50 dark:bg-black/70">
+      {canCreateExternal && (
+        <div
+          className={
+            createModalOpen
+              ? 'fixed inset-0 z-50 flex items-center justify-center bg-zinc-900/50 dark:bg-black/70'
+              : 'hidden'
+          }
+          aria-hidden={!createModalOpen}
+        >
           <div className="bg-zinc-200 dark:bg-gray-900 border border-zinc-200 dark:border-gray-800 rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
             <div className="p-6">
               <CreateExternalDemandForm
+                isOpen={createModalOpen}
                 dealers={dealers}
                 specialists={specialists}
                 barcodeModeEnabled={barcodeModeEnabled}
                 onSuccess={handleCreateSuccess}
-                onCancel={() => setCreateModalOpen(false)}
+                onCancel={() => {
+                  clearExternalDemandDraft()
+                  if (typeof sessionStorage !== 'undefined') {
+                    sessionStorage.removeItem(EXTERNAL_DEMAND_RESTORE_FLAG)
+                  }
+                  setCreateModalOpen(false)
+                }}
               />
             </div>
           </div>

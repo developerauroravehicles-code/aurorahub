@@ -1,7 +1,31 @@
 'use client'
 
-import { useActionState, useState, useEffect, useMemo } from 'react'
-import { createExternalDemand, previewExternalDemandBarcode } from './create-external-demand-actions'
+import {
+  useActionState,
+  useState,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useCallback,
+  startTransition,
+} from 'react'
+import {
+  createExternalDemand,
+  previewExternalDemandBarcode,
+  previewExternalDemandCompletionPricing,
+  saveDealerInstallationPriceForExternalDemand,
+  suggestExternalDemandCameraModel,
+  validateExternalDemandBarcodes,
+  type ExternalDemandMissingPrice,
+} from './create-external-demand-actions'
+import {
+  clearExternalDemandDraft,
+  EXTERNAL_DEMAND_RESTORE_FLAG,
+  loadExternalDemandDraft,
+  saveExternalDemandDraft,
+  type ExternalDemandFormDraft,
+} from '@/lib/external-demand-form-draft'
 import { getCameraModelsForDealer } from './get-cameras-for-dealer'
 import { VEHICLE_MAKES_CA } from '@/lib/vehicle-makes'
 import { getModelsForMake, getTrimsForModel } from '@/lib/vehicle-models'
@@ -37,12 +61,15 @@ interface Specialist {
   full_name: string | null
 }
 
-type ScannedBarcode = { code: string; modelName: string }
+type ScannedBarcode = { code: string; modelName: string; cameraModelId: string }
+
+const CAMERA_CUSTOM = '__custom__'
 
 interface CreateExternalDemandFormProps {
   dealers: Dealer[]
   specialists: Specialist[]
   barcodeModeEnabled?: boolean
+  isOpen?: boolean
   onSuccess?: () => void
   onCancel?: () => void
 }
@@ -55,10 +82,14 @@ export function CreateExternalDemandForm({
   dealers,
   specialists,
   barcodeModeEnabled = false,
+  isOpen = true,
   onSuccess,
   onCancel,
 }: CreateExternalDemandFormProps) {
   const [state, formAction, isPending] = useActionState(createExternalDemand, null)
+  const restoringDraftRef = useRef(false)
+  const prevDealerIdRef = useRef<string | null>(null)
+  const prevSpecialistIdRef = useRef<string | null>(null)
   const [selectedDealerId, setSelectedDealerId] = useState<string>(dealers[0]?.id ?? '')
 
   useEffect(() => {
@@ -68,6 +99,7 @@ export function CreateExternalDemandForm({
   }, [dealers])
 
   const [cameraModels, setCameraModels] = useState<CameraModel[]>([])
+  const [camerasLoading, setCamerasLoading] = useState(false)
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
   const [phone, setPhone] = useState('')
@@ -79,8 +111,10 @@ export function CreateExternalDemandForm({
   const [selectedModel, setSelectedModel] = useState('')
   const [selectedTrim, setSelectedTrim] = useState('')
   const [customModel, setCustomModel] = useState('')
-  const [selectedCamera, setSelectedCamera] = useState('')
+  const [selectedCameraId, setSelectedCameraId] = useState('')
   const [customCamera, setCustomCamera] = useState('')
+  const [cameraNameForSubmit, setCameraNameForSubmit] = useState('')
+  const [comment, setComment] = useState('')
   const [isFutureCustomer, setIsFutureCustomer] = useState(false)
   const [completeOnCreate, setCompleteOnCreate] = useState(false)
   const [serviceType, setServiceType] = useState<DemandServiceType>('installation')
@@ -90,6 +124,11 @@ export function CreateExternalDemandForm({
   const [scannedBarcodes, setScannedBarcodes] = useState<ScannedBarcode[]>([])
   const [scanPending, setScanPending] = useState(false)
   const [clientError, setClientError] = useState<string | null>(null)
+  const [pricingCheckPending, setPricingCheckPending] = useState(false)
+  const [missingPrice, setMissingPrice] = useState<ExternalDemandMissingPrice | null>(null)
+  const [inlinePriceCad, setInlinePriceCad] = useState('')
+  const [inlinePricePending, setInlinePricePending] = useState(false)
+  const [inlinePriceMessage, setInlinePriceMessage] = useState<string | null>(null)
 
   const selectedDealer = dealers.find((d) => d.id === selectedDealerId)
   const dealerTimezone = useMemo(
@@ -100,25 +139,218 @@ export function CreateExternalDemandForm({
     [selectedDealer]
   )
 
+  const collectDraft = useCallback((): ExternalDemandFormDraft => {
+    return {
+      version: 1,
+      selectedDealerId,
+      assignedSpecialistId,
+      completeOnCreate,
+      serviceType,
+      firstName,
+      lastName,
+      phone,
+      address,
+      vehicleYear,
+      stockNumber,
+      vinLast6,
+      selectedMake,
+      selectedModel,
+      selectedTrim,
+      customModel,
+      selectedCameraId,
+      customCamera,
+      cameraNameForSubmit,
+      comment,
+      isFutureCustomer,
+      appointmentDate,
+      scannedBarcodes,
+    }
+  }, [
+    selectedDealerId,
+    assignedSpecialistId,
+    completeOnCreate,
+    serviceType,
+    firstName,
+    lastName,
+    phone,
+    address,
+    vehicleYear,
+    stockNumber,
+    vinLast6,
+    selectedMake,
+    selectedModel,
+    selectedTrim,
+    customModel,
+    selectedCameraId,
+    customCamera,
+    cameraNameForSubmit,
+    comment,
+    isFutureCustomer,
+    appointmentDate,
+    scannedBarcodes,
+  ])
+
+  const applyDraft = useCallback((draft: ExternalDemandFormDraft) => {
+    restoringDraftRef.current = true
+    prevDealerIdRef.current = draft.selectedDealerId
+    setSelectedDealerId(draft.selectedDealerId)
+    setAssignedSpecialistId(draft.assignedSpecialistId)
+    setCompleteOnCreate(draft.completeOnCreate)
+    setServiceType(draft.serviceType)
+    setFirstName(draft.firstName)
+    setLastName(draft.lastName)
+    setPhone(draft.phone)
+    setAddress(draft.address)
+    setVehicleYear(draft.vehicleYear)
+    setStockNumber(draft.stockNumber)
+    setVinLast6(draft.vinLast6)
+    setSelectedMake(draft.selectedMake)
+    setSelectedModel(draft.selectedModel)
+    setSelectedTrim(draft.selectedTrim)
+    setCustomModel(draft.customModel)
+    setSelectedCameraId(draft.selectedCameraId)
+    setCustomCamera(draft.customCamera)
+    setCameraNameForSubmit(draft.cameraNameForSubmit)
+    setComment(draft.comment)
+    setIsFutureCustomer(draft.isFutureCustomer)
+    setAppointmentDate(draft.appointmentDate)
+    setScannedBarcodes(draft.scannedBarcodes)
+    queueMicrotask(() => {
+      restoringDraftRef.current = false
+    })
+  }, [])
+
+  useLayoutEffect(() => {
+    if (!isOpen) return
+    if (typeof sessionStorage === 'undefined') return
+    if (sessionStorage.getItem(EXTERNAL_DEMAND_RESTORE_FLAG) !== '1') return
+    const stored = loadExternalDemandDraft()
+    if (stored) applyDraft(stored)
+  }, [isOpen, applyDraft])
+
+  useLayoutEffect(() => {
+    if (!state?.error) return
+    const stored = state.draft ?? loadExternalDemandDraft()
+    if (stored) {
+      applyDraft(stored)
+      saveExternalDemandDraft(stored)
+    }
+  }, [state?.error, state?.draft, applyDraft])
+
   useEffect(() => {
-    if (selectedDealerId) {
-      getCameraModelsForDealer(selectedDealerId).then(setCameraModels)
-    } else {
+    if (!isOpen) return
+    const timer = window.setTimeout(() => {
+      saveExternalDemandDraft(collectDraft())
+    }, 350)
+    return () => window.clearTimeout(timer)
+  }, [collectDraft, isOpen])
+
+  useEffect(() => {
+    if (state?.success) {
+      clearExternalDemandDraft()
+      if (typeof sessionStorage !== 'undefined') {
+        sessionStorage.removeItem(EXTERNAL_DEMAND_RESTORE_FLAG)
+      }
+      onSuccess?.()
+    }
+  }, [state?.success, onSuccess])
+
+  useEffect(() => {
+    if (!selectedDealerId) {
       setCameraModels([])
+      setCamerasLoading(false)
+      return
+    }
+    let cancelled = false
+    setCamerasLoading(true)
+    getCameraModelsForDealer(selectedDealerId).then((models) => {
+      if (cancelled) return
+      setCameraModels(models)
+      setCamerasLoading(false)
+    })
+    return () => {
+      cancelled = true
     }
   }, [selectedDealerId])
 
   useEffect(() => {
-    if (state?.success) {
-      onSuccess?.()
+    if (restoringDraftRef.current) {
+      prevDealerIdRef.current = selectedDealerId
+      return
     }
-  }, [state?.success, onSuccess])
+    if (prevDealerIdRef.current === null) {
+      prevDealerIdRef.current = selectedDealerId
+      return
+    }
+    if (prevDealerIdRef.current !== selectedDealerId) {
+      prevDealerIdRef.current = selectedDealerId
+      setSelectedCameraId('')
+      setCustomCamera('')
+      setCameraNameForSubmit('')
+    }
+  }, [selectedDealerId])
+
+  useEffect(() => {
+    if (restoringDraftRef.current) {
+      prevSpecialistIdRef.current = assignedSpecialistId
+      return
+    }
+    if (prevSpecialistIdRef.current === null) {
+      prevSpecialistIdRef.current = assignedSpecialistId
+      return
+    }
+    if (prevSpecialistIdRef.current !== assignedSpecialistId && scannedBarcodes.length > 0) {
+      setScannedBarcodes([])
+      setClientError('Specialist changed — re-scan barcodes from that specialist’s field stock.')
+    }
+    prevSpecialistIdRef.current = assignedSpecialistId
+  }, [assignedSpecialistId, scannedBarcodes.length])
+
+  useEffect(() => {
+    const unitIds = scannedBarcodes.map((b) => b.cameraModelId).filter(Boolean)
+    if (!selectedDealerId || unitIds.length === 0) return
+
+    let cancelled = false
+    void suggestExternalDemandCameraModel(selectedDealerId, unitIds).then((result) => {
+      if (cancelled || !('ok' in result) || !result.ok) return
+      setSelectedCameraId(result.cameraModelId)
+      setCustomCamera('')
+      setCameraNameForSubmit(result.cameraModelName)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [scannedBarcodes, selectedDealerId])
 
   useEffect(() => {
     if (barcodeModeEnabled && isFutureCustomer) {
       setCompleteOnCreate(true)
     }
   }, [barcodeModeEnabled, isFutureCustomer])
+
+  async function handleSaveInlinePrice() {
+    if (!missingPrice) return
+    const price = parseFloat(inlinePriceCad)
+    if (!Number.isFinite(price) || price < 0) {
+      setInlinePriceMessage('Enter a valid price (0 or greater).')
+      return
+    }
+    setInlinePricePending(true)
+    setInlinePriceMessage(null)
+    const result = await saveDealerInstallationPriceForExternalDemand({
+      dealerId: missingPrice.dealerId,
+      cameraModelId: missingPrice.cameraModelId,
+      priceCad: price,
+    })
+    setInlinePricePending(false)
+    if (result.error) {
+      setInlinePriceMessage(result.error)
+      return
+    }
+    setInlinePriceMessage('Price saved — submit again to create the demand.')
+    setMissingPrice(null)
+    setClientError(null)
+  }
 
   async function addScannedBarcode() {
     const raw = barcodeInput.trim()
@@ -137,7 +369,10 @@ export function CreateExternalDemandForm({
       return
     }
     if ('ok' in preview && preview.ok) {
-      setScannedBarcodes((prev) => [...prev, { code: preview.code, modelName: preview.modelName }])
+      setScannedBarcodes((prev) => [
+        ...prev,
+        { code: preview.code, modelName: preview.modelName, cameraModelId: preview.cameraModelId },
+      ])
       setBarcodeInput('')
     }
   }
@@ -145,6 +380,13 @@ export function CreateExternalDemandForm({
   const showBarcodeOnComplete = barcodeModeEnabled && completeOnCreate
   const barcodeRequiredOnComplete =
     showBarcodeOnComplete && isBarcodeRequiredForServiceType(serviceType)
+  const installationCompletedOnCreate = completeOnCreate && serviceType === 'installation'
+  const allowCustomCamera = !installationCompletedOnCreate
+  const selectedCatalogCamera = cameraModels.find((c) => c.id === selectedCameraId)
+  const submitCameraModelName =
+    selectedCameraId === CAMERA_CUSTOM
+      ? customCamera
+      : selectedCatalogCamera?.name ?? cameraNameForSubmit
   const specialistRequiredForBarcodes =
     showBarcodeOnComplete &&
     (isBarcodeRequiredForServiceType(serviceType) || scannedBarcodes.length > 0)
@@ -224,18 +466,75 @@ export function CreateExternalDemandForm({
 
   return (
     <form
-      action={formAction}
       className="space-y-6"
-      onSubmit={(e) => {
+      onSubmit={async (e) => {
+        e.preventDefault()
+        setClientError(null)
+        setInlinePriceMessage(null)
         if (barcodeRequiredOnComplete && scannedBarcodes.length === 0) {
-          e.preventDefault()
           setClientError('Scan at least one product barcode (Enter after each scan).')
           return
         }
         if (specialistRequiredForBarcodes && !assignedSpecialistId) {
-          e.preventDefault()
           setClientError('Select a specialist — barcodes are taken from their field stock.')
+          return
         }
+        if (installationCompletedOnCreate && !submitCameraModelName.trim()) {
+          setClientError(
+            'Select a camera from the dealer list or scan unit barcodes so pricing can match the catalog.'
+          )
+          return
+        }
+
+        const form = e.currentTarget
+        const draft = collectDraft()
+        saveExternalDemandDraft(draft)
+        if (typeof sessionStorage !== 'undefined') {
+          sessionStorage.setItem(EXTERNAL_DEMAND_RESTORE_FLAG, '1')
+        }
+
+        const fd = new FormData(form)
+        fd.set('draftPayload', JSON.stringify(draft))
+
+        if (
+          completeOnCreate &&
+          assignedSpecialistId &&
+          scannedBarcodes.length > 0
+        ) {
+          setPricingCheckPending(true)
+          const barcodeValidation = await validateExternalDemandBarcodes(
+            assignedSpecialistId,
+            scannedBarcodes.map((b) => b.code)
+          )
+          if ('error' in barcodeValidation) {
+            setPricingCheckPending(false)
+            setClientError(barcodeValidation.error)
+            saveExternalDemandDraft(draft)
+            applyDraft(draft)
+            return
+          }
+        }
+
+        if (completeOnCreate && serviceType) {
+          const preview = await previewExternalDemandCompletionPricing(fd)
+          setPricingCheckPending(false)
+          if ('error' in preview && preview.error) {
+            setClientError(preview.error)
+            if ('missingPrice' in preview && preview.missingPrice) {
+              setMissingPrice(preview.missingPrice)
+            }
+            saveExternalDemandDraft(draft)
+            applyDraft(draft)
+            return
+          }
+          setMissingPrice(null)
+        } else {
+          setPricingCheckPending(false)
+        }
+
+        startTransition(() => {
+          formAction(fd)
+        })
       }}
     >
       <div>
@@ -246,6 +545,40 @@ export function CreateExternalDemandForm({
       {(state?.error || clientError) && (
         <div className="bg-red-900/50 border border-red-800 text-red-200 p-3 rounded-md text-sm">
           {clientError ?? state?.error}
+        </div>
+      )}
+
+      {missingPrice && (
+        <div className="rounded-md border border-amber-700/50 bg-amber-950/40 p-4 space-y-3 text-sm">
+          <p className="text-amber-100">
+            Missing installation price for{' '}
+            <strong>
+              {missingPrice.dealerName} / {missingPrice.cameraModelName}
+            </strong>
+            . Enter the dealer price here (same as Inventory → Pricing) without leaving this form.
+          </p>
+          <div className="flex flex-wrap items-end gap-2">
+            <label className="flex-1 min-w-[8rem]">
+              <span className="block text-xs text-amber-200/80 mb-1">Price (CAD)</span>
+              <input
+                type="number"
+                min={0}
+                step="0.01"
+                value={inlinePriceCad}
+                onChange={(ev) => setInlinePriceCad(ev.target.value)}
+                className="w-full rounded-md border border-amber-800/60 bg-black/40 px-3 py-2 text-white"
+              />
+            </label>
+            <button
+              type="button"
+              disabled={inlinePricePending}
+              onClick={() => void handleSaveInlinePrice()}
+              className="shrink-0 rounded-md bg-[#C27E00] px-4 py-2 text-white hover:bg-[#a06900] disabled:opacity-50"
+            >
+              {inlinePricePending ? 'Saving…' : 'Save price'}
+            </button>
+          </div>
+          {inlinePriceMessage && <p className="text-xs text-amber-200">{inlinePriceMessage}</p>}
         </div>
       )}
 
@@ -587,50 +920,115 @@ export function CreateExternalDemandForm({
         <h3 className="col-span-full text-sm font-medium text-zinc-900 dark:text-white border-t border-zinc-200 dark:border-gray-800 pt-4 mt-4">Camera</h3>
         <div>
           <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300">Camera Model *</label>
-          {cameraModels.length > 0 ? (
+          {camerasLoading ? (
+            <select disabled className={`${inputClass} opacity-70`}>
+              <option>Loading dealer cameras…</option>
+            </select>
+          ) : cameraModels.length > 0 ? (
             <div className="space-y-1">
               <select
-                value={selectedCamera}
+                value={selectedCameraId}
                 onChange={(e) => {
-                  setSelectedCamera(e.target.value)
+                  const next = e.target.value
+                  setSelectedCameraId(next)
                   setCustomCamera('')
+                  if (next && next !== CAMERA_CUSTOM) {
+                    const cam = cameraModels.find((c) => c.id === next)
+                    setCameraNameForSubmit(cam?.name ?? '')
+                  } else {
+                    setCameraNameForSubmit('')
+                  }
                 }}
-                required
+                required={selectedCameraId !== CAMERA_CUSTOM}
                 className={inputClass}
               >
                 <option value="">-- Select --</option>
                 {cameraModels.map((c) => (
-                  <option key={c.id} value={c.name} className="bg-white text-zinc-900 dark:bg-black dark:text-white">
+                  <option key={c.id} value={c.id} className="bg-white text-zinc-900 dark:bg-black dark:text-white">
                     {c.label ?? c.name}
                   </option>
                 ))}
-                <option value="__custom__" className="bg-white text-zinc-900 dark:bg-black dark:text-white">
-                  Other
-                </option>
+                {!selectedCatalogCamera &&
+                  selectedCameraId &&
+                  selectedCameraId !== CAMERA_CUSTOM &&
+                  cameraNameForSubmit && (
+                    <option value={selectedCameraId} className="bg-white text-zinc-900 dark:bg-black dark:text-white">
+                      {cameraNameForSubmit} (from scanned units)
+                    </option>
+                  )}
+                {allowCustomCamera && (
+                  <option value={CAMERA_CUSTOM} className="bg-white text-zinc-900 dark:bg-black dark:text-white">
+                    Other
+                  </option>
+                )}
               </select>
-              {selectedCamera === '__custom__' && (
+              {installationCompletedOnCreate && (
+                <p className="text-xs text-zinc-500 dark:text-gray-500">
+                  Completed installs use dealer catalog pricing — pick a camera from the list or scan unit barcodes to
+                  auto-select a set.
+                </p>
+              )}
+              {selectedCameraId === CAMERA_CUSTOM && (
                 <input
                   type="text"
                   value={customCamera}
                   onChange={(e) => setCustomCamera(e.target.value)}
                   placeholder="Camera model"
                   required
-                  name="cameraModel"
                   className={inputClass}
                 />
               )}
-              {selectedCamera && selectedCamera !== '__custom__' && (
-                <input type="hidden" name="cameraModel" value={selectedCamera} />
+              {submitCameraModelName.trim() && selectedCameraId !== CAMERA_CUSTOM && (
+                <>
+                  <input type="hidden" name="cameraModel" value={submitCameraModelName} />
+                  <input type="hidden" name="cameraModelId" value={selectedCameraId} />
+                </>
+              )}
+              {selectedCameraId === CAMERA_CUSTOM && customCamera.trim() && (
+                <input type="hidden" name="cameraModel" value={customCamera} />
               )}
             </div>
           ) : (
-            <input name="cameraModel" required className={inputClass} placeholder="Enter camera model" />
+            <div className="space-y-1">
+              {selectedCameraId && cameraNameForSubmit ? (
+                <>
+                  <input
+                    readOnly
+                    value={cameraNameForSubmit}
+                    className={`${inputClass} opacity-90`}
+                    aria-label="Camera model from scanned units"
+                  />
+                  <input type="hidden" name="cameraModel" value={cameraNameForSubmit} />
+                  <input type="hidden" name="cameraModelId" value={selectedCameraId} />
+                </>
+              ) : (
+                <input
+                  name="cameraModel"
+                  required
+                  value={customCamera}
+                  onChange={(e) => setCustomCamera(e.target.value)}
+                  className={inputClass}
+                  placeholder="Enter camera model"
+                />
+              )}
+              <p className="text-xs text-amber-700 dark:text-amber-300">
+                No cameras assigned to this dealer for booking — assign cameras in System Management or scan unit
+                barcodes below to infer the set.
+              </p>
+            </div>
           )}
         </div>
 
         <div className="sm:col-span-2">
           <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300">Comment</label>
-          <textarea name="comment" rows={2} className={inputClass} placeholder="Optional" />
+          <textarea
+            name="comment"
+            rows={2}
+            value={comment}
+            onChange={(e) => setComment(e.target.value)}
+            className={inputClass}
+            placeholder="Optional"
+          />
         </div>
 
         {barcodeFields}
@@ -648,10 +1046,10 @@ export function CreateExternalDemandForm({
         )}
         <button
           type="submit"
-          disabled={isPending}
+          disabled={isPending || pricingCheckPending}
           className="px-4 py-2 text-sm font-medium text-white bg-[#C27E00] hover:bg-[#a06900] rounded-md disabled:opacity-50"
         >
-          {isPending ? 'Creating...' : 'Create External Demand'}
+          {pricingCheckPending ? 'Checking price…' : isPending ? 'Creating...' : 'Create External Demand'}
         </button>
       </div>
     </form>

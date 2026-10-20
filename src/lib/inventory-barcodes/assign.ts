@@ -21,7 +21,7 @@ async function insertBarcodeEvent(
   })
 }
 
-async function fetchBarcodeByCode(
+export async function fetchBarcodeByCode(
   supabase: SupabaseClient,
   code: string
 ): Promise<InventoryBarcodeRow | null> {

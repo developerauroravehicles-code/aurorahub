@@ -6,7 +6,7 @@
  * - One unit is consumed from the dealer inventory location.
  * - If assigned_specialist_id is set, one unit is also consumed from that specialist's field location.
  *
- * Idempotency is per demand + from_location (two consumption rows max per demand).
+ * Idempotency is per demand + from_location + camera model (barcode consume may increment quantity).
  * Specialist field stock is assigned via dealer → specialist transfer in Inventory admin.
  */
 export const INVENTORY_V2_CONSUMPTION_NOTE =

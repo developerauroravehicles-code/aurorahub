@@ -1,8 +1,11 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { ensureSpecialistLocation } from '@/lib/inventory-v2/locations'
 import type { DemandServiceType } from '@/lib/demand-pricing'
+import { fetchBarcodeByCode } from './assign'
 import { normalizeBarcodeCode } from './code-generator'
 import type { InventoryBarcodeRow } from './types'
+import { recordConsumptionMovement } from './consumption-movement'
+import { rollbackDemandBarcodeConsumption } from './rollback-demand-consumption'
 
 async function insertBarcodeEvent(
   supabase: SupabaseClient,
@@ -21,37 +24,46 @@ async function insertBarcodeEvent(
   })
 }
 
-async function recordConsumptionMovement(
-  supabase: SupabaseClient,
-  input: {
-    cameraModelId: string
-    fromLocationId: string
-    demandId: string
-    note: string
+async function explainBarcodeSpecialistMismatch(
+  adminSupabase: SupabaseClient,
+  barcode: InventoryBarcodeRow,
+  specialistId: string
+): Promise<string> {
+  if (barcode.kind === 'set') {
+    return 'This is a set container label — scan each unit product label (Nova, battery, etc.), not the set batch label.'
   }
-): Promise<{ error?: string }> {
-  const { data: existing } = await supabase
-    .from('inventory_movements_v2')
-    .select('id')
-    .eq('reference_demand_id', input.demandId)
-    .eq('movement_type', 'consumption')
-    .eq('from_location_id', input.fromLocationId)
-    .eq('camera_model_id', input.cameraModelId)
-    .maybeSingle()
-
-  if (existing) return {}
-
-  const { error } = await supabase.from('inventory_movements_v2').insert({
-    camera_model_id: input.cameraModelId,
-    movement_type: 'consumption',
-    quantity: 1,
-    from_location_id: input.fromLocationId,
-    reference_demand_id: input.demandId,
-    note: input.note,
-  })
-
-  if (error) return { error: error.message }
-  return {}
+  if (barcode.kind !== 'unit') {
+    return 'Not a unit product barcode.'
+  }
+  if (barcode.status === 'void') {
+    return 'This label was voided. Register or generate a replacement unit barcode and assign it to the specialist.'
+  }
+  if (barcode.status === 'consumed') {
+    return 'This label is already consumed on another completed job.'
+  }
+  if (barcode.status === 'generated') {
+    return 'Label is in warehouse (generated) — assign it to the specialist in Inventory before scanning here.'
+  }
+  if (barcode.status === 'at_dealer') {
+    return 'Label is on dealer stock — assign it to the specialist field stock in Inventory first.'
+  }
+  if (barcode.status !== 'at_specialist') {
+    return `Label status is "${barcode.status}" — expected specialist field stock.`
+  }
+  if (barcode.specialist_id !== specialistId) {
+    const otherId = barcode.specialist_id as string | null
+    if (otherId) {
+      const { data: other } = await adminSupabase
+        .from('profiles')
+        .select('full_name')
+        .eq('id', otherId)
+        .maybeSingle()
+      const name = other?.full_name?.trim() || 'another specialist'
+      return `Label is on ${name}'s field stock — select that specialist or re-assign the label.`
+    }
+    return 'Label is not linked to the selected specialist.'
+  }
+  return 'Invalid barcode or not on the selected specialist field stock'
 }
 
 export async function lookupUnitBarcodeAtSpecialist(
@@ -66,31 +78,55 @@ export async function lookupUnitBarcodeAtSpecialist(
   if (!normalized) return { error: 'Enter a barcode' }
   if (!specialistId) return { error: 'Select a specialist first' }
 
-  const { data: rows, error } = await adminSupabase
-    .from('inventory_barcodes')
-    .select('id, code, camera_model_id, status, specialist_id, kind, camera_models(name)')
-    .eq('kind', 'unit')
-    .eq('status', 'at_specialist')
-    .eq('specialist_id', specialistId)
-
-  if (error) return { error: error.message }
-
-  const match = (rows ?? []).find(
-    (b) => normalizeBarcodeCode(String(b.code ?? '')) === normalized
-  )
-  if (!match) {
-    return { error: 'Invalid barcode or not on the selected specialist field stock' }
+  const barcode = await fetchBarcodeByCode(adminSupabase, normalized)
+  if (!barcode) {
+    return { error: 'Barcode not found in registry — check the code or use Register printed label.' }
   }
-  if (!match.camera_model_id) return { error: 'Barcode has no camera model' }
 
-  const modelJoin = match.camera_models as { name?: string } | { name?: string }[] | null
-  const modelName = Array.isArray(modelJoin) ? modelJoin[0]?.name : modelJoin?.name
+  if (
+    barcode.kind !== 'unit' ||
+    barcode.status !== 'at_specialist' ||
+    barcode.specialist_id !== specialistId
+  ) {
+    const detail = await explainBarcodeSpecialistMismatch(adminSupabase, barcode, specialistId)
+    return { error: detail }
+  }
+
+  if (!barcode.camera_model_id) return { error: 'Barcode has no camera model' }
+
+  const { data: cam } = await adminSupabase
+    .from('camera_models')
+    .select('name')
+    .eq('id', barcode.camera_model_id)
+    .maybeSingle()
 
   return {
-    barcodeId: match.id,
-    cameraModelId: match.camera_model_id as string,
-    cameraModelName: modelName ?? null,
+    barcodeId: barcode.id,
+    cameraModelId: barcode.camera_model_id as string,
+    cameraModelName: cam?.name ?? null,
   }
+}
+
+/** Dry-run: all unit codes must be on the selected specialist before creating a demand. */
+export async function validateUnitBarcodesAtSpecialist(
+  adminSupabase: SupabaseClient,
+  codes: string[],
+  specialistId: string
+): Promise<{ ok: true } | { error: string }> {
+  if (!specialistId.trim()) {
+    return { error: 'Select the specialist whose field stock these barcodes belong to.' }
+  }
+  const seen = new Set<string>()
+  for (const raw of codes) {
+    const code = normalizeBarcodeCode(raw)
+    if (!code) continue
+    const key = code.toLowerCase()
+    if (seen.has(key)) return { error: `Duplicate barcode in list: ${code}` }
+    seen.add(key)
+    const resolved = await lookupUnitBarcodeAtSpecialist(adminSupabase, code, specialistId)
+    if ('error' in resolved) return { error: `${code}: ${resolved.error}` }
+  }
+  return { ok: true }
 }
 
 export async function consumeBarcodeForDemand(
@@ -145,29 +181,27 @@ export async function consumeBarcodeForDemand(
   const cameraModelId = barcode.camera_model_id as string | null
   if (!cameraModelId) return { error: 'Barcode has no camera model' }
 
-  if (input.serviceType === 'installation') {
-    const { data: specialist } = await adminSupabase
-      .from('profiles')
-      .select('full_name')
-      .eq('id', input.specialistId)
-      .maybeSingle()
+  const { data: specialist } = await adminSupabase
+    .from('profiles')
+    .select('full_name')
+    .eq('id', input.specialistId)
+    .maybeSingle()
 
-    const specialistLocationId = await ensureSpecialistLocation(
-      adminSupabase,
-      input.specialistId,
-      specialist?.full_name
-    )
+  const specialistLocationId = await ensureSpecialistLocation(
+    adminSupabase,
+    input.specialistId,
+    specialist?.full_name
+  )
 
-    // Physical unit is on specialist field stock; dealer was never stocked or already transferred out on assign.
-    if (specialistLocationId) {
-      const specialistConsume = await recordConsumptionMovement(adminSupabase, {
-        cameraModelId,
-        fromLocationId: specialistLocationId,
-        demandId: input.demandId,
-        note: `Barcode ${barcode.code} consumption (specialist)`,
-      })
-      if (specialistConsume.error) return { error: specialistConsume.error }
-    }
+  // Scanned unit leaves specialist field stock — ledger consumption for all service types (install/transfer/removal).
+  if (specialistLocationId) {
+    const specialistConsume = await recordConsumptionMovement(adminSupabase, {
+      cameraModelId,
+      fromLocationId: specialistLocationId,
+      demandId: input.demandId,
+      note: `Barcode ${barcode.code} consumption (specialist, ${input.serviceType})`,
+    })
+    if (specialistConsume.error) return { error: specialistConsume.error }
   }
 
   const now = new Date().toISOString()
@@ -240,9 +274,15 @@ export async function consumeBarcodesForDemand(
       adminResolveForSpecialist: input.adminResolveForSpecialist,
     })
     if (result.error) {
+      const rollback = await rollbackDemandBarcodeConsumption(adminSupabase, {
+        demandId: input.demandId,
+        actorId: input.actorId,
+        reason: `Rollback after failed consume of ${code}`,
+      })
+      const rollbackNote = rollback.error ? ` Rollback warning: ${rollback.error}` : ''
       return {
-        cameraModelIds,
-        error: `${code}: ${result.error}`,
+        cameraModelIds: [],
+        error: `${code}: ${result.error}${rollbackNote}`,
       }
     }
     if (result.cameraModelId) cameraModelIds.push(result.cameraModelId)

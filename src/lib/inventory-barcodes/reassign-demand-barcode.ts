@@ -132,13 +132,22 @@ export async function changeDemandInstalledBarcode(
   if (input.serviceType === 'installation' && newBarcode.camera_model_id && specialistLocationId) {
     const { data: existingMove } = await adminSupabase
       .from('inventory_movements_v2')
-      .select('id')
+      .select('id, quantity')
       .eq('reference_demand_id', input.demandId)
       .eq('movement_type', 'consumption')
       .eq('from_location_id', specialistLocationId)
+      .eq('camera_model_id', newBarcode.camera_model_id)
       .maybeSingle()
 
-    if (!existingMove) {
+    if (existingMove) {
+      await adminSupabase
+        .from('inventory_movements_v2')
+        .update({
+          quantity: (existingMove.quantity ?? 1) + 1,
+          note: `Barcode ${newBarcode.code} consumption (specialist) after reassignment`,
+        })
+        .eq('id', existingMove.id)
+    } else {
       await adminSupabase.from('inventory_movements_v2').insert({
         camera_model_id: newBarcode.camera_model_id,
         movement_type: 'consumption',

@@ -30,7 +30,7 @@ export async function releaseConsumedBarcode(
   supabase: SupabaseClient,
   input: {
     barcodeId: string
-    actorId: string
+    actorId: string | null
     reason: string
   }
 ): Promise<{ error?: string }> {

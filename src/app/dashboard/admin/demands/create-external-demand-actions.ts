@@ -8,9 +8,8 @@ import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 import { getTimezoneFromDealer } from '@/lib/dealer-timezone'
 import { wallDateToAppointmentIso } from '@/lib/external-demand-date'
-import { lookupCameraModelId } from '@/lib/camera-model-resolve'
+import type { ExternalDemandFormDraft } from '@/lib/external-demand-form-draft'
 import {
-  calculateDemandInvoiceAmount,
   DemandServiceType,
   isBarcodeRequiredForServiceType,
   isDemandServiceType,
@@ -21,7 +20,19 @@ import {
   consumeBarcodesForDemand,
   isBarcodeModeEnabled,
   lookupUnitBarcodeAtSpecialist,
+  rollbackDemandBarcodeConsumption,
+  validateUnitBarcodesAtSpecialist,
 } from '@/lib/inventory-barcodes'
+import { inferBookingCameraFromScannedUnits } from '@/lib/camera-model-infer-from-units'
+import {
+  getActiveCameraModelById,
+  lookupCameraModelId,
+} from '@/lib/camera-model-resolve'
+import {
+  resolveExternalDemandCameraAndPrice,
+  type ExternalDemandMissingPrice,
+} from './create-external-demand-pricing'
+import { upsertInventoryPricingRule } from '@/app/dashboard/admin/inventory/actions'
 
 const schema = z.object({
   dealerId: z.string().min(1, 'Dealer is required'),
@@ -43,46 +54,48 @@ const schema = z.object({
   assignedSpecialistId: z.string().optional().transform(v => (v && v.trim() ? v.trim() : undefined)),
 })
 
-export type CreateExternalDemandState = { error?: string; success?: boolean; fieldErrors?: Record<string, string[]> } | null
+export type CreateExternalDemandState = {
+  error?: string
+  success?: boolean
+  fieldErrors?: Record<string, string[]>
+  draft?: ExternalDemandFormDraft
+} | null
 
-export async function previewExternalDemandBarcode(specialistId: string, code: string) {
+function parseDraftPayload(formData: FormData): ExternalDemandFormDraft | undefined {
+  const raw = formData.get('draftPayload')
+  if (!raw || typeof raw !== 'string') return undefined
+  try {
+    const parsed = JSON.parse(raw) as ExternalDemandFormDraft
+    if (parsed?.version === 1) return parsed
+  } catch {
+    /* ignore */
+  }
+  return undefined
+}
+
+function withDraft(
+  formData: FormData,
+  body: Omit<NonNullable<CreateExternalDemandState>, 'draft'>
+): CreateExternalDemandState {
+  const draft = parseDraftPayload(formData)
+  return draft ? { ...body, draft } : body
+}
+
+async function requireAuroraManager() {
   const supabase = await createClient()
   const {
     data: { user },
   } = await supabase.auth.getUser()
   if (!user) return { error: 'Unauthorized' as const }
 
-  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
-  if (!profile || profile.role !== 'aurora_manager') {
-    return { error: 'Only Aurora Managers can scan barcodes here' as const }
-  }
-
-  const trimmed = code.trim()
-  if (!trimmed) return { error: 'Enter a barcode' as const }
-  if (!specialistId.trim()) return { error: 'Select a specialist before scanning barcodes' as const }
-
-  const admin = createAdminClient()
-  const resolved = await lookupUnitBarcodeAtSpecialist(admin, trimmed, specialistId.trim())
-  if ('error' in resolved) return { error: resolved.error as string }
-
-  return {
-    ok: true as const,
-    code: trimmed.toUpperCase(),
-    modelName: resolved.cameraModelName ?? 'Unit',
-  }
-}
-
-export async function createExternalDemand(prevState: CreateExternalDemandState, formData: FormData): Promise<CreateExternalDemandState> {
-  const supabase = await createClient()
-
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { error: 'Unauthorized' }
-
   const { data: profile } = await supabase.from('profiles').select('id, role').eq('id', user.id).single()
   if (!profile || profile.role !== 'aurora_manager') {
-    return { error: 'Only Aurora Managers can create external demands' }
+    return { error: 'Only Aurora Managers can create external demands' as const }
   }
+  return { supabase, user, profile }
+}
 
+function readParsedForm(formData: FormData) {
   const rawData = {
     dealerId: formData.get('dealerId'),
     firstName: formData.get('firstName'),
@@ -99,16 +112,146 @@ export async function createExternalDemand(prevState: CreateExternalDemandState,
     comment: formData.get('comment'),
     assignedSpecialistId: formData.get('assignedSpecialistId'),
   }
+  return schema.safeParse(rawData)
+}
 
-  const result = schema.safeParse(rawData)
+export async function previewExternalDemandBarcode(specialistId: string, code: string) {
+  const auth = await requireAuroraManager()
+  if ('error' in auth) return { error: auth.error ?? 'Unauthorized' }
+
+  const trimmed = code.trim()
+  if (!trimmed) return { error: 'Enter a barcode' as const }
+  if (!specialistId.trim()) return { error: 'Select a specialist before scanning barcodes' as const }
+
+  const admin = createAdminClient()
+  const resolved = await lookupUnitBarcodeAtSpecialist(admin, trimmed, specialistId.trim())
+  if ('error' in resolved) return { error: resolved.error as string }
+
+  return {
+    ok: true as const,
+    code: trimmed.toUpperCase(),
+    modelName: resolved.cameraModelName ?? 'Unit',
+    cameraModelId: resolved.cameraModelId,
+  }
+}
+
+/** Suggest booking catalog camera from scanned unit model ids (set template or single unit). */
+export async function suggestExternalDemandCameraModel(
+  dealerId: string,
+  unitCameraModelIds: string[]
+) {
+  const auth = await requireAuroraManager()
+  if ('error' in auth) return { error: auth.error ?? 'Unauthorized' }
+
+  if (!dealerId.trim()) return { error: 'Select a dealer first' as const }
+
+  const inferred = await inferBookingCameraFromScannedUnits(auth.supabase, unitCameraModelIds)
+  if (!inferred) return { error: 'Could not match scanned units to a catalog camera' as const }
+
+  return {
+    ok: true as const,
+    cameraModelId: inferred.cameraModelId,
+    cameraModelName: inferred.cameraModelName,
+  }
+}
+
+/** Validate completion pricing before submit (no DB writes). */
+export async function previewExternalDemandCompletionPricing(formData: FormData) {
+  const auth = await requireAuroraManager()
+  if ('error' in auth) return { error: auth.error ?? 'Unauthorized' }
+
+  const result = readParsedForm(formData)
   if (!result.success) {
-    return { error: 'Validation failed', fieldErrors: result.error.flatten().fieldErrors }
+    return { error: 'Validation failed' as const }
+  }
+
+  const completeOnCreate = formData.get('completeOnCreate') === 'true'
+  const serviceTypeRaw = completeOnCreate ? String(formData.get('serviceType') ?? '').trim() : ''
+  if (!completeOnCreate || !isDemandServiceType(serviceTypeRaw)) {
+    return { ok: true as const, skipped: true as const }
+  }
+
+  const barcodeCodes = formData
+    .getAll('barcodeCodes')
+    .map((v) => String(v).trim())
+    .filter(Boolean)
+
+  const resolved = await resolveExternalDemandCameraAndPrice(auth.supabase, {
+    dealerId: result.data.dealerId,
+    cameraModel: result.data.cameraModel,
+    cameraModelIdFromForm: String(formData.get('cameraModelId') ?? '').trim(),
+    completeOnCreate: true,
+    serviceType: serviceTypeRaw,
+    barcodeCodes,
+    assignedSpecialistId: result.data.assignedSpecialistId,
+  })
+
+  if ('error' in resolved) {
+    return {
+      error: resolved.error,
+      missingPrice: resolved.missingPrice,
+    }
+  }
+
+  return { ok: true as const, amount: resolved.amount }
+}
+
+/** Dry-run barcode checks (same rules as consume, no writes). */
+export async function validateExternalDemandBarcodes(
+  specialistId: string,
+  codes: string[]
+): Promise<{ ok: true } | { error: string }> {
+  const auth = await requireAuroraManager()
+  if ('error' in auth) return { error: auth.error ?? 'Unauthorized' }
+
+  const admin = createAdminClient()
+  return validateUnitBarcodesAtSpecialist(admin, codes, specialistId.trim())
+}
+
+export async function saveDealerInstallationPriceForExternalDemand(input: {
+  dealerId: string
+  cameraModelId: string
+  priceCad: number
+}): Promise<{ error?: string; success?: boolean }> {
+  const auth = await requireAuroraManager()
+  if ('error' in auth) return { error: auth.error ?? 'Unauthorized' }
+
+  if (!input.dealerId.trim() || !input.cameraModelId.trim()) {
+    return { error: 'Dealer and camera model are required' }
+  }
+  if (!Number.isFinite(input.priceCad) || input.priceCad < 0) {
+    return { error: 'Price must be 0 or greater' }
+  }
+
+  const fd = new FormData()
+  fd.set('scope_type', 'dealer')
+  fd.set('scope_id', input.dealerId.trim())
+  fd.set('camera_model_id', input.cameraModelId.trim())
+  fd.set('service_type', 'installation')
+  fd.set('price_cad', String(input.priceCad))
+
+  return upsertInventoryPricingRule(fd)
+}
+
+export async function createExternalDemand(
+  prevState: CreateExternalDemandState,
+  formData: FormData
+): Promise<CreateExternalDemandState> {
+  const auth = await requireAuroraManager()
+  if ('error' in auth) return { error: auth.error ?? 'Unauthorized' }
+
+  const { supabase, user, profile } = auth
+
+  const result = readParsedForm(formData)
+  if (!result.success) {
+    return withDraft(formData, {
+      error: 'Validation failed',
+      fieldErrors: result.error.flatten().fieldErrors,
+    })
   }
 
   const data = result.data
 
-  // Calendar date is a business day for the dealer: store as 12:00 in that dealer's timezone (fallback: Pacific).
-  // Use toDate(...) so server TZ (often UTC) does not skew fromZonedTime(new Date(y,m,d,...)).
   const { data: dealerRow } = await supabase
     .from('dealers')
     .select('region_codes(timezone_id, timezones(name))')
@@ -120,13 +263,15 @@ export async function createExternalDemand(prevState: CreateExternalDemandState,
   try {
     appointmentDateISO = wallDateToAppointmentIso(data.appointmentDate, tz ?? 'America/Vancouver')
   } catch {
-    return { error: 'Invalid appointment date' }
+    return withDraft(formData, { error: 'Invalid appointment date' })
   }
 
   const completeOnCreate = formData.get('completeOnCreate') === 'true'
   const serviceTypeRaw = completeOnCreate ? String(formData.get('serviceType') ?? '').trim() : ''
   if (completeOnCreate && !isDemandServiceType(serviceTypeRaw)) {
-    return { error: 'Service type is required when marking as completed on creation.' }
+    return withDraft(formData, {
+      error: 'Service type is required when marking as completed on creation.',
+    })
   }
   const serviceType = completeOnCreate ? (serviceTypeRaw as DemandServiceType) : null
 
@@ -140,34 +285,68 @@ export async function createExternalDemand(prevState: CreateExternalDemandState,
     const barcodeRequired = isBarcodeRequiredForServiceType(serviceType)
     if (barcodeRequired) {
       if (!data.assignedSpecialistId) {
-        return {
+        return withDraft(formData, {
           error:
             'Select the specialist who performed the install — barcodes are consumed from their field stock.',
-        }
+        })
       }
       if (barcodeCodes.length === 0) {
-        return { error: 'Scan at least one product barcode (unit label) before completing.' }
+        return withDraft(formData, {
+          error: 'Scan at least one product barcode (unit label) before completing.',
+        })
       }
     } else if (barcodeCodes.length > 0 && !data.assignedSpecialistId) {
-      return { error: 'Select the specialist whose field stock the scanned barcodes belong to.' }
+      return withDraft(formData, {
+        error: 'Select the specialist whose field stock the scanned barcodes belong to.',
+      })
     }
   }
 
-  const cameraModelId = await lookupCameraModelId(supabase, data.cameraModel)
+  if (
+    completeOnCreate &&
+    barcodeMode &&
+    serviceType &&
+    data.assignedSpecialistId &&
+    barcodeCodes.length > 0
+  ) {
+    const admin = createAdminClient()
+    const barcodeCheck = await validateUnitBarcodesAtSpecialist(
+      admin,
+      barcodeCodes,
+      data.assignedSpecialistId
+    )
+    if ('error' in barcodeCheck) {
+      return withDraft(formData, { error: barcodeCheck.error })
+    }
+  }
 
+  const cameraModelIdFromForm = String(formData.get('cameraModelId') ?? '').trim()
+
+  let resolvedCameraModelId =
+    (await getActiveCameraModelById(supabase, cameraModelIdFromForm))?.id ??
+    (await lookupCameraModelId(supabase, data.cameraModel))
+  let resolvedCameraModelName = data.cameraModel
   let invoiceTotalAmount: number | undefined
+
   if (completeOnCreate && serviceType) {
-    const pricingResult = await calculateDemandInvoiceAmount(supabase, {
+    const pricing = await resolveExternalDemandCameraAndPrice(supabase, {
       dealerId: data.dealerId,
-      cameraModelId,
-      cameraModelName: data.cameraModel,
+      cameraModel: data.cameraModel,
+      cameraModelIdFromForm,
+      completeOnCreate: true,
       serviceType,
+      barcodeCodes,
+      assignedSpecialistId: data.assignedSpecialistId,
     })
-    if ('error' in pricingResult) {
-      return { error: pricingResult.error }
+    if ('error' in pricing) {
+      return withDraft(formData, { error: pricing.error })
     }
-    invoiceTotalAmount = pricingResult.amount
+    invoiceTotalAmount = pricing.amount
+    resolvedCameraModelId = pricing.cameraModelId
+    resolvedCameraModelName = pricing.cameraModelName
   }
+
+  const cameraModelId = resolvedCameraModelId
 
   const insertData = {
     created_by: profile.id,
@@ -181,11 +360,10 @@ export async function createExternalDemand(prevState: CreateExternalDemandState,
     vehicle_year: data.vehicleYear,
     stock_number: data.stockNumber,
     vin_last6: data.vinLast6,
-    camera_model: data.cameraModel,
+    camera_model: resolvedCameraModelName,
     ...(cameraModelId && { camera_model_id: cameraModelId }),
     appointment_date: appointmentDateISO,
     status: completeOnCreate ? 'completed' : 'pending_finance',
-    // Statement / reporting use completed_at for month filters — must match the retroactive job date, not "now"
     ...(completeOnCreate && { completed_at: appointmentDateISO }),
     ...(completeOnCreate && serviceType && { service_type: serviceType }),
     ...(completeOnCreate && invoiceTotalAmount != null && { invoice_total_amount: invoiceTotalAmount }),
@@ -194,11 +372,12 @@ export async function createExternalDemand(prevState: CreateExternalDemandState,
     ...(data.assignedSpecialistId && { assigned_specialist_id: data.assignedSpecialistId }),
   }
 
+  // Pricing and catalog checks run above — barcodes are consumed only after a successful demand insert.
   const { data: demand, error } = await supabase.from('demands').insert(insertData).select().single()
 
   if (error) {
     console.error('External demand creation error:', error)
-    return { error: error.message || 'Failed to create demand.' }
+    return withDraft(formData, { error: error.message || 'Failed to create demand.' })
   }
 
   if (completeOnCreate) {
@@ -215,8 +394,13 @@ export async function createExternalDemand(prevState: CreateExternalDemandState,
         adminResolveForSpecialist: true,
       })
       if (consumeResult.error) {
+        await rollbackDemandBarcodeConsumption(admin, {
+          demandId: demand.id,
+          actorId: user.id,
+          reason: 'External demand create aborted after barcode consume failure',
+        })
         await admin.from('demands').delete().eq('id', demand.id)
-        return { error: consumeResult.error }
+        return withDraft(formData, { error: consumeResult.error })
       }
     }
 
@@ -228,7 +412,9 @@ export async function createExternalDemand(prevState: CreateExternalDemandState,
     actorId: user.id,
     previousStatus: null,
     newStatus: demand.status,
-    notes: completeOnCreate ? 'External demand created and marked completed by Aurora Manager' : 'External demand created by Aurora Manager',
+    notes: completeOnCreate
+      ? 'External demand created and marked completed by Aurora Manager'
+      : 'External demand created by Aurora Manager',
   }).catch(() => {})
 
   dispatchWebhooks(supabase, 'demand_created', {
@@ -255,3 +441,5 @@ export async function createExternalDemand(prevState: CreateExternalDemandState,
   revalidatePath('/dashboard/admin/daily-invoices')
   return { success: true }
 }
+
+export type { ExternalDemandMissingPrice }
