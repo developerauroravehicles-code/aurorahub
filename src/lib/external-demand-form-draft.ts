@@ -24,6 +24,7 @@ export type ExternalDemandFormDraft = {
   selectedTrim: string
   customModel: string
   selectedCameraId: string
+  selectedCameraIds: string[]
   customCamera: string
   cameraNameForSubmit: string
   comment: string

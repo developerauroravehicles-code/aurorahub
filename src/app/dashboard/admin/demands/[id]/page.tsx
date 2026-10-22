@@ -23,8 +23,11 @@ import { DemandManualSmsPanel } from '../demand-manual-sms-panel'
 import type { SMSTriggerType } from '@/lib/sms-settings'
 import { DemandInstallationNotesSection, type InstallationNoteRow } from '../demand-installation-notes-section'
 import { DemandBarcodeChangeForm } from '../demand-barcode-change-form'
+import { CompleteExternalDemandPanel } from '../complete-external-demand-panel'
 import { SERVICE_TYPE_LABELS, DemandServiceType } from '@/lib/demand-pricing'
 import { isBarcodeModeEnabled } from '@/lib/inventory-barcodes'
+import { buildLatestFieldHighlights, fieldHighlightClass, bucketActorRole } from '@/lib/demand-field-updates'
+import { DemandFieldLegend, DemandFieldWrap } from '@/components/demand-field-highlight'
 
 /** List filters (date, status, dealer) are passed on the detail URL so "Back" can restore them. */
 function demandsListHrefFromDetailSearch(
@@ -106,6 +109,8 @@ export default async function DemandDetailsPage({
   const admin = createAdminClient()
   const barcodeModeEnabled = await isBarcodeModeEnabled(supabase)
   let installedBarcodeCodes: string[] = []
+  let setInstallLabel: string | null = null
+  const demandCameraModelId = (demand as { camera_model_id?: string | null }).camera_model_id ?? null
   if (barcodeModeEnabled && demand.status === 'completed') {
     const { data: consumedRows } = await admin
       .from('inventory_barcodes')
@@ -116,9 +121,19 @@ export default async function DemandDetailsPage({
       .order('consumed_at', { ascending: true })
     installedBarcodeCodes = (consumedRows ?? []).map((r) => r.code).filter(Boolean)
   }
+  if (demandCameraModelId) {
+    const { data: bookingCamera } = await admin
+      .from('camera_models')
+      .select('name, booking_display_as_set')
+      .eq('id', demandCameraModelId)
+      .maybeSingle()
+    if (bookingCamera?.booking_display_as_set && bookingCamera.name) {
+      setInstallLabel = bookingCamera.name
+    }
+  }
   const { data: logsRows } = await admin
     .from('demand_logs')
-    .select('id, demand_id, actor_id, previous_status, new_status, notes, created_at')
+    .select('id, demand_id, actor_id, previous_status, new_status, notes, metadata, created_at')
     .eq('demand_id', id)
     .order('created_at', { ascending: false })
   const actorIds = [...new Set((logsRows ?? []).map((l: { actor_id?: string }) => l.actor_id).filter(Boolean))]
@@ -134,6 +149,14 @@ export default async function DemandDetailsPage({
     ...l,
     profiles: l.actor_id ? actorProfiles[l.actor_id as string] : null,
   }))
+
+  const fieldHighlights = buildLatestFieldHighlights(
+    (logsRows ?? []).map((l: Record<string, unknown>) => ({
+      created_at: l.created_at as string,
+      metadata: l.metadata,
+      profiles: l.actor_id ? actorProfiles[l.actor_id as string] : null,
+    }))
+  )
 
   const statusColors = {
     pending_finance: 'bg-yellow-900/50 text-yellow-300 border-yellow-800',
@@ -237,11 +260,33 @@ export default async function DemandDetailsPage({
       </div>
 
       {/* Status Badge */}
-      <div className="flex items-center gap-4">
-        <span className={`px-4 py-2 rounded-lg text-sm font-medium border ${statusColors[demand.status as keyof typeof statusColors] || 'bg-zinc-200/80 dark:bg-gray-900/50 text-zinc-600 dark:text-gray-300 border-zinc-200 dark:border-gray-800'}`}>
-          {demand.status.replace('_', ' ').toUpperCase()}
-        </span>
+      <div className="flex flex-col gap-4">
+        <div className="flex items-center gap-4">
+          <span className={`px-4 py-2 rounded-lg text-sm font-medium border ${statusColors[demand.status as keyof typeof statusColors] || 'bg-zinc-200/80 dark:bg-gray-900/50 text-zinc-600 dark:text-gray-300 border-zinc-200 dark:border-gray-800'}`}>
+            {demand.status.replace('_', ' ').toUpperCase()}
+          </span>
+          {demand.is_external ? (
+            <span className="text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-gray-400">
+              External demand
+            </span>
+          ) : null}
+        </div>
+        {isAuroraManager &&
+          demand.is_external &&
+          (demand.status === 'pending_finance' || demand.status === 'approved') &&
+          specialists &&
+          specialists.length > 0 && (
+            <CompleteExternalDemandPanel
+              demandId={id}
+              cameraModelId={(demand as { camera_model_id?: string | null }).camera_model_id ?? null}
+              specialists={specialists}
+              barcodeModeEnabled={barcodeModeEnabled}
+              initialSpecialistId={demand.assigned_specialist_id}
+            />
+          )}
       </div>
+
+      <DemandFieldLegend />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Demand ID (read-only) */}
@@ -263,6 +308,7 @@ export default async function DemandDetailsPage({
             phone={demand.customer_phone ?? ''}
             address={demand.customer_address}
             canEdit={canEditCoreFields}
+            fieldHighlights={fieldHighlights}
           />
           {barcodeModeEnabled && demand.status === 'completed' && (
             <DemandBarcodeChangeForm
@@ -271,6 +317,7 @@ export default async function DemandDetailsPage({
               specialistId={demand.assigned_specialist_id}
               serviceType={(demand.service_type as 'installation' | 'transfer' | 'removal') ?? 'installation'}
               installedBarcodeCodes={installedBarcodeCodes}
+              setInstallLabel={setInstallLabel}
               canEdit={isAuroraManager}
             />
           )}
@@ -280,10 +327,14 @@ export default async function DemandDetailsPage({
         <div className="bg-zinc-200/50 dark:bg-white/5 border border-zinc-200 dark:border-gray-800 p-6 rounded-lg">
           <h2 className="text-lg font-semibold text-zinc-900 dark:text-white mb-4">Vehicle Information</h2>
           <div className="space-y-3">
-            <div>
-              <p className="text-sm text-zinc-500 dark:text-gray-400">Vehicle</p>
-              <p className="text-zinc-900 dark:text-white font-medium">{demand.vehicle_year} {demand.vehicle_make} {demand.vehicle_model}</p>
-            </div>
+            <DemandFieldWrap field="vehicle_make" highlights={fieldHighlights}>
+              <div>
+                <p className="text-sm text-zinc-500 dark:text-gray-400">Vehicle</p>
+                <p className="text-zinc-900 dark:text-white font-medium">
+                  {demand.vehicle_year} {demand.vehicle_make} {demand.vehicle_model}
+                </p>
+              </div>
+            </DemandFieldWrap>
             <div>
               <p className="text-sm text-zinc-500 dark:text-gray-400 mb-1">Camera Model</p>
               <EditCameraModelForm
@@ -291,6 +342,7 @@ export default async function DemandDetailsPage({
                 cameraModel={demand.camera_model}
                 cameraModels={cameraModels}
                 canEdit={canEditCoreFields}
+                fieldHighlights={fieldHighlights}
               />
             </div>
             <div>
@@ -299,6 +351,7 @@ export default async function DemandDetailsPage({
                 demandId={id}
                 stockNumber={demand.stock_number}
                 canEdit={canEditCoreFields}
+                fieldHighlights={fieldHighlights}
               />
             </div>
             <div>
@@ -307,16 +360,19 @@ export default async function DemandDetailsPage({
                 demandId={id}
                 vinLast6={demand.vin_last6}
                 canEdit={canEditCoreFields}
+                fieldHighlights={fieldHighlights}
               />
             </div>
-            <div>
-              <p className="text-sm text-zinc-500 dark:text-gray-400">Appointment Date</p>
-              <p className="text-zinc-900 dark:text-white font-semibold text-[#C27E00]">
-                {demand.is_external
-                  ? formatExternalDemandDate(demand.appointment_date, displayTzForDemand)
-                  : formatInTimeZone(new Date(demand.appointment_date), displayTzForDemand, 'PPP h:mm a')}
-              </p>
-            </div>
+            <DemandFieldWrap field="appointment_date" highlights={fieldHighlights}>
+              <div>
+                <p className="text-sm text-zinc-500 dark:text-gray-400">Appointment Date</p>
+                <p className="text-zinc-900 dark:text-white font-semibold text-[#C27E00]">
+                  {demand.is_external
+                    ? formatExternalDemandDate(demand.appointment_date, displayTzForDemand)
+                    : formatInTimeZone(new Date(demand.appointment_date), displayTzForDemand, 'PPP h:mm a')}
+                </p>
+              </div>
+            </DemandFieldWrap>
           </div>
         </div>
 
@@ -470,6 +526,38 @@ export default async function DemandDetailsPage({
                     {log.notes && (
                       <p className="text-sm text-zinc-500 dark:text-gray-500 mt-1 italic">{log.notes}</p>
                     )}
+                    {Array.isArray((log.metadata as { field_changes?: unknown[] })?.field_changes) &&
+                      (log.metadata as { field_changes: { label: string; previous: string | null; next: string | null }[] })
+                        .field_changes.length > 0 && (
+                        <ul className="mt-2 space-y-1 text-sm">
+                          {(
+                            log.metadata as {
+                              field_changes: { label: string; previous: string | null; next: string | null }[]
+                              actor_role?: string
+                            }
+                          ).field_changes.map((ch, i) => {
+                            const bucket = bucketActorRole(
+                              (log.metadata as { actor_role?: string }).actor_role ??
+                                (log.profiles as { role?: string })?.role
+                            )
+                            return (
+                              <li
+                                key={i}
+                                className={`${fieldHighlightClass(bucket)} text-zinc-700 dark:text-gray-300`}
+                              >
+                                <span className="font-medium">{ch.label}:</span>{' '}
+                                {ch.previous ? (
+                                  <>
+                                    <span className="line-through opacity-70">{ch.previous}</span>
+                                    {' → '}
+                                  </>
+                                ) : null}
+                                <span>{ch.next ?? '—'}</span>
+                              </li>
+                            )
+                          })}
+                        </ul>
+                      )}
                   </div>
                   <p className="text-xs text-zinc-500 dark:text-gray-500">
                     {formatInTimeZone(new Date(log.created_at), getEffectiveTimezone((demand.dealers as { region_codes?: { timezones?: { name: string } } } | null)?.region_codes?.timezones?.name ?? null), 'MMM d, yyyy h:mm a')}

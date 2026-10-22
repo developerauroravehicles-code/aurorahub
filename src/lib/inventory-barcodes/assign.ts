@@ -44,7 +44,13 @@ export async function assignBarcodeToDealer(
 ): Promise<{ barcode?: InventoryBarcodeRow; error?: string }> {
   const barcode = await fetchBarcodeByCode(supabase, input.code)
   if (!barcode) return { error: 'Barcode not found' }
-  if (barcode.kind !== 'unit') return { error: 'Set container barcodes cannot be assigned to dealer stock' }
+  if (barcode.kind === 'set') {
+    return {
+      error:
+        'Legacy set container labels are no longer used. Scan each unit product label from the set template instead.',
+    }
+  }
+  if (barcode.kind !== 'unit') return { error: 'Only unit product barcodes can be assigned to dealer stock' }
   if (barcode.status !== 'generated') {
     return { error: `Barcode is ${barcode.status}; expected generated` }
   }
@@ -100,8 +106,14 @@ export async function assignBarcodeToSpecialist(
 ): Promise<{ barcode?: InventoryBarcodeRow; error?: string }> {
   const barcode = await fetchBarcodeByCode(supabase, input.code)
   if (!barcode) return { error: 'Barcode not found' }
+  if (barcode.kind === 'set') {
+    return {
+      error:
+        'Legacy set container labels are no longer used. Scan each unit product label from the set template instead.',
+    }
+  }
   if (barcode.kind !== 'unit') {
-    return { error: 'Set container barcodes cannot be assigned to specialist field stock' }
+    return { error: 'Only unit product barcodes can be assigned to specialist field stock' }
   }
   if (barcode.status !== 'at_dealer' && barcode.status !== 'generated') {
     return { error: `Barcode is ${barcode.status}; expected at_dealer or generated` }

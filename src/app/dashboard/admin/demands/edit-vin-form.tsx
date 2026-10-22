@@ -3,6 +3,8 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { updateVinLast6 } from './actions'
+import { DemandFieldWrap } from '@/components/demand-field-highlight'
+import type { DemandFieldKey, FieldHighlightBucket } from '@/lib/demand-field-updates'
 
 const inputClass = 'w-full border border-zinc-300 dark:border-gray-700 bg-zinc-200/50 dark:bg-white/5 p-2 rounded text-zinc-900 dark:text-white text-sm focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]'
 
@@ -10,12 +12,14 @@ interface EditVinFormProps {
   demandId: string
   vinLast6: string | null
   canEdit: boolean
+  fieldHighlights?: Partial<Record<DemandFieldKey, FieldHighlightBucket>>
 }
 
 export function EditVinForm({
   demandId,
   vinLast6,
   canEdit,
+  fieldHighlights,
 }: EditVinFormProps) {
   const router = useRouter()
   const [value, setValue] = useState(vinLast6 ?? '')
@@ -46,11 +50,14 @@ export function EditVinForm({
 
   if (!canEdit) {
     return (
-      <p className="text-zinc-900 dark:text-white">{vinLast6 ? vinLast6.toUpperCase() : '—'}</p>
+      <DemandFieldWrap field="vin_last6" highlights={fieldHighlights}>
+        <p className="text-zinc-900 dark:text-white">{vinLast6 ? vinLast6.toUpperCase() : '—'}</p>
+      </DemandFieldWrap>
     )
   }
 
   return (
+    <DemandFieldWrap field="vin_last6" highlights={fieldHighlights}>
     <div className="space-y-2">
       <input
         type="text"
@@ -82,5 +89,6 @@ export function EditVinForm({
         </p>
       )}
     </div>
+    </DemandFieldWrap>
   )
 }

@@ -57,6 +57,7 @@ interface Demand {
 
 interface DemandsListProps {
   barcodeModeEnabled?: boolean
+  barcodeCodesByDemandId?: Record<string, string[]>
   demands: Demand[]
   dealers: Dealer[]
   specialists: Specialist[]
@@ -101,6 +102,7 @@ export function DemandsList({
   hideDealerFilter,
   duplicateStockNumbers = [],
   barcodeModeEnabled = false,
+  barcodeCodesByDemandId = {},
 }: DemandsListProps) {
   const [createModalOpen, setCreateModalOpen] = useState(false)
   const router = useRouter()
@@ -220,11 +222,13 @@ export function DemandsList({
     }
 
     if (searchValue.trim()) {
-      filtered = filtered.filter(d => demandMatchesSmartSearch(d, searchValue))
+      filtered = filtered.filter((d) =>
+        demandMatchesSmartSearch(d, searchValue, barcodeCodesByDemandId)
+      )
     }
 
     return filtered
-  }, [demands, statusFilter, dateFilter, searchValue])
+  }, [demands, statusFilter, dateFilter, searchValue, barcodeCodesByDemandId])
 
   const hasActiveFilters = statusFilter !== 'all' || dateFilter !== 'all' || searchValue.trim() !== '' || dealerFilterActive
 
@@ -360,7 +364,7 @@ export function DemandsList({
                 className="w-full border border-zinc-300 dark:border-gray-700 bg-zinc-200/50 dark:bg-white/5 p-2 rounded text-zinc-900 dark:text-white text-sm placeholder:text-zinc-500 dark:placeholder:text-gray-500 focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]"
               />
               <p className="mt-1 text-xs text-zinc-500 dark:text-gray-500">
-                Matches customer name, phone, VIN (last 6), stock number, demand reference (OR).
+                Matches customer name, phone, VIN (last 6), stock number, demand reference, product barcode (OR).
               </p>
             </div>
 

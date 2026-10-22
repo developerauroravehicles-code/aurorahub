@@ -5,8 +5,6 @@ import { revalidatePath } from 'next/cache'
 import {
   assignBarcodeToDealer,
   assignBarcodeToSpecialist,
-  activateSetForSpecialistAssignment,
-  assignUnitUnderSetToSpecialist,
   voidBarcode,
   deleteBarcodeRecord,
   generateUnitBarcodesForSetTemplate,
@@ -23,7 +21,6 @@ import {
 } from '@/lib/inventory-barcodes'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { resetNegativeBalances } from '@/lib/inventory-v2/movements'
-import { normalizeBarcodeCode } from '@/lib/inventory-barcodes/code-generator'
 
 async function requireAuroraManager() {
   const supabase = await createClient()
@@ -228,47 +225,9 @@ export async function scanAssignBarcodeToSpecialist(formData: FormData) {
 
   const code = String(formData.get('code') ?? '').trim()
   const specialistId = String(formData.get('specialist_id') ?? '').trim()
-  const activeSetId = String(formData.get('active_set_id') ?? '').trim()
 
   if (!code || !specialistId) {
     return { error: 'Barcode and specialist are required' }
-  }
-
-  const settings = await getBarcodeSettings(auth.supabase)
-
-  const normalized = normalizeBarcodeCode(code)
-  const { data: row } = await auth.supabase
-    .from('inventory_barcodes')
-    .select('kind')
-    .ilike('code', normalized)
-    .maybeSingle()
-
-  if (row?.kind === 'set' && !activeSetId) {
-    const setResult = await activateSetForSpecialistAssignment(auth.supabase, {
-      code,
-      specialistId,
-      actorId: auth.userId,
-    })
-    if (setResult.error) return { error: setResult.error }
-    revalidatePath('/dashboard/admin/inventory')
-    return { success: true, setProgress: setResult.progress }
-  }
-
-  if (activeSetId) {
-    const unitResult = await assignUnitUnderSetToSpecialist(auth.supabase, {
-      unitCode: code,
-      setId: activeSetId,
-      specialistId,
-      actorId: auth.userId,
-      allowLinkLooseUnit: !settings.setAutoGenerateUnitBarcodes,
-    })
-    if (unitResult.error) return { error: unitResult.error }
-    revalidatePath('/dashboard/admin/inventory')
-    return {
-      success: true,
-      barcode: unitResult.barcode,
-      setProgress: unitResult.progress,
-    }
   }
 
   const result = await assignBarcodeToSpecialist(auth.supabase, {

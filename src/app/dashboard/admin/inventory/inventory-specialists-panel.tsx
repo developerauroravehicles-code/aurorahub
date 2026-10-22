@@ -40,12 +40,6 @@ export function InventorySpecialistsPanel({
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [flashSpecialistId, setFlashSpecialistId] = useState<string | null>(null)
   const [scanSpecialistId, setScanSpecialistId] = useState('')
-  const [activeSetProgress, setActiveSetProgress] = useState<{
-    setId: string
-    setCode: string
-    assignedUnitCount: number
-    expectedUnitCount: number
-  } | null>(null)
   const scanInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -87,35 +81,11 @@ export function InventorySpecialistsPanel({
       const fd = new FormData()
       fd.set('specialist_id', scanSpecialistId)
       fd.set('code', code.trim())
-      if (activeSetProgress?.setId) fd.set('active_set_id', activeSetProgress.setId)
-      const result = (await scanAssignBarcodeToSpecialist(fd)) as {
-        error?: string
-        setProgress?: {
-          setId: string
-          setCode: string
-          assignedUnitCount: number
-          expectedUnitCount: number
-          complete?: boolean
-        }
-      }
+      const result = await scanAssignBarcodeToSpecialist(fd)
       if (result.error) {
         setMessage({ type: 'err', text: result.error })
       } else {
-        if (result.setProgress) {
-          setActiveSetProgress({
-            setId: result.setProgress.setId,
-            setCode: result.setProgress.setCode,
-            assignedUnitCount: result.setProgress.assignedUnitCount,
-            expectedUnitCount: result.setProgress.expectedUnitCount,
-          })
-          if (result.setProgress.complete) setActiveSetProgress(null)
-          setMessage({
-            type: 'ok',
-            text: `Set ${result.setProgress.setCode}: ${result.setProgress.assignedUnitCount}/${result.setProgress.expectedUnitCount} units`,
-          })
-        } else {
-          setMessage({ type: 'ok', text: `Assigned ${code.trim()}.` })
-        }
+        setMessage({ type: 'ok', text: `Assigned ${code.trim()}.` })
         if (scanInputRef.current) scanInputRef.current.value = ''
         scanInputRef.current?.focus()
         router.refresh()
@@ -161,19 +131,8 @@ export function InventorySpecialistsPanel({
             Assign cameras to specialist (barcode scan)
           </h3>
           <p className="text-xs text-zinc-500">
-            For sets: scan set barcode first, then each unit. Standalone units scan without a set.
+            Scan each unit label. Set installs use unit stickers from the set template only (no set container barcode).
           </p>
-          {activeSetProgress && (
-            <div className="rounded-md border border-[#C27E00]/40 bg-[#C27E00]/10 px-3 py-2 text-xs flex justify-between gap-2">
-              <span>
-                Set <span className="font-mono">{activeSetProgress.setCode}</span> —{' '}
-                {activeSetProgress.assignedUnitCount}/{activeSetProgress.expectedUnitCount}
-              </span>
-              <button type="button" className="text-[#C27E00]" onClick={() => setActiveSetProgress(null)}>
-                Clear
-              </button>
-            </div>
-          )}
           <select
             value={scanSpecialistId}
             onChange={(e) => setScanSpecialistId(e.target.value)}

@@ -103,6 +103,7 @@ export type CommNotificationType =
   | 'service_record_pending'
   | 'duplicate_stock_number'
   | 'inventory_stock_alert'
+  | 'demand_fields_updated'
 
 export type CommNotification = {
   id: string

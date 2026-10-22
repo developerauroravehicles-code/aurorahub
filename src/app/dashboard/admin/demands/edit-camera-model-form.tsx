@@ -3,6 +3,8 @@
 import { useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { updateCameraModel } from './actions'
+import { DemandFieldWrap } from '@/components/demand-field-highlight'
+import type { DemandFieldKey, FieldHighlightBucket } from '@/lib/demand-field-updates'
 
 const inputClass =
   'w-full border border-zinc-300 dark:border-gray-700 bg-white dark:bg-zinc-900 p-2 rounded text-zinc-900 dark:text-zinc-100 text-sm focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00] placeholder:text-zinc-500 dark:placeholder:text-gray-400'
@@ -20,6 +22,7 @@ interface EditCameraModelFormProps {
   cameraModel: string | null
   cameraModels: CameraModelOption[]
   canEdit: boolean
+  fieldHighlights?: Partial<Record<DemandFieldKey, FieldHighlightBucket>>
 }
 
 function getInitialSelection(cameraModel: string | null, cameraModels: CameraModelOption[]) {
@@ -37,6 +40,7 @@ export function EditCameraModelForm({
   cameraModel,
   cameraModels,
   canEdit,
+  fieldHighlights,
 }: EditCameraModelFormProps) {
   const router = useRouter()
   const initial = useMemo(
@@ -71,10 +75,15 @@ export function EditCameraModelForm({
   }
 
   if (!canEdit) {
-    return <p className="text-zinc-900 dark:text-white">{cameraModel || '—'}</p>
+    return (
+      <DemandFieldWrap field="camera_model" highlights={fieldHighlights}>
+        <p className="text-zinc-900 dark:text-white">{cameraModel || '—'}</p>
+      </DemandFieldWrap>
+    )
   }
 
   return (
+    <DemandFieldWrap field="camera_model" highlights={fieldHighlights}>
     <div className="space-y-2">
       {cameraModels.length > 0 ? (
         <>
@@ -94,33 +103,12 @@ export function EditCameraModelForm({
                 {camera.label ?? camera.name}
               </option>
             ))}
-            <option value="__custom__">Other (Custom)</option>
           </select>
-          {selectedCamera === '__custom__' && (
-            <input
-              type="text"
-              value={customCamera}
-              onChange={(e) => {
-                setCustomCamera(e.target.value)
-                setMessage(null)
-              }}
-              className={inputClass}
-              placeholder="Enter custom camera model"
-            />
-          )}
         </>
       ) : (
-        <input
-          type="text"
-          value={customCamera || resolvedValue}
-          onChange={(e) => {
-            setSelectedCamera('__custom__')
-            setCustomCamera(e.target.value)
-            setMessage(null)
-          }}
-          className={inputClass}
-          placeholder="Camera model"
-        />
+        <p className="text-sm text-amber-700 dark:text-amber-300">
+          No cameras assigned to this dealer. Assign cameras in System Management before changing the booking model.
+        </p>
       )}
       <div className="flex items-center gap-2">
         <button
@@ -142,5 +130,6 @@ export function EditCameraModelForm({
         </p>
       )}
     </div>
+    </DemandFieldWrap>
   )
 }

@@ -48,6 +48,7 @@ export async function fetchBarcodeRegistry(
       demands(demand_number, status, customer_firstname, customer_lastname, customer_phone)
     `
     )
+    .neq('kind', 'set')
     .order('created_at', { ascending: false })
     .limit(options.limit ?? 300)
 

@@ -22,6 +22,8 @@ interface AppointmentCalendarProps {
   getTakenSlots: (dateStr: string) => Promise<string[]>
   /** When true, past dates are selectable (e.g. external retroactive demands) */
   allowPastDates?: boolean
+  /** Prefer this over parsing `onDateSelect` Date in the parent (avoids TZ drift). */
+  onWallDateSelect?: (ymd: string) => void
 }
 
 export function AppointmentCalendar({
@@ -31,6 +33,7 @@ export function AppointmentCalendar({
   selectedPacificYmd,
   getTakenSlots,
   allowPastDates = false,
+  onWallDateSelect,
 }: AppointmentCalendarProps) {
   const now = useSystemTime()
   const contextTz = useTimezone()
@@ -91,6 +94,7 @@ export function AppointmentCalendar({
     const todayStr = getTodayInTz()
     const isPast = ymd < todayStr
     if (!inMonth || (!allowPastDates && isPast)) return
+    onWallDateSelect?.(ymd)
     onDateSelect(toDate(`${ymd}T12:00:00`, { timeZone: systemTz }))
   }
 
@@ -170,12 +174,12 @@ export function AppointmentCalendar({
                 ${
                   !inMonth
                     ? 'text-zinc-600 dark:text-gray-600 cursor-not-allowed'
-                    : dayIsPast && !allowPastDates
-                      ? 'text-zinc-500 dark:text-gray-500 bg-zinc-200/80 dark:bg-gray-900/50 cursor-not-allowed opacity-60 border border-zinc-200 dark:border-gray-800'
-                      : dayIsPast && allowPastDates
-                        ? 'text-zinc-500 dark:text-gray-400 bg-gray-800/50 hover:bg-zinc-200 dark:hover:bg-white/10 border border-zinc-300 dark:border-gray-700'
-                        : dayIsSelected
-                          ? 'bg-[#C27E00] text-white'
+                    : dayIsSelected
+                      ? 'bg-[#C27E00] text-white border border-[#C27E00]'
+                      : dayIsPast && !allowPastDates
+                        ? 'text-zinc-500 dark:text-gray-500 bg-zinc-200/80 dark:bg-gray-900/50 cursor-not-allowed opacity-60 border border-zinc-200 dark:border-gray-800'
+                        : dayIsPast && allowPastDates
+                          ? 'text-zinc-500 dark:text-gray-400 bg-gray-800/50 hover:bg-zinc-200 dark:hover:bg-white/10 border border-zinc-300 dark:border-gray-700 cursor-pointer'
                           : dayIsToday
                             ? 'bg-blue-900/30 text-blue-200 border border-blue-800'
                             : dayIsTaken

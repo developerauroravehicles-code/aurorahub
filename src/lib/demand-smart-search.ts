@@ -22,6 +22,8 @@ export type DemandSmartSearchRow = {
   vin_last6?: string | null
   stock_number?: string | null
   demand_number?: string | number | null
+  /** Optional — attached on row or via barcodeCodesByDemandId in demandMatchesSmartSearch */
+  barcode_codes?: string[]
 }
 /** True if trimmed query has meaningful length for search (avoid 1-char noise). */
 function queryIsActive(trimmed: string): boolean {
@@ -99,20 +101,48 @@ function matchesDemandNumber(row: DemandSmartSearchRow, trimmed: string): boolea
   return dn.includes(q)
 }
 
+function normalizeBarcodeQuery(raw: string): string {
+  return raw.trim().toUpperCase().replace(/\s/g, '')
+}
+
+/** Unit/set product barcode linked to demand (inventory_barcodes.demand_id). */
+function matchesProductBarcode(
+  codes: string[] | undefined,
+  trimmed: string
+): boolean {
+  if (!codes?.length) return false
+  const q = normalizeBarcodeQuery(trimmed)
+  if (q.length < 3) return false
+  return codes.some((code) => {
+    const c = normalizeBarcodeQuery(code)
+    return c === q || c.includes(q) || q.includes(c)
+  })
+}
+
 /**
- * Single-field search: name, phone, VIN last 6, stock, and demand reference number (when present).
+ * Single-field search: name, phone, VIN last 6, stock, demand reference, product barcodes (when index provided).
  * Empty/whitespace query matches all rows. Short fuzzy text (below threshold) skips filtering.
  */
-export function demandMatchesSmartSearch(row: DemandSmartSearchRow, raw: string): boolean {
+export function demandMatchesSmartSearch(
+  row: DemandSmartSearchRow,
+  raw: string,
+  barcodeCodesByDemandId?: Record<string, string[]>
+): boolean {
   const trimmed = raw.trim()
   if (trimmed === '') return true
   if (!queryIsActive(trimmed)) return true
+
+  const demandId = (row as DemandSmartSearchRow & { id?: string }).id
+  const barcodeCodes =
+    row.barcode_codes ??
+    (demandId && barcodeCodesByDemandId ? barcodeCodesByDemandId[demandId] : undefined)
 
   return (
     matchesName(row, trimmed) ||
     matchesPhone(row, trimmed) ||
     matchesVin(row, trimmed) ||
     matchesStock(row, trimmed) ||
-    matchesDemandNumber(row, trimmed)
+    matchesDemandNumber(row, trimmed) ||
+    matchesProductBarcode(barcodeCodes, trimmed)
   )
 }

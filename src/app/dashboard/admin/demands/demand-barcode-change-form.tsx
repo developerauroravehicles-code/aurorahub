@@ -14,6 +14,7 @@ export function DemandBarcodeChangeForm({
   specialistId,
   serviceType,
   installedBarcodeCodes,
+  setInstallLabel,
   canEdit,
 }: {
   demandId: string
@@ -21,6 +22,8 @@ export function DemandBarcodeChangeForm({
   specialistId: string | null
   serviceType: 'installation' | 'transfer' | 'removal'
   installedBarcodeCodes: string[]
+  /** When demand booked a set camera, show grouped unit barcodes under this heading. */
+  setInstallLabel?: string | null
   canEdit: boolean
 }) {
   const router = useRouter()
@@ -45,12 +48,14 @@ export function DemandBarcodeChangeForm({
     </ul>
   )
 
+  const installHeading = setInstallLabel
+    ? `Set installation — ${setInstallLabel}`
+    : `Installed product barcode${installedBarcodeCodes.length > 1 ? 's' : ''}`
+
   if (!canEdit) {
     return (
       <div className="mt-3 text-sm">
-        <p className="text-zinc-500 dark:text-gray-400 mb-1">
-          Installed barcode{installedBarcodeCodes.length > 1 ? 's' : ''}
-        </p>
+        <p className="text-zinc-500 dark:text-gray-400 mb-1">{installHeading}</p>
         {barcodeList}
       </div>
     )
@@ -58,9 +63,7 @@ export function DemandBarcodeChangeForm({
 
   return (
     <div className="mt-4 pt-4 border-t border-zinc-200 dark:border-gray-800">
-      <p className="text-sm font-medium text-zinc-900 dark:text-white mb-1">
-        Installed product barcode{installedBarcodeCodes.length > 1 ? 's' : ''}
-      </p>
+      <p className="text-sm font-medium text-zinc-900 dark:text-white mb-1">{installHeading}</p>
       <div className="text-[#C27E00] mb-3">{barcodeList}</div>
       {installedBarcodeCodes.length > 1 && (
         <p className="text-xs text-zinc-500 mb-3">

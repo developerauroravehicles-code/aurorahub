@@ -28,8 +28,10 @@ import {
   getActiveCameraModelById,
   lookupCameraModelId,
 } from '@/lib/camera-model-resolve'
+import { validateDealerBookingCamera } from '@/lib/dealer-camera-catalog'
 import { resolveExternalDemandCameraAndPrice } from './create-external-demand-pricing'
 import { upsertInventoryPricingRule } from '@/app/dashboard/admin/inventory/actions'
+import { applyExternalDemandCompletion } from '@/lib/external-demand-completion'
 
 const schema = z.object({
   dealerId: z.string().min(1, 'Dealer is required'),
@@ -121,7 +123,9 @@ export async function previewExternalDemandBarcode(specialistId: string, code: s
   if (!specialistId.trim()) return { error: 'Select a specialist before scanning barcodes' as const }
 
   const admin = createAdminClient()
-  const resolved = await lookupUnitBarcodeAtSpecialist(admin, trimmed, specialistId.trim())
+  const resolved = await lookupUnitBarcodeAtSpecialist(admin, trimmed, specialistId.trim(), {
+    allowOrphanedConsumed: true,
+  })
   if ('error' in resolved) return { error: resolved.error as string }
 
   return {
@@ -145,10 +149,17 @@ export async function suggestExternalDemandCameraModel(
   const inferred = await inferBookingCameraFromScannedUnits(auth.supabase, unitCameraModelIds)
   if (!inferred) return { error: 'Could not match scanned units to a catalog camera' as const }
 
+  const assigned = await validateDealerBookingCamera(auth.supabase, dealerId, {
+    cameraModelId: inferred.cameraModelId,
+  })
+  if ('error' in assigned) {
+    return { error: assigned.error as string }
+  }
+
   return {
     ok: true as const,
-    cameraModelId: inferred.cameraModelId,
-    cameraModelName: inferred.cameraModelName,
+    cameraModelId: assigned.cameraModelId,
+    cameraModelName: assigned.cameraModelName,
   }
 }
 
@@ -202,7 +213,9 @@ export async function validateExternalDemandBarcodes(
   if ('error' in auth) return { error: auth.error ?? 'Unauthorized' }
 
   const admin = createAdminClient()
-  return validateUnitBarcodesAtSpecialist(admin, codes, specialistId.trim())
+  return validateUnitBarcodesAtSpecialist(admin, codes, specialistId.trim(), {
+    allowOrphanedConsumed: true,
+  })
 }
 
 export async function saveDealerInstallationPriceForExternalDemand(input: {
@@ -310,7 +323,8 @@ export async function createExternalDemand(
     const barcodeCheck = await validateUnitBarcodesAtSpecialist(
       admin,
       barcodeCodes,
-      data.assignedSpecialistId
+      data.assignedSpecialistId,
+      { allowOrphanedConsumed: true }
     )
     if ('error' in barcodeCheck) {
       return withDraft(formData, { error: barcodeCheck.error })
@@ -342,6 +356,16 @@ export async function createExternalDemand(
     resolvedCameraModelId = pricing.cameraModelId
     resolvedCameraModelName = pricing.cameraModelName
   }
+
+  const cameraCheck = await validateDealerBookingCamera(supabase, data.dealerId, {
+    cameraModelId: resolvedCameraModelId,
+    cameraModelName: resolvedCameraModelName,
+  })
+  if ('error' in cameraCheck) {
+    return withDraft(formData, { error: cameraCheck.error })
+  }
+  resolvedCameraModelId = cameraCheck.cameraModelId
+  resolvedCameraModelName = cameraCheck.cameraModelName
 
   const cameraModelId = resolvedCameraModelId
 
@@ -434,6 +458,79 @@ export async function createExternalDemand(
   }).catch(() => {})
 
   revalidatePath('/dashboard/admin/demands')
+  revalidatePath('/dashboard/admin/invoices')
+  revalidatePath('/dashboard/admin/daily-invoices')
+  return { success: true }
+}
+
+export type CompleteExternalDemandState = { error?: string; success?: boolean } | null
+
+/** Mark an existing external demand completed (retroactive close) — Aurora Manager only. */
+export async function completeExternalDemand(
+  _prev: CompleteExternalDemandState,
+  formData: FormData
+): Promise<CompleteExternalDemandState> {
+  const auth = await requireAuroraManager()
+  if ('error' in auth) return { error: auth.error }
+
+  const { supabase, user } = auth
+  const demandId = String(formData.get('demandId') ?? '').trim()
+  const serviceTypeRaw = String(formData.get('serviceType') ?? '').trim()
+  const assignedSpecialistId = String(formData.get('assignedSpecialistId') ?? '').trim() || undefined
+  const cameraModelIdFromForm = String(formData.get('cameraModelId') ?? '').trim()
+  const barcodeCodes = formData
+    .getAll('barcodeCodes')
+    .map((v) => String(v).trim())
+    .filter(Boolean)
+
+  if (!demandId) return { error: 'Demand is required.' }
+  if (!isDemandServiceType(serviceTypeRaw)) {
+    return { error: 'Select a valid service type.' }
+  }
+  const serviceType = serviceTypeRaw as DemandServiceType
+
+  const { data: demand, error: fetchErr } = await supabase
+    .from('demands')
+    .select(
+      'id, dealer_id, appointment_date, camera_model, camera_model_id, assigned_specialist_id, status, is_external'
+    )
+    .eq('id', demandId)
+    .single()
+
+  if (fetchErr || !demand) return { error: 'Demand not found.' }
+  if (!demand.is_external) {
+    return { error: 'Only external demands can be completed from this action.' }
+  }
+  if (demand.status !== 'pending_finance' && demand.status !== 'approved') {
+    return { error: 'Only pending or approved external demands can be marked completed here.' }
+  }
+  if (!demand.dealer_id) return { error: 'Demand has no dealer.' }
+
+  const admin = createAdminClient()
+  const completion = await applyExternalDemandCompletion({
+    supabase,
+    admin,
+    user,
+    demand: {
+      id: demand.id,
+      dealer_id: demand.dealer_id,
+      appointment_date: demand.appointment_date,
+      camera_model: demand.camera_model,
+      camera_model_id: demand.camera_model_id,
+      assigned_specialist_id: demand.assigned_specialist_id,
+      status: demand.status,
+    },
+    serviceType,
+    barcodeCodes,
+    assignedSpecialistId,
+    cameraModelIdFromForm,
+    previousStatus: demand.status,
+  })
+
+  if (completion.error) return { error: completion.error }
+
+  revalidatePath('/dashboard/admin/demands')
+  revalidatePath(`/dashboard/admin/demands/${demandId}`)
   revalidatePath('/dashboard/admin/invoices')
   revalidatePath('/dashboard/admin/daily-invoices')
   return { success: true }

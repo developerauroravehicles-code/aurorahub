@@ -12,6 +12,7 @@ export interface DemandLogParams {
   previousStatus: DemandStatus | null
   newStatus: DemandStatus
   notes?: string
+  metadata?: Record<string, unknown>
 }
 
 /** Insert a demand log entry for audit trail. Uses admin client to bypass RLS. */
@@ -24,6 +25,7 @@ export async function logDemandChange(params: DemandLogParams): Promise<void> {
       previous_status: params.previousStatus,
       new_status: params.newStatus,
       notes: params.notes ?? null,
+      metadata: params.metadata ?? {},
     })
   } catch (err) {
     console.error('Failed to log demand change:', err)

@@ -57,7 +57,9 @@ export async function resolveExternalDemandCameraAndPrice(
     const admin = createAdminClient()
     const unitModelIds: string[] = []
     for (const code of barcodeCodes) {
-      const unit = await lookupUnitBarcodeAtSpecialist(admin, code, assignedSpecialistId)
+      const unit = await lookupUnitBarcodeAtSpecialist(admin, code, assignedSpecialistId, {
+        allowOrphanedConsumed: true,
+      })
       if (!('error' in unit)) unitModelIds.push(unit.cameraModelId)
     }
     if (unitModelIds.length > 0) {

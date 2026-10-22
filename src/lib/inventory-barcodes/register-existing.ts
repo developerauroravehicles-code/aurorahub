@@ -19,10 +19,18 @@ export async function registerExistingUnitBarcode(
 
   const { data: existing } = await supabase
     .from('inventory_barcodes')
-    .select('id')
+    .select('id, kind')
     .ilike('code', code)
     .maybeSingle()
-  if (existing) return { error: 'This barcode code already exists in the registry' }
+  if (existing) {
+    if (existing.kind === 'set') {
+      return {
+        error:
+          'This code is a legacy set container label. Sets no longer use container barcodes — register unit product labels only.',
+      }
+    }
+    return { error: 'This barcode code already exists in the registry' }
+  }
 
   const { data: model } = await supabase
     .from('camera_models')

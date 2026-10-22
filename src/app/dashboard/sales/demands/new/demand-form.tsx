@@ -447,22 +447,11 @@ export function DemandForm({
                     {camera.label ?? camera.name}
                   </option>
                 ))}
-                <option value="__custom__" className="bg-zinc-50 dark:bg-black text-zinc-900 dark:text-white">Other (Custom)</option>
               </select>
-              {selectedCamera === '__custom__' && (
-                <input
-                  type="text"
-                  value={customCamera}
-                  onChange={(e) => setCustomCamera(e.target.value)}
-                  placeholder="Enter custom camera model"
-                  required={selectedCamera === '__custom__'}
-                  className="mt-1.5 block w-full rounded-md border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 py-2.5 px-3 shadow-sm focus:border-[#C27E00] focus:outline-none focus:ring-[#C27E00] text-base text-zinc-900 dark:text-white placeholder:text-zinc-500 dark:placeholder:text-gray-500"
-                />
-              )}
               {!selectedCamera && (
                 <p className="text-sm text-zinc-500 dark:text-gray-500">Please select a camera model</p>
               )}
-              {selectedCamera && selectedCamera !== '__custom__' && (
+              {selectedCamera && (
                 <input
                   type="hidden"
                   name="cameraModel"
@@ -470,25 +459,12 @@ export function DemandForm({
                   required
                 />
               )}
-              {selectedCamera === '__custom__' && customCamera && (
-                <input
-                  type="hidden"
-                  name="cameraModel"
-                  value={customCamera}
-                  required
-                />
-              )}
             </div>
           ) : (
-            <div>
-              <input
-                name="cameraModel"
-                required
-                className="mt-1.5 block w-full rounded-md border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 py-2.5 px-3 shadow-sm focus:border-[#C27E00] focus:outline-none focus:ring-[#C27E00] text-base text-zinc-900 dark:text-white placeholder:text-zinc-500 dark:placeholder:text-gray-500"
-                placeholder="Enter camera model"
-              />
-              <p className="text-sm text-zinc-500 dark:text-gray-500 mt-1.5">No camera models available. Enter manually.</p>
-            </div>
+            <p className="text-sm text-amber-700 dark:text-amber-300 mt-1.5">
+              No cameras are assigned to your dealer for booking. Ask an Aurora Manager to assign camera models in
+              System Management before creating a demand.
+            </p>
           )}
         </div>
       </div>
@@ -610,9 +586,7 @@ export function DemandForm({
           <button
             type="submit"
             disabled={
-              isPending || 
-              !selectedSlot || 
-              (cameraModels.length > 0 && (!selectedCamera || (selectedCamera === '__custom__' && !customCamera)))
+              isPending || !selectedSlot || cameraModels.length === 0 || !selectedCamera
             }
             className="ml-3 inline-flex justify-center rounded-md border border-transparent bg-[#C27E00] py-2.5 px-5 text-base font-semibold text-white shadow-sm hover:bg-[#a06900] focus:outline-none focus:ring-2 focus:ring-[#C27E00] focus:ring-offset-2 disabled:opacity-50 transition-colors"
           >

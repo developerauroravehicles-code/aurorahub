@@ -7,7 +7,7 @@ import { z } from 'zod'
 import { validateAppointmentSlot, getPoolSlotContext } from '@/app/dashboard/system-management/calendar/actions'
 import { getTimezoneFromDealer } from '@/lib/dealer-timezone'
 import { SYSTEM_DEFAULT_TIMEZONE } from '@/lib/timezone-defaults'
-import { lookupCameraModelId } from '@/lib/camera-model-resolve'
+import { validateDealerBookingCamera } from '@/lib/dealer-camera-catalog'
 import { notifyAuroraManagersIfDuplicateStock } from '@/lib/notify-duplicate-stock'
 import {
   isSlotAvailableForDealer,
@@ -121,7 +121,12 @@ export async function createDemand(prevState: CreateDemandState, formData: FormD
       return { error: 'This time slot is fully booked for your service area. Please select another time.' }
   }
 
-  const cameraModelId = await lookupCameraModelId(supabase, data.cameraModel)
+  const cameraCheck = await validateDealerBookingCamera(supabase, profile.dealer_id, {
+    cameraModelName: data.cameraModel,
+  })
+  if ('error' in cameraCheck) {
+    return { error: cameraCheck.error }
+  }
 
   const insertData = {
     created_by: profile.id,
@@ -135,8 +140,8 @@ export async function createDemand(prevState: CreateDemandState, formData: FormD
     vehicle_year: data.vehicleYear,
     stock_number: data.stockNumber,
     vin_last6: data.vinLast6,
-    camera_model: data.cameraModel,
-    ...(cameraModelId && { camera_model_id: cameraModelId }),
+    camera_model: cameraCheck.cameraModelName,
+    camera_model_id: cameraCheck.cameraModelId,
     appointment_date: data.appointmentDate,
     status: 'pending_finance' as const,
     ...(profile.role === 'finance' && { assigned_finance_id: profile.id }),

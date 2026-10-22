@@ -17,6 +17,43 @@ import { lookupCameraModelId } from '@/lib/camera-model-resolve'
 import { addDemandToDailyBatch, ptDateFromIso } from '@/lib/daily-dealer-invoices'
 import { assertDealerDemandAccess, canEditDemandCoreFields, getInventoryManagerDealerId } from '@/lib/inventory-manager-access'
 import { isSpecialistDoubleBooked } from '@/lib/scheduling-pool'
+import {
+  buildDemandFieldChanges,
+  recordDemandFieldUpdates,
+  type DemandFieldKey,
+} from '@/lib/demand-field-updates'
+import { validateDealerBookingCamera } from '@/lib/dealer-camera-catalog'
+
+async function persistDemandFieldChanges(opts: {
+  demandId: string
+  userId: string
+  actorRole: string
+  actorName?: string | null
+  status: DemandStatus
+  demandNumber?: string | number | null
+  assignedSpecialistId?: string | null
+  customerLabel?: string
+  before: Partial<Record<DemandFieldKey, unknown>>
+  after: Partial<Record<DemandFieldKey, unknown>>
+  fields: DemandFieldKey[]
+  notes?: string
+}) {
+  const fieldChanges = buildDemandFieldChanges(opts.before, opts.after, opts.fields)
+  if (!fieldChanges.length) return
+  await recordDemandFieldUpdates({
+    demandId: opts.demandId,
+    actorId: opts.userId,
+    actorRole: opts.actorRole,
+    actorName: opts.actorName ?? undefined,
+    previousStatus: opts.status,
+    newStatus: opts.status,
+    notes: opts.notes,
+    fieldChanges,
+    assignedSpecialistId: opts.assignedSpecialistId,
+    demandNumber: opts.demandNumber,
+    customerLabel: opts.customerLabel,
+  })
+}
 
 type DemandEditProfile = {
   role: string
@@ -49,7 +86,7 @@ export async function updateAssignedSpecialist(
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('role')
+    .select('role, full_name')
     .eq('id', user.id)
     .single()
 
@@ -59,7 +96,9 @@ export async function updateAssignedSpecialist(
 
   const { data: demand } = await supabase
     .from('demands')
-    .select('status, appointment_date')
+    .select(
+      'status, appointment_date, assigned_specialist_id, demand_number, customer_firstname, customer_lastname'
+    )
     .eq('id', demandId)
     .single()
 
@@ -83,16 +122,24 @@ export async function updateAssignedSpecialist(
   if (error) return { success: false, error: error.message }
 
   const status: DemandStatus = (demand?.status ?? 'approved') as DemandStatus
-  logDemandChange({
+  await persistDemandFieldChanges({
     demandId,
-    actorId: user.id,
-    previousStatus: status,
-    newStatus: status,
-    notes: specialistId ? 'Specialist changed' : 'Specialist unassigned',
-  }).catch(() => {})
+    userId: user.id,
+    actorRole: profile.role,
+    actorName: profile.full_name,
+    status,
+    demandNumber: demand?.demand_number,
+    assignedSpecialistId: specialistId,
+    customerLabel: `${demand?.customer_firstname ?? ''} ${demand?.customer_lastname ?? ''}`.trim(),
+    before: { assigned_specialist_id: demand?.assigned_specialist_id ?? null },
+    after: { assigned_specialist_id: specialistId },
+    fields: ['assigned_specialist_id'],
+    notes: specialistId ? 'Specialist assignment updated' : 'Specialist unassigned',
+  })
 
   revalidatePath('/dashboard/admin/demands')
   revalidatePath(`/dashboard/admin/demands/${demandId}`)
+  revalidatePath('/dashboard/specialist/work')
   return { success: true }
 }
 
@@ -106,7 +153,7 @@ export async function updateAssignedFinance(
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('role')
+    .select('role, full_name')
     .eq('id', user.id)
     .single()
 
@@ -116,7 +163,9 @@ export async function updateAssignedFinance(
 
   const { data: demand } = await supabase
     .from('demands')
-    .select('status')
+    .select(
+      'status, assigned_finance_id, assigned_specialist_id, demand_number, customer_firstname, customer_lastname'
+    )
     .eq('id', demandId)
     .single()
 
@@ -128,13 +177,20 @@ export async function updateAssignedFinance(
   if (error) return { success: false, error: error.message }
 
   const status: DemandStatus = (demand?.status ?? 'pending_finance') as DemandStatus
-  logDemandChange({
+  await persistDemandFieldChanges({
     demandId,
-    actorId: user.id,
-    previousStatus: status,
-    newStatus: status,
-    notes: financeId ? 'Finance changed' : 'Finance unassigned',
-  }).catch(() => {})
+    userId: user.id,
+    actorRole: profile.role,
+    actorName: profile.full_name,
+    status,
+    demandNumber: demand?.demand_number,
+    assignedSpecialistId: demand?.assigned_specialist_id,
+    customerLabel: `${demand?.customer_firstname ?? ''} ${demand?.customer_lastname ?? ''}`.trim(),
+    before: { assigned_finance_id: demand?.assigned_finance_id ?? null },
+    after: { assigned_finance_id: financeId },
+    fields: ['assigned_finance_id'],
+    notes: financeId ? 'Finance assignment updated' : 'Finance unassigned',
+  })
 
   revalidatePath('/dashboard/admin/demands')
   revalidatePath(`/dashboard/admin/demands/${demandId}`)
@@ -151,13 +207,15 @@ export async function updateCustomerInfo(
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('role, dealer_id')
+    .select('role, dealer_id, full_name')
     .eq('id', user.id)
     .single()
 
   const { data: demand } = await supabase
     .from('demands')
-    .select('status, dealer_id')
+    .select(
+      'status, dealer_id, demand_number, assigned_specialist_id, customer_firstname, customer_lastname, customer_phone, customer_address'
+    )
     .eq('id', demandId)
     .single()
 
@@ -171,29 +229,49 @@ export async function updateCustomerInfo(
     return { success: false, error: 'First name, last name and phone are required' }
   }
 
+  const address = (data.address || '').trim() || null
+
   const { error } = await supabase
     .from('demands')
     .update({
       customer_firstname: firstName,
       customer_lastname: lastName,
       customer_phone: phone,
-      customer_address: (data.address || '').trim() || null,
+      customer_address: address,
     })
     .eq('id', demandId)
 
   if (error) return { success: false, error: error.message }
 
   const status: DemandStatus = (demand?.status ?? 'pending_finance') as DemandStatus
-  logDemandChange({
+  await persistDemandFieldChanges({
     demandId,
-    actorId: user.id,
-    previousStatus: status,
-    newStatus: status,
+    userId: user.id,
+    actorRole: profile!.role,
+    actorName: profile!.full_name,
+    status,
+    demandNumber: demand?.demand_number,
+    assignedSpecialistId: demand?.assigned_specialist_id,
+    customerLabel: `${firstName} ${lastName}`.trim(),
+    before: {
+      customer_firstname: demand?.customer_firstname,
+      customer_lastname: demand?.customer_lastname,
+      customer_phone: demand?.customer_phone,
+      customer_address: demand?.customer_address,
+    },
+    after: {
+      customer_firstname: firstName,
+      customer_lastname: lastName,
+      customer_phone: phone,
+      customer_address: address,
+    },
+    fields: ['customer_firstname', 'customer_lastname', 'customer_phone', 'customer_address'],
     notes: 'Customer information updated',
-  }).catch(() => {})
+  })
 
   revalidatePath('/dashboard/admin/demands')
   revalidatePath(`/dashboard/admin/demands/${demandId}`)
+  revalidatePath('/dashboard/specialist/work')
   return { success: true }
 }
 
@@ -207,7 +285,7 @@ export async function updateVinLast6(
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('role, dealer_id')
+    .select('role, dealer_id, full_name')
     .eq('id', user.id)
     .single()
 
@@ -218,7 +296,9 @@ export async function updateVinLast6(
 
   const { data: demand } = await supabase
     .from('demands')
-    .select('status, dealer_id')
+    .select(
+      'status, dealer_id, demand_number, assigned_specialist_id, customer_firstname, customer_lastname, vin_last6'
+    )
     .eq('id', demandId)
     .single()
 
@@ -233,16 +313,24 @@ export async function updateVinLast6(
   if (error) return { success: false, error: error.message }
 
   const status: DemandStatus = (demand?.status ?? 'pending_finance') as DemandStatus
-  logDemandChange({
+  await persistDemandFieldChanges({
     demandId,
-    actorId: user.id,
-    previousStatus: status,
-    newStatus: status,
+    userId: user.id,
+    actorRole: profile!.role,
+    actorName: profile!.full_name,
+    status,
+    demandNumber: demand?.demand_number,
+    assignedSpecialistId: demand?.assigned_specialist_id,
+    customerLabel: `${demand?.customer_firstname ?? ''} ${demand?.customer_lastname ?? ''}`.trim(),
+    before: { vin_last6: demand?.vin_last6 },
+    after: { vin_last6: normalized },
+    fields: ['vin_last6'],
     notes: 'VIN last 6 digits updated',
-  }).catch(() => {})
+  })
 
   revalidatePath('/dashboard/admin/demands')
   revalidatePath(`/dashboard/admin/demands/${demandId}`)
+  revalidatePath('/dashboard/specialist/work')
   return { success: true }
 }
 
@@ -256,7 +344,7 @@ export async function updateStockNumber(
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('role, dealer_id')
+    .select('role, dealer_id, full_name')
     .eq('id', user.id)
     .single()
 
@@ -264,7 +352,9 @@ export async function updateStockNumber(
 
   const { data: demand } = await supabase
     .from('demands')
-    .select('status, dealer_id, demand_number')
+    .select(
+      'status, dealer_id, demand_number, assigned_specialist_id, customer_firstname, customer_lastname, stock_number'
+    )
     .eq('id', demandId)
     .single()
 
@@ -279,13 +369,20 @@ export async function updateStockNumber(
   if (error) return { success: false, error: error.message }
 
   const status: DemandStatus = (demand?.status ?? 'pending_finance') as DemandStatus
-  logDemandChange({
+  await persistDemandFieldChanges({
     demandId,
-    actorId: user.id,
-    previousStatus: status,
-    newStatus: status,
+    userId: user.id,
+    actorRole: profile!.role,
+    actorName: profile!.full_name,
+    status,
+    demandNumber: demand?.demand_number,
+    assignedSpecialistId: demand?.assigned_specialist_id,
+    customerLabel: `${demand?.customer_firstname ?? ''} ${demand?.customer_lastname ?? ''}`.trim(),
+    before: { stock_number: demand?.stock_number },
+    after: { stock_number: trimmed || null },
+    fields: ['stock_number'],
     notes: 'Stock number updated',
-  }).catch(() => {})
+  })
 
   if (trimmed) {
     const dealerScope = getInventoryManagerDealerId(profile) ?? demand?.dealer_id ?? undefined
@@ -299,6 +396,7 @@ export async function updateStockNumber(
 
   revalidatePath('/dashboard/admin/demands')
   revalidatePath(`/dashboard/admin/demands/${demandId}`)
+  revalidatePath('/dashboard/specialist/work')
   return { success: true }
 }
 
@@ -312,7 +410,7 @@ export async function updateCameraModel(
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('role, dealer_id')
+    .select('role, dealer_id, full_name')
     .eq('id', user.id)
     .single()
 
@@ -323,36 +421,55 @@ export async function updateCameraModel(
 
   const { data: demand } = await supabase
     .from('demands')
-    .select('status, dealer_id')
+    .select(
+      'status, dealer_id, demand_number, assigned_specialist_id, customer_firstname, customer_lastname, camera_model'
+    )
     .eq('id', demandId)
     .single()
 
   const authError = authorizeCoreDemandEdit(profile, demand?.dealer_id)
   if (authError) return { success: false, error: authError.error }
 
-  const cameraModelId = await lookupCameraModelId(supabase, trimmed)
+  if (!demand?.dealer_id) {
+    return { success: false, error: 'Demand has no dealer.' }
+  }
+
+  const cameraCheck = await validateDealerBookingCamera(supabase, demand.dealer_id, {
+    cameraModelName: trimmed,
+  })
+  if ('error' in cameraCheck) {
+    return { success: false, error: cameraCheck.error }
+  }
 
   const { error } = await supabase
     .from('demands')
     .update({
-      camera_model: trimmed,
-      camera_model_id: cameraModelId,
+      camera_model: cameraCheck.cameraModelName,
+      camera_model_id: cameraCheck.cameraModelId,
     })
     .eq('id', demandId)
 
   if (error) return { success: false, error: error.message }
 
   const status: DemandStatus = (demand?.status ?? 'pending_finance') as DemandStatus
-  logDemandChange({
+  await persistDemandFieldChanges({
     demandId,
-    actorId: user.id,
-    previousStatus: status,
-    newStatus: status,
+    userId: user.id,
+    actorRole: profile!.role,
+    actorName: profile!.full_name,
+    status,
+    demandNumber: demand?.demand_number,
+    assignedSpecialistId: demand?.assigned_specialist_id,
+    customerLabel: `${demand?.customer_firstname ?? ''} ${demand?.customer_lastname ?? ''}`.trim(),
+    before: { camera_model: demand?.camera_model },
+    after: { camera_model: cameraCheck.cameraModelName },
+    fields: ['camera_model'],
     notes: 'Camera model updated',
-  }).catch(() => {})
+  })
 
   revalidatePath('/dashboard/admin/demands')
   revalidatePath(`/dashboard/admin/demands/${demandId}`)
+  revalidatePath('/dashboard/specialist/work')
   return { success: true }
 }
 
@@ -365,11 +482,15 @@ export async function updateDemandByAuroraManager(
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Unauthorized' }
 
-  const { data: profile } = await supabase.from('profiles').select('role, dealer_id').eq('id', user.id).single()
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role, dealer_id, full_name')
+    .eq('id', user.id)
+    .single()
 
   const { data: demand } = await supabase
     .from('demands')
-    .select('dealer_id, status, appointment_date, customer_phone, customer_firstname, customer_lastname, assigned_specialist_id, is_external, demand_number, customer_address, vehicle_year, vehicle_make, vehicle_model, vin_last6, stock_number, dealers(region_codes(timezone_id, timezones(name)), name, address)')
+    .select('dealer_id, status, appointment_date, customer_phone, customer_firstname, customer_lastname, assigned_specialist_id, is_external, demand_number, customer_address, vehicle_year, vehicle_make, vehicle_model, vin_last6, stock_number, camera_model, dealers(region_codes(timezone_id, timezones(name)), name, address)')
     .eq('id', demandId)
     .single()
 
@@ -424,7 +545,12 @@ export async function updateDemandByAuroraManager(
   const newAppointmentDate = new Date(appointmentDate)
   const appointmentDateChanged = oldAppointmentDate && oldAppointmentDate.getTime() !== newAppointmentDate.getTime()
 
-  const cameraModelId = await lookupCameraModelId(supabase, cameraModel)
+  const cameraCheck = await validateDealerBookingCamera(supabase, demand.dealer_id!, {
+    cameraModelName: cameraModel,
+  })
+  if ('error' in cameraCheck) {
+    return { error: cameraCheck.error }
+  }
 
   const { error: updateError } = await supabase
     .from('demands')
@@ -437,8 +563,8 @@ export async function updateDemandByAuroraManager(
       vehicle_model: vehicleModel,
       vehicle_year: vehicleYear,
       stock_number: stockNumber,
-      camera_model: cameraModel,
-      camera_model_id: cameraModelId,
+      camera_model: cameraCheck.cameraModelName,
+      camera_model_id: cameraCheck.cameraModelId,
       appointment_date: appointmentDate,
       updated_at: new Date().toISOString(),
     })
@@ -447,13 +573,54 @@ export async function updateDemandByAuroraManager(
   if (updateError) return { error: updateError.message }
 
   const status: DemandStatus = (demand?.status ?? 'pending_finance') as DemandStatus
-  logDemandChange({
+  const editFields: DemandFieldKey[] = [
+    'customer_firstname',
+    'customer_lastname',
+    'customer_phone',
+    'customer_address',
+    'vehicle_make',
+    'vehicle_model',
+    'vehicle_year',
+    'stock_number',
+    'camera_model',
+    'appointment_date',
+  ]
+  await persistDemandFieldChanges({
     demandId,
-    actorId: user.id,
-    previousStatus: status,
-    newStatus: status,
+    userId: user.id,
+    actorRole: profile!.role,
+    actorName: profile!.full_name,
+    status,
+    demandNumber: demand.demand_number,
+    assignedSpecialistId: demand.assigned_specialist_id,
+    customerLabel: `${customerFirstname} ${customerLastname}`.trim(),
+    before: {
+      customer_firstname: demand.customer_firstname,
+      customer_lastname: demand.customer_lastname,
+      customer_phone: demand.customer_phone,
+      customer_address: demand.customer_address,
+      vehicle_make: demand.vehicle_make,
+      vehicle_model: demand.vehicle_model,
+      vehicle_year: demand.vehicle_year,
+      stock_number: demand.stock_number,
+      camera_model: demand.camera_model,
+      appointment_date: demand.appointment_date,
+    },
+    after: {
+      customer_firstname: customerFirstname,
+      customer_lastname: customerLastname,
+      customer_phone: customerPhone,
+      customer_address: customerAddress,
+      vehicle_make: vehicleMake,
+      vehicle_model: vehicleModel,
+      vehicle_year: vehicleYear,
+      stock_number: stockNumber,
+      camera_model: cameraCheck.cameraModelName,
+      appointment_date: appointmentDate,
+    },
+    fields: editFields,
     notes: appointmentDateChanged ? 'Appointment rescheduled' : 'Demand updated',
-  }).catch(() => {})
+  })
 
   if (appointmentDateChanged && (options.sendToCustomer || options.sendToSpecialist)) {
     const smsSettings = await getSmsSettings()
@@ -529,6 +696,7 @@ export async function updateDemandByAuroraManager(
 
   revalidatePath('/dashboard/admin/demands')
   revalidatePath(`/dashboard/admin/demands/${demandId}`)
+  revalidatePath('/dashboard/specialist/work')
   return {}
 }
 
@@ -565,7 +733,11 @@ export async function updateCompletedAt(
   } = await supabase.auth.getUser()
   if (!user) return { success: false, error: 'Unauthorized' }
 
-  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role, full_name')
+    .eq('id', user.id)
+    .single()
   if (profile?.role !== 'aurora_manager') {
     return { success: false, error: 'Only Aurora Manager can update completion date' }
   }
@@ -587,7 +759,9 @@ export async function updateCompletedAt(
 
   const { data: row } = await supabase
     .from('demands')
-    .select('status, completed_at, dealer_id')
+    .select(
+      'status, completed_at, dealer_id, demand_number, assigned_specialist_id, customer_firstname, customer_lastname'
+    )
     .eq('id', demandId)
     .single()
 
@@ -611,22 +785,30 @@ export async function updateCompletedAt(
     addDemandToDailyBatch(admin, demandId).catch(() => {})
   }
 
-  logDemandChange({
+  await persistDemandFieldChanges({
     demandId,
-    actorId: user.id,
-    previousStatus: 'completed',
-    newStatus: 'completed',
+    userId: user.id,
+    actorRole: profile.role,
+    actorName: profile.full_name,
+    status: 'completed',
+    demandNumber: row.demand_number,
+    assignedSpecialistId: row.assigned_specialist_id,
+    customerLabel: `${row.customer_firstname ?? ''} ${row.customer_lastname ?? ''}`.trim(),
+    before: { completed_at: row.completed_at },
+    after: { completed_at: completedAtIso },
+    fields: ['completed_at'],
     notes:
       oldPtDate && oldPtDate !== newPtDate
         ? `Completion date updated (${oldPtDate} → ${newPtDate} PT)`
         : 'Completion date updated',
-  }).catch(() => {})
+  })
 
   revalidatePath('/dashboard/admin/demands')
   revalidatePath(`/dashboard/admin/demands/${demandId}`)
   revalidatePath('/dashboard/admin/statements')
   revalidatePath('/dashboard/admin/invoices')
   revalidatePath('/dashboard/admin/daily-invoices')
+  revalidatePath('/dashboard/specialist/work')
   return { success: true }
 }
 

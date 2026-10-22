@@ -6,6 +6,11 @@ import { normalizeBarcodeCode } from './code-generator'
 import type { InventoryBarcodeRow } from './types'
 import { recordConsumptionMovement } from './consumption-movement'
 import { rollbackDemandBarcodeConsumption } from './rollback-demand-consumption'
+import { resolveBarcodeSpecialistId } from './release-consumed'
+
+export function isOrphanedConsumedBarcode(barcode: Pick<InventoryBarcodeRow, 'status' | 'demand_id'>): boolean {
+  return barcode.status === 'consumed' && (barcode.demand_id == null || barcode.demand_id === '')
+}
 
 async function insertBarcodeEvent(
   supabase: SupabaseClient,
@@ -30,7 +35,7 @@ async function explainBarcodeSpecialistMismatch(
   specialistId: string
 ): Promise<string> {
   if (barcode.kind === 'set') {
-    return 'This is a set container label — scan each unit product label (Nova, battery, etc.), not the set batch label.'
+    return 'Legacy set container label — scan each unit product label for this installation (Nova, battery, etc.).'
   }
   if (barcode.kind !== 'unit') {
     return 'Not a unit product barcode.'
@@ -39,6 +44,9 @@ async function explainBarcodeSpecialistMismatch(
     return 'This label was voided. Register or generate a replacement unit barcode and assign it to the specialist.'
   }
   if (barcode.status === 'consumed') {
+    if (isOrphanedConsumedBarcode(barcode)) {
+      return 'This label is marked consumed but not linked to any demand — select the specialist who had this unit, or use Inventory → Release consumed to return it to field stock.'
+    }
     return 'This label is already consumed on another completed job.'
   }
   if (barcode.status === 'generated') {
@@ -66,10 +74,25 @@ async function explainBarcodeSpecialistMismatch(
   return 'Invalid barcode or not on the selected specialist field stock'
 }
 
+async function specialistMatchesBarcode(
+  adminSupabase: SupabaseClient,
+  barcode: InventoryBarcodeRow,
+  specialistId: string
+): Promise<boolean> {
+  if (barcode.specialist_id === specialistId) return true
+  const resolved = await resolveBarcodeSpecialistId(
+    adminSupabase,
+    barcode.id,
+    barcode.specialist_id as string | null
+  )
+  return resolved === specialistId
+}
+
 export async function lookupUnitBarcodeAtSpecialist(
   adminSupabase: SupabaseClient,
   code: string,
-  specialistId: string
+  specialistId: string,
+  options?: { allowOrphanedConsumed?: boolean }
 ): Promise<
   | { barcodeId: string; cameraModelId: string; cameraModelName: string | null }
   | { error: string }
@@ -83,11 +106,36 @@ export async function lookupUnitBarcodeAtSpecialist(
     return { error: 'Barcode not found in registry — check the code or use Register printed label.' }
   }
 
-  if (
-    barcode.kind !== 'unit' ||
-    barcode.status !== 'at_specialist' ||
-    barcode.specialist_id !== specialistId
-  ) {
+  const orphanedConsumed =
+    options?.allowOrphanedConsumed && isOrphanedConsumedBarcode(barcode)
+
+  if (barcode.kind !== 'unit') {
+    const detail = await explainBarcodeSpecialistMismatch(adminSupabase, barcode, specialistId)
+    return { error: detail }
+  }
+
+  if (orphanedConsumed) {
+    const matches = await specialistMatchesBarcode(adminSupabase, barcode, specialistId)
+    if (!matches) {
+      const ownerId = await resolveBarcodeSpecialistId(
+        adminSupabase,
+        barcode.id,
+        barcode.specialist_id as string | null
+      )
+      if (ownerId && ownerId !== specialistId) {
+        const { data: other } = await adminSupabase
+          .from('profiles')
+          .select('full_name')
+          .eq('id', ownerId)
+          .maybeSingle()
+        const name = other?.full_name?.trim() || 'another specialist'
+        return {
+          error: `Label is consumed (no demand linked) and belongs to ${name} — select that specialist or use Inventory → Release consumed.`,
+        }
+      }
+      return { error: 'Label is not linked to the selected specialist.' }
+    }
+  } else if (barcode.status !== 'at_specialist' || barcode.specialist_id !== specialistId) {
     const detail = await explainBarcodeSpecialistMismatch(adminSupabase, barcode, specialistId)
     return { error: detail }
   }
@@ -111,7 +159,8 @@ export async function lookupUnitBarcodeAtSpecialist(
 export async function validateUnitBarcodesAtSpecialist(
   adminSupabase: SupabaseClient,
   codes: string[],
-  specialistId: string
+  specialistId: string,
+  options?: { allowOrphanedConsumed?: boolean }
 ): Promise<{ ok: true } | { error: string }> {
   if (!specialistId.trim()) {
     return { error: 'Select the specialist whose field stock these barcodes belong to.' }
@@ -123,7 +172,12 @@ export async function validateUnitBarcodesAtSpecialist(
     const key = code.toLowerCase()
     if (seen.has(key)) return { error: `Duplicate barcode in list: ${code}` }
     seen.add(key)
-    const resolved = await lookupUnitBarcodeAtSpecialist(adminSupabase, code, specialistId)
+    const resolved = await lookupUnitBarcodeAtSpecialist(
+      adminSupabase,
+      code,
+      specialistId,
+      options
+    )
     if ('error' in resolved) return { error: `${code}: ${resolved.error}` }
   }
   return { ok: true }
@@ -151,7 +205,8 @@ export async function consumeBarcodeForDemand(
     const resolved = await lookupUnitBarcodeAtSpecialist(
       adminSupabase,
       normalized,
-      input.specialistId
+      input.specialistId,
+      { allowOrphanedConsumed: true }
     )
     if ('error' in resolved) return { error: resolved.error }
     barcodeId = resolved.barcodeId
@@ -180,6 +235,39 @@ export async function consumeBarcodeForDemand(
 
   const cameraModelId = barcode.camera_model_id as string | null
   if (!cameraModelId) return { error: 'Barcode has no camera model' }
+
+  if (isOrphanedConsumedBarcode(barcode as InventoryBarcodeRow)) {
+    const now = new Date().toISOString()
+    const { data: updated, error: relinkError } = await adminSupabase
+      .from('inventory_barcodes')
+      .update({
+        demand_id: input.demandId,
+        consumed_at: (barcode.consumed_at as string | null) ?? now,
+        updated_at: now,
+      })
+      .eq('id', barcode.id)
+      .select('*')
+      .single()
+
+    if (relinkError || !updated) {
+      return { error: relinkError?.message ?? 'Failed to link barcode to demand' }
+    }
+
+    await insertBarcodeEvent(
+      adminSupabase,
+      barcode.id,
+      'consumed',
+      input.actorId,
+      {
+        demand_id: input.demandId,
+        service_type: input.serviceType,
+        relink_orphaned_consumed: true,
+      },
+      input.demandId
+    )
+
+    return { barcode: updated as InventoryBarcodeRow, cameraModelId }
+  }
 
   const { data: specialist } = await adminSupabase
     .from('profiles')

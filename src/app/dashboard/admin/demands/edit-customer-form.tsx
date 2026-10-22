@@ -4,6 +4,8 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { updateCustomerInfo } from './actions'
 import { CanadianPhoneInput, formatCanadianPhone } from '@/components/canadian-phone-input'
+import { DemandFieldWrap } from '@/components/demand-field-highlight'
+import type { DemandFieldKey, FieldHighlightBucket } from '@/lib/demand-field-updates'
 
 const inputClass = 'w-full border border-zinc-300 dark:border-gray-700 bg-zinc-200/50 dark:bg-white/5 p-2 rounded text-zinc-900 dark:text-white text-sm focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]'
 
@@ -14,6 +16,7 @@ interface EditCustomerFormProps {
   phone: string
   address: string | null
   canEdit: boolean
+  fieldHighlights?: Partial<Record<DemandFieldKey, FieldHighlightBucket>>
 }
 
 export function EditCustomerForm({
@@ -23,6 +26,7 @@ export function EditCustomerForm({
   phone,
   address,
   canEdit,
+  fieldHighlights,
 }: EditCustomerFormProps) {
   const router = useRouter()
   const [firstNameVal, setFirstNameVal] = useState(firstName ?? '')
@@ -64,19 +68,27 @@ export function EditCustomerForm({
   if (!canEdit) {
     return (
       <div className="space-y-3">
-        <div>
-          <p className="text-sm text-zinc-500 dark:text-gray-400">Name</p>
-          <p className="text-zinc-900 dark:text-white font-medium">{firstName} {lastName}</p>
-        </div>
-        <div>
-          <p className="text-sm text-zinc-500 dark:text-gray-400">Phone</p>
-          <p className="text-zinc-900 dark:text-white">{phone}</p>
-        </div>
-        {address && (
+        <DemandFieldWrap field="customer_firstname" highlights={fieldHighlights}>
           <div>
-            <p className="text-sm text-zinc-500 dark:text-gray-400">Address</p>
-            <p className="text-zinc-900 dark:text-white">{address}</p>
+            <p className="text-sm text-zinc-500 dark:text-gray-400">Name</p>
+            <p className="text-zinc-900 dark:text-white font-medium">
+              {firstName} {lastName}
+            </p>
           </div>
+        </DemandFieldWrap>
+        <DemandFieldWrap field="customer_phone" highlights={fieldHighlights}>
+          <div>
+            <p className="text-sm text-zinc-500 dark:text-gray-400">Phone</p>
+            <p className="text-zinc-900 dark:text-white">{phone}</p>
+          </div>
+        </DemandFieldWrap>
+        {address && (
+          <DemandFieldWrap field="customer_address" highlights={fieldHighlights}>
+            <div>
+              <p className="text-sm text-zinc-500 dark:text-gray-400">Address</p>
+              <p className="text-zinc-900 dark:text-white">{address}</p>
+            </div>
+          </DemandFieldWrap>
         )}
       </div>
     )
@@ -84,6 +96,7 @@ export function EditCustomerForm({
 
   return (
     <div className="space-y-3">
+      <DemandFieldWrap field="customer_firstname" highlights={fieldHighlights}>
       <div>
         <label className="block text-xs font-medium text-zinc-500 dark:text-gray-400 mb-1">First Name</label>
         <input
@@ -95,6 +108,8 @@ export function EditCustomerForm({
           placeholder="First name"
         />
       </div>
+      </DemandFieldWrap>
+      <DemandFieldWrap field="customer_lastname" highlights={fieldHighlights}>
       <div>
         <label className="block text-xs font-medium text-zinc-500 dark:text-gray-400 mb-1">Last Name</label>
         <input
@@ -106,6 +121,8 @@ export function EditCustomerForm({
           placeholder="Last name"
         />
       </div>
+      </DemandFieldWrap>
+      <DemandFieldWrap field="customer_phone" highlights={fieldHighlights}>
       <div>
         <label className="block text-xs font-medium text-zinc-500 dark:text-gray-400 mb-1">Phone</label>
         <CanadianPhoneInput
@@ -115,6 +132,8 @@ export function EditCustomerForm({
           placeholder="416 - 123 - 4567"
         />
       </div>
+      </DemandFieldWrap>
+      <DemandFieldWrap field="customer_address" highlights={fieldHighlights}>
       <div>
         <label className="block text-xs font-medium text-zinc-500 dark:text-gray-400 mb-1">Address</label>
         <input
@@ -125,6 +144,7 @@ export function EditCustomerForm({
           placeholder="Optional"
         />
       </div>
+      </DemandFieldWrap>
       <div className="flex items-center gap-2">
         <button
           type="button"

@@ -3,6 +3,8 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { updateStockNumber } from './actions'
+import { DemandFieldWrap } from '@/components/demand-field-highlight'
+import type { DemandFieldKey, FieldHighlightBucket } from '@/lib/demand-field-updates'
 
 const inputClass = 'w-full border border-zinc-300 dark:border-gray-700 bg-zinc-200/50 dark:bg-white/5 p-2 rounded text-zinc-900 dark:text-white text-sm focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]'
 
@@ -10,12 +12,14 @@ interface EditStockNumberFormProps {
   demandId: string
   stockNumber: string | null
   canEdit: boolean
+  fieldHighlights?: Partial<Record<DemandFieldKey, FieldHighlightBucket>>
 }
 
 export function EditStockNumberForm({
   demandId,
   stockNumber,
   canEdit,
+  fieldHighlights,
 }: EditStockNumberFormProps) {
   const router = useRouter()
   const [value, setValue] = useState(stockNumber ?? '')
@@ -41,11 +45,14 @@ export function EditStockNumberForm({
 
   if (!canEdit) {
     return (
-      <p className="text-zinc-900 dark:text-white">{stockNumber || '—'}</p>
+      <DemandFieldWrap field="stock_number" highlights={fieldHighlights}>
+        <p className="text-zinc-900 dark:text-white">{stockNumber || '—'}</p>
+      </DemandFieldWrap>
     )
   }
 
   return (
+    <DemandFieldWrap field="stock_number" highlights={fieldHighlights}>
     <div className="space-y-2">
       <input
         type="text"
@@ -75,5 +82,6 @@ export function EditStockNumberForm({
         </p>
       )}
     </div>
+    </DemandFieldWrap>
   )
 }

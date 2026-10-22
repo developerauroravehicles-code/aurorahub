@@ -3,6 +3,12 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { revalidatePath } from 'next/cache'
 import { logDemandChange } from '@/lib/demand-logger'
+import {
+  buildDemandFieldChanges,
+  recordDemandFieldUpdates,
+  type DemandFieldKey,
+} from '@/lib/demand-field-updates'
+import { validateDealerBookingCamera } from '@/lib/dealer-camera-catalog'
 import { dispatchWebhooks } from '@/lib/webhook-dispatch'
 import { sendSMS } from '@/lib/twilio'
 import { logSmsSent } from '@/lib/sms-logger'
@@ -424,7 +430,7 @@ export async function updateDemand(demandId: string, formData: FormData) {
   // Check if user is finance
   const { data: profile } = await supabase
     .from('profiles')
-    .select('role')
+    .select('role, full_name')
     .eq('id', user.id)
     .single()
 
@@ -435,7 +441,7 @@ export async function updateDemand(demandId: string, formData: FormData) {
   // Check if demand is assigned to current user
   const { data: demand } = await supabase
     .from('demands')
-    .select('assigned_finance_id, status, appointment_date, customer_phone, customer_firstname, customer_lastname, dealer_id, assigned_specialist_id, demand_number, customer_address, vehicle_year, vehicle_make, vehicle_model, vin_last6, stock_number, dealers(region_codes(timezone_id, timezones(name)), name, address)')
+    .select('assigned_finance_id, status, appointment_date, customer_phone, customer_firstname, customer_lastname, dealer_id, assigned_specialist_id, demand_number, customer_address, vehicle_year, vehicle_make, vehicle_model, vin_last6, stock_number, camera_model, dealers(region_codes(timezone_id, timezones(name)), name, address)')
     .eq('id', demandId)
     .single()
 
@@ -485,7 +491,16 @@ export async function updateDemand(demandId: string, formData: FormData) {
     }
   }
 
-  const cameraModelId = await lookupCameraModelId(supabase, cameraModel)
+  if (!demand.dealer_id) {
+    return { error: 'Demand has no dealer.' }
+  }
+
+  const cameraCheck = await validateDealerBookingCamera(supabase, demand.dealer_id, {
+    cameraModelName: cameraModel,
+  })
+  if ('error' in cameraCheck) {
+    return { error: cameraCheck.error }
+  }
 
   // Update demand
   const { error: updateError } = await supabase
@@ -499,8 +514,8 @@ export async function updateDemand(demandId: string, formData: FormData) {
       vehicle_model: vehicleModel,
       vehicle_year: vehicleYear,
       stock_number: stockNumber,
-      camera_model: cameraModel,
-      camera_model_id: cameraModelId,
+      camera_model: cameraCheck.cameraModelName,
+      camera_model_id: cameraCheck.cameraModelId,
       appointment_date: appointmentDate,
       updated_at: new Date().toISOString()
     })
@@ -517,14 +532,59 @@ export async function updateDemand(demandId: string, formData: FormData) {
     }).catch(() => {})
   }
 
-  if (appointmentDateChanged) {
-    logDemandChange({
+  const editFields: DemandFieldKey[] = [
+    'customer_firstname',
+    'customer_lastname',
+    'customer_phone',
+    'customer_address',
+    'vehicle_make',
+    'vehicle_model',
+    'vehicle_year',
+    'stock_number',
+    'camera_model',
+    'appointment_date',
+  ]
+  const fieldChanges = buildDemandFieldChanges(
+    {
+      customer_firstname: demand.customer_firstname,
+      customer_lastname: demand.customer_lastname,
+      customer_phone: demand.customer_phone,
+      customer_address: demand.customer_address,
+      vehicle_make: demand.vehicle_make,
+      vehicle_model: demand.vehicle_model,
+      vehicle_year: demand.vehicle_year,
+      stock_number: demand.stock_number,
+      camera_model: demand.camera_model,
+      appointment_date: demand.appointment_date,
+    },
+    {
+      customer_firstname: customerFirstname,
+      customer_lastname: customerLastname,
+      customer_phone: customerPhone,
+      customer_address: customerAddress,
+      vehicle_make: vehicleMake,
+      vehicle_model: vehicleModel,
+      vehicle_year: vehicleYear,
+      stock_number: stockNumber,
+      camera_model: cameraCheck.cameraModelName,
+      appointment_date: appointmentDate,
+    },
+    editFields
+  )
+  if (fieldChanges.length > 0) {
+    await recordDemandFieldUpdates({
       demandId,
       actorId: user.id,
+      actorRole: profile.role,
+      actorName: profile.full_name ?? undefined,
       previousStatus: 'approved',
       newStatus: 'approved',
-      notes: 'Appointment date rescheduled',
-    }).catch(() => {})
+      notes: appointmentDateChanged ? 'Appointment date rescheduled' : 'Demand updated by finance',
+      fieldChanges,
+      assignedSpecialistId: demand.assigned_specialist_id,
+      demandNumber: demand.demand_number,
+      customerLabel: `${customerFirstname} ${customerLastname}`.trim(),
+    })
   }
 
   // Send rescheduling notice SMS when appointment date changed (always, no 24h condition)
@@ -589,6 +649,8 @@ export async function updateDemand(demandId: string, formData: FormData) {
   }
 
   revalidatePath('/dashboard/finance/demands')
+  revalidatePath(`/dashboard/admin/demands/${demandId}`)
+  revalidatePath('/dashboard/specialist/work')
   revalidatePath('/dashboard')
   return { success: true }
 }

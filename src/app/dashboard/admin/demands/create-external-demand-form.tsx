@@ -114,17 +114,23 @@ export function CreateExternalDemandForm({
   const [selectedTrim, setSelectedTrim] = useState('')
   const [customModel, setCustomModel] = useState('')
   const [selectedCameraId, setSelectedCameraId] = useState('')
+  const [selectedCameraIds, setSelectedCameraIds] = useState<string[]>([])
   const [customCamera, setCustomCamera] = useState('')
   const [cameraNameForSubmit, setCameraNameForSubmit] = useState('')
   const [comment, setComment] = useState('')
   const [isFutureCustomer, setIsFutureCustomer] = useState(false)
-  const [completeOnCreate, setCompleteOnCreate] = useState(false)
+  const [entryMode, setEntryMode] = useState<'standard' | 'retroactive'>('retroactive')
+  const [completeOnCreate, setCompleteOnCreate] = useState(true)
   const [serviceType, setServiceType] = useState<DemandServiceType>('installation')
   const [appointmentDate, setAppointmentDate] = useState('')
   const [assignedSpecialistId, setAssignedSpecialistId] = useState('')
   const [barcodeInput, setBarcodeInput] = useState('')
   const [scannedBarcodes, setScannedBarcodes] = useState<ScannedBarcode[]>([])
   const [scanPending, setScanPending] = useState(false)
+  const [barcodeScanFeedback, setBarcodeScanFeedback] = useState<{
+    type: 'error' | 'success' | 'info'
+    text: string
+  } | null>(null)
   const [clientError, setClientError] = useState<string | null>(null)
   const [pricingCheckPending, setPricingCheckPending] = useState(false)
   const [missingPrice, setMissingPrice] = useState<ExternalDemandMissingPrice | null>(null)
@@ -140,6 +146,19 @@ export function CreateExternalDemandForm({
       ),
     [selectedDealer]
   )
+
+  useEffect(() => {
+    const retroactive = entryMode === 'retroactive'
+    setCompleteOnCreate(retroactive)
+  }, [entryMode])
+
+  useEffect(() => {
+    if (!appointmentDate) return
+    const todayInDealer = formatInTimeZone(new Date(), dealerTimezone, 'yyyy-MM-dd')
+    if (appointmentDate < todayInDealer) {
+      setEntryMode('retroactive')
+    }
+  }, [appointmentDate, dealerTimezone])
 
   const collectDraft = useCallback((): ExternalDemandFormDraft => {
     return {
@@ -160,6 +179,7 @@ export function CreateExternalDemandForm({
       selectedTrim,
       customModel,
       selectedCameraId,
+      selectedCameraIds,
       customCamera,
       cameraNameForSubmit,
       comment,
@@ -184,6 +204,7 @@ export function CreateExternalDemandForm({
     selectedTrim,
     customModel,
     selectedCameraId,
+    selectedCameraIds,
     customCamera,
     cameraNameForSubmit,
     comment,
@@ -197,6 +218,7 @@ export function CreateExternalDemandForm({
     prevDealerIdRef.current = draft.selectedDealerId
     setSelectedDealerId(draft.selectedDealerId)
     setAssignedSpecialistId(draft.assignedSpecialistId)
+    setEntryMode(draft.completeOnCreate ? 'retroactive' : 'standard')
     setCompleteOnCreate(draft.completeOnCreate)
     setServiceType(draft.serviceType)
     setFirstName(draft.firstName)
@@ -211,6 +233,13 @@ export function CreateExternalDemandForm({
     setSelectedTrim(draft.selectedTrim)
     setCustomModel(draft.customModel)
     setSelectedCameraId(draft.selectedCameraId)
+    setSelectedCameraIds(
+      draft.selectedCameraIds?.length
+        ? draft.selectedCameraIds
+        : draft.selectedCameraId && draft.selectedCameraId !== CAMERA_CUSTOM
+          ? [draft.selectedCameraId]
+          : []
+    )
     setCustomCamera(draft.customCamera)
     setCameraNameForSubmit(draft.cameraNameForSubmit)
     setComment(draft.comment)
@@ -287,10 +316,53 @@ export function CreateExternalDemandForm({
     if (prevDealerIdRef.current !== selectedDealerId) {
       prevDealerIdRef.current = selectedDealerId
       setSelectedCameraId('')
+      setSelectedCameraIds([])
       setCustomCamera('')
       setCameraNameForSubmit('')
     }
   }, [selectedDealerId])
+
+  function toggleCatalogCamera(cameraId: string) {
+    if (scannedBarcodes.length > 0) return
+    setSelectedCameraIds((prev) => {
+      const next = prev.includes(cameraId) ? prev.filter((id) => id !== cameraId) : [...prev, cameraId]
+      return next
+    })
+    setCustomCamera('')
+  }
+
+  useEffect(() => {
+    if (scannedBarcodes.length > 0) return
+    const ids = selectedCameraIds.filter(Boolean)
+    if (!selectedDealerId || ids.length === 0) {
+      return
+    }
+
+    const labels = ids
+      .map((id) => cameraModels.find((c) => c.id === id))
+      .filter(Boolean)
+      .map((c) => c!.label ?? c!.name)
+    const joined = labels.join(' + ')
+    if (joined) setCameraNameForSubmit(joined)
+
+    let cancelled = false
+    void suggestExternalDemandCameraModel(selectedDealerId, ids).then((result) => {
+      if (cancelled) return
+      if ('ok' in result && result.ok) {
+        setSelectedCameraId(result.cameraModelId)
+        setCameraNameForSubmit(result.cameraModelName)
+      } else if (ids.length === 1) {
+        const cam = cameraModels.find((c) => c.id === ids[0])
+        setSelectedCameraId(ids[0])
+        setCameraNameForSubmit(cam?.name ?? joined)
+      } else {
+        setSelectedCameraId(ids[0])
+      }
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [selectedCameraIds, selectedDealerId, scannedBarcodes.length, cameraModels])
 
   useEffect(() => {
     if (restoringDraftRef.current) {
@@ -316,6 +388,7 @@ export function CreateExternalDemandForm({
     void suggestExternalDemandCameraModel(selectedDealerId, unitIds).then((result) => {
       if (cancelled || !('ok' in result) || !result.ok) return
       setSelectedCameraId(result.cameraModelId)
+      setSelectedCameraIds([])
       setCustomCamera('')
       setCameraNameForSubmit(result.cameraModelName)
     })
@@ -372,26 +445,58 @@ export function CreateExternalDemandForm({
 
   async function addScannedBarcode() {
     const raw = barcodeInput.trim()
-    if (!raw) return
-    if (scannedBarcodes.some((b) => b.code.toLowerCase() === raw.toLowerCase())) {
-      setClientError('This barcode is already in the list.')
+    if (!raw) {
+      setBarcodeScanFeedback({ type: 'error', text: 'Enter or scan a barcode first.' })
+      return
+    }
+    if (!assignedSpecialistId.trim()) {
+      setBarcodeScanFeedback({
+        type: 'error',
+        text: 'Choose the specialist above — barcodes must match their field stock (including released/orphan consumed labels).',
+      })
+      return
+    }
+    const codeKey = raw.toUpperCase()
+    if (scannedBarcodes.some((b) => b.code.toLowerCase() === codeKey.toLowerCase())) {
+      setBarcodeScanFeedback({ type: 'error', text: 'This barcode is already in the list.' })
       setBarcodeInput('')
       return
     }
+
     setScanPending(true)
     setClientError(null)
-    const preview = await previewExternalDemandBarcode(assignedSpecialistId, raw)
-    setScanPending(false)
-    if ('error' in preview && preview.error) {
-      setClientError(preview.error)
-      return
-    }
-    if ('ok' in preview && preview.ok) {
+    setBarcodeScanFeedback({ type: 'info', text: 'Checking barcode…' })
+
+    try {
+      const preview = await previewExternalDemandBarcode(assignedSpecialistId, raw)
+      if (preview && 'error' in preview && preview.error) {
+        setBarcodeScanFeedback({ type: 'error', text: preview.error })
+        return
+      }
+      if (!preview || !('ok' in preview) || !preview.ok) {
+        setBarcodeScanFeedback({
+          type: 'error',
+          text: 'Barcode could not be verified. Check the code and specialist.',
+        })
+        return
+      }
       setScannedBarcodes((prev) => [
         ...prev,
-        { code: preview.code, modelName: preview.modelName, cameraModelId: preview.cameraModelId },
+        {
+          code: preview.code,
+          modelName: preview.modelName,
+          cameraModelId: preview.cameraModelId,
+        },
       ])
       setBarcodeInput('')
+      setBarcodeScanFeedback({ type: 'success', text: `Added ${preview.code} (${preview.modelName})` })
+    } catch (e) {
+      setBarcodeScanFeedback({
+        type: 'error',
+        text: e instanceof Error ? e.message : 'Barcode lookup failed.',
+      })
+    } finally {
+      setScanPending(false)
     }
   }
 
@@ -400,11 +505,14 @@ export function CreateExternalDemandForm({
     showBarcodeOnComplete && isBarcodeRequiredForServiceType(serviceType)
   const installationCompletedOnCreate = completeOnCreate && serviceType === 'installation'
   const allowCustomCamera = !installationCompletedOnCreate
-  const selectedCatalogCamera = cameraModels.find((c) => c.id === selectedCameraId)
-  const submitCameraModelName =
-    selectedCameraId === CAMERA_CUSTOM
-      ? customCamera
-      : selectedCatalogCamera?.name ?? cameraNameForSubmit
+  const usingCustomCamera = selectedCameraIds.length === 0 && selectedCameraId === CAMERA_CUSTOM
+  const submitCameraModelName = usingCustomCamera
+    ? customCamera
+    : cameraNameForSubmit ||
+      selectedCameraIds
+        .map((id) => cameraModels.find((c) => c.id === id)?.name)
+        .filter(Boolean)
+        .join(' + ')
   const specialistRequiredForBarcodes =
     showBarcodeOnComplete &&
     (isBarcodeRequiredForServiceType(serviceType) || scannedBarcodes.length > 0)
@@ -414,16 +522,19 @@ export function CreateExternalDemandForm({
       <label className="block text-sm font-medium text-zinc-900 dark:text-white">
         Product barcodes{barcodeRequiredOnComplete ? ' *' : ' (optional for transfer)'}
       </label>
-      {!assignedSpecialistId && (
-        <p className="text-xs text-amber-700 dark:text-amber-300">
-          Select the specialist above — scans must match their field stock.
+        {!assignedSpecialistId && (
+        <p className="text-xs text-amber-700 dark:text-amber-300 font-medium">
+          Choose the specialist in the field above before adding barcodes.
         </p>
       )}
       <div className="flex gap-2">
         <input
           type="text"
           value={barcodeInput}
-          onChange={(e) => setBarcodeInput(e.target.value.toUpperCase())}
+          onChange={(e) => {
+            setBarcodeInput(e.target.value.toUpperCase())
+            if (barcodeScanFeedback?.type === 'error') setBarcodeScanFeedback(null)
+          }}
           onKeyDown={(e) => {
             if (e.key === 'Enter') {
               e.preventDefault()
@@ -431,19 +542,35 @@ export function CreateExternalDemandForm({
             }
           }}
           autoComplete="off"
-          disabled={scanPending || isPending || !assignedSpecialistId}
+          disabled={scanPending || isPending}
           placeholder="Scan unit barcode, press Enter…"
           className="flex-1 rounded-md border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 px-3 py-2 text-sm font-mono text-zinc-900 dark:text-white focus:border-[#C27E00] focus:outline-none focus:ring-1 focus:ring-[#C27E00] disabled:opacity-50"
         />
         <button
           type="button"
-          disabled={scanPending || isPending || !barcodeInput.trim() || !assignedSpecialistId}
+          disabled={
+            scanPending || isPending || !barcodeInput.trim() || !assignedSpecialistId.trim()
+          }
           onClick={() => void addScannedBarcode()}
-          className="shrink-0 rounded-md border border-[#C27E00]/50 px-3 py-2 text-sm text-[#C27E00] hover:bg-[#C27E00]/10 disabled:opacity-50"
+          className="shrink-0 rounded-md border border-[#C27E00]/50 px-3 py-2 text-sm font-medium text-[#C27E00] hover:bg-[#C27E00]/10 disabled:opacity-50 min-w-[4.5rem]"
         >
-          Add
+          {scanPending ? '…' : 'Add'}
         </button>
       </div>
+      {barcodeScanFeedback ? (
+        <p
+          className={`text-sm ${
+            barcodeScanFeedback.type === 'error'
+              ? 'text-red-600 dark:text-red-300'
+              : barcodeScanFeedback.type === 'success'
+                ? 'text-green-700 dark:text-green-300'
+                : 'text-zinc-500 dark:text-gray-400'
+          }`}
+          role="status"
+        >
+          {barcodeScanFeedback.text}
+        </p>
+      ) : null}
       <p className="text-xs text-zinc-500 dark:text-gray-500">
         {barcodeRequiredOnComplete
           ? 'Required for completed retroactive installs. Scan each unit label (not the set box).'
@@ -452,28 +579,37 @@ export function CreateExternalDemandForm({
       {scannedBarcodes.map((b) => (
         <input key={b.code} type="hidden" name="barcodeCodes" value={b.code} />
       ))}
-      {scannedBarcodes.length > 0 && (
-        <ul className="space-y-1 rounded-md border border-zinc-200 dark:border-gray-800 divide-y divide-zinc-200 dark:divide-gray-800">
-          {scannedBarcodes.map((b) => (
-            <li
-              key={b.code}
-              className="flex items-center justify-between gap-2 px-3 py-2 text-sm bg-zinc-50 dark:bg-black/30"
-            >
-              <span>
-                <span className="font-mono text-zinc-900 dark:text-white">{b.code}</span>
-                <span className="text-zinc-500 ml-2">{b.modelName}</span>
-              </span>
-              <button
-                type="button"
-                className="text-xs text-red-400 hover:underline"
-                onClick={() => setScannedBarcodes((prev) => prev.filter((x) => x.code !== b.code))}
+      <div className="rounded-md border border-zinc-200 dark:border-gray-800 overflow-hidden">
+        {scannedBarcodes.length === 0 ? (
+          <p className="px-3 py-2 text-xs text-zinc-500 dark:text-gray-500 bg-zinc-50/80 dark:bg-black/20">
+            No barcodes added yet.
+          </p>
+        ) : (
+          <ul className="divide-y divide-zinc-200 dark:divide-gray-800">
+            {scannedBarcodes.map((b) => (
+              <li
+                key={b.code}
+                className="flex items-center justify-between gap-2 px-3 py-2 text-sm bg-zinc-50 dark:bg-black/30"
               >
-                Remove
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
+                <span>
+                  <span className="font-mono font-medium text-zinc-900 dark:text-white">{b.code}</span>
+                  <span className="text-zinc-500 dark:text-gray-400 ml-2">{b.modelName}</span>
+                </span>
+                <button
+                  type="button"
+                  className="text-xs text-red-500 hover:underline shrink-0"
+                  onClick={() => {
+                    setScannedBarcodes((prev) => prev.filter((x) => x.code !== b.code))
+                    setBarcodeScanFeedback(null)
+                  }}
+                >
+                  Remove
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
     </div>
   ) : barcodeModeEnabled && !completeOnCreate ? (
     <p className="sm:col-span-2 text-xs text-zinc-500 dark:text-gray-400">
@@ -497,9 +633,14 @@ export function CreateExternalDemandForm({
           setClientError('Select a specialist — barcodes are taken from their field stock.')
           return
         }
-        if (installationCompletedOnCreate && !submitCameraModelName.trim()) {
+        if (
+          installationCompletedOnCreate &&
+          !submitCameraModelName.trim() &&
+          selectedCameraIds.length === 0 &&
+          scannedBarcodes.length === 0
+        ) {
           setClientError(
-            'Select a camera from the dealer list or scan unit barcodes so pricing can match the catalog.'
+            'Select one or more cameras from the dealer list or scan unit barcodes so pricing can match the catalog.'
           )
           return
         }
@@ -556,8 +697,41 @@ export function CreateExternalDemandForm({
       }}
     >
       <div>
-        <h2 className="text-lg font-medium text-zinc-900 dark:text-white border-b border-zinc-200 dark:border-gray-800 pb-2">Create External Demand</h2>
-        <p className="text-sm text-zinc-500 dark:text-gray-400 mt-1">Date only — no slot. External demands do not affect normal demand slots. Past dates allowed for retroactive entry.</p>
+        <h2 className="text-lg font-medium text-zinc-900 dark:text-white border-b border-zinc-200 dark:border-gray-800 pb-2">
+          Create External Demand
+        </h2>
+        <p className="text-sm text-zinc-500 dark:text-gray-400 mt-1">
+          Aurora Manager only. Date only — no slot; external demands do not block dealer calendar capacity.
+        </p>
+        <div className="mt-4 flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => setEntryMode('retroactive')}
+            className={`rounded-lg px-3 py-2 text-sm font-medium border transition-colors ${
+              entryMode === 'retroactive'
+                ? 'border-[#C27E00] bg-[#C27E00]/15 text-[#C27E00]'
+                : 'border-zinc-300 dark:border-gray-600 text-zinc-700 dark:text-gray-300'
+            }`}
+          >
+            Retroactive — create as completed
+          </button>
+          <button
+            type="button"
+            onClick={() => setEntryMode('standard')}
+            className={`rounded-lg px-3 py-2 text-sm font-medium border transition-colors ${
+              entryMode === 'standard'
+                ? 'border-[#C27E00] bg-[#C27E00]/15 text-[#C27E00]'
+                : 'border-zinc-300 dark:border-gray-600 text-zinc-700 dark:text-gray-300'
+            }`}
+          >
+            Standard — pending finance
+          </button>
+        </div>
+        <p className="text-xs text-zinc-500 dark:text-gray-500 mt-2">
+          {entryMode === 'retroactive'
+            ? 'Pick a past or today job date, service type, pricing, and optional barcodes. Demand is saved as completed (closed).'
+            : 'Creates pending finance for normal workflow. Use retroactive mode for backdated completed jobs.'}
+        </p>
       </div>
 
       {(state?.error || clientError) && (
@@ -654,8 +828,9 @@ export function CreateExternalDemandForm({
             timezoneName={dealerTimezone}
             allowPastDates
             selectedPacificYmd={appointmentDate || null}
-            onDateSelect={(date) => {
-              setAppointmentDate(formatInTimeZone(date, dealerTimezone, 'yyyy-MM-dd'))
+            onWallDateSelect={(ymd) => setAppointmentDate(ymd)}
+            onDateSelect={() => {
+              /* wall date set via onWallDateSelect */
             }}
             getTakenSlots={async () => []}
           />
@@ -703,6 +878,8 @@ export function CreateExternalDemandForm({
           )}
         </div>
 
+        {barcodeFields}
+
         <h3 className="col-span-full text-sm font-medium text-zinc-900 dark:text-white border-t border-zinc-200 dark:border-gray-800 pt-4 mt-4">Customer</h3>
         <div className="sm:col-span-2 flex items-center gap-2">
           <input
@@ -716,19 +893,6 @@ export function CreateExternalDemandForm({
             Future Customer
           </label>
           <span className="text-xs text-zinc-500 dark:text-gray-500">— When checked, customer info is set to &quot;Future&quot;</span>
-        </div>
-        <div className="sm:col-span-2 flex items-center gap-2">
-          <input
-            type="checkbox"
-            id="completeOnCreate"
-            checked={completeOnCreate}
-            onChange={(e) => setCompleteOnCreate(e.target.checked)}
-            className="rounded border-zinc-300 dark:border-gray-600 bg-white dark:bg-black/50 text-[#C27E00] focus:ring-[#C27E00] focus:ring-offset-0"
-          />
-          <label htmlFor="completeOnCreate" className="text-sm font-medium text-zinc-600 dark:text-gray-300 cursor-pointer">
-            Mark as completed on creation
-          </label>
-          <span className="text-xs text-zinc-500 dark:text-gray-500">— When checked, demand is created directly as completed</span>
         </div>
         {completeOnCreate && <input type="hidden" name="completeOnCreate" value="true" />}
         {completeOnCreate && (
@@ -944,67 +1108,50 @@ export function CreateExternalDemandForm({
               <option>Loading dealer cameras…</option>
             </select>
           ) : cameraModels.length > 0 ? (
-            <div className="space-y-1">
-              <select
-                value={selectedCameraId}
-                onChange={(e) => {
-                  const next = e.target.value
-                  setSelectedCameraId(next)
-                  setCustomCamera('')
-                  if (next && next !== CAMERA_CUSTOM) {
-                    const cam = cameraModels.find((c) => c.id === next)
-                    setCameraNameForSubmit(cam?.name ?? '')
-                  } else {
-                    setCameraNameForSubmit('')
-                  }
-                }}
-                required={selectedCameraId !== CAMERA_CUSTOM}
-                className={inputClass}
-              >
-                <option value="">-- Select --</option>
-                {cameraModels.map((c) => (
-                  <option key={c.id} value={c.id} className="bg-white text-zinc-900 dark:bg-black dark:text-white">
-                    {c.label ?? c.name}
-                  </option>
-                ))}
-                {!selectedCatalogCamera &&
-                  selectedCameraId &&
-                  selectedCameraId !== CAMERA_CUSTOM &&
-                  cameraNameForSubmit && (
-                    <option value={selectedCameraId} className="bg-white text-zinc-900 dark:bg-black dark:text-white">
-                      {cameraNameForSubmit} (from scanned units)
-                    </option>
-                  )}
-                {allowCustomCamera && (
-                  <option value={CAMERA_CUSTOM} className="bg-white text-zinc-900 dark:bg-black dark:text-white">
-                    Other
-                  </option>
-                )}
-              </select>
+            <div className="space-y-2">
+              {scannedBarcodes.length > 0 && cameraNameForSubmit ? (
+                <p className="text-sm text-zinc-700 dark:text-gray-300">
+                  Booking camera from scanned units:{' '}
+                  <span className="font-medium text-[#C27E00]">{cameraNameForSubmit}</span>
+                </p>
+              ) : (
+                <div
+                  className={`max-h-52 overflow-y-auto rounded-md border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/40 p-2 space-y-1 ${scannedBarcodes.length > 0 ? 'opacity-50 pointer-events-none' : ''}`}
+                >
+                  {cameraModels.map((c) => {
+                    const checked = selectedCameraIds.includes(c.id)
+                    return (
+                      <label
+                        key={c.id}
+                        className={`flex items-start gap-2 rounded-md px-2 py-2 cursor-pointer text-sm ${
+                          checked ? 'bg-[#C27E00]/10 border border-[#C27E00]/40' : 'hover:bg-zinc-100 dark:hover:bg-white/5'
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() => toggleCatalogCamera(c.id)}
+                          className="mt-0.5 rounded border-zinc-300 text-[#C27E00] focus:ring-[#C27E00]"
+                        />
+                        <span className="text-zinc-900 dark:text-white">{c.label ?? c.name}</span>
+                      </label>
+                    )
+                  })}
+                </div>
+              )}
               {installationCompletedOnCreate && (
                 <p className="text-xs text-zinc-500 dark:text-gray-500">
-                  Completed installs use dealer catalog pricing — pick a camera from the list or scan unit barcodes to
-                  auto-select a set.
+                  Select all components installed (e.g. set + battery). Matching set templates use set pricing; otherwise
+                  the first selection drives pricing — or scan unit barcodes.
                 </p>
               )}
-              {selectedCameraId === CAMERA_CUSTOM && (
-                <input
-                  type="text"
-                  value={customCamera}
-                  onChange={(e) => setCustomCamera(e.target.value)}
-                  placeholder="Camera model"
-                  required
-                  className={inputClass}
-                />
-              )}
-              {submitCameraModelName.trim() && selectedCameraId !== CAMERA_CUSTOM && (
+              {submitCameraModelName.trim() && !usingCustomCamera && (
                 <>
                   <input type="hidden" name="cameraModel" value={submitCameraModelName} />
-                  <input type="hidden" name="cameraModelId" value={selectedCameraId} />
+                  {selectedCameraId && selectedCameraId !== CAMERA_CUSTOM ? (
+                    <input type="hidden" name="cameraModelId" value={selectedCameraId} />
+                  ) : null}
                 </>
-              )}
-              {selectedCameraId === CAMERA_CUSTOM && customCamera.trim() && (
-                <input type="hidden" name="cameraModel" value={customCamera} />
               )}
             </div>
           ) : (
@@ -1021,19 +1168,11 @@ export function CreateExternalDemandForm({
                   <input type="hidden" name="cameraModelId" value={selectedCameraId} />
                 </>
               ) : (
-                <input
-                  name="cameraModel"
-                  required
-                  value={customCamera}
-                  onChange={(e) => setCustomCamera(e.target.value)}
-                  className={inputClass}
-                  placeholder="Enter camera model"
-                />
+                <p className="text-sm text-amber-700 dark:text-amber-300">
+                  No cameras assigned to this dealer for booking. Assign cameras in System Management, or scan unit
+                  barcodes that match an assigned booking camera.
+                </p>
               )}
-              <p className="text-xs text-amber-700 dark:text-amber-300">
-                No cameras assigned to this dealer for booking — assign cameras in System Management or scan unit
-                barcodes below to infer the set.
-              </p>
             </div>
           )}
         </div>
@@ -1049,8 +1188,6 @@ export function CreateExternalDemandForm({
             placeholder="Optional"
           />
         </div>
-
-        {barcodeFields}
       </div>
 
       <div className="flex justify-end gap-3 pt-4 border-t border-zinc-200 dark:border-gray-800">
@@ -1068,7 +1205,13 @@ export function CreateExternalDemandForm({
           disabled={isPending || pricingCheckPending}
           className="px-4 py-2 text-sm font-medium text-white bg-[#C27E00] hover:bg-[#a06900] rounded-md disabled:opacity-50"
         >
-          {pricingCheckPending ? 'Checking price…' : isPending ? 'Creating...' : 'Create External Demand'}
+          {pricingCheckPending
+            ? 'Checking price…'
+            : isPending
+              ? 'Saving…'
+              : completeOnCreate
+                ? 'Create completed external demand'
+                : 'Create external demand'}
         </button>
       </div>
     </form>

@@ -94,15 +94,6 @@ export function InventoryBarcodePanel({
   const [registrySearch, setRegistrySearch] = useState('')
   const [selectedExportIds, setSelectedExportIds] = useState<Set<string>>(new Set())
   const [selectedBarcodeId, setSelectedBarcodeId] = useState<string | null>(null)
-  const [activeSetProgress, setActiveSetProgress] = useState<{
-    setId: string
-    setCode: string
-    assignedUnitCount: number
-    expectedUnitCount: number
-  } | null>(null)
-  const [setAutoGenerateUnits, setSetAutoGenerateUnits] = useState(
-    settings.setAutoGenerateUnitBarcodes ?? false
-  )
   const [traceEvents, setTraceEvents] = useState<
     { event_type: string; created_at: string; actor_name: string | null }[]
   >([])
@@ -125,9 +116,9 @@ export function InventoryBarcodePanel({
   }, [selectedBarcodeId])
 
   function modelForGenerated(b: GeneratedBarcode): string {
-    if (b.kind === 'set') {
+    if (b.setTemplateId) {
       const template = templates.find((t) => t.id === b.setTemplateId)
-      return template ? `${template.name} (${template.code})` : ''
+      if (template) return `Set parts — ${template.name} (${template.code})`
     }
     return cameras.find((c) => c.id === b.cameraModelId)?.name ?? ''
   }
@@ -252,9 +243,10 @@ export function InventoryBarcodePanel({
     }
   }
 
+  const unitRegistry = registry.filter((r) => r.kind !== 'set')
   const filteredRegistry = registrySearch.trim()
-    ? registry.filter((r) => r.code.toLowerCase().includes(registrySearch.trim().toLowerCase()))
-    : registry
+    ? unitRegistry.filter((r) => r.code.toLowerCase().includes(registrySearch.trim().toLowerCase()))
+    : unitRegistry
 
   if (!enabled) {
     return (
@@ -322,13 +314,7 @@ export function InventoryBarcodePanel({
               onClick={() => {
                 const next = !enabled
                 setEnabled(next)
-                run(() =>
-                  saveBarcodeSettingsAction({
-                    ...settings,
-                    enabled: next,
-                    setAutoGenerateUnitBarcodes: setAutoGenerateUnits,
-                  })
-                )
+                run(() => saveBarcodeSettingsAction({ ...settings, enabled: next }))
               }}
               className={`relative w-11 h-6 rounded-full transition ${enabled ? 'bg-[#C27E00]' : 'bg-zinc-400'}`}
             >
@@ -632,27 +618,8 @@ export function InventoryBarcodePanel({
             e.preventDefault()
             const form = e.currentTarget
             run(async () => {
-              const res = (await scanAssignBarcodeToSpecialist(new FormData(form))) as {
-                error?: string
-                success?: boolean
-                setProgress?: {
-                  setId: string
-                  setCode: string
-                  assignedUnitCount: number
-                  expectedUnitCount: number
-                  complete?: boolean
-                }
-              }
+              const res = await scanAssignBarcodeToSpecialist(new FormData(form))
               if (!res.error) {
-                if (res.setProgress) {
-                  setActiveSetProgress({
-                    setId: res.setProgress.setId,
-                    setCode: res.setProgress.setCode,
-                    assignedUnitCount: res.setProgress.assignedUnitCount,
-                    expectedUnitCount: res.setProgress.expectedUnitCount,
-                  })
-                  if (res.setProgress.complete) setActiveSetProgress(null)
-                }
                 form.reset()
                 specialistScanRef.current?.focus()
               }
@@ -664,25 +631,9 @@ export function InventoryBarcodePanel({
             <ScanLine className="h-4 w-4 text-[#C27E00]" /> Assign to specialist (scan)
           </h3>
           <p className="text-xs text-zinc-500">
-            For sets: scan the <strong>set</strong> barcode first, then each <strong>unit</strong> label.
-            Standalone units can be scanned without a set.
+            Scan each <strong>unit</strong> label. For set installs, scan every unit sticker from the set template
+            (no separate set container barcode).
           </p>
-          {activeSetProgress && (
-            <div className="rounded-md border border-[#C27E00]/40 bg-[#C27E00]/10 px-3 py-2 text-xs text-zinc-800 dark:text-gray-200 flex items-center justify-between gap-2">
-              <span>
-                Active set <span className="font-mono">{activeSetProgress.setCode}</span> —{' '}
-                {activeSetProgress.assignedUnitCount}/{activeSetProgress.expectedUnitCount} units assigned
-              </span>
-              <button
-                type="button"
-                className="text-[#C27E00] hover:underline shrink-0"
-                onClick={() => setActiveSetProgress(null)}
-              >
-                Clear
-              </button>
-            </div>
-          )}
-          <input type="hidden" name="active_set_id" value={activeSetProgress?.setId ?? ''} />
           <select name="specialist_id" required className={`${inputClass} w-full`}>
             <option value="">Specialist…</option>
             {specialists.map((s) => (

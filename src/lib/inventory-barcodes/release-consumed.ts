@@ -2,7 +2,8 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { ensureSpecialistLocation } from '@/lib/inventory-v2/locations'
 import { recordAdjustment } from '@/lib/inventory-v2/movements'
 
-async function resolveSpecialistIdForRelease(
+/** Last assigned specialist from row or recent assign events (e.g. after demand delete clears demand_id). */
+export async function resolveBarcodeSpecialistId(
   supabase: SupabaseClient,
   barcodeId: string,
   specialistIdOnRow: string | null
@@ -47,7 +48,7 @@ export async function releaseConsumedBarcode(
   if (barcode.kind !== 'unit') return { error: 'Only unit barcodes can be released' }
   if (barcode.status !== 'consumed') return { error: 'Barcode is not consumed' }
 
-  const specialistId = await resolveSpecialistIdForRelease(
+  const specialistId = await resolveBarcodeSpecialistId(
     supabase,
     barcode.id,
     barcode.specialist_id as string | null

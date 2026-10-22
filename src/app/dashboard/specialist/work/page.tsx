@@ -1,4 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
+import { fetchFieldHighlightsForDemands, type DemandFieldKey, type FieldHighlightBucket } from '@/lib/demand-field-updates'
+import { DemandFieldLegend, DemandFieldWrap } from '@/components/demand-field-highlight'
 import { getDuplicateStockNumbers } from '@/lib/demand-stock'
 import { WorkActions } from './work-actions'
 import { getWorkBarcodeModeEnabled } from './actions'
@@ -34,6 +37,7 @@ function DemandContentCard({
   getDealerTimezone,
   actions,
   duplicateStockNumbers = [],
+  fieldHighlights,
 }: {
   demand: WorkDemandRow
   statusBadge: React.ReactNode
@@ -42,6 +46,7 @@ function DemandContentCard({
   getDealerTimezone: (d: WorkDemandRow) => string | null
   actions?: React.ReactNode
   duplicateStockNumbers?: string[]
+  fieldHighlights?: Partial<Record<DemandFieldKey, FieldHighlightBucket>>
 }) {
   const dealerName = (demand.dealers as { name?: string } | null)?.name ?? '—'
   const tz = getDealerTimezone(demand)
@@ -69,46 +74,60 @@ function DemandContentCard({
 
           {/* Customer & Contact */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3 text-sm">
-            <div>
-              <p className="text-xs font-medium text-zinc-500 dark:text-gray-500 uppercase tracking-wider mb-0.5">Customer</p>
-              <p className="text-zinc-600 dark:text-gray-300">{demand.customer_phone || '—'}</p>
-            </div>
+            <DemandFieldWrap field="customer_phone" highlights={fieldHighlights}>
+              <div>
+                <p className="text-xs font-medium text-zinc-500 dark:text-gray-500 uppercase tracking-wider mb-0.5">Customer</p>
+                <p className="text-zinc-600 dark:text-gray-300">{demand.customer_phone || '—'}</p>
+              </div>
+            </DemandFieldWrap>
           </div>
 
           {/* Vehicle */}
-          <div>
-            <p className="text-xs font-medium text-zinc-500 dark:text-gray-500 uppercase tracking-wider mb-1">Vehicle</p>
-            <p className="text-zinc-600 dark:text-gray-300">
-              {demand.vehicle_year} {demand.vehicle_make} {demand.vehicle_model}
-              {demand.stock_number && (
-                <span className="ml-2 text-zinc-500 dark:text-gray-500">Stock: {demand.stock_number}</span>
-              )}
-              {demand.vin_last6 && (
-                <span className="ml-2 text-zinc-500 dark:text-gray-500">VIN: …{demand.vin_last6}</span>
-              )}
-            </p>
-          </div>
+          <DemandFieldWrap field="vehicle_make" highlights={fieldHighlights}>
+            <div>
+              <p className="text-xs font-medium text-zinc-500 dark:text-gray-500 uppercase tracking-wider mb-1">Vehicle</p>
+              <p className="text-zinc-600 dark:text-gray-300">
+                {demand.vehicle_year} {demand.vehicle_make} {demand.vehicle_model}
+                {demand.stock_number && (
+                  <DemandFieldWrap field="stock_number" highlights={fieldHighlights} className="inline ml-2">
+                    <span className="text-zinc-500 dark:text-gray-500">Stock: {demand.stock_number}</span>
+                  </DemandFieldWrap>
+                )}
+                {demand.vin_last6 && (
+                  <DemandFieldWrap field="vin_last6" highlights={fieldHighlights} className="inline ml-2">
+                    <span className="text-zinc-500 dark:text-gray-500">VIN: …{demand.vin_last6}</span>
+                  </DemandFieldWrap>
+                )}
+              </p>
+            </div>
+          </DemandFieldWrap>
 
           {/* Installation */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3">
-            <div>
-              <p className="text-xs font-medium text-zinc-500 dark:text-gray-500 uppercase tracking-wider mb-0.5">Camera Model</p>
-              <p className="text-zinc-600 dark:text-gray-300">{demand.camera_model || '—'}</p>
-            </div>
-            <div>
-              <p className="text-xs font-medium text-zinc-500 dark:text-gray-500 uppercase tracking-wider mb-0.5">Appointment</p>
-              <p className="font-medium text-zinc-900 dark:text-white">{formatAppointment(demand.appointment_date, tz)}</p>
-            </div>
+            <DemandFieldWrap field="camera_model" highlights={fieldHighlights}>
+              <div>
+                <p className="text-xs font-medium text-zinc-500 dark:text-gray-500 uppercase tracking-wider mb-0.5">Camera Model</p>
+                <p className="text-zinc-600 dark:text-gray-300">{demand.camera_model || '—'}</p>
+              </div>
+            </DemandFieldWrap>
+            <DemandFieldWrap field="appointment_date" highlights={fieldHighlights}>
+              <div>
+                <p className="text-xs font-medium text-zinc-500 dark:text-gray-500 uppercase tracking-wider mb-0.5">Appointment</p>
+                <p className="font-medium text-zinc-900 dark:text-white">{formatAppointment(demand.appointment_date, tz)}</p>
+              </div>
+            </DemandFieldWrap>
           </div>
 
           {/* Location */}
           {(demand.customer_address || demand.comment) && (
             <div className="space-y-2">
               {demand.customer_address && (
-                <div>
-                  <p className="text-xs font-medium text-zinc-500 dark:text-gray-500 uppercase tracking-wider mb-0.5">Address</p>
-                  <p className="text-zinc-600 dark:text-gray-300">{demand.customer_address}</p>
-                </div>
+                <DemandFieldWrap field="customer_address" highlights={fieldHighlights}>
+                  <div>
+                    <p className="text-xs font-medium text-zinc-500 dark:text-gray-500 uppercase tracking-wider mb-0.5">Address</p>
+                    <p className="text-zinc-600 dark:text-gray-300">{demand.customer_address}</p>
+                  </div>
+                </DemandFieldWrap>
               )}
               {demand.comment && (
                 <div>
@@ -186,6 +205,17 @@ export default async function SpecialistWorkPage() {
     const duplicateStockNumbers = Array.from(await getDuplicateStockNumbers())
     const barcodeModeEnabled = await getWorkBarcodeModeEnabled()
 
+    const allDemandIds = [
+      ...(myAssignedWork ?? []).map((d) => d.id),
+      ...(unassignedWork ?? []).map((d) => d.id),
+      ...(allAssignedWork ?? []).map((d) => d.id),
+    ]
+    const uniqueDemandIds = [...new Set(allDemandIds)]
+    const fieldHighlightsByDemand =
+      uniqueDemandIds.length > 0
+        ? await fetchFieldHighlightsForDemands(createAdminClient(), uniqueDemandIds)
+        : {}
+
     const getDealerTimezone = (d: { dealers?: { region_codes?: { timezones?: { name: string } } } | null }) =>
       (d.dealers as { region_codes?: { timezones?: { name: string } } } | null)?.region_codes?.timezones?.name ?? null
     const formatAppointment = (appointmentDate: string, timezoneName: string | null) =>
@@ -196,6 +226,9 @@ export default async function SpecialistWorkPage() {
             <div>
                 <h1 className="text-2xl font-semibold text-zinc-900 dark:text-white mb-2">Work Management</h1>
                 <p className="text-zinc-500 dark:text-gray-400">Assign work to yourself from the pool or manage your assigned work.</p>
+                <div className="mt-3">
+                  <DemandFieldLegend />
+                </div>
             </div>
 
             {/* My Assigned Work */}
@@ -224,6 +257,7 @@ export default async function SpecialistWorkPage() {
                                   />
                                 }
                                 duplicateStockNumbers={duplicateStockNumbers}
+                                fieldHighlights={fieldHighlightsByDemand[demand.id]}
                             />
                         ))}
                     </div>
@@ -254,6 +288,7 @@ export default async function SpecialistWorkPage() {
                                     getDealerTimezone={getDealerTimezone}
                                     actions={<WorkActions demandId={demand.id} isAssigned={false} />}
                                     duplicateStockNumbers={duplicateStockNumbers}
+                                    fieldHighlights={fieldHighlightsByDemand[demand.id]}
                                 />
                             ))}
                         </div>
@@ -283,6 +318,7 @@ export default async function SpecialistWorkPage() {
                                 formatAppointment={formatAppointment}
                                 getDealerTimezone={getDealerTimezone}
                                 duplicateStockNumbers={duplicateStockNumbers}
+                                fieldHighlights={fieldHighlightsByDemand[demand.id]}
                             />
                         ))}
                     </div>
