@@ -9,7 +9,7 @@ import {
 import {
   buildSpecialistCompensationSnapshot,
   fetchSpecialistCompensationSnapshot,
-  fetchSpecialistPayRates,
+  fetchSpecialistCompensationInputs,
   type PeriodStatsRow,
 } from '@/lib/specialist-compensation-snapshot'
 
@@ -192,7 +192,12 @@ export async function getSpecialistStatsForList(
   > = {}
 
   for (const row of (statsRows ?? []) as PeriodStatsRow[]) {
-    const rates = await fetchSpecialistPayRates(auth.supabase, row.profile_id, period.start, period.end)
+    const inputs = await fetchSpecialistCompensationInputs(
+      auth.supabase,
+      row.profile_id,
+      period.start,
+      period.end
+    )
     const snapshot = buildSpecialistCompensationSnapshot(
       row.profile_id,
       period.start,
@@ -200,7 +205,7 @@ export async function getSpecialistStatsForList(
       row,
       [],
       [],
-      rates
+      inputs
     )
     out[row.profile_id] = {
       installations_completed: snapshot.installations_completed,

@@ -120,6 +120,9 @@ export function SelfPortalContent({
     start_date?: string | null
     province?: string | null
     platform_role?: string | null
+    salary_amount?: number | null
+    salary_type?: string | null
+    salary_currency?: string | null
   } | null
   orgDisplay: { mainDepartment: string; subDepartment: string; jobTitle: string } | null
   leaveRequests: { id: string; leave_type: string; start_date: string; end_date: string; status: string; notes?: string | null }[]
@@ -349,6 +352,28 @@ export function SelfPortalContent({
 
       {activeTab === 'pay' && (
         <div className="bg-zinc-200/50 dark:bg-white/5 rounded-lg border border-zinc-200 dark:border-gray-800 p-6">
+          {personnel?.salary_amount != null && Number(personnel.salary_amount) > 0 ? (
+            <div className="mb-6 rounded-lg border border-[#C27E00]/30 bg-[#C27E00]/5 p-4">
+              <p className="text-xs uppercase tracking-wide text-zinc-500 dark:text-gray-400 mb-1">
+                Compensation on file (HR)
+              </p>
+              <p className="text-xl font-semibold text-zinc-900 dark:text-white tabular-nums">
+                {personnel.salary_currency ?? 'CAD'}{' '}
+                {Number(personnel.salary_amount).toLocaleString(undefined, {
+                  minimumFractionDigits: 0,
+                  maximumFractionDigits: 2,
+                })}
+                {personnel.salary_type ? (
+                  <span className="text-sm font-normal text-zinc-500 dark:text-gray-400 ml-2">
+                    ({PAYMENT_TYPES[personnel.salary_type] ?? personnel.salary_type})
+                  </span>
+                ) : null}
+              </p>
+              <p className="text-xs text-zinc-500 dark:text-gray-400 mt-1">
+                Matches your HR personnel record. Period estimates below use this basis where applicable.
+              </p>
+            </div>
+          ) : null}
           {profile.role === 'specialist' && payEstimate ? (
             <SelfPayEstimatePanel initialSnapshot={payEstimate} />
           ) : null}

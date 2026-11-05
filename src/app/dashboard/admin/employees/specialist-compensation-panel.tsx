@@ -182,7 +182,9 @@ export function SpecialistCompensationPanel({ profileId, initialSnapshot }: Prop
         )}
       </div>
 
-      <p className="text-xs text-zinc-500">{formatRatesSummary(snapshot.rates_used)}</p>
+      <p className="text-xs text-zinc-500">
+        {formatRatesSummary(snapshot.rates_used, snapshot.compensation_basis)}
+      </p>
 
       {snapshot.pay_lines.length > 0 ? (
         <div className="rounded-lg border border-zinc-200 dark:border-zinc-700 overflow-hidden">

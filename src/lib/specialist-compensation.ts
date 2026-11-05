@@ -1,4 +1,7 @@
 import { calculatePerCompletedAmount } from '@/app/dashboard/hr/payroll/payroll-utils'
+import type { ResolvedPersonnelCompensation } from '@/lib/personnel-compensation'
+
+export type { ResolvedPersonnelCompensation } from '@/lib/personnel-compensation'
 
 export type SpecialistPayRates = {
   baseCompleted: number
@@ -27,7 +30,16 @@ export type SpecialistPayLine = {
   label: string
   amount: number
   currency: 'CAD' | 'USD'
-  source: 'installation' | 'removal' | 'transfer' | 'delay' | 'service_fee' | 'expense' | 'expense_claim' | 'manual'
+  source:
+    | 'installation'
+    | 'removal'
+    | 'transfer'
+    | 'delay'
+    | 'service_fee'
+    | 'expense'
+    | 'expense_claim'
+    | 'manual'
+    | 'base_salary'
 }
 
 export type SpecialistCompensationSnapshot = {
@@ -51,6 +63,8 @@ export type SpecialistCompensationSnapshot = {
     notes: string
     created_at: string
   }[]
+  /** HR-defined pay basis (personnel salary / payroll structure), when not default tier. */
+  compensation_basis?: ResolvedPersonnelCompensation | null
 }
 
 export function computeSpecialistPayEstimate(input: {
@@ -64,28 +78,59 @@ export function computeSpecialistPayEstimate(input: {
   expenseClaims: { id: string; label: string; amount: number }[]
   manualItems: { id: string; label: string; amount: number }[]
   rates?: SpecialistPayRates
+  compensation?: ResolvedPersonnelCompensation | null
 }): Pick<
   SpecialistCompensationSnapshot,
   'rates_used' | 'pay_lines' | 'estimated_net_cad' | 'estimated_delay_usd'
 > {
   const rates = input.rates ?? SPECIALIST_RATES
+  const comp = input.compensation
   const pay_lines: SpecialistPayLine[] = []
 
-  const installationNet = calculatePerCompletedAmount(
-    rates.baseCompleted,
-    rates.baseAmountCad,
-    rates.perExtraCad,
-    input.installationsCompleted
-  )
-
-  if (installationNet > 0) {
+  const fixedPeriodPay = comp?.fixedPeriodPayCad ?? 0
+  if (fixedPeriodPay > 0) {
+    const annualNote =
+      comp?.annualSalaryCad != null
+        ? ` (annual $${comp.annualSalaryCad.toLocaleString()} CAD, prorated for period)`
+        : ''
     pay_lines.push({
-      id: 'installations',
-      label: `Installations (${input.installationsCompleted}) — first ${rates.baseCompleted} @ $${rates.baseAmountCad.toLocaleString()} CAD, then +$${rates.perExtraCad} CAD each`,
-      amount: Math.round(installationNet * 100) / 100,
+      id: 'base-salary',
+      label: `${comp?.paymentTypeLabel ?? 'Base compensation'}${annualNote}`,
+      amount: Math.round(fixedPeriodPay * 100) / 100,
       currency: 'CAD',
-      source: 'installation',
+      source: 'base_salary',
     })
+  }
+
+  let installationNet = 0
+  if (comp?.payMode === 'flat_per_installation' && comp.perInstallationCad != null) {
+    installationNet = input.installationsCompleted * comp.perInstallationCad
+    if (installationNet > 0) {
+      pay_lines.push({
+        id: 'installations',
+        label: `Installations (${input.installationsCompleted} × $${comp.perInstallationCad.toLocaleString()} CAD)`,
+        amount: Math.round(installationNet * 100) / 100,
+        currency: 'CAD',
+        source: 'installation',
+      })
+    }
+  } else if (comp?.payMode !== 'fixed_period') {
+    installationNet = calculatePerCompletedAmount(
+      rates.baseCompleted,
+      rates.baseAmountCad,
+      rates.perExtraCad,
+      input.installationsCompleted
+    )
+
+    if (installationNet > 0) {
+      pay_lines.push({
+        id: 'installations',
+        label: `Installations (${input.installationsCompleted}) — first ${rates.baseCompleted} @ $${rates.baseAmountCad.toLocaleString()} CAD, then +$${rates.perExtraCad} CAD each`,
+        amount: Math.round(installationNet * 100) / 100,
+        currency: 'CAD',
+        source: 'installation',
+      })
+    }
   }
 
   const removalNet = input.removalsCompleted * rates.removalCad
@@ -195,7 +240,21 @@ export function currentMonthPeriod(): { start: string; end: string } {
   }
 }
 
-export function formatRatesSummary(rates: SpecialistPayRates = SPECIALIST_RATES): string {
+export function formatRatesSummary(
+  rates: SpecialistPayRates = SPECIALIST_RATES,
+  compensation?: ResolvedPersonnelCompensation | null
+): string {
+  if (compensation?.payMode === 'flat_per_installation' && compensation.perInstallationCad != null) {
+    return `$${compensation.perInstallationCad.toLocaleString()} CAD per installation · removal $${rates.removalCad} · transfer $${rates.transferCad} · delay $${rates.delay30Usd}/$${rates.delay60Usd} USD`
+  }
+  if (compensation?.payMode === 'fixed_period') {
+    if (compensation.hourlyRateCad != null) {
+      return `$${compensation.hourlyRateCad.toLocaleString()} CAD/hour (enter hours via HR payroll) · removal $${rates.removalCad} · transfer $${rates.transferCad}`
+    }
+    if (compensation.annualSalaryCad != null) {
+      return `Annual salary $${compensation.annualSalaryCad.toLocaleString()} CAD · period estimate $${(compensation.fixedPeriodPayCad ?? 0).toLocaleString()} CAD`
+    }
+  }
   const r = rates
   return `${r.baseCompleted} dashcam @ $${r.baseAmountCad.toLocaleString()} CAD · +$${r.perExtraCad} CAD · removal $${r.removalCad} · transfer $${r.transferCad} · delay $${r.delay30Usd}/$${r.delay60Usd} USD`
 }

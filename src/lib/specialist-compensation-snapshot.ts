@@ -6,6 +6,11 @@ import {
   type SpecialistCompensationSnapshot,
   type SpecialistPayRates,
 } from '@/lib/specialist-compensation'
+import {
+  mapPaymentTypeToCompensation,
+  mapSalaryFieldsToCompensation,
+  type ResolvedPersonnelCompensation,
+} from '@/lib/personnel-compensation'
 
 export type PeriodStatsRow = {
   profile_id: string
@@ -21,6 +26,11 @@ export type PeriodStatsRow = {
   expense_claims_total: number
 }
 
+export type SpecialistCompensationInputs = {
+  rates: SpecialistPayRates
+  compensation: ResolvedPersonnelCompensation | null
+}
+
 function manualItemsFromStats(
   stats: PeriodStatsRow | undefined,
   manualItems: SpecialistCompensationSnapshot['manual_items']
@@ -33,27 +43,30 @@ function manualItemsFromStats(
   return []
 }
 
-function personnelSalaryRates(
-  salaryAmount: number | null | undefined,
-  salaryType: string | null | undefined
-): Partial<SpecialistPayRates> | null {
-  if (salaryAmount == null || !Number.isFinite(Number(salaryAmount)) || Number(salaryAmount) <= 0) {
-    return null
+function tierToCompensation(tier: {
+  base_completed: number
+  base_amount: number
+  per_completed_amount: number
+}): ResolvedPersonnelCompensation {
+  return {
+    payMode: 'tiered',
+    rates: {
+      ...SPECIALIST_RATES,
+      baseCompleted: Number(tier.base_completed),
+      baseAmountCad: Number(tier.base_amount),
+      perExtraCad: Number(tier.per_completed_amount),
+    },
+    paymentTypeLabel: 'Per completed (tiered)',
   }
-  const amount = Number(salaryAmount)
-  if (salaryType === 'per_installation') {
-    return { baseAmountCad: amount }
-  }
-  return null
 }
 
-export async function fetchSpecialistPayRates(
+export async function fetchSpecialistCompensationInputs(
   supabase: SupabaseClient,
   profileId: string,
   periodStart: string,
   periodEnd: string
-): Promise<SpecialistPayRates> {
-  const rates: SpecialistPayRates = { ...SPECIALIST_RATES }
+): Promise<SpecialistCompensationInputs> {
+  const defaultRates: SpecialistPayRates = { ...SPECIALIST_RATES }
 
   const { data: personnel } = await supabase
     .from('personnel')
@@ -61,7 +74,23 @@ export async function fetchSpecialistPayRates(
     .eq('profile_id', profileId)
     .maybeSingle()
 
-  if (!personnel) return rates
+  if (!personnel) {
+    return { rates: defaultRates, compensation: null }
+  }
+
+  const salaryAmount = personnel.salary_amount != null ? Number(personnel.salary_amount) : null
+  if (salaryAmount != null && salaryAmount > 0) {
+    const fromPersonnel = mapSalaryFieldsToCompensation(
+      salaryAmount,
+      personnel.salary_type as string | null,
+      periodStart,
+      periodEnd,
+      defaultRates
+    )
+    if (fromPersonnel) {
+      return { rates: fromPersonnel.rates, compensation: fromPersonnel }
+    }
+  }
 
   const { data: tiers } = await supabase
     .from('compensation_per_completed')
@@ -74,23 +103,45 @@ export async function fetchSpecialistPayRates(
 
   const activeTier = tiers?.[0]
   if (activeTier) {
-    return {
-      ...rates,
-      baseCompleted: Number(activeTier.base_completed),
-      baseAmountCad: Number(activeTier.base_amount),
-      perExtraCad: Number(activeTier.per_completed_amount),
+    const fromTier = tierToCompensation(activeTier)
+    return { rates: fromTier.rates, compensation: fromTier }
+  }
+
+  const { data: structures } = await supabase
+    .from('compensation_structures')
+    .select('payment_type, amount, effective_from, effective_to')
+    .eq('personnel_id', personnel.id)
+    .lte('effective_from', periodEnd)
+    .or(`effective_to.is.null,effective_to.gte.${periodStart}`)
+    .order('effective_from', { ascending: false })
+    .limit(1)
+
+  const activeStructure = structures?.[0]
+  if (activeStructure && activeStructure.payment_type !== 'per_completed_tiered') {
+    const fromStructure = mapPaymentTypeToCompensation(
+      activeStructure.payment_type as string,
+      activeStructure.amount != null ? Number(activeStructure.amount) : null,
+      periodStart,
+      periodEnd,
+      defaultRates
+    )
+    if (fromStructure) {
+      return { rates: fromStructure.rates, compensation: fromStructure }
     }
   }
 
-  const salaryOverride = personnelSalaryRates(
-    personnel.salary_amount as number | null,
-    personnel.salary_type as string | null
-  )
-  if (salaryOverride) {
-    return { ...rates, ...salaryOverride }
-  }
+  return { rates: defaultRates, compensation: null }
+}
 
-  return rates
+/** @deprecated use fetchSpecialistCompensationInputs */
+export async function fetchSpecialistPayRates(
+  supabase: SupabaseClient,
+  profileId: string,
+  periodStart: string,
+  periodEnd: string
+): Promise<SpecialistPayRates> {
+  const inputs = await fetchSpecialistCompensationInputs(supabase, profileId, periodStart, periodEnd)
+  return inputs.rates
 }
 
 async function loadApprovedExpenseClaims(
@@ -122,7 +173,7 @@ export function buildSpecialistCompensationSnapshot(
   stats: PeriodStatsRow | undefined,
   manualItems: SpecialistCompensationSnapshot['manual_items'],
   expenseClaims: { id: string; label: string; amount: number }[],
-  rates: SpecialistPayRates = SPECIALIST_RATES
+  inputs: SpecialistCompensationInputs = { rates: SPECIALIST_RATES, compensation: null }
 ): SpecialistCompensationSnapshot {
   const resolvedManual = manualItemsFromStats(stats, manualItems)
   const resolvedClaims =
@@ -147,7 +198,8 @@ export function buildSpecialistCompensationSnapshot(
     expenseReimbTotal: Number(stats?.expense_reimbursement_total ?? 0),
     expenseClaims: resolvedClaims,
     manualItems: resolvedManual.map((m) => ({ id: m.id, label: m.label, amount: m.amount })),
-    rates,
+    rates: inputs.rates,
+    compensation: inputs.compensation,
   })
 
   return {
@@ -161,6 +213,7 @@ export function buildSpecialistCompensationSnapshot(
     delay_60min_count: Number(stats?.delay_60min_count ?? 0),
     service_jobs_completed: Number(stats?.service_jobs_completed ?? 0),
     manual_items: resolvedManual.filter((m) => m.id !== 'manual-total'),
+    compensation_basis: inputs.compensation,
     ...payCalc,
   }
 }
@@ -183,7 +236,7 @@ export async function fetchSpecialistCompensationSnapshot(
 
   const stats = (statsRows as PeriodStatsRow[] | null)?.[0]
 
-  const [manualRows, expenseClaims, rates] = await Promise.all([
+  const [manualRows, expenseClaims, inputs] = await Promise.all([
     supabase
       .from('specialist_manual_payroll_items')
       .select('id, label, amount, notes, created_at')
@@ -192,7 +245,7 @@ export async function fetchSpecialistCompensationSnapshot(
       .eq('period_end', end)
       .order('created_at', { ascending: false }),
     loadApprovedExpenseClaims(supabase, profileId, start, end),
-    fetchSpecialistPayRates(supabase, profileId, start, end),
+    fetchSpecialistCompensationInputs(supabase, profileId, start, end),
   ])
 
   const manualItems = (manualRows.data ?? []).map((r) => ({
@@ -203,5 +256,5 @@ export async function fetchSpecialistCompensationSnapshot(
     created_at: r.created_at,
   }))
 
-  return buildSpecialistCompensationSnapshot(profileId, start, end, stats, manualItems, expenseClaims, rates)
+  return buildSpecialistCompensationSnapshot(profileId, start, end, stats, manualItems, expenseClaims, inputs)
 }
