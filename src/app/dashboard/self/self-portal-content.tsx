@@ -19,6 +19,7 @@ import {
 } from 'lucide-react'
 import { requestLeave, createITRequest } from './actions'
 import { SelfPayEstimatePanel } from './self-pay-estimate-panel'
+import { SalaryPaySchedulePanel } from './salary-pay-schedule-panel'
 import { SelfExpensesPanel } from './self-expenses-panel'
 import { SelfDocumentsPanel } from './self-documents-panel'
 import type { SpecialistCompensationSnapshot } from '@/lib/specialist-compensation'
@@ -123,6 +124,7 @@ export function SelfPortalContent({
     salary_amount?: number | null
     salary_type?: string | null
     salary_currency?: string | null
+    salary_pay_schedule?: string | null
   } | null
   orgDisplay: { mainDepartment: string; subDepartment: string; jobTitle: string } | null
   leaveRequests: { id: string; leave_type: string; start_date: string; end_date: string; status: string; notes?: string | null }[]
@@ -373,6 +375,15 @@ export function SelfPortalContent({
                 Matches your HR personnel record. Period estimates below use this basis where applicable.
               </p>
             </div>
+          ) : null}
+          {personnel?.salary_amount != null && Number(personnel.salary_amount) > 0 ? (
+            <SalaryPaySchedulePanel
+              salaryAmount={Number(personnel.salary_amount)}
+              salaryType={personnel.salary_type ?? null}
+              salaryCurrency={personnel.salary_currency ?? null}
+              paySchedule={personnel.salary_pay_schedule ?? 'semi_monthly_equal'}
+              paymentRecords={payments}
+            />
           ) : null}
           {profile.role === 'specialist' && payEstimate ? (
             <SelfPayEstimatePanel initialSnapshot={payEstimate} />

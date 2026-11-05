@@ -34,7 +34,7 @@ export default async function SelfPortalPage() {
     .from('personnel')
     .select(`
       id, full_name, phone, email, position, status, start_date, province, platform_role,
-      salary_amount, salary_type, salary_currency,
+      salary_amount, salary_type, salary_currency, salary_pay_schedule,
       department_id, org_role_id,
       hr_departments(name, parent_id),
       hr_org_roles(name)

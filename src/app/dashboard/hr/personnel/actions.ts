@@ -50,6 +50,7 @@ export async function createPersonnel(formData: Record<string, string | undefine
     salary_amount: formData.salary_amount ? parseFloat(formData.salary_amount) : null,
     salary_currency: formData.salary_currency || null,
     salary_type: formData.salary_type || null,
+    salary_pay_schedule: formData.salary_pay_schedule || 'semi_monthly_equal',
   }).select('id').single()
 
   if (error) return { error: error.message }
@@ -130,6 +131,7 @@ export async function updatePersonnel(id: string, formData: Record<string, strin
     salary_amount: formData.salary_amount ? parseFloat(formData.salary_amount) : null,
     salary_currency: formData.salary_currency || null,
     salary_type: formData.salary_type || null,
+    salary_pay_schedule: formData.salary_pay_schedule || 'semi_monthly_equal',
     updated_at: new Date().toISOString(),
   }).eq('id', id)
 

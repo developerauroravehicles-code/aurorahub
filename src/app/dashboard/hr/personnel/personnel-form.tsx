@@ -42,6 +42,11 @@ const PLATFORM_ROLES = [
   { value: 'it', label: 'IT' },
 ]
 
+const SALARY_PAY_SCHEDULES = [
+  { value: 'semi_monthly_equal', label: 'Semi-monthly (50% on 15th, 50% at month end)' },
+  { value: 'monthly_single', label: 'Monthly (single payment at month end)' },
+]
+
 const SALARY_TYPES = [
   { value: '', label: '—' },
   { value: 'salary', label: 'Salary (annual)' },
@@ -292,15 +297,24 @@ export function PersonnelForm({
       {/* Salary / Compensation */}
       <div className="bg-zinc-200/50 dark:bg-white/5 rounded-lg border border-zinc-200 dark:border-gray-800 p-6">
         <h2 className="text-lg font-semibold text-zinc-900 dark:text-white mb-4">Salary & Compensation</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <div>
             <label className={labelClass}>Amount</label>
             <input name="salary_amount" type="number" step="0.01" min="0" className={inputClass} placeholder="e.g. 65000" />
+            <p className="text-xs text-zinc-500 mt-1">Annual for salary type; monthly schedule uses amount ÷ 12.</p>
           </div>
           <div>
             <label className={labelClass}>Type</label>
             <select name="salary_type" className={selectClass}>
               {SALARY_TYPES.map((s) => <option key={s.value || 'empty'} value={s.value}>{s.label}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className={labelClass}>Pay schedule</label>
+            <select name="salary_pay_schedule" className={selectClass} defaultValue="semi_monthly_equal">
+              {SALARY_PAY_SCHEDULES.map((s) => (
+                <option key={s.value} value={s.value}>{s.label}</option>
+              ))}
             </select>
           </div>
           <div>

@@ -80,6 +80,11 @@ const PROVINCES = [
   { value: 'out_of_canada', label: 'Out Of Canada' },
 ]
 
+const SALARY_PAY_SCHEDULES = [
+  { value: 'semi_monthly_equal', label: 'Semi-monthly (50% on 15th, 50% at month end)' },
+  { value: 'monthly_single', label: 'Monthly (single payment at month end)' },
+]
+
 const SALARY_TYPES = [
   { value: '', label: '—' },
   { value: 'salary', label: 'Salary (annual)' },
@@ -363,7 +368,7 @@ export function PersonnelDetail({
           ))}
 
           {section('Salary & Compensation', (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               <div>
                 <label className={labelClass}>Amount</label>
                 <input
@@ -380,6 +385,18 @@ export function PersonnelDetail({
                 <label className={labelClass}>Type</label>
                 <select name="salary_type" className={selectClass} defaultValue={String(person.salary_type ?? '')}>
                   {SALARY_TYPES.map((s) => <option key={s.value || 'empty'} value={s.value}>{s.label}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className={labelClass}>Pay schedule</label>
+                <select
+                  name="salary_pay_schedule"
+                  className={selectClass}
+                  defaultValue={String(person.salary_pay_schedule ?? 'semi_monthly_equal')}
+                >
+                  {SALARY_PAY_SCHEDULES.map((s) => (
+                    <option key={s.value} value={s.value}>{s.label}</option>
+                  ))}
                 </select>
               </div>
               <div>
@@ -610,6 +627,10 @@ export function PersonnelDetail({
     )
   }
 
+  const payScheduleLabel =
+    SALARY_PAY_SCHEDULES.find((s) => s.value === (person.salary_pay_schedule ?? 'semi_monthly_equal'))?.label ??
+    'Semi-monthly (50% on 15th, 50% at month end)'
+
   const salaryDisplay = person.salary_amount != null
     ? `${person.salary_currency || 'CAD'} ${Number(person.salary_amount).toLocaleString()}${person.salary_type ? ` (${person.salary_type})` : ''}`
     : '—'
@@ -765,6 +786,7 @@ export function PersonnelDetail({
             ) : null}
             <p><span className="text-zinc-500 dark:text-gray-500">Work Arrangement:</span> {String(WORK_ARRANGEMENTS.find((w) => w.value === person.work_arrangement)?.label ?? person.work_arrangement ?? '—')}</p>
             <p><span className="text-zinc-500 dark:text-gray-500">Salary:</span> {salaryDisplay}</p>
+            <p><span className="text-zinc-500 dark:text-gray-500">Pay schedule:</span> {payScheduleLabel}</p>
           </div>
         ))}
 
