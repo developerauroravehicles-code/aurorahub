@@ -104,6 +104,7 @@ export type CommNotificationType =
   | 'duplicate_stock_number'
   | 'inventory_stock_alert'
   | 'demand_fields_updated'
+  | 'expense_claim_pending'
 
 export type CommNotification = {
   id: string

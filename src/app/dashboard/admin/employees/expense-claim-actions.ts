@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import type { SpecialistExpenseClaim } from '@/lib/specialist-expense-claims'
+import { approveExpenseClaimWithPayroll } from '@/lib/expense-claim-approve'
 
 async function ensureAmOrHr() {
   const supabase = await createClient()
@@ -43,32 +44,17 @@ export async function approveSpecialistExpenseClaim(
   const auth = await ensureAmOrHr()
   if (auth.error || !auth.userId || !auth.supabase) return { error: auth.error ?? 'Unauthorized' }
 
-  const { data: claim } = await auth.supabase
-    .from('specialist_expense_claims')
-    .select('id, status')
-    .eq('id', claimId)
-    .eq('profile_id', profileId)
-    .single()
+  const result = await approveExpenseClaimWithPayroll(auth.supabase, {
+    claimId,
+    reviewerId: auth.userId,
+    profileId,
+  })
 
-  if (!claim) return { error: 'Expense claim not found.' }
-  if (claim.status !== 'pending') return { error: 'Only pending claims can be approved.' }
-
-  const { error } = await auth.supabase
-    .from('specialist_expense_claims')
-    .update({
-      status: 'approved',
-      reviewed_by: auth.userId,
-      reviewed_at: new Date().toISOString(),
-      rejection_reason: '',
-      updated_at: new Date().toISOString(),
-    })
-    .eq('id', claimId)
-    .eq('profile_id', profileId)
-
-  if (error) return { error: error.message }
+  if (result.error) return { error: result.error }
 
   revalidatePath(`/dashboard/admin/employees/${profileId}`)
   revalidatePath('/dashboard/admin/employees')
+  revalidatePath('/dashboard/admin/approvals')
   revalidatePath('/dashboard/self')
   return { success: true }
 }

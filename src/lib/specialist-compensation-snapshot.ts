@@ -152,18 +152,22 @@ async function loadApprovedExpenseClaims(
 ): Promise<{ id: string; label: string; amount: number }[]> {
   const { data } = await supabase
     .from('specialist_expense_claims')
-    .select('id, description, amount')
+    .select('id, description, amount, expense_date, payable_on, payroll_applied_at')
     .eq('profile_id', profileId)
     .eq('status', 'approved')
-    .gte('expense_date', start)
-    .lte('expense_date', end)
+    .is('payroll_applied_at', null)
     .order('expense_date', { ascending: true })
 
-  return (data ?? []).map((r) => ({
-    id: r.id,
-    label: r.description,
-    amount: Number(r.amount),
-  }))
+  return (data ?? [])
+    .filter((r) => {
+      const payDate = (r.payable_on as string | null) ?? (r.expense_date as string)
+      return payDate >= start && payDate <= end
+    })
+    .map((r) => ({
+      id: r.id,
+      label: r.description,
+      amount: Number(r.amount),
+    }))
 }
 
 export function buildSpecialistCompensationSnapshot(

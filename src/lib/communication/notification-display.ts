@@ -7,6 +7,7 @@ import {
   MessageCircle,
   MessageSquareX,
   Package,
+  Receipt,
   Video,
   Wrench,
   type LucideIcon,
@@ -106,6 +107,13 @@ const TYPE_CONFIG: Record<CommNotificationType, NotificationTypeConfig> = {
     iconColor: 'text-sky-700 dark:text-sky-300',
     borderColor: 'border-l-sky-500',
   },
+  expense_claim_pending: {
+    label: 'Expense approval',
+    icon: Receipt,
+    iconBg: 'bg-amber-100 dark:bg-amber-900/40',
+    iconColor: 'text-amber-700 dark:text-amber-300',
+    borderColor: 'border-l-amber-500',
+  },
 }
 
 const DEFAULT_CONFIG: NotificationTypeConfig = {
@@ -130,6 +138,7 @@ export function notificationLink(n: CommNotification): string {
   if (n.type === 'inventory_stock_alert' && p.link) return p.link
   if (n.type === 'demand_fields_updated' && p.link) return String(p.link)
   if (n.type === 'demand_fields_updated' && p.linkAdmin) return String(p.linkAdmin)
+  if (n.type === 'expense_claim_pending') return '/dashboard/admin/approvals'
   if (p.context === 'meet' && p.room_id) return `/dashboard/communication/meet/${p.room_id}`
   if (p.conversation_id) return `/dashboard/communication/chat?c=${p.conversation_id}`
   if (p.room_id) return `/dashboard/communication/meet/${p.room_id}`
@@ -191,6 +200,13 @@ export function getNotificationSubtitle(n: CommNotification): string | null {
       return (p.message as string) || `${p.warningCount ?? 0} inventory warning(s)`
     case 'demand_fields_updated':
       return (p.message as string) || 'Demand details were updated'
+    case 'expense_claim_pending': {
+      const parts: string[] = []
+      if (p.submitter_name) parts.push(String(p.submitter_name))
+      if (p.category_label) parts.push(String(p.category_label))
+      if (p.amount != null) parts.push(`$${Number(p.amount).toFixed(2)}`)
+      return parts.join(' · ') || 'New expense claim pending approval'
+    }
     default:
       return null
   }

@@ -1,13 +1,16 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { ExternalLink, Loader2, Plus, Receipt } from 'lucide-react'
 import {
   EXPENSE_CATEGORY_LABELS,
+  EXPENSE_CATEGORIES,
+  isExtraDutyCategory,
   type SpecialistExpenseCategory,
   type SpecialistExpenseClaim,
 } from '@/lib/specialist-expense-claims'
-import { submitSpecialistExpenseClaim } from './expense-actions'
+import { formatDurationMinutes } from '@/lib/extra-duty-compensation'
+import { previewExtraDutyClaim, submitSpecialistExpenseClaim } from './expense-actions'
 
 const STATUS_STYLES: Record<string, string> = {
   pending: 'bg-amber-500/20 text-amber-400',
@@ -25,6 +28,32 @@ export function SelfExpensesPanel({ initialClaims }: Props) {
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
+  const [category, setCategory] = useState<SpecialistExpenseCategory>('travel')
+  const [dutyHours, setDutyHours] = useState('0')
+  const [dutyMinutes, setDutyMinutes] = useState('0')
+  const [dutyPreview, setDutyPreview] = useState<{
+    amount?: number
+    hourlyRate?: number
+    error?: string
+  } | null>(null)
+  const [previewLoading, setPreviewLoading] = useState(false)
+
+  const extraDuty = isExtraDutyCategory(category)
+
+  useEffect(() => {
+    if (!extraDuty || !showForm) {
+      setDutyPreview(null)
+      return
+    }
+    const t = window.setTimeout(() => {
+      setPreviewLoading(true)
+      void previewExtraDutyClaim(dutyHours, dutyMinutes).then((res) => {
+        setPreviewLoading(false)
+        setDutyPreview(res)
+      })
+    }, 300)
+    return () => window.clearTimeout(t)
+  }, [extraDuty, showForm, dutyHours, dutyMinutes])
 
   return (
     <section className="space-y-5">
@@ -35,7 +64,8 @@ export function SelfExpensesPanel({ initialClaims }: Props) {
             Expenses (Giderler)
           </h2>
           <p className="text-sm text-zinc-500 dark:text-gray-400 mt-0.5">
-            Submit receipts for reimbursement. Approved amounts appear in Pay estimate.
+            Yol, Yemek, Akaryakıt (amount + receipt) or Extra Duty (hours only). Aurora Manager approval
+            required; approved items pay on the next salary date.
           </p>
         </div>
         {!showForm ? (
@@ -64,6 +94,11 @@ export function SelfExpensesPanel({ initialClaims }: Props) {
             setSubmitting(true)
             setError(null)
             setSuccess(false)
+            formData.set('category', category)
+            if (extraDuty) {
+              formData.set('duty_hours', dutyHours)
+              formData.set('duty_minutes', dutyMinutes)
+            }
             const result = await submitSpecialistExpenseClaim(formData)
             setSubmitting(false)
             if (result.error) {
@@ -85,20 +120,25 @@ export function SelfExpensesPanel({ initialClaims }: Props) {
                 name="description"
                 required
                 maxLength={300}
-                placeholder="e.g. Five Guys lunch — dealer visit"
+                placeholder={
+                  extraDuty ? 'e.g. After-hours dealer support' : 'e.g. Highway toll — Surrey visit'
+                }
                 className="w-full rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-950 px-3 py-2 text-sm"
               />
             </div>
             <div>
-              <label className="block text-xs text-zinc-500 mb-1">Amount (CAD) *</label>
-              <input
-                name="amount"
-                type="number"
-                min="0.01"
-                step="0.01"
-                required
+              <label className="block text-xs text-zinc-500 mb-1">Category *</label>
+              <select
+                value={category}
+                onChange={(e) => setCategory(e.target.value as SpecialistExpenseCategory)}
                 className="w-full rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-950 px-3 py-2 text-sm"
-              />
+              >
+                {EXPENSE_CATEGORIES.map((key) => (
+                  <option key={key} value={key}>
+                    {EXPENSE_CATEGORY_LABELS[key]}
+                  </option>
+                ))}
+              </select>
             </div>
             <div>
               <label className="block text-xs text-zinc-500 mb-1">Expense date *</label>
@@ -110,36 +150,82 @@ export function SelfExpensesPanel({ initialClaims }: Props) {
                 className="w-full rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-950 px-3 py-2 text-sm"
               />
             </div>
-            <div>
-              <label className="block text-xs text-zinc-500 mb-1">Category</label>
-              <select
-                name="category"
-                defaultValue="meals"
-                className="w-full rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-950 px-3 py-2 text-sm"
-              >
-                {(Object.keys(EXPENSE_CATEGORY_LABELS) as SpecialistExpenseCategory[]).map((key) => (
-                  <option key={key} value={key}>
-                    {EXPENSE_CATEGORY_LABELS[key]}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs text-zinc-500 mb-1">Receipt photo / PDF *</label>
-              <input
-                name="receipt"
-                type="file"
-                required
-                accept="image/jpeg,image/png,image/webp,image/gif,application/pdf"
-                className="w-full text-sm text-zinc-600 dark:text-gray-300 file:mr-3 file:rounded file:border-0 file:bg-[#C27E00] file:px-3 file:py-1.5 file:text-sm file:text-white"
-              />
-              <p className="text-xs text-zinc-500 mt-1">Max 8 MB. Saved to Google Drive.</p>
-            </div>
+
+            {extraDuty ? (
+              <>
+                <div>
+                  <label className="block text-xs text-zinc-500 mb-1">Hours</label>
+                  <input
+                    type="number"
+                    min={0}
+                    max={24}
+                    value={dutyHours}
+                    onChange={(e) => setDutyHours(e.target.value)}
+                    className="w-full rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-950 px-3 py-2 text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-zinc-500 mb-1">Minutes</label>
+                  <input
+                    type="number"
+                    min={0}
+                    max={59}
+                    value={dutyMinutes}
+                    onChange={(e) => setDutyMinutes(e.target.value)}
+                    className="w-full rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-950 px-3 py-2 text-sm"
+                  />
+                </div>
+                <div className="sm:col-span-2 rounded-lg border border-[#C27E00]/30 bg-[#C27E00]/5 px-3 py-2 text-sm">
+                  {previewLoading ? (
+                    <span className="text-zinc-500">Calculating…</span>
+                  ) : dutyPreview?.error ? (
+                    <span className="text-red-600 dark:text-red-400">{dutyPreview.error}</span>
+                  ) : dutyPreview?.amount != null ? (
+                    <span className="text-zinc-800 dark:text-gray-200">
+                      Estimated pay:{' '}
+                      <strong className="text-[#C27E00]">${dutyPreview.amount.toFixed(2)} CAD</strong>
+                      {dutyPreview.hourlyRate != null ? (
+                        <span className="text-zinc-500 text-xs ml-2">
+                          @ ${dutyPreview.hourlyRate.toFixed(2)}/hr (1.5× monthly hourly)
+                        </span>
+                      ) : null}
+                    </span>
+                  ) : (
+                    <span className="text-zinc-500">Enter duration to preview amount.</span>
+                  )}
+                </div>
+              </>
+            ) : (
+              <>
+                <div>
+                  <label className="block text-xs text-zinc-500 mb-1">Amount (CAD) *</label>
+                  <input
+                    name="amount"
+                    type="number"
+                    min="0.01"
+                    step="0.01"
+                    required
+                    className="w-full rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-950 px-3 py-2 text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-zinc-500 mb-1">Receipt photo / PDF *</label>
+                  <input
+                    name="receipt"
+                    type="file"
+                    required
+                    accept="image/jpeg,image/png,image/webp,image/gif,application/pdf"
+                    className="w-full text-sm text-zinc-600 dark:text-gray-300 file:mr-3 file:rounded file:border-0 file:bg-[#C27E00] file:px-3 file:py-1.5 file:text-sm file:text-white"
+                  />
+                  <p className="text-xs text-zinc-500 mt-1">Max 8 MB. Saved to Google Drive.</p>
+                </div>
+              </>
+            )}
           </div>
           <div className="flex gap-2">
             <button
               type="submit"
-              disabled={submitting}
+              disabled={submitting || (extraDuty && !!dutyPreview?.error)}
               className="inline-flex items-center gap-2 rounded-lg bg-[#C27E00] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
             >
               {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
@@ -167,6 +253,7 @@ export function SelfExpensesPanel({ initialClaims }: Props) {
                 <th className="px-3 py-2">Date</th>
                 <th className="px-3 py-2">Description</th>
                 <th className="px-3 py-2">Category</th>
+                <th className="px-3 py-2">Detail</th>
                 <th className="px-3 py-2 text-right">Amount</th>
                 <th className="px-3 py-2">Status</th>
                 <th className="px-3 py-2">Receipt</th>
@@ -181,9 +268,19 @@ export function SelfExpensesPanel({ initialClaims }: Props) {
                     {c.status === 'rejected' && c.rejection_reason ? (
                       <span className="block text-xs text-red-500 mt-0.5">{c.rejection_reason}</span>
                     ) : null}
+                    {c.status === 'approved' && c.payable_on ? (
+                      <span className="block text-xs text-green-600 dark:text-green-400 mt-0.5">
+                        Pays on {new Date(`${c.payable_on}T12:00:00Z`).toLocaleDateString()}
+                      </span>
+                    ) : null}
                   </td>
                   <td className="px-3 py-2 text-zinc-500">
                     {EXPENSE_CATEGORY_LABELS[c.category] ?? c.category}
+                  </td>
+                  <td className="px-3 py-2 text-zinc-500 text-xs">
+                    {c.category === 'extra_duty' && c.duration_minutes != null
+                      ? formatDurationMinutes(c.duration_minutes)
+                      : '—'}
                   </td>
                   <td className="px-3 py-2 text-right tabular-nums font-medium">
                     ${Number(c.amount).toFixed(2)}

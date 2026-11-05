@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { clsx } from 'clsx'
-import { LogOut, LayoutDashboard, FileText, Users, Settings, Receipt, CalendarDays, Briefcase, ClipboardList, Wrench, GraduationCap, Clock, DollarSign, Shield, ShieldCheck, TrendingUp, Package, BarChart3, UserCircle, Cpu, MapPin, Building2, Camera, Database, Mail, Zap, Image, BookOpen, MessageSquare, Ticket, ChevronDown, ChevronRight, UserCog, Webhook, Globe, Plug, Activity, Bell, ListTodo, History, UsersRound, MessageCircle, Video, PanelLeftClose, X } from 'lucide-react'
+import { LogOut, LayoutDashboard, FileText, Users, Settings, Receipt, CalendarDays, Briefcase, ClipboardList, Wrench, GraduationCap, Clock, DollarSign, Shield, ShieldCheck, TrendingUp, Package, BarChart3, UserCircle, Cpu, MapPin, Building2, Camera, Database, Mail, Zap, Image, BookOpen, MessageSquare, Ticket, ChevronDown, ChevronRight, UserCog, Webhook, Globe, Plug, Activity, Bell, ListTodo, History, UsersRound, MessageCircle, Video, PanelLeftClose, X, CheckSquare } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
@@ -11,6 +11,7 @@ import { DealerClock } from '@/components/dealer-clock'
 import { ThemeToggle } from '@/components/theme-toggle'
 import { canAccessAdminCustomers, isInventoryManager, normalizeUserRole } from '@/lib/inventory-manager-access'
 import { useUnreadNotificationCount } from '@/components/communication/use-unread-notifications'
+import { usePendingApprovalsCount } from '@/components/admin/use-pending-approvals-count'
 
 interface Profile {
   id: string
@@ -58,6 +59,8 @@ export function Sidebar({
     communication: true,
   })
   const unreadCount = useUnreadNotificationCount(profile.id)
+  const role = normalizeUserRole(profile.role)
+  const pendingApprovals = usePendingApprovalsCount(role === 'aurora_manager')
 
   const handleSignOut = async () => {
     await supabase.auth.signOut()
@@ -68,7 +71,19 @@ export function Sidebar({
     setExpandedSections((prev) => ({ ...prev, [key]: !prev[key] }))
   }
 
-  const role = normalizeUserRole(profile.role)
+  function renderLinkTitle(link: NavLink) {
+    if (link.href === '/dashboard/admin/approvals' && pendingApprovals > 0) {
+      return (
+        <>
+          <span className="flex-1">{link.name}</span>
+          <span className="ml-auto rounded-full bg-amber-500 px-1.5 py-0.5 text-[10px] font-semibold text-white tabular-nums">
+            {pendingApprovals > 99 ? '99+' : pendingApprovals}
+          </span>
+        </>
+      )
+    }
+    return link.name
+  }
   const roleLabel =
     role === 'specialist'
       ? 'Technical Support'
@@ -175,6 +190,7 @@ export function Sidebar({
     links.push(adminDemandsLink)
     links.push({ name: 'Reports', href: '/dashboard/admin/reports', icon: FileText })
     if (role === 'aurora_manager') {
+      links.push({ name: 'Onaylar', href: '/dashboard/admin/approvals', icon: CheckSquare })
       links.push({ name: 'Employees', href: '/dashboard/admin/employees', icon: Users })
       links.push(adminCustomersLink)
     }
@@ -311,7 +327,7 @@ export function Sidebar({
                       "mr-3 h-5 w-5 flex-shrink-0 transition-colors",
                       pathname.startsWith(link.href) ? "text-[#C27E00]" : "text-zinc-500 dark:text-gray-500 group-hover:text-zinc-600 dark:text-gray-300"
                     )} />
-                    {link.name}
+                    {renderLinkTitle(link)}
                   </Link>
                 )
               })}
@@ -372,7 +388,7 @@ export function Sidebar({
                       "mr-3 h-5 w-5 flex-shrink-0 transition-colors",
                       pathname.startsWith(link.href) ? "text-[#C27E00]" : "text-zinc-500 dark:text-gray-500 group-hover:text-zinc-600 dark:text-gray-300"
                     )} />
-                    {link.name}
+                    {renderLinkTitle(link)}
                   </Link>
                 )
               })}
@@ -433,7 +449,7 @@ export function Sidebar({
                     "mr-3 h-5 w-5 flex-shrink-0 transition-colors",
                     pathname.startsWith(link.href) ? "text-[#C27E00]" : "text-zinc-500 dark:text-gray-500 group-hover:text-zinc-600 dark:text-gray-300"
                   )} />
-                  {link.name}
+                  {renderLinkTitle(link)}
                 </Link>
               )
             })}

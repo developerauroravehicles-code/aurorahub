@@ -3,7 +3,9 @@ import type { GoogleDriveSettings } from '@/lib/google-drive'
 
 export type SpecialistExpenseClaimStatus = 'pending' | 'approved' | 'rejected'
 
-export type SpecialistExpenseCategory = 'travel' | 'meals' | 'fuel' | 'supplies' | 'other'
+export type SpecialistExpenseCategory = 'travel' | 'meals' | 'fuel' | 'extra_duty'
+
+export const EXPENSE_CATEGORIES: SpecialistExpenseCategory[] = ['travel', 'meals', 'fuel', 'extra_duty']
 
 export type SpecialistExpenseClaim = {
   id: string
@@ -19,15 +21,22 @@ export type SpecialistExpenseClaim = {
   reviewed_by: string | null
   reviewed_at: string | null
   rejection_reason: string
+  duration_minutes: number | null
+  hourly_rate_used: number | null
+  payable_on: string | null
+  payroll_applied_at: string | null
   created_at: string
 }
 
 export const EXPENSE_CATEGORY_LABELS: Record<SpecialistExpenseCategory, string> = {
-  travel: 'Travel',
-  meals: 'Meals',
-  fuel: 'Fuel',
-  supplies: 'Supplies',
-  other: 'Other',
+  travel: 'Yol (Travel)',
+  meals: 'Yemek (Meals)',
+  fuel: 'Akaryakıt (Fuel)',
+  extra_duty: 'Extra Duty',
+}
+
+export function isExtraDutyCategory(category: string): boolean {
+  return category === 'extra_duty'
 }
 
 export async function getGoogleDriveSettingsFromDb(
