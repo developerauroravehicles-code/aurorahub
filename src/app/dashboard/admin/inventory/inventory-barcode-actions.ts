@@ -41,13 +41,39 @@ export async function loadBarcodePanelData(search?: string) {
   if (auth.error) return { error: auth.error }
 
   const registryLimit = search?.trim() ? 500 : 300
-  const [settings, templates, registry] = await Promise.all([
+  const { fetchBarcodeRegistryCount, fetchBarcodeRegistryAnomalies, fetchBarcodeTraceByCode } =
+    await import('@/lib/inventory-barcodes/registry-query')
+
+  const [settings, templates, registry, totalCount, anomalies] = await Promise.all([
     getBarcodeSettings(auth.supabase),
     fetchSetTemplates(auth.supabase),
     fetchBarcodeRegistry(auth.supabase, { search, limit: registryLimit }),
+    fetchBarcodeRegistryCount(auth.supabase),
+    fetchBarcodeRegistryAnomalies(auth.supabase, 30),
   ])
 
-  return { settings, templates, registry }
+  return { settings, templates, registry, totalCount, anomalies }
+}
+
+export async function searchBarcodeRegistry(search: string) {
+  const auth = await requireAuroraManager()
+  if (auth.error) return { error: auth.error, registry: [] as Awaited<ReturnType<typeof fetchBarcodeRegistry>> }
+
+  const registry = await fetchBarcodeRegistry(auth.supabase, {
+    search: search.trim(),
+    limit: search.trim().length >= 8 ? 100 : 500,
+  })
+  return { registry }
+}
+
+export async function lookupBarcodeByCode(code: string) {
+  const auth = await requireAuroraManager()
+  if (auth.error) return { error: auth.error }
+
+  const { fetchBarcodeTraceByCode } = await import('@/lib/inventory-barcodes/registry-query')
+  const row = await fetchBarcodeTraceByCode(auth.supabase, code)
+  if (!row) return { error: 'No barcode found with that code.' }
+  return { row }
 }
 
 export async function saveBarcodeSettingsAction(settings: BarcodeSettings) {

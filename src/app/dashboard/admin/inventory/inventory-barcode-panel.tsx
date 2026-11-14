@@ -22,7 +22,10 @@ import {
   getBarcodeTraceEvents,
   resetNegativeStockBalancesAction,
   registerExistingBarcodeAction,
+  searchBarcodeRegistry,
+  lookupBarcodeByCode,
 } from './inventory-barcode-actions'
+import type { BarcodeRegistryAnomaly } from '@/lib/inventory-barcodes/registry-query'
 
 type Camera = { id: string; name: string }
 type Dealer = { id: string; name: string }
@@ -75,6 +78,9 @@ export function InventoryBarcodePanel({
   settings,
   templates,
   registry,
+  registryTotalCount,
+  anomalies,
+  initialRegistrySearch = '',
   cameras,
   dealers,
   specialists,
@@ -82,6 +88,9 @@ export function InventoryBarcodePanel({
   settings: BarcodeSettings
   templates: SetTemplate[]
   registry: BarcodeTraceRow[]
+  registryTotalCount: number
+  anomalies: BarcodeRegistryAnomaly[]
+  initialRegistrySearch?: string
   cameras: Camera[]
   dealers: Dealer[]
   specialists: Specialist[]
@@ -91,7 +100,10 @@ export function InventoryBarcodePanel({
   const [enabled, setEnabled] = useState(settings.enabled)
   const [message, setMessage] = useState<{ type: 'ok' | 'err'; text: string } | null>(null)
   const [lastGenerated, setLastGenerated] = useState<GeneratedBarcode[]>([])
-  const [registrySearch, setRegistrySearch] = useState('')
+  const [registrySearch, setRegistrySearch] = useState(initialRegistrySearch)
+  const [liveRegistry, setLiveRegistry] = useState(registry)
+  const [registrySearching, setRegistrySearching] = useState(false)
+  const [lookupCode, setLookupCode] = useState('')
   const [selectedExportIds, setSelectedExportIds] = useState<Set<string>>(new Set())
   const [selectedBarcodeId, setSelectedBarcodeId] = useState<string | null>(null)
   const [traceEvents, setTraceEvents] = useState<
@@ -106,6 +118,10 @@ export function InventoryBarcodePanel({
   const specialistScanRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
+    setLiveRegistry(registry)
+  }, [registry])
+
+  useEffect(() => {
     if (selectedBarcodeId) {
       void getBarcodeTraceEvents(selectedBarcodeId).then((res) => {
         if (res.events) setTraceEvents(res.events)
@@ -114,6 +130,23 @@ export function InventoryBarcodePanel({
       setTraceEvents([])
     }
   }, [selectedBarcodeId])
+
+  useEffect(() => {
+    const q = registrySearch.trim()
+    if (!q) {
+      setLiveRegistry(registry)
+      return
+    }
+    const t = setTimeout(() => {
+      setRegistrySearching(true)
+      void searchBarcodeRegistry(q).then((res) => {
+        setRegistrySearching(false)
+        if (res.registry) setLiveRegistry(res.registry)
+        if (res.error) setMessage({ type: 'err', text: res.error })
+      })
+    }, 350)
+    return () => clearTimeout(t)
+  }, [registrySearch, registry])
 
   function modelForGenerated(b: GeneratedBarcode): string {
     if (b.setTemplateId) {
@@ -243,10 +276,7 @@ export function InventoryBarcodePanel({
     }
   }
 
-  const unitRegistry = registry.filter((r) => r.kind !== 'set')
-  const filteredRegistry = registrySearch.trim()
-    ? unitRegistry.filter((r) => r.code.toLowerCase().includes(registrySearch.trim().toLowerCase()))
-    : unitRegistry
+  const filteredRegistry = liveRegistry
 
   if (!enabled) {
     return (
@@ -750,9 +780,75 @@ export function InventoryBarcodePanel({
           </div>
         </div>
         <p className="text-xs text-zinc-500 dark:text-gray-500">
-          Shows the latest 300 barcodes from the server. Use <strong className="font-medium">Search code</strong> to
-          find older labels (e.g. full AUR-… code from the physical sticker).
+          Showing {filteredRegistry.length} row(s)
+          {registrySearch.trim()
+            ? ` matching “${registrySearch.trim()}” (server search)`
+            : ` of ${registryTotalCount} total — latest 300 loaded`}
+          {registrySearching ? ' · searching…' : ''}. Paste the full <strong className="font-medium">AUR-…</strong> code
+          from the sticker; search queries the database (not just the visible list).
         </p>
+
+        <form
+          className="flex flex-wrap items-end gap-2 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-zinc-50/80 dark:bg-white/[0.02] p-3"
+          onSubmit={(e) => {
+            e.preventDefault()
+            setRegistrySearching(true)
+            void lookupBarcodeByCode(lookupCode).then((res) => {
+              setRegistrySearching(false)
+              if (res.error) {
+                setMessage({ type: 'err', text: res.error })
+                return
+              }
+              if (res.row) {
+                setRegistrySearch(res.row.code)
+                setLiveRegistry((prev) => {
+                  if (prev.some((r) => r.id === res.row!.id)) return prev
+                  return [res.row!, ...prev]
+                })
+                setSelectedBarcodeId(res.row.id)
+                setMessage({ type: 'ok', text: `Found ${res.row.code}` })
+              }
+            })
+          }}
+        >
+          <div className="flex-1 min-w-[200px]">
+            <label className="text-xs text-zinc-500 block mb-1">Exact lookup</label>
+            <input
+              value={lookupCode}
+              onChange={(e) => setLookupCode(e.target.value.toUpperCase())}
+              placeholder="AUR-20260909-ZL2LD4"
+              className={`${inputClass} w-full font-mono`}
+            />
+          </div>
+          <button type="submit" disabled={registrySearching || !lookupCode.trim()} className={btnPrimary}>
+            Find in database
+          </button>
+        </form>
+
+        {anomalies.length > 0 ? (
+          <div className="rounded-lg border border-red-500/30 bg-red-500/5 p-3 space-y-2">
+            <p className="text-sm font-medium text-red-800 dark:text-red-200">
+              {anomalies.length} barcode(s) need attention (hidden from the default list before this fix)
+            </p>
+            <ul className="text-xs text-red-900/80 dark:text-red-100/80 space-y-1 max-h-32 overflow-y-auto font-mono">
+              {anomalies.map((a) => (
+                <li key={`${a.code}-${a.reason}`}>
+                  <button
+                    type="button"
+                    className="text-left hover:underline"
+                    onClick={() => {
+                      setRegistrySearch(a.code)
+                      setLookupCode(a.code)
+                    }}
+                  >
+                    {a.code}
+                  </button>
+                  <span className="text-red-700/70 dark:text-red-200/70"> — {a.reason} ({a.status})</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
         <div className="overflow-x-auto">
           <table className="min-w-full text-sm">
             <thead>
@@ -791,7 +887,15 @@ export function InventoryBarcodePanel({
                     />
                   </td>
                   <td className="py-2 pr-3 font-mono text-xs">{row.code}</td>
-                  <td className="py-2 pr-3">{row.kind}</td>
+                  <td className="py-2 pr-3">
+                    {row.kind === 'set' ? (
+                      <span className="text-xs text-amber-700 dark:text-amber-300" title="Legacy set container">
+                        set (legacy)
+                      </span>
+                    ) : (
+                      row.kind
+                    )}
+                  </td>
                   <td className="py-2 pr-3">{row.camera_model_name ?? '—'}</td>
                   <td className="py-2 pr-3">{statusBadge(row.status)}</td>
                   <td className="py-2 pr-3 text-xs">

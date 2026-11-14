@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import { fetchInventoryStockAlerts } from '@/lib/inventory-stock-alerts'
 import { fetchSpecialistStockSummary } from '@/lib/inventory-v2/specialist-stock'
 import { getBarcodeSettings, fetchBarcodeRegistry, fetchSetTemplates } from '@/lib/inventory-barcodes'
+import { fetchBarcodeRegistryCount, fetchBarcodeRegistryAnomalies } from '@/lib/inventory-barcodes/registry-query'
 import { InventoryDashboard } from './inventory-dashboard'
 
 const VALID_TABS = new Set([
@@ -19,7 +20,7 @@ const VALID_TABS = new Set([
 export default async function InventoryPage({
   searchParams,
 }: {
-  searchParams: Promise<{ tab?: string; specialist?: string }>
+  searchParams: Promise<{ tab?: string; specialist?: string; barcode_q?: string }>
 }) {
   const supabase = await createClient()
   const {
@@ -112,10 +113,13 @@ export default async function InventoryPage({
 
   const { alerts, summary, customRules } = inventoryAlertsRes
   const specialistStock = await fetchSpecialistStockSummary(supabase)
+  const barcodeQ = params.barcode_q?.trim() ?? ''
   const barcodeSettings = await getBarcodeSettings(supabase)
-  const [barcodeTemplates, barcodeRegistry] = await Promise.all([
+  const [barcodeTemplates, barcodeRegistry, barcodeRegistryTotal, barcodeAnomalies] = await Promise.all([
     fetchSetTemplates(supabase),
-    fetchBarcodeRegistry(supabase, { limit: 300 }),
+    fetchBarcodeRegistry(supabase, { search: barcodeQ || undefined, limit: barcodeQ ? 500 : 300 }),
+    fetchBarcodeRegistryCount(supabase),
+    fetchBarcodeRegistryAnomalies(supabase, 30),
   ])
 
   return (
@@ -169,6 +173,9 @@ export default async function InventoryPage({
         barcodeSettings={barcodeSettings}
         barcodeTemplates={barcodeTemplates}
         barcodeRegistry={barcodeRegistry}
+        barcodeRegistryTotal={barcodeRegistryTotal}
+        barcodeAnomalies={barcodeAnomalies}
+        initialBarcodeSearch={barcodeQ}
         initialTab={
           initialTab as
             | 'dashboard'

@@ -196,6 +196,9 @@ export function InventoryDashboard({
   barcodeSettings,
   barcodeTemplates,
   barcodeRegistry,
+  barcodeRegistryTotal,
+  barcodeAnomalies,
+  initialBarcodeSearch,
 }: {
   provinces: Province[]
   cities: City[]
@@ -224,6 +227,9 @@ export function InventoryDashboard({
     items?: { id: string; camera_model_id: string; quantity: number; camera_models?: { name: string } | null }[]
   }[]
   barcodeRegistry: BarcodeTraceRow[]
+  barcodeRegistryTotal: number
+  barcodeAnomalies: { code: string; kind: string; status: string; reason: string }[]
+  initialBarcodeSearch?: string
 }) {
   const router = useRouter()
   const [tab, setTab] = useState<TabId>(initialTab ?? 'dashboard')
@@ -877,6 +883,9 @@ export function InventoryDashboard({
           settings={barcodeSettings}
           templates={barcodeTemplates}
           registry={barcodeRegistry}
+          registryTotalCount={barcodeRegistryTotal}
+          anomalies={barcodeAnomalies}
+          initialRegistrySearch={initialBarcodeSearch ?? ''}
           cameras={cameras}
           dealers={dealers.map((d) => ({ id: d.id, name: d.name }))}
           specialists={specialists}
