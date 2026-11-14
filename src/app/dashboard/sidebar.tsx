@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { clsx } from 'clsx'
-import { LogOut, LayoutDashboard, FileText, Users, Settings, Receipt, CalendarDays, Briefcase, ClipboardList, Wrench, GraduationCap, Clock, DollarSign, Shield, ShieldCheck, TrendingUp, Package, BarChart3, UserCircle, Cpu, MapPin, Building2, Camera, Database, Mail, Zap, Image, BookOpen, MessageSquare, Ticket, ChevronDown, ChevronRight, UserCog, Webhook, Globe, Plug, Activity, Bell, ListTodo, History, UsersRound, MessageCircle, Video, PanelLeftClose, X, CheckSquare } from 'lucide-react'
+import { LogOut, LayoutDashboard, FileText, Users, Settings, Receipt, CalendarDays, Briefcase, ClipboardList, Wrench, GraduationCap, Clock, DollarSign, Shield, ShieldCheck, TrendingUp, Package, BarChart3, UserCircle, Cpu, MapPin, Building2, Camera, Database, Mail, Zap, Image, BookOpen, MessageSquare, Ticket, ChevronDown, ChevronRight, UserCog, Webhook, Globe, Plug, Activity, Bell, ListTodo, History, UsersRound, MessageCircle, Video, PanelLeftClose, X, CheckSquare, Contact } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
@@ -191,6 +191,7 @@ export function Sidebar({
     links.push({ name: 'Reports', href: '/dashboard/admin/reports', icon: FileText })
     if (role === 'aurora_manager') {
       links.push({ name: 'Onaylar', href: '/dashboard/admin/approvals', icon: CheckSquare })
+      links.push({ name: 'CRM', href: '/dashboard/admin/crm', icon: Contact })
       links.push({ name: 'Employees', href: '/dashboard/admin/employees', icon: Users })
       links.push(adminCustomersLink)
     }

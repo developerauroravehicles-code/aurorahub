@@ -2,6 +2,7 @@
 
 import { headers } from 'next/headers'
 import { revalidatePath } from 'next/cache'
+import type { SupabaseClient } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/server'
 import { getGoogleDriveSettingsFromDb } from '@/lib/specialist-expense-claims'
 import {
@@ -118,7 +119,19 @@ export async function preparePendingAssignmentsForPersonnel(personnelId: string)
     data: { user },
   } = await supabase.auth.getUser()
   if (!user) return { error: 'Not authenticated' }
+  return preparePendingAssignmentsForUser(supabase, user.id, personnelId)
+}
 
+/**
+ * Same as preparePendingAssignmentsForPersonnel, for a caller that already holds a
+ * client acting as `userId` (e.g. the field app's Bearer client).
+ */
+export async function preparePendingAssignmentsForUser(
+  supabase: Awaited<ReturnType<typeof createClient>> | SupabaseClient,
+  userId: string,
+  personnelId: string
+) {
+  const user = { id: userId }
   const { data: person } = await supabase
     .from('personnel')
     .select('id')
@@ -390,13 +403,34 @@ export async function verifyUploadedDocument(assignmentId: string) {
   return { success: true }
 }
 
-export async function getEmbeddedSigningUrl(assignmentId: string) {
+export async function getEmbeddedSigningUrl(
+  assignmentId: string
+): Promise<{ error?: string; url?: string }> {
   const supabase = await createClient()
   const {
     data: { user },
   } = await supabase.auth.getUser()
   if (!user) return { error: 'Not authenticated' }
 
+  const hdrs = await headers()
+  const host = hdrs.get('x-forwarded-host') ?? hdrs.get('host') ?? 'localhost:3000'
+  const proto = hdrs.get('x-forwarded-proto') ?? 'https'
+  const returnUrl = `${proto}://${host}/dashboard/self?tab=documents&signed=${assignmentId}`
+
+  return getEmbeddedSigningUrlForUser(supabase, user.id, assignmentId, returnUrl)
+}
+
+/**
+ * DocuSign embedded signing URL for the signer's own assignment, for a caller
+ * that already holds a client acting as `userId` (web action or field app).
+ */
+export async function getEmbeddedSigningUrlForUser(
+  supabase: Awaited<ReturnType<typeof createClient>> | SupabaseClient,
+  userId: string,
+  assignmentId: string,
+  returnUrl: string
+) {
+  const user = { id: userId }
   const dsSettings = await getDocuSignSettingsFromDb(supabase)
   if (!dsSettings?.enabled) return { error: 'DocuSign is not configured' }
 
@@ -439,11 +473,6 @@ export async function getEmbeddedSigningUrl(assignmentId: string) {
   if (!envelopeId) {
     return { error: 'Signing session not available' }
   }
-
-  const hdrs = await headers()
-  const host = hdrs.get('x-forwarded-host') ?? hdrs.get('host') ?? 'localhost:3000'
-  const proto = hdrs.get('x-forwarded-proto') ?? 'https'
-  const returnUrl = `${proto}://${host}/dashboard/self?tab=documents&signed=${assignmentId}`
 
   const urlResult = await createEmbeddedSigningUrl(dsSettings, {
     envelopeId,

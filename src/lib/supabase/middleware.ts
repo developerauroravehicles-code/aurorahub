@@ -57,11 +57,34 @@ export async function updateSession(request: NextRequest) {
     '/api/daily-invoice-review-notify',
     '/api/daily-invoice-auto-send',
     '/api/daily-invoice-eod-notify',
+    '/api/crm-note-reminders',
   ]
   const isCronApi = cronPaths.some((p) =>
     request.nextUrl.pathname === p || request.nextUrl.pathname.startsWith(p + '/')
   )
   if (isCronApi) {
+    return supabaseResponse
+  }
+
+  // Mobile field API (AuroraField) authenticates with a Bearer access token
+  // inside each route handler; it never uses cookie sessions.
+  if (
+    request.nextUrl.pathname === '/api/field' ||
+    request.nextUrl.pathname.startsWith('/api/field/')
+  ) {
+    // Dev only: let the Expo web preview (http://<host>:8081) call the API from a browser.
+    // Native apps don't need CORS; production never sends these headers.
+    const origin = request.headers.get('origin')
+    if (process.env.NODE_ENV !== 'production' && origin && /^http:\/\/[^/]+:8081$/.test(origin)) {
+      const cors = {
+        'Access-Control-Allow-Origin': origin,
+        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'Authorization, Content-Type',
+        Vary: 'Origin',
+      }
+      if (request.method === 'OPTIONS') return new NextResponse(null, { status: 204, headers: cors })
+      for (const [k, v] of Object.entries(cors)) supabaseResponse.headers.set(k, v)
+    }
     return supabaseResponse
   }
 
