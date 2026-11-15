@@ -7,6 +7,20 @@ import { parseCrmPeriodFromSearchParams } from '@/lib/crm/period'
 import { canSetDealerAcquired } from '@/lib/crm/acquired'
 import { computeRemindAtFromMeeting, type FollowUpKind } from '@/lib/crm/follow-up'
 import { ptDatetimeLocalToISO } from '@/lib/timezone-defaults'
+import { fetchProspectCrmDetail, listCrmProspects } from '@/lib/crm/load-prospect'
+
+export type CrmNoteOwner =
+  | { type: 'dealer'; dealerId: string }
+  | { type: 'prospect'; prospectId: string }
+
+function revalidateCrmOwner(owner: CrmNoteOwner) {
+  if (owner.type === 'dealer') {
+    revalidatePath(`/dashboard/admin/crm/dealers/${owner.dealerId}`)
+  } else {
+    revalidatePath(`/dashboard/admin/crm/prospects/${owner.prospectId}`)
+    revalidatePath('/dashboard/admin/crm/prospects')
+  }
+}
 
 export async function ensureAuroraManager() {
   const supabase = await createClient()
@@ -99,11 +113,86 @@ export async function updateDealerCrmContact(
   return { success: true }
 }
 
-export async function createDealerCrmNote(
-  dealerId: string,
-  body: string,
+export async function listCrmProspectsAction() {
+  const auth = await ensureAuroraManager()
+  if (auth.error || !auth.supabase) return { error: auth.error, prospects: [] }
+
+  try {
+    const prospects = await listCrmProspects(auth.supabase)
+    return { prospects }
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : 'Failed to load prospects.' }
+  }
+}
+
+export async function createCrmProspect(input: {
+  name: string
+  primary_contact_name?: string
+  primary_contact_email?: string
+  phone?: string
+  address?: string
+  initialNote?: string
   meetingAtLocal?: string
+}) {
+  const auth = await ensureAuroraManager()
+  if (auth.error || !auth.supabase || !auth.userId) return { error: auth.error ?? 'Unauthorized' }
+
+  const name = input.name.trim()
+  if (!name) return { error: 'Company or dealer name is required.' }
+
+  const { data: row, error } = await auth.supabase
+    .from('crm_prospects')
+    .insert({
+      name,
+      primary_contact_name: input.primary_contact_name?.trim() || null,
+      primary_contact_email: input.primary_contact_email?.trim() || null,
+      phone: input.phone?.trim() || null,
+      address: input.address?.trim() || null,
+      status: 'prospect',
+      created_by: auth.userId,
+    })
+    .select('id')
+    .single()
+
+  if (error || !row) return { error: error?.message ?? 'Could not create prospect.' }
+
+  if (input.initialNote?.trim()) {
+    await createCrmNote({ type: 'prospect', prospectId: row.id }, input.initialNote, input.meetingAtLocal)
+  }
+
+  revalidatePath('/dashboard/admin/crm/prospects')
+  return { success: true, prospectId: row.id as string }
+}
+
+export async function updateCrmProspect(
+  prospectId: string,
+  input: {
+    name?: string
+    primary_contact_name?: string
+    primary_contact_email?: string
+    phone?: string
+    address?: string
+    status?: 'prospect' | 'qualified' | 'won' | 'lost'
+  }
 ) {
+  const auth = await ensureAuroraManager()
+  if (auth.error || !auth.supabase) return { error: auth.error ?? 'Unauthorized' }
+
+  const { error } = await auth.supabase
+    .from('crm_prospects')
+    .update({
+      ...input,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', prospectId)
+
+  if (error) return { error: error.message }
+  revalidatePath(`/dashboard/admin/crm/prospects/${prospectId}`)
+  revalidatePath('/dashboard/admin/crm/prospects')
+  return { success: true }
+}
+
+export async function createCrmNote(owner: CrmNoteOwner, body: string, meetingAtLocal?: string) {
   const auth = await ensureAuroraManager()
   if (auth.error || !auth.supabase || !auth.userId) return { error: auth.error ?? 'Unauthorized' }
 
@@ -118,29 +207,41 @@ export async function createDealerCrmNote(
     }
   }
 
+  const insertRow =
+    owner.type === 'dealer'
+      ? { dealer_id: owner.dealerId, body: trimmed, meeting_at, created_by: auth.userId }
+      : { prospect_id: owner.prospectId, body: trimmed, meeting_at, created_by: auth.userId }
+
   const { data, error } = await auth.supabase
     .from('dealer_crm_notes')
-    .insert({
-      dealer_id: dealerId,
-      body: trimmed,
-      meeting_at,
-      created_by: auth.userId,
-    })
+    .insert(insertRow)
     .select('id')
     .single()
 
   if (error) return { error: error.message }
-  revalidatePath(`/dashboard/admin/crm/dealers/${dealerId}`)
+
+  if (owner.type === 'prospect') {
+    await auth.supabase
+      .from('crm_prospects')
+      .update({ updated_at: new Date().toISOString() })
+      .eq('id', owner.prospectId)
+  }
+
+  revalidateCrmOwner(owner)
   return { success: true, noteId: data.id }
 }
 
+/** @deprecated use createCrmNote */
+export async function createDealerCrmNote(dealerId: string, body: string, meetingAtLocal?: string) {
+  return createCrmNote({ type: 'dealer', dealerId }, body, meetingAtLocal)
+}
+
 export async function createNoteEmailReminder(input: {
-  dealerId: string
+  owner: CrmNoteOwner
   noteId: string
   recipientEmail: string
   subject?: string
   followUpKind: FollowUpKind
-  /** Required when followUpKind is custom; also used to set meeting on note if missing */
   meetingAtLocal?: string
   customRemindAtLocal?: string
 }) {
@@ -195,24 +296,39 @@ export async function createNoteEmailReminder(input: {
 
   const remind_on = remindAt.toISOString().slice(0, 10)
 
-  const { error } = await auth.supabase.from('dealer_crm_note_reminders').insert({
-    dealer_id: input.dealerId,
-    note_id: input.noteId,
-    remind_on,
-    remind_at: remindAt.toISOString(),
-    follow_up_kind: followUpKind,
-    recipient_email: email,
-    subject: (input.subject?.trim() || 'Aurora CRM follow-up').slice(0, 200),
-    status: 'pending',
-    created_by: auth.userId,
-  })
+  const reminderRow =
+    input.owner.type === 'dealer'
+      ? {
+          dealer_id: input.owner.dealerId,
+          note_id: input.noteId,
+          remind_on,
+          remind_at: remindAt.toISOString(),
+          follow_up_kind: followUpKind,
+          recipient_email: email,
+          subject: (input.subject?.trim() || 'Aurora CRM follow-up').slice(0, 200),
+          status: 'pending',
+          created_by: auth.userId,
+        }
+      : {
+          prospect_id: input.owner.prospectId,
+          note_id: input.noteId,
+          remind_on,
+          remind_at: remindAt.toISOString(),
+          follow_up_kind: followUpKind,
+          recipient_email: email,
+          subject: (input.subject?.trim() || 'Aurora CRM follow-up').slice(0, 200),
+          status: 'pending',
+          created_by: auth.userId,
+        }
+
+  const { error } = await auth.supabase.from('dealer_crm_note_reminders').insert(reminderRow)
 
   if (error) return { error: error.message }
-  revalidatePath(`/dashboard/admin/crm/dealers/${input.dealerId}`)
+  revalidateCrmOwner(input.owner)
   return { success: true }
 }
 
-export async function cancelNoteReminder(reminderId: string, dealerId: string) {
+export async function cancelNoteReminder(reminderId: string, owner: CrmNoteOwner) {
   const auth = await ensureAuroraManager()
   if (auth.error || !auth.supabase) return { error: auth.error ?? 'Unauthorized' }
 
@@ -223,6 +339,15 @@ export async function cancelNoteReminder(reminderId: string, dealerId: string) {
     .eq('status', 'pending')
 
   if (error) return { error: error.message }
-  revalidatePath(`/dashboard/admin/crm/dealers/${dealerId}`)
+  revalidateCrmOwner(owner)
   return { success: true }
+}
+
+export async function getProspectCrmDetail(prospectId: string) {
+  const auth = await ensureAuroraManager()
+  if (auth.error || !auth.supabase) return { error: auth.error }
+
+  const detail = await fetchProspectCrmDetail(auth.supabase, prospectId)
+  if (!detail) return { error: 'Prospect not found.' }
+  return { detail }
 }

@@ -2,7 +2,12 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { createDealerCrmNote, createNoteEmailReminder, cancelNoteReminder } from './actions'
+import {
+  createCrmNote,
+  createNoteEmailReminder,
+  cancelNoteReminder,
+  type CrmNoteOwner,
+} from './actions'
 import { FOLLOW_UP_OPTIONS } from '@/lib/crm/follow-up'
 import { followUpKindLabel } from '@/lib/crm/follow-up'
 import { formatInPT, SYSTEM_DEFAULT_TIMEZONE } from '@/lib/timezone-defaults'
@@ -28,11 +33,11 @@ export type CrmNoteRow = {
 }
 
 export function DealerCrmNotes({
-  dealerId,
+  owner,
   notes,
   emailSuggestions,
 }: {
-  dealerId: string
+  owner: CrmNoteOwner
   notes: CrmNoteRow[]
   emailSuggestions: string[]
 }) {
@@ -51,7 +56,7 @@ export function DealerCrmNotes({
     e.preventDefault()
     setPending(true)
     setError(null)
-    const r = await createDealerCrmNote(dealerId, body, meetingAt || undefined)
+    const r = await createCrmNote(owner, body, meetingAt || undefined)
     setPending(false)
     if (r.error) {
       setError(r.error)
@@ -67,7 +72,7 @@ export function DealerCrmNotes({
     setPending(true)
     setError(null)
     const r = await createNoteEmailReminder({
-      dealerId,
+      owner,
       noteId,
       recipientEmail,
       followUpKind: followUpKind as Parameters<typeof createNoteEmailReminder>[0]['followUpKind'],
@@ -166,7 +171,7 @@ export function DealerCrmNotes({
                         type="button"
                         className="text-red-600 hover:underline"
                         onClick={async () => {
-                          await cancelNoteReminder(rem.id, dealerId)
+                          await cancelNoteReminder(rem.id, owner)
                           router.refresh()
                         }}
                       >

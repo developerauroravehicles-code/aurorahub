@@ -4,6 +4,8 @@ import { CrmPeriodFilter } from './crm-period-filter'
 import { CrmKpiCards } from './crm-kpi-cards'
 import { DealerPerformanceTable, type PerformanceRow } from './dealer-performance-table'
 import { salesStatForDealer } from '@/lib/crm/load-crm-data'
+import Link from 'next/link'
+import { NewProspectForm } from './new-prospect-form'
 
 export const dynamic = 'force-dynamic'
 
@@ -50,6 +52,24 @@ export default async function CrmOverviewPage({ searchParams }: { searchParams: 
         activeDealers={snapshot.activeDealers}
         totalRegisteredDealers={snapshot.totalRegisteredDealers}
       />
+
+      <section className="rounded-xl border border-zinc-200 dark:border-zinc-800 p-4 space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <h2 className="text-lg font-semibold text-zinc-900 dark:text-white">New conversations</h2>
+            <p className="text-sm text-zinc-500">
+              Start a potential dealer record without creating a dealer in Configuration.
+            </p>
+          </div>
+          <Link
+            href="/dashboard/admin/crm/prospects"
+            className="text-sm text-[#C27E00] hover:underline"
+          >
+            All prospects →
+          </Link>
+        </div>
+        <NewProspectForm compact />
+      </section>
 
       <div>
         <h2 className="text-lg font-semibold text-zinc-900 dark:text-white mb-3">Top dealers</h2>

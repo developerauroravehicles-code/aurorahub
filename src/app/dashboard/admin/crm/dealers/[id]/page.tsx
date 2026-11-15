@@ -66,7 +66,11 @@ export default async function CrmDealerDetailPage({ params, searchParams }: Prop
         acquirerCandidates={candidates.profiles ?? []}
       />
 
-      <DealerCrmNotes dealerId={id} notes={detail.notes} emailSuggestions={detail.emailSuggestions} />
+      <DealerCrmNotes
+        owner={{ type: 'dealer', dealerId: id }}
+        notes={detail.notes}
+        emailSuggestions={detail.emailSuggestions}
+      />
     </div>
   )
 }

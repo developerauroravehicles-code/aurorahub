@@ -20,7 +20,7 @@ export async function GET(request: Request) {
   const { data: due, error } = await admin
     .from('dealer_crm_note_reminders')
     .select(
-      'id, dealer_id, note_id, recipient_email, subject, remind_at, follow_up_kind, dealer_crm_notes(body, meeting_at), dealers(name)'
+      'id, dealer_id, prospect_id, note_id, recipient_email, subject, remind_at, follow_up_kind, dealer_crm_notes(body, meeting_at), dealers(name), crm_prospects(name)'
     )
     .eq('status', 'pending')
     .or(`remind_at.lte.${nowIso},and(remind_at.is.null,remind_on.lte.${nowIso.slice(0, 10)})`)
@@ -51,15 +51,21 @@ export async function GET(request: Request) {
     const noteBody = noteObj?.body
     const meetingAt = noteObj?.meeting_at
     const dealer = row.dealers as { name?: string } | { name?: string }[] | null
-    const dealerName = (Array.isArray(dealer) ? dealer[0]?.name : dealer?.name) ?? 'Dealer'
-    const detailUrl = `${APP_BASE}/dashboard/admin/crm/dealers/${row.dealer_id}`
+    const prospect = row.crm_prospects as { name?: string } | { name?: string }[] | null
+    const accountName =
+      (Array.isArray(dealer) ? dealer[0]?.name : dealer?.name) ??
+      (Array.isArray(prospect) ? prospect[0]?.name : prospect?.name) ??
+      'Account'
+    const detailUrl = row.dealer_id
+      ? `${APP_BASE}/dashboard/admin/crm/dealers/${row.dealer_id}`
+      : `${APP_BASE}/dashboard/admin/crm/prospects/${row.prospect_id}`
 
-    const subject = (row.subject as string)?.trim() || `CRM reminder: ${dealerName}`
+    const subject = (row.subject as string)?.trim() || `CRM reminder: ${accountName}`
     const meetingLine = meetingAt
       ? `<p><strong>Meeting:</strong> ${new Date(meetingAt).toLocaleString('en-CA', { timeZone: 'America/Vancouver' })} PT</p>`
       : ''
     const html = `
-      <p>Follow-up for <strong>${dealerName}</strong>.</p>
+      <p>Follow-up for <strong>${accountName}</strong>.</p>
       ${meetingLine}
       <blockquote style="border-left:3px solid #C27E00;padding-left:12px;color:#444">
         ${String(noteBody ?? '').replace(/</g, '&lt;').replace(/\n/g, '<br/>')}

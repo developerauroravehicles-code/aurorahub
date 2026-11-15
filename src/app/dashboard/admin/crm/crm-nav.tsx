@@ -6,6 +6,7 @@ import clsx from 'clsx'
 
 const LINKS: { href: string; label: string; exact?: boolean }[] = [
   { href: '/dashboard/admin/crm', label: 'Overview', exact: true },
+  { href: '/dashboard/admin/crm/prospects', label: 'Prospects' },
   { href: '/dashboard/admin/crm/dealers', label: 'Dealers' },
   { href: '/dashboard/admin/crm/performance', label: 'Performance' },
   { href: '/dashboard/admin/crm/acquirers', label: 'Account acquirers' },
