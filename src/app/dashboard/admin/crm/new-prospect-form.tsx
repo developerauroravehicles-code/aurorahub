@@ -26,7 +26,6 @@ export function NewProspectForm({ compact = false }: { compact?: boolean }) {
       phone: String(fd.get('phone') ?? '') || undefined,
       address: String(fd.get('address') ?? '') || undefined,
       initialNote: String(fd.get('initial_note') ?? '') || undefined,
-      meetingAtLocal: String(fd.get('meeting_at') ?? '') || undefined,
     })
     setPending(false)
     if (res.error) {
@@ -74,11 +73,12 @@ export function NewProspectForm({ compact = false }: { compact?: boolean }) {
         <input name="phone" placeholder="Phone" className={inputClass} />
         <input name="address" placeholder="Address (optional)" className={inputClass} />
       </div>
-      <textarea name="initial_note" rows={2} placeholder="First conversation notes (optional)" className={inputClass} />
-      <div>
-        <label className="text-xs text-zinc-500 block mb-1">First meeting (PT, optional)</label>
-        <input type="datetime-local" name="meeting_at" className={inputClass} />
-      </div>
+      <textarea
+        name="initial_note"
+        rows={3}
+        placeholder="Main conversation text (optional — shown at top of the record)"
+        className={inputClass}
+      />
       <div className="flex gap-2">
         <button type="submit" disabled={pending} className="rounded-md bg-[#C27E00] px-4 py-2 text-sm font-medium text-white disabled:opacity-50">
           Create & open

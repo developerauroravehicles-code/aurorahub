@@ -3,6 +3,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 export type CrmProspectRow = {
   id: string
   name: string
+  summary: string | null
   primary_contact_name: string | null
   primary_contact_email: string | null
   phone: string | null
@@ -21,7 +22,7 @@ export async function listCrmProspects(supabase: SupabaseClient): Promise<CrmPro
   const { data, error } = await supabase
     .from('crm_prospects')
     .select(
-      'id, name, primary_contact_name, primary_contact_email, phone, address, status, dealer_id, acquired_by_profile_id, acquired_at, created_at, updated_at'
+      'id, name, summary, primary_contact_name, primary_contact_email, phone, address, status, dealer_id, acquired_by_profile_id, acquired_at, created_at, updated_at'
     )
     .in('status', ['prospect', 'qualified'])
     .order('updated_at', { ascending: false })
@@ -51,7 +52,7 @@ export async function fetchProspectCrmDetail(supabase: SupabaseClient, prospectI
   const { data: prospect, error } = await supabase
     .from('crm_prospects')
     .select(
-      'id, name, primary_contact_name, primary_contact_email, phone, address, status, dealer_id, acquired_by_profile_id, acquired_at, created_at, updated_at'
+      'id, name, summary, primary_contact_name, primary_contact_email, phone, address, status, dealer_id, acquired_by_profile_id, acquired_at, created_at, updated_at'
     )
     .eq('id', prospectId)
     .single()

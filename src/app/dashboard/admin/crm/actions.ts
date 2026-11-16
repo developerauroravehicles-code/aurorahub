@@ -132,7 +132,6 @@ export async function createCrmProspect(input: {
   phone?: string
   address?: string
   initialNote?: string
-  meetingAtLocal?: string
 }) {
   const auth = await ensureAuroraManager()
   if (auth.error || !auth.supabase || !auth.userId) return { error: auth.error ?? 'Unauthorized' }
@@ -140,10 +139,13 @@ export async function createCrmProspect(input: {
   const name = input.name.trim()
   if (!name) return { error: 'Company or dealer name is required.' }
 
+  const summary = input.initialNote?.trim() || null
+
   const { data: row, error } = await auth.supabase
     .from('crm_prospects')
     .insert({
       name,
+      summary,
       primary_contact_name: input.primary_contact_name?.trim() || null,
       primary_contact_email: input.primary_contact_email?.trim() || null,
       phone: input.phone?.trim() || null,
@@ -156,12 +158,118 @@ export async function createCrmProspect(input: {
 
   if (error || !row) return { error: error?.message ?? 'Could not create prospect.' }
 
-  if (input.initialNote?.trim()) {
-    await createCrmNote({ type: 'prospect', prospectId: row.id }, input.initialNote, input.meetingAtLocal)
-  }
-
   revalidatePath('/dashboard/admin/crm/prospects')
   return { success: true, prospectId: row.id as string }
+}
+
+export async function updateCrmMainSummary(owner: CrmNoteOwner, text: string) {
+  const auth = await ensureAuroraManager()
+  if (auth.error || !auth.supabase) return { error: auth.error ?? 'Unauthorized' }
+
+  const summary = text.trim() || null
+
+  if (owner.type === 'dealer') {
+    const { error } = await auth.supabase.from('dealers').update({ crm_summary: summary }).eq('id', owner.dealerId)
+    if (error) return { error: error.message }
+  } else {
+    const { error } = await auth.supabase
+      .from('crm_prospects')
+      .update({ summary, updated_at: new Date().toISOString() })
+      .eq('id', owner.prospectId)
+    if (error) return { error: error.message }
+  }
+
+  revalidateCrmOwner(owner)
+  return { success: true }
+}
+
+export async function updateCrmNote(
+  owner: CrmNoteOwner,
+  noteId: string,
+  input: { body: string; meetingAtLocal?: string }
+) {
+  const auth = await ensureAuroraManager()
+  if (auth.error || !auth.supabase) return { error: auth.error ?? 'Unauthorized' }
+
+  const trimmed = input.body.trim()
+  if (!trimmed) return { error: 'Comment cannot be empty.' }
+
+  const ownerFilter =
+    owner.type === 'dealer'
+      ? { column: 'dealer_id' as const, value: owner.dealerId }
+      : { column: 'prospect_id' as const, value: owner.prospectId }
+
+  const { data: existing } = await auth.supabase
+    .from('dealer_crm_notes')
+    .select('id')
+    .eq('id', noteId)
+    .eq(ownerFilter.column, ownerFilter.value)
+    .maybeSingle()
+
+  if (!existing) return { error: 'Comment not found.' }
+
+  let meeting_at: string | null | undefined = undefined
+  if (input.meetingAtLocal !== undefined) {
+    if (input.meetingAtLocal.trim()) {
+      meeting_at = ptDatetimeLocalToISO(input.meetingAtLocal.trim())
+      if (Number.isNaN(new Date(meeting_at).getTime())) {
+        return { error: 'Enter a valid meeting date and time.' }
+      }
+    } else {
+      meeting_at = null
+    }
+  }
+
+  const patch: { body: string; meeting_at?: string | null } = { body: trimmed }
+  if (meeting_at !== undefined) patch.meeting_at = meeting_at
+
+  const { error } = await auth.supabase.from('dealer_crm_notes').update(patch).eq('id', noteId)
+
+  if (error) return { error: error.message }
+
+  if (owner.type === 'prospect') {
+    await auth.supabase
+      .from('crm_prospects')
+      .update({ updated_at: new Date().toISOString() })
+      .eq('id', owner.prospectId)
+  }
+
+  revalidateCrmOwner(owner)
+  return { success: true }
+}
+
+export async function deleteCrmNote(owner: CrmNoteOwner, noteId: string) {
+  const auth = await ensureAuroraManager()
+  if (auth.error || !auth.supabase) return { error: auth.error ?? 'Unauthorized' }
+
+  const ownerFilter =
+    owner.type === 'dealer'
+      ? { column: 'dealer_id' as const, value: owner.dealerId }
+      : { column: 'prospect_id' as const, value: owner.prospectId }
+
+  await auth.supabase
+    .from('dealer_crm_note_reminders')
+    .update({ status: 'cancelled' })
+    .eq('note_id', noteId)
+    .eq('status', 'pending')
+
+  const { error } = await auth.supabase
+    .from('dealer_crm_notes')
+    .delete()
+    .eq('id', noteId)
+    .eq(ownerFilter.column, ownerFilter.value)
+
+  if (error) return { error: error.message }
+
+  if (owner.type === 'prospect') {
+    await auth.supabase
+      .from('crm_prospects')
+      .update({ updated_at: new Date().toISOString() })
+      .eq('id', owner.prospectId)
+  }
+
+  revalidateCrmOwner(owner)
+  return { success: true }
 }
 
 export async function updateCrmProspect(

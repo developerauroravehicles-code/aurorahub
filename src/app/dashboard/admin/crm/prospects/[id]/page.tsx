@@ -39,6 +39,7 @@ export default async function CrmProspectDetailPage({ params }: Props) {
 
       <DealerCrmNotes
         owner={{ type: 'prospect', prospectId: id }}
+        mainSummary={p.summary ?? null}
         notes={detail.notes}
         emailSuggestions={detail.emailSuggestions}
       />

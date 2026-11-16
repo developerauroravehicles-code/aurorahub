@@ -15,6 +15,7 @@ export type CrmDealerRow = {
   name: string
   address: string | null
   phone: string | null
+  crm_summary: string | null
   primary_contact_name: string | null
   primary_contact_email: string | null
   acquired_by_profile_id: string | null
@@ -48,7 +49,7 @@ export async function buildCrmSnapshot(
   const { data: dealers, error: dealerErr } = await supabase
     .from('dealers')
     .select(
-      'id, code, name, address, phone, primary_contact_name, primary_contact_email, acquired_by_profile_id, acquired_at, region_codes(name, code)'
+      'id, code, name, address, phone, crm_summary, primary_contact_name, primary_contact_email, acquired_by_profile_id, acquired_at, region_codes(name, code)'
     )
     .order('name')
 
@@ -92,7 +93,7 @@ export async function fetchDealerCrmDetail(supabase: SupabaseClient, dealerId: s
   const { data: dealer, error } = await supabase
     .from('dealers')
     .select(
-      'id, code, name, address, phone, primary_contact_name, primary_contact_email, acquired_by_profile_id, acquired_at, region_codes(name, code)'
+      'id, code, name, address, phone, crm_summary, primary_contact_name, primary_contact_email, acquired_by_profile_id, acquired_at, region_codes(name, code)'
     )
     .eq('id', dealerId)
     .single()

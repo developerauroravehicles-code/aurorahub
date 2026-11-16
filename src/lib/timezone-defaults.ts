@@ -38,6 +38,11 @@ export function ptDatetimeLocalToISO(localStr: string): string {
   return fromZonedTime(withSeconds, SYSTEM_DEFAULT_TIMEZONE).toISOString()
 }
 
+/** Inverse of ptDatetimeLocalToISO for datetime-local inputs. */
+export function ptIsoToDatetimeLocalValue(iso: string): string {
+  return formatInTimeZone(new Date(iso), SYSTEM_DEFAULT_TIMEZONE, "yyyy-MM-dd'T'HH:mm")
+}
+
 /**
  * Convert yyyy-MM (e.g. "2026-03") to month range in the given timezone as ISO strings for DB queries.
  */
