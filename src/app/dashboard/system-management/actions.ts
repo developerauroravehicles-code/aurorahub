@@ -6,11 +6,8 @@ import type { SystemData, Profile } from '@/types/system-management'
 import { normalizeEmail } from '@/lib/email-normalize'
 import { parseWarrantyYearsFromForm } from '@/lib/warranty-period'
 import { parsePersonnelOrgFields } from '@/lib/hr-org-structure'
-import {
-  applyAdminUserPassword,
-  assertUserCredentialManager,
-  normalizeAdminPassword,
-} from '@/lib/identity/admin-user-access'
+import { applyAdminUserPassword, assertUserCredentialManager } from '@/lib/identity/admin-user-access.server'
+import { normalizeAdminPassword } from '@/lib/identity/user-credential-manager'
 
 // Helper to get a fresh admin client every time with explicit schema
 function getAdminClient() {

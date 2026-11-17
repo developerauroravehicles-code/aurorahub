@@ -12,7 +12,7 @@ import { normalizeEmail } from '@/lib/email-normalize'
 import { OrgStructureFields } from '@/app/dashboard/hr/personnel/org-structure-fields'
 import { orgRoleLabel, type OrgDepartmentTree } from '@/lib/hr-org-structure'
 import { formLabelClassName, formSelectClassName } from '@/lib/form-field-styles'
-import { isUserCredentialManager } from '@/lib/identity/admin-user-access'
+import { isUserCredentialManager } from '@/lib/identity/user-credential-manager'
 
 const selectClass = formSelectClassName
 const labelClass = formLabelClassName

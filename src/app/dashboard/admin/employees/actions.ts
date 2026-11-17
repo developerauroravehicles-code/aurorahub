@@ -3,11 +3,8 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { normalizeEmail } from '@/lib/email-normalize'
-import {
-  assertUserCredentialManager,
-  applyAdminUserPassword,
-  normalizeAdminPassword,
-} from '@/lib/identity/admin-user-access'
+import { normalizeAdminPassword } from '@/lib/identity/user-credential-manager'
+import { assertUserCredentialManager, applyAdminUserPassword } from '@/lib/identity/admin-user-access.server'
 
 type UserRole =
   | 'sales'

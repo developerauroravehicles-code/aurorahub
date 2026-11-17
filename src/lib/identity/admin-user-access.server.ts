@@ -1,14 +1,9 @@
+import 'server-only'
+
 import { createClient } from '@/lib/supabase/server'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { getNextPasswordPromptAtAfterChange } from '@/lib/password-change/prompt'
-
-export const USER_CREDENTIAL_MANAGER_ROLES = ['aurora_manager', 'hr', 'it'] as const
-
-export type UserCredentialManagerRole = (typeof USER_CREDENTIAL_MANAGER_ROLES)[number]
-
-export function isUserCredentialManager(role: string | null | undefined): boolean {
-  return USER_CREDENTIAL_MANAGER_ROLES.includes(role as UserCredentialManagerRole)
-}
+import { isUserCredentialManager, normalizeAdminPassword } from '@/lib/identity/user-credential-manager'
 
 export async function assertUserCredentialManager(): Promise<
   { error: string; userId: null } | { error: null; userId: string }
@@ -25,14 +20,6 @@ export async function assertUserCredentialManager(): Promise<
   }
 
   return { error: null, userId: user.id }
-}
-
-export function normalizeAdminPassword(password: string): { password: string } | { error: string } {
-  const trimmed = password.trim()
-  if (!trimmed || trimmed.length < 6) {
-    return { error: 'Password must be at least 6 characters long' }
-  }
-  return { password: trimmed }
 }
 
 /** Re-apply password via admin API and mark profile ready to sign in (matches IT reset flow). */

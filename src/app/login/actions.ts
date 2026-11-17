@@ -107,6 +107,6 @@ export async function login(prevState: ActionState, formData: FormData) {
     userAgent: h.get('user-agent') ?? null,
   })
 
-  return { success: true }
+  return { success: true as const }
 }
 
