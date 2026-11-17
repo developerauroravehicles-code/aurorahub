@@ -31,7 +31,7 @@ export default async function SpecialistDetailsPage({ params }: { params: Promis
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('*, dealers(name)')
+    .select('*, dealers!profiles_dealer_id_fkey(name)')
     .eq('id', id)
     .single()
 

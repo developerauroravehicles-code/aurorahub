@@ -42,7 +42,9 @@ async function getAuth(): Promise<AuthResult> {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('id, full_name, avatar_url, dealer_id, role, dealer:dealers(id, name, code)')
+    .select(
+      'id, full_name, avatar_url, dealer_id, role, dealer:dealers!profiles_dealer_id_fkey(id, name, code)'
+    )
     .eq('id', user.id)
     .single()
 
@@ -180,7 +182,9 @@ export async function getMessageableProfilesAction() {
 
   let query = supabase
     .from('profiles')
-    .select('id, full_name, avatar_url, dealer_id, role, dealer:dealers(id, name, code)')
+    .select(
+      'id, full_name, avatar_url, dealer_id, role, dealer:dealers!profiles_dealer_id_fkey(id, name, code)'
+    )
     .neq('id', profile.id)
     .order('full_name')
 

@@ -90,7 +90,10 @@ export async function getGroupMembers(groupId: string) {
   const perm = await requirePermission('identity.groups.manage')
   if (perm !== true) return []
   const supabaseAdmin = createAdminClient()
-  const { data: profiles } = await supabaseAdmin.from('profiles').select('id, full_name, role, dealer_id, dealers(code)').in('id', userIds)
+  const { data: profiles } = await supabaseAdmin
+    .from('profiles')
+    .select('id, full_name, role, dealer_id, dealers!profiles_dealer_id_fkey(code)')
+    .in('id', userIds)
   return (profiles ?? []).map((p) => ({
     user_id: p.id,
     profile: {
@@ -106,7 +109,10 @@ export async function getProfilesForGroup(dealerId?: string | null) {
 
   // Use admin client to bypass RLS - profiles table may restrict read for regular users
   const supabaseAdmin = createAdminClient()
-  let q = supabaseAdmin.from('profiles').select('id, full_name, role, dealer_id, dealers(code)').order('full_name')
+  let q = supabaseAdmin
+    .from('profiles')
+    .select('id, full_name, role, dealer_id, dealers!profiles_dealer_id_fkey(code)')
+    .order('full_name')
   if (dealerId) q = q.eq('dealer_id', dealerId)
   const { data, error } = await q
   if (error) return []

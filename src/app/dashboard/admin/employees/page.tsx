@@ -42,7 +42,7 @@ export default async function EmployeesPage({
   // Fetch profiles with dealer info
   let query = supabase
     .from('profiles')
-    .select('*, dealers(name)')
+    .select('*, dealers!profiles_dealer_id_fkey(name)')
     .order('created_at', { ascending: false })
 
   // If General Manager, filter by own dealer and only show sales and finance

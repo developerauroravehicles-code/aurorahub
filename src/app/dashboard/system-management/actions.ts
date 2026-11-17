@@ -58,7 +58,7 @@ export async function getSystemData(): Promise<SystemData> {
   // Fetch profiles with dealer info
   const { data: rawProfiles, error: profilesError } = await supabaseAdmin
     .from('profiles')
-    .select('*, dealers(name, code)')
+    .select('*, dealers!profiles_dealer_id_fkey(name, code)')
     .order('created_at', { ascending: false })
 
   const profileIds = (rawProfiles || []).map((p) => String(p.id))
@@ -473,7 +473,7 @@ export async function getProfileForEdit(userId: string) {
 
   const { data: profile, error: profileError } = await supabaseAdmin
     .from('profiles')
-    .select('id, full_name, phone, role, dealer_id, dealers(id, name, code)')
+    .select('id, full_name, phone, role, dealer_id, dealers!profiles_dealer_id_fkey(id, name, code)')
     .eq('id', userId)
     .single()
 
