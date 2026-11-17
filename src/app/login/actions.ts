@@ -5,6 +5,7 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { logIdentityEvent } from '@/lib/identity-audit'
 import { assertUserCanSignIn, formatLoginAuthError } from '@/lib/user-login-access'
+import { pruneDealerUserSessions } from '@/lib/dealer-session-limit'
 import { z } from 'zod'
 import { normalizeEmail } from '@/lib/email-normalize'
 
@@ -83,6 +84,8 @@ export async function login(prevState: ActionState, formData: FormData) {
       return { error: 'Dealer code does not match your account.' }
     }
   }
+
+  await pruneDealerUserSessions(user.user.id)
 
   const accessCheck = await assertUserCanSignIn(user.user.id, { skipCache: true })
   if (accessCheck.error) {

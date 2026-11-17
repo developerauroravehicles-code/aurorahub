@@ -19,7 +19,7 @@ import { getTimezoneFromDealer } from '@/lib/dealer-timezone'
 import { lookupCameraModelId } from '@/lib/camera-model-resolve'
 import { notifyAuroraManagersSmsFailed } from '@/lib/notify-sms-failed'
 import { notifyAuroraManagersIfDuplicateStock } from '@/lib/notify-duplicate-stock'
-import { isSpecialistDoubleBooked } from '@/lib/scheduling-pool'
+import { finalizeDemandAsApproved } from '@/lib/demands/finalize-demand-approved'
 
 export async function assignDemandToMe(demandId: string) {
   const supabase = await createClient()
@@ -108,201 +108,20 @@ export async function approveDemand(demandId: string, sendSMSToCustomer: boolean
       .eq('id', demandId)
   }
   
-  // Auto-assign to dealer's specialist if not already assigned
-  // First try specialist_dealers (AURORAHQ model); then fallback to profiles.dealer_id
-  let assignedSpecialistId = demand.assigned_specialist_id
-  
-  if (!assignedSpecialistId && demand.dealer_id) {
-    const { data: sdRow } = await supabase
-      .from('specialist_dealers')
-      .select('specialist_id')
-      .eq('dealer_id', demand.dealer_id)
-      .limit(1)
-      .maybeSingle()
-    if (sdRow?.specialist_id) {
-      assignedSpecialistId = sdRow.specialist_id
-    }
-  }
-  if (!assignedSpecialistId) {
-    const { data: dealerSpecialist } = await supabase
-      .from('profiles')
-      .select('id')
-      .eq('dealer_id', demand.dealer_id)
-      .eq('role', 'specialist')
-      .limit(1)
-      .single()
-    if (dealerSpecialist) {
-      assignedSpecialistId = dealerSpecialist.id
-    }
-  }
-
-  if (assignedSpecialistId) {
-    if (demand.appointment_date) {
-      const doubleBooked = await isSpecialistDoubleBooked(
-        supabase,
-        assignedSpecialistId,
-        demand.appointment_date,
-        { excludeDemandId: demandId }
-      )
-      if (doubleBooked) {
-        assignedSpecialistId = null
-      }
-    }
-  }
-
-  // Update status and assign specialist if found
-  const updateData: { status: string; assigned_specialist_id?: string } = { 
-    status: 'approved' 
-  }
-  
-  if (assignedSpecialistId) {
-    updateData.assigned_specialist_id = assignedSpecialistId
-  }
-
-  const { data: updated, error: updateError } = await supabase
-    .from('demands')
-    .update(updateData)
-    .eq('id', demandId)
-    .eq('status', 'pending_finance')
-    .select('id')
-    .single()
-
-  if (updateError) return { error: updateError.message }
-  if (!updated) return { error: 'Demand was already approved or no longer pending' }
-
-  logDemandChange({
+  const finalized = await finalizeDemandAsApproved(supabase, {
     demandId,
     actorId: user.id,
+    demand,
     previousStatus: 'pending_finance',
-    newStatus: 'approved',
-    notes: assignedSpecialistId ? 'Approved and specialist assigned' : 'Approved',
-  }).catch(() => {})
+    transitionFromStatus: 'pending_finance',
+    sms: {
+      customer: sendSMSToCustomer,
+      specialist: sendSMSToSpecialist,
+      auroraManager: sendSMSToAuroraManager,
+    },
+  })
 
-  dispatchWebhooks(supabase, 'demand_approved', {
-    demand_id: demandId,
-    previous_status: 'pending_finance',
-    new_status: 'approved',
-    assigned_specialist_id: assignedSpecialistId ?? demand.assigned_specialist_id,
-  }).catch(() => {})
-
-  dispatchWebhooks(supabase, 'demand_status_change', {
-    demand_id: demandId,
-    previous_status: 'pending_finance',
-    new_status: 'approved',
-  }).catch(() => {})
-
-  const smsSettings = await getSmsSettings()
-  const ac = smsSettings.appointment_created
-
-  // Send SMS to customer if requested and enabled in settings
-  const adminForSms = createAdminClient()
-  const { data: dealerForSms } = await supabase
-    .from('dealers')
-    .select('name, address, region_codes(timezone_id, timezones(name))')
-    .eq('id', demand.dealer_id)
-    .single()
-  const timezoneName = (dealerForSms?.region_codes as { timezones?: { name: string } } | null)?.timezones?.name
-  const dealerCtx = {
-    name: dealerForSms?.name,
-    address: dealerForSms?.address,
-    timezoneName,
-  }
-
-  if (ac.enabled && ac.sendToCustomer && sendSMSToCustomer && demand.customer_phone) {
-    try {
-      const message = buildCustomerSmsMessage('appointment_created', ac, demand, dealerCtx, {
-        contactPhone: smsSettings.contactPhone,
-        signature: smsSettings.signature,
-      })
-      const result = await sendSMS(demand.customer_phone, message)
-      if (result.success) {
-        logSmsSent({
-          phoneNumber: demand.customer_phone,
-          recipientType: 'customer',
-          recipientName: `${demand.customer_firstname} ${demand.customer_lastname}`.trim(),
-          demandId,
-          messageType: 'appointment_created',
-          triggeredBy: 'system',
-          messageContent: message,
-        }).catch(() => {})
-      } else {
-        notifyAuroraManagersSmsFailed(adminForSms, demandId, 'appointment_created', 'Send failed').catch(() => {})
-      }
-    } catch (smsError) {
-      console.error('Failed to send SMS notification:', smsError)
-      notifyAuroraManagersSmsFailed(adminForSms, demandId, 'appointment_created', 'Send error').catch(() => {})
-    }
-  } else if (sendSMSToCustomer && demand.customer_phone && (!ac.enabled || !ac.sendToCustomer)) {
-    // Customer was expected to receive SMS but settings disabled it
-    notifyAuroraManagersSmsFailed(adminForSms, demandId, 'appointment_created', 'Disabled in SMS settings').catch(() => {})
-  }
-
-  // Send SMS to assigned specialist if requested and enabled in settings
-  const specialistIdToNotify = assignedSpecialistId || demand.assigned_specialist_id
-  if (ac.enabled && ac.sendToSpecialist && sendSMSToSpecialist && specialistIdToNotify) {
-    try {
-      const message = buildSpecialistSmsMessage('appointment_created', ac, demand, dealerCtx, {
-        contactPhone: smsSettings.contactPhone,
-        signature: smsSettings.signature,
-      })
-      const { data: specialist } = await supabase
-        .from('profiles')
-        .select('phone, full_name')
-        .eq('id', specialistIdToNotify)
-        .single()
-      if (specialist?.phone) {
-        const result = await sendSMS(specialist.phone, message)
-        if (result.success) {
-          logSmsSent({
-            phoneNumber: specialist.phone,
-            recipientType: 'specialist',
-            recipientName: specialist.full_name ?? undefined,
-            demandId,
-            messageType: 'appointment_created',
-            triggeredBy: 'system',
-            messageContent: message,
-          }).catch(() => {})
-        }
-      }
-    } catch (smsError) {
-      console.error('Failed to send SMS to specialist:', smsError)
-    }
-  }
-
-  // Send SMS to Aurora Manager(s) if requested and enabled in settings
-  if (ac.enabled && ac.sendToAuroraManager && sendSMSToAuroraManager) {
-    try {
-      const { data: auroraManagers } = await supabase
-        .from('profiles')
-        .select('id, phone, full_name')
-        .eq('role', 'aurora_manager')
-        .not('phone', 'is', null)
-      if (auroraManagers?.length) {
-        const message = buildCustomerSmsMessage('appointment_created', ac, demand, dealerCtx, {
-          contactPhone: smsSettings.contactPhone,
-          signature: smsSettings.signature,
-        })
-        for (const am of auroraManagers) {
-          if (am.phone) {
-            const result = await sendSMS(am.phone, message)
-            if (result.success) {
-              logSmsSent({
-                phoneNumber: am.phone,
-                recipientType: 'aurora_manager',
-                recipientName: am.full_name ?? undefined,
-                demandId,
-                messageType: 'appointment_created',
-                triggeredBy: 'system',
-                messageContent: message,
-              }).catch(() => {})
-            }
-          }
-        }
-      }
-    } catch (smsError) {
-      console.error('Failed to send SMS to Aurora Manager:', smsError)
-    }
-  }
+  if ('error' in finalized) return { error: finalized.error }
 
   revalidatePath('/dashboard/finance/demands')
   revalidatePath('/dashboard')

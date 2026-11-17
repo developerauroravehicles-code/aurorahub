@@ -4,7 +4,15 @@ import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { normalizeEmail } from '@/lib/email-normalize'
 
-type UserRole = 'sales' | 'finance' | 'specialist' | 'aurora_manager' | 'general_manager' | 'hr' | 'it'
+type UserRole =
+  | 'sales'
+  | 'finance'
+  | 'specialist'
+  | 'aurora_manager'
+  | 'general_manager'
+  | 'inventory_manager'
+  | 'hr'
+  | 'it'
 
 type ActionState = { error?: string; success?: boolean } | null
 

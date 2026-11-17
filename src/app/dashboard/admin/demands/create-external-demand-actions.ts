@@ -32,6 +32,7 @@ import { validateDealerBookingCamera } from '@/lib/dealer-camera-catalog'
 import { resolveExternalDemandCameraAndPrice } from './create-external-demand-pricing'
 import { upsertInventoryPricingRule } from '@/app/dashboard/admin/inventory/actions'
 import { applyExternalDemandCompletion } from '@/lib/external-demand-completion'
+import { finalizeDemandAsApproved } from '@/lib/demands/finalize-demand-approved'
 
 const schema = z.object({
   dealerId: z.string().min(1, 'Dealer is required'),
@@ -384,7 +385,7 @@ export async function createExternalDemand(
     camera_model: resolvedCameraModelName,
     ...(cameraModelId && { camera_model_id: cameraModelId }),
     appointment_date: appointmentDateISO,
-    status: completeOnCreate ? 'completed' : 'pending_finance',
+    status: completeOnCreate ? 'completed' : 'approved',
     ...(completeOnCreate && { completed_at: appointmentDateISO }),
     ...(completeOnCreate && serviceType && { service_type: serviceType }),
     ...(completeOnCreate && invoiceTotalAmount != null && { invoice_total_amount: invoiceTotalAmount }),
@@ -428,15 +429,38 @@ export async function createExternalDemand(
     addDemandToDailyBatch(admin, demand.id).catch(() => {})
   }
 
-  logDemandChange({
-    demandId: demand.id,
-    actorId: user.id,
-    previousStatus: null,
-    newStatus: demand.status,
-    notes: completeOnCreate
-      ? 'External demand created and marked completed by Aurora Manager'
-      : 'External demand created by Aurora Manager',
-  }).catch(() => {})
+  if (!completeOnCreate) {
+    await finalizeDemandAsApproved(supabase, {
+      demandId: demand.id,
+      actorId: user.id,
+      demand: {
+        dealer_id: demand.dealer_id,
+        customer_phone: demand.customer_phone,
+        customer_firstname: demand.customer_firstname,
+        customer_lastname: demand.customer_lastname,
+        appointment_date: demand.appointment_date,
+        customer_address: demand.customer_address,
+        vehicle_year: demand.vehicle_year,
+        vehicle_make: demand.vehicle_make,
+        vehicle_model: demand.vehicle_model,
+        vin_last6: demand.vin_last6,
+        stock_number: demand.stock_number,
+        assigned_specialist_id: demand.assigned_specialist_id,
+      },
+      previousStatus: null,
+      logNote: 'External demand created and approved',
+      transitionFromStatus: null,
+      sms: { customer: false, specialist: false, auroraManager: false },
+    })
+  } else {
+    logDemandChange({
+      demandId: demand.id,
+      actorId: user.id,
+      previousStatus: null,
+      newStatus: demand.status,
+      notes: 'External demand created and marked completed by Aurora Manager',
+    }).catch(() => {})
+  }
 
   dispatchWebhooks(supabase, 'demand_created', {
     demand_id: demand.id,

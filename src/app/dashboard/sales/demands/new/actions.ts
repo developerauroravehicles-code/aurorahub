@@ -12,6 +12,7 @@ import { notifyAuroraManagersIfDuplicateStock } from '@/lib/notify-duplicate-sto
 import {
   isSlotAvailableForDealer,
 } from '@/lib/scheduling-pool'
+import { finalizeDemandAsApproved } from '@/lib/demands/finalize-demand-approved'
 
 async function getDealerTimezone(dealerId: string | null): Promise<string | null> {
   if (!dealerId) return null
@@ -143,7 +144,7 @@ export async function createDemand(prevState: CreateDemandState, formData: FormD
     camera_model: cameraCheck.cameraModelName,
     camera_model_id: cameraCheck.cameraModelId,
     appointment_date: data.appointmentDate,
-    status: 'pending_finance' as const,
+    status: 'approved' as const,
     ...(profile.role === 'finance' && { assigned_finance_id: profile.id }),
     ...(data.comment && data.comment.trim() && { comment: data.comment.trim() }),
   }
@@ -159,13 +160,31 @@ export async function createDemand(prevState: CreateDemandState, formData: FormD
       return { error: error.message || 'Failed to create demand. Please check your permissions.' }
   }
 
-  logDemandChange({
+  const finalized = await finalizeDemandAsApproved(supabase, {
     demandId: demand.id,
     actorId: user.id,
+    demand: {
+      dealer_id: demand.dealer_id,
+      customer_phone: demand.customer_phone,
+      customer_firstname: demand.customer_firstname,
+      customer_lastname: demand.customer_lastname,
+      appointment_date: demand.appointment_date,
+      customer_address: demand.customer_address,
+      vehicle_year: demand.vehicle_year,
+      vehicle_make: demand.vehicle_make,
+      vehicle_model: demand.vehicle_model,
+      vin_last6: demand.vin_last6,
+      stock_number: demand.stock_number,
+      assigned_specialist_id: demand.assigned_specialist_id,
+    },
     previousStatus: null,
-    newStatus: 'pending_finance',
-    notes: 'Demand created',
-  }).catch(() => {})
+    logNote: 'Demand created and approved',
+    transitionFromStatus: null,
+  })
+
+  if ('error' in finalized) {
+    console.error('Auto-approve after create failed:', finalized.error)
+  }
 
   dispatchWebhooks(supabase, 'demand_created', {
     demand_id: demand.id,
@@ -184,9 +203,6 @@ export async function createDemand(prevState: CreateDemandState, formData: FormD
     demandNumber: demand.demand_number,
     stockNumber: data.stockNumber,
   }).catch(() => {})
-
-  // SMS will be sent when finance approves the demand
-  // Removed SMS sending from demand creation
 
   const { data: dealerRow } = await supabase
     .from('dealers')
