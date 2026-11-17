@@ -1,4 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
+import { redirect } from 'next/navigation'
+import { getDashboardHomeForRole } from '@/lib/dashboard-home'
 import { formatInTimeZone } from 'date-fns-tz'
 import Link from 'next/link'
 import { FileText, Clock, CheckCircle, XCircle, AlertCircle, Calendar, Briefcase, ClipboardCheck, Users, DollarSign, Building2, BarChart3 } from 'lucide-react'
@@ -42,6 +44,11 @@ export default async function DashboardPage({
     .single()
 
   if (!profile) return <div className="text-zinc-900 dark:text-white">Profile not found</div>
+
+  const home = getDashboardHomeForRole(profile.role)
+  if (home !== '/dashboard') {
+    redirect(home)
+  }
 
   // If sales user, fetch their demands
   if (profile.role === 'sales') {

@@ -7,6 +7,7 @@ import { assertUserCanSignIn, formatLoginAuthError } from '@/lib/user-login-acce
 import { pruneDealerUserSessions } from '@/lib/dealer-session-limit'
 import { z } from 'zod'
 import { normalizeEmail } from '@/lib/email-normalize'
+import { getDashboardHomeForRole } from '@/lib/dashboard-home'
 
 const loginSchema = z.object({
   dealerCode: z.string().min(1, 'Dealer code is required'),
@@ -14,7 +15,7 @@ const loginSchema = z.object({
   password: z.string().min(1, 'Password is required'),
 })
 
-type ActionState = { error?: string; success?: true } | null
+type ActionState = { error?: string; success?: true; redirectTo?: string } | null
 
 export async function login(prevState: ActionState, formData: FormData) {
   const data = Object.fromEntries(formData)
@@ -44,7 +45,7 @@ export async function login(prevState: ActionState, formData: FormData) {
   // Verify Dealer Code
   const { data: profile } = await supabase
     .from('profiles')
-    .select('dealer_id')
+    .select('dealer_id, role')
     .eq('id', user.user.id)
     .single()
 
@@ -107,6 +108,9 @@ export async function login(prevState: ActionState, formData: FormData) {
     userAgent: h.get('user-agent') ?? null,
   })
 
-  return { success: true as const }
+  return {
+    success: true as const,
+    redirectTo: getDashboardHomeForRole(profile.role),
+  }
 }
 

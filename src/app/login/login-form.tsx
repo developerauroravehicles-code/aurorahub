@@ -15,7 +15,7 @@ export function LoginForm() {
     if (state?.success) {
       setRedirecting(true)
       // Server Action redirect() with useActionState can leave the UI stuck on "Signing in..."
-      window.location.assign('/dashboard')
+      window.location.assign(state.redirectTo ?? '/dashboard')
     }
   }, [state])
 

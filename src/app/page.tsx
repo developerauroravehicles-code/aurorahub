@@ -8,9 +8,10 @@ export default async function LandingPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   
-  // If user is already logged in, redirect to dashboard
   if (user) {
-    redirect('/dashboard')
+    const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).maybeSingle()
+    const { getDashboardHomeForRole } = await import('@/lib/dashboard-home')
+    redirect(getDashboardHomeForRole(profile?.role))
   }
 
   return (

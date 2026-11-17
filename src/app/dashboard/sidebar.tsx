@@ -91,9 +91,12 @@ export function Sidebar({
         ? 'Inventory Manager'
         : role?.replace(/_/g, ' ') ?? ''
   const subtitle = profile.jobTitle?.trim() || roleLabel
-  const links: NavLink[] = [
-    { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-  ]
+  const links: NavLink[] =
+    role === 'sales'
+      ? [{ name: 'Demands', href: '/dashboard/sales/demands', icon: FileText }]
+      : role === 'finance'
+        ? [{ name: 'Demands', href: '/dashboard/finance/demands', icon: FileText }]
+        : [{ name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard }]
 
   const adminDemandsLink: NavLink = { name: 'Demands', href: '/dashboard/admin/demands', icon: FileText }
   const adminCustomersLink: NavLink = { name: 'Customers', href: '/dashboard/admin/customers', icon: UserCircle }
@@ -159,10 +162,8 @@ export function Sidebar({
   ]
 
   if (role === 'sales') {
-    links.push({ name: 'Demands', href: '/dashboard/sales/demands', icon: FileText })
     links.push({ name: 'Reports', href: '/dashboard/sales/reports', icon: FileText })
   } else if (role === 'finance') {
-    links.push({ name: 'Demands', href: '/dashboard/finance/demands', icon: FileText })
     links.push({ name: 'Reports', href: '/dashboard/finance/reports', icon: FileText })
   } else if (role === 'specialist') {
     links.push({ name: 'Work List', href: '/dashboard/specialist/work', icon: FileText })
