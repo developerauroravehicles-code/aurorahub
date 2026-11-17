@@ -18,8 +18,6 @@ import { pad2 } from '@/lib/calendar-wall-date'
 import { useTimezone } from '@/contexts/timezone-context'
 import { useSystemTime } from '@/contexts/system-time-context'
 import { AppointmentCalendar } from '@/components/appointment-calendar'
-import { VEHICLE_MAKES_CA } from '@/lib/vehicle-makes'
-import { getModelsForMake, getTrimsForModel } from '@/lib/vehicle-models'
 import { getISODay } from 'date-fns'
 import {
   isIsoDowClosed,
@@ -79,9 +77,8 @@ export function DemandForm({
   const [selectedSlot, setSelectedSlot] = useState<string>('')
   const [selectedCamera, setSelectedCamera] = useState<string>('')
   const [customCamera, setCustomCamera] = useState<string>('')
-  const [firstName, setFirstName] = useState('')
-  const [lastName, setLastName] = useState('')
   const [phone, setPhone] = useState('')
+  const [vinDecodedReady, setVinDecodedReady] = useState(false)
   const [vehicleYear, setVehicleYear] = useState('')
   const [stockNumber, setStockNumber] = useState('')
   const [vinLast6, setVinLast6] = useState('')
@@ -163,7 +160,17 @@ export function DemandForm({
         setCustomModel('')
       }
     }
+    setVinDecodedReady(Boolean(fields.vehicleYear && (fields.selectedMake || fields.rawMake)))
   }
+
+  const vehicleModelForSubmit =
+    selectedModel === '__custom__'
+      ? customModel
+      : selectedModel
+        ? selectedTrim
+          ? `${selectedModel} (${selectedTrim})`
+          : selectedModel
+        : customModel
 
   if (state && 'success' in state && state.success) {
     const { demand, dealer, timezoneName: successTz, role } = state
@@ -178,10 +185,21 @@ export function DemandForm({
             <div className="space-y-2">
               <h2 className="text-xl font-semibold text-zinc-900 dark:text-white">Demand created</h2>
               <p className="text-zinc-600 dark:text-gray-400">
-                Demand #{demand.demand_number} has been submitted for finance review. Print the
-                customer information sheet below to share appointment and warranty details with your
-                customer.
+                Demand #{demand.demand_number} is booked. The customer received a link by SMS to confirm
+                their name and phone. You can print the sheet below for the desk.
               </p>
+              {state.smsSent ? (
+                <p className="text-sm text-green-700 dark:text-green-300">Customer link sent by SMS.</p>
+              ) : state.smsError ? (
+                <p className="text-sm text-amber-700 dark:text-amber-300">
+                  SMS failed: {state.smsError}. Share this link:{' '}
+                  <span className="font-mono text-xs break-all">{state.portalUrl}</span>
+                </p>
+              ) : state.portalUrl ? (
+                <p className="text-sm text-zinc-600 dark:text-gray-400 font-mono text-xs break-all">
+                  Customer link: {state.portalUrl}
+                </p>
+              ) : null}
             </div>
           </div>
 
@@ -231,11 +249,16 @@ export function DemandForm({
         </div>
       )}
 
+      <p className="text-sm text-zinc-600 dark:text-gray-400">
+        Enter <strong>stock</strong>, decode the full <strong>VIN</strong>, and the customer <strong>phone</strong>. Name and
+        address are completed by the customer via the SMS link.
+      </p>
+
       <DemandDocumentFillButton
         disabled={isPending}
         currentValues={{
-          firstName,
-          lastName,
+          firstName: '',
+          lastName: '',
           phone,
           vehicleYear,
           stockNumber,
@@ -245,8 +268,8 @@ export function DemandForm({
           customModel,
         }}
         setters={{
-          setFirstName,
-          setLastName,
+          setFirstName: () => {},
+          setLastName: () => {},
           setPhone,
           setVehicleYear,
           setStockNumber,
@@ -258,22 +281,20 @@ export function DemandForm({
         }}
       />
 
+      <input type="hidden" name="address" value={defaultAddress} />
+      <input type="hidden" name="vehicleMake" value={selectedMake} />
+      <input type="hidden" name="vehicleModel" value={vehicleModelForSubmit} />
+      <input type="hidden" name="vehicleYear" value={vehicleYear} />
+      <input type="hidden" name="vinLast6" value={vinLast6} />
+
       <div className="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-2">
-        <h3 className="col-span-full text-xl font-semibold leading-7 text-zinc-900 dark:text-white border-b border-zinc-200 dark:border-gray-800 pb-2">Customer Information</h3>
-        
-        <div>
-          <label className="block text-base font-medium text-zinc-600 dark:text-gray-300">First Name</label>
-          <input name="firstName" required value={firstName} onChange={(e) => setFirstName(e.target.value.toUpperCase())} style={{ textTransform: 'uppercase' }} className="mt-1.5 block w-full rounded-md border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 py-2.5 px-3 text-base shadow-sm focus:border-[#C27E00] focus:outline-none focus:ring-[#C27E00] text-zinc-900 dark:text-white placeholder:text-zinc-500 dark:placeholder:text-gray-500" />
-        </div>
+        <h3 className="col-span-full text-xl font-semibold leading-7 text-zinc-900 dark:text-white border-b border-zinc-200 dark:border-gray-800 pb-2">
+          Customer
+        </h3>
 
-        <div>
-          <label className="block text-base font-medium text-zinc-600 dark:text-gray-300">Last Name</label>
-          <input name="lastName" required value={lastName} onChange={(e) => setLastName(e.target.value.toUpperCase())} style={{ textTransform: 'uppercase' }} className="mt-1.5 block w-full rounded-md border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 py-2.5 px-3 shadow-sm focus:border-[#C27E00] focus:outline-none focus:ring-[#C27E00] text-base text-zinc-900 dark:text-white placeholder:text-zinc-500 dark:placeholder:text-gray-500" />
-        </div>
-
-        <div>
+        <div className="sm:col-span-2">
           <label className="block text-base font-medium text-zinc-600 dark:text-gray-300">
-            Phone Number <span className="text-sm text-zinc-500 dark:text-gray-500">(416 - 123 - 4567)</span>
+            Phone number <span className="text-sm text-zinc-500 dark:text-gray-500">(SMS link)</span>
           </label>
           <CanadianPhoneInput
             name="phone"
@@ -285,144 +306,35 @@ export function DemandForm({
           />
         </div>
 
-        <div>
-          <label className="block text-base font-medium text-zinc-600 dark:text-gray-300">Customer Address</label>
-          <input 
-            name="address" 
-            value={defaultAddress}
-            readOnly
-            className="mt-1.5 block w-full rounded-md border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 py-2.5 px-3 text-base shadow-sm text-zinc-900 dark:text-white opacity-75 cursor-not-allowed" 
-            placeholder="Address will be auto-filled with dealer name"
+        <h3 className="col-span-full text-xl font-semibold leading-7 text-zinc-900 dark:text-white border-b border-zinc-200 dark:border-gray-800 pb-2 mt-4">
+          Vehicle (from VIN)
+        </h3>
+
+        <div className="sm:col-span-2">
+          <VinDecodeField
+            disabled={isPending}
+            onDecoded={applyVinDecodeFields}
+            inputClassName="mt-1.5 block w-full rounded-md border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 py-2.5 px-3 shadow-sm focus:border-[#C27E00] focus:outline-none focus:ring-[#C27E00] text-base text-zinc-900 dark:text-white"
           />
-          <p className="mt-1.5 text-sm text-zinc-500 dark:text-gray-500">Address is automatically set to your dealer name and cannot be edited.</p>
         </div>
 
-        <h3 className="col-span-full text-xl font-semibold leading-7 text-zinc-900 dark:text-white border-b border-zinc-200 dark:border-gray-800 pb-2 mt-4">Vehicle Information</h3>
-
-        <VinDecodeField
-          disabled={isPending}
-          onDecoded={applyVinDecodeFields}
-          inputClassName="mt-1.5 block w-full rounded-md border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 py-2.5 px-3 shadow-sm focus:border-[#C27E00] focus:outline-none focus:ring-[#C27E00] text-base text-zinc-900 dark:text-white"
-        />
-
-        <div>
-          <label className="block text-base font-medium text-zinc-600 dark:text-gray-300">Make</label>
-          <select
-            name="vehicleMake"
-            value={selectedMake}
-            onChange={(e) => {
-              setSelectedMake(e.target.value)
-              setSelectedModel('')
-              setSelectedTrim('')
-              setCustomModel('')
-            }}
-            required
-            className="mt-1.5 block w-full rounded-md border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 py-2.5 px-3 shadow-sm focus:border-[#C27E00] focus:outline-none focus:ring-[#C27E00] text-base text-zinc-900 dark:text-white placeholder:text-zinc-500 dark:placeholder:text-gray-500"
-          >
-            <option value="">-- Select make --</option>
-            {VEHICLE_MAKES_CA.map((make) => (
-              <option key={make} value={make} className="bg-zinc-50 dark:bg-black text-zinc-900 dark:text-white">
-                {make}
-              </option>
-            ))}
-          </select>
-        </div>
+        {vinDecodedReady && (
+          <p className="sm:col-span-2 text-sm text-zinc-600 dark:text-gray-400">
+            {vehicleYear} {selectedMake} {vehicleModelForSubmit}
+            {vinLast6 ? ` · VIN …${vinLast6}` : ''}
+          </p>
+        )}
 
         <div>
-          <label className="block text-base font-medium text-zinc-600 dark:text-gray-300">Model</label>
-          {selectedMake ? (
-            <div className="space-y-2">
-              <select
-                value={selectedModel}
-                onChange={(e) => {
-                  setSelectedModel(e.target.value)
-                  setSelectedTrim('')
-                  setCustomModel(e.target.value === '__custom__' ? customModel : '')
-                }}
-                required={selectedModel !== '__custom__'}
-                className="mt-1.5 block w-full rounded-md border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 py-2.5 px-3 shadow-sm focus:border-[#C27E00] focus:outline-none focus:ring-[#C27E00] text-base text-zinc-900 dark:text-white placeholder:text-zinc-500 dark:placeholder:text-gray-500"
-              >
-                <option value="">-- Select model --</option>
-                {getModelsForMake(selectedMake).map((model) => (
-                  <option key={model} value={model} className="bg-zinc-50 dark:bg-black text-zinc-900 dark:text-white">
-                    {model}
-                  </option>
-                ))}
-                <option value="__custom__" className="bg-zinc-50 dark:bg-black text-zinc-900 dark:text-white">Other</option>
-              </select>
-              {selectedModel && selectedModel !== '__custom__' && getTrimsForModel(selectedMake, selectedModel).length > 0 && (
-                <select
-                  value={selectedTrim}
-                  onChange={(e) => setSelectedTrim(e.target.value)}
-                  className="mt-1.5 block w-full rounded-md border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 py-2.5 px-3 shadow-sm focus:border-[#C27E00] focus:outline-none focus:ring-[#C27E00] text-base text-zinc-900 dark:text-white placeholder:text-zinc-500 dark:placeholder:text-gray-500"
-                >
-                  <option value="">-- Select trim (optional) --</option>
-                  {getTrimsForModel(selectedMake, selectedModel).map((trim) => (
-                    <option key={trim} value={trim} className="bg-zinc-50 dark:bg-black text-zinc-900 dark:text-white">
-                      {trim}
-                    </option>
-                  ))}
-                </select>
-              )}
-              {selectedModel === '__custom__' && (
-                <input
-                  type="text"
-                  value={customModel}
-                  onChange={(e) => setCustomModel(e.target.value)}
-                  placeholder="Enter model name"
-                  required
-                  name="vehicleModel"
-                  className="mt-1.5 block w-full rounded-md border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 py-2.5 px-3 shadow-sm focus:border-[#C27E00] focus:outline-none focus:ring-[#C27E00] text-base text-zinc-900 dark:text-white placeholder:text-zinc-500 dark:placeholder:text-gray-500"
-                />
-              )}
-              {(selectedModel && selectedModel !== '__custom__') && (
-                <input
-                  type="hidden"
-                  name="vehicleModel"
-                  value={selectedTrim ? `${selectedModel} (${selectedTrim})` : selectedModel}
-                />
-              )}
-            </div>
-          ) : (
-            <input
-              type="text"
-              value=""
-              readOnly
-              placeholder="Select make first"
-              className="mt-1.5 block w-full rounded-md border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 py-2.5 px-3 text-base shadow-sm text-zinc-500 dark:text-gray-500 cursor-not-allowed"
-            />
-          )}
-        </div>
-
-        <div>
-          <label className="block text-base font-medium text-zinc-600 dark:text-gray-300">Year</label>
-          <input name="vehicleYear" type="number" min="1900" max="2100" required value={vehicleYear} onChange={(e) => setVehicleYear(e.target.value)} className="mt-1.5 block w-full rounded-md border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 py-2.5 px-3 shadow-sm focus:border-[#C27E00] focus:outline-none focus:ring-[#C27E00] text-base text-zinc-900 dark:text-white placeholder:text-zinc-500 dark:placeholder:text-gray-500" />
-        </div>
-
-        <div>
-          <label className="block text-base font-medium text-zinc-600 dark:text-gray-300">Stock Number</label>
-          <input 
+          <label className="block text-base font-medium text-zinc-600 dark:text-gray-300">Stock number</label>
+          <input
             name="stockNumber"
             value={stockNumber}
-            onChange={(e) => setStockNumber(e.target.value.toUpperCase())}
-            style={{ textTransform: 'uppercase' }}
-            required 
-            className="mt-1.5 block w-full rounded-md border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 py-2.5 px-3 shadow-sm focus:border-[#C27E00] focus:outline-none focus:ring-[#C27E00] text-base text-zinc-900 dark:text-white placeholder:text-zinc-500 dark:placeholder:text-gray-500" 
-            placeholder="Enter stock number"
-          />
-        </div>
-
-        <div>
-          <label className="block text-base font-medium text-zinc-600 dark:text-gray-300">VIN Last 6 Digits <span className="text-red-400">*</span></label>
-          <input 
-            name="vinLast6"
-            value={vinLast6}
-            onChange={(e) => setVinLast6(e.target.value.toUpperCase())}
+            onChange={e => setStockNumber(e.target.value.toUpperCase())}
             style={{ textTransform: 'uppercase' }}
             required
-            minLength={6}
-            className="mt-1.5 block w-full rounded-md border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 py-2.5 px-3 shadow-sm focus:border-[#C27E00] focus:outline-none focus:ring-[#C27E00] text-base text-zinc-900 dark:text-white placeholder:text-zinc-500 dark:placeholder:text-gray-500" 
-            placeholder="Last 6 digits"
+            className="mt-1.5 block w-full rounded-md border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 py-2.5 px-3 shadow-sm focus:border-[#C27E00] focus:outline-none focus:ring-[#C27E00] text-base text-zinc-900 dark:text-white"
+            placeholder="Enter stock number"
           />
         </div>
 
@@ -586,11 +498,17 @@ export function DemandForm({
           <button
             type="submit"
             disabled={
-              isPending || !selectedSlot || cameraModels.length === 0 || !selectedCamera
+              isPending ||
+              !vinDecodedReady ||
+              !stockNumber.trim() ||
+              !phone.trim() ||
+              !selectedSlot ||
+              cameraModels.length === 0 ||
+              !selectedCamera
             }
             className="ml-3 inline-flex justify-center rounded-md border border-transparent bg-[#C27E00] py-2.5 px-5 text-base font-semibold text-white shadow-sm hover:bg-[#a06900] focus:outline-none focus:ring-2 focus:ring-[#C27E00] focus:ring-offset-2 disabled:opacity-50 transition-colors"
           >
-            {isPending ? 'Submitting...' : 'Create Demand'}
+            {isPending ? 'Submitting…' : 'Create appointment & send link'}
           </button>
         </div>
       </div>

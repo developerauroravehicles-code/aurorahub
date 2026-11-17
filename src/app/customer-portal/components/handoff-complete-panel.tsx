@@ -4,6 +4,10 @@ import { useCallback, useEffect, useState } from 'react'
 import { formatInTimeZone } from 'date-fns-tz'
 import { createClient } from '@/lib/supabase/client'
 import { SYSTEM_DEFAULT_TIMEZONE } from '@/lib/timezone-defaults'
+import {
+  DEALER_HANDOFF_PLACEHOLDER_FIRST,
+  DEALER_HANDOFF_PLACEHOLDER_LAST,
+} from '@/lib/demand-dealer-handoff'
 
 type HandoffData = {
   pending: boolean
@@ -56,8 +60,10 @@ export function HandoffCompletePanel({ token, onCompleted }: Props) {
     }
     setData(parsed)
     if (Boolean(parsed.pending)) {
-      const fn = parsed.customer_firstname === 'PENDING' ? '' : parsed.customer_firstname
-      const ln = parsed.customer_lastname === 'CUSTOMER' ? '' : parsed.customer_lastname
+      const fn =
+        parsed.customer_firstname === DEALER_HANDOFF_PLACEHOLDER_FIRST ? '' : parsed.customer_firstname
+      const ln =
+        parsed.customer_lastname === DEALER_HANDOFF_PLACEHOLDER_LAST ? '' : parsed.customer_lastname
       setFirstName(fn)
       setLastName(ln)
       setPhone(parsed.customer_phone ?? '')

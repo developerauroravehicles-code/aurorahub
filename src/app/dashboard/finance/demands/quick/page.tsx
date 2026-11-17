@@ -1,1 +1,5 @@
-export { default } from '@/app/dashboard/sales/demands/quick/page'
+import { redirect } from 'next/navigation'
+
+export default function LegacyQuickDemandPage() {
+  redirect('/dashboard/finance/demands/new')
+}

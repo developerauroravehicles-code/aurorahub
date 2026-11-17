@@ -13,6 +13,12 @@ import {
   isSlotAvailableForDealer,
 } from '@/lib/scheduling-pool'
 import { finalizeDemandAsApproved } from '@/lib/demands/finalize-demand-approved'
+import {
+  DEALER_HANDOFF_PLACEHOLDER_FIRST,
+  DEALER_HANDOFF_PLACEHOLDER_LAST,
+} from '@/lib/demand-dealer-handoff'
+import { issuePortalTokenForDemand } from '@/lib/issue-portal-token-for-demand'
+import { sendDealerHandoffLinkSms } from '@/lib/send-dealer-handoff-link-sms'
 
 async function getDealerTimezone(dealerId: string | null): Promise<string | null> {
   if (!dealerId) return null
@@ -26,18 +32,17 @@ async function getDealerTimezone(dealerId: string | null): Promise<string | null
 }
 
 const schema = z.object({
-  firstName: z.string().min(1).transform(v => (v || '').trim().toUpperCase()),
-  lastName: z.string().min(1).transform(v => (v || '').trim().toUpperCase()),
-  phone: z.string().min(1),
+  phone: z.string().min(1, 'Phone is required'),
   address: z.string().optional(),
-  vehicleMake: z.string().min(1),
-  vehicleModel: z.string().min(1),
-  vehicleYear: z.coerce.number().min(1900),
+  vehicleMake: z.string().min(1, 'Decode the full VIN first'),
+  vehicleModel: z.string().min(1, 'Decode the full VIN first'),
+  vehicleYear: z.coerce.number().min(1900, 'Decode the full VIN first'),
   stockNumber: z.string().min(1, 'Stock number is required').transform(v => (v || '').trim().toUpperCase()),
-  vinLast6: z.string().min(1, 'VIN last 6 digits is required').refine(
-    v => (v || '').trim().replace(/\s/g, '').length >= 6,
-    'VIN last 6 digits is required (at least 6 characters)'
-  ).transform(v => (v || '').trim().replace(/\s/g, '').slice(-6).toUpperCase()),
+  vinLast6: z
+    .string()
+    .min(1, 'VIN is required')
+    .transform(v => (v || '').trim().replace(/\s/g, '').slice(-6).toUpperCase())
+    .refine(v => v.length >= 6, 'Decode the full VIN first'),
   cameraModel: z.string().min(1),
   appointmentDate: z.string().min(1, 'Please select a time slot'),
   comment: z.string().optional(),
@@ -70,6 +75,9 @@ export type CreateDemandState =
       dealer: { name: string; warranty_years: number | null }
       timezoneName: string | null
       role: 'sales' | 'finance'
+      portalUrl: string | null
+      smsSent: boolean
+      smsError?: string
     }
   | null
 
@@ -86,8 +94,6 @@ export async function createDemand(prevState: CreateDemandState, formData: FormD
   }
 
   const rawData = {
-    firstName: formData.get('firstName'),
-    lastName: formData.get('lastName'),
     phone: formData.get('phone'),
     address: formData.get('address'),
     vehicleMake: formData.get('vehicleMake'),
@@ -129,13 +135,20 @@ export async function createDemand(prevState: CreateDemandState, formData: FormD
     return { error: cameraCheck.error }
   }
 
+  const { data: dealerAddressRow } = await supabase
+    .from('dealers')
+    .select('name, address')
+    .eq('id', profile.dealer_id)
+    .single()
+
   const insertData = {
     created_by: profile.id,
     dealer_id: profile.dealer_id,
-    customer_firstname: data.firstName,
-    customer_lastname: data.lastName,
+    customer_firstname: DEALER_HANDOFF_PLACEHOLDER_FIRST,
+    customer_lastname: DEALER_HANDOFF_PLACEHOLDER_LAST,
     customer_phone: data.phone,
-    customer_address: data.address,
+    customer_address: data.address || dealerAddressRow?.address || dealerAddressRow?.name || null,
+    customer_details_pending: true,
     vehicle_make: data.vehicleMake,
     vehicle_model: data.vehicleModel,
     vehicle_year: data.vehicleYear,
@@ -178,8 +191,9 @@ export async function createDemand(prevState: CreateDemandState, formData: FormD
       assigned_specialist_id: demand.assigned_specialist_id,
     },
     previousStatus: null,
-    logNote: 'Demand created and approved',
+    logNote: 'Demand created and approved; customer details pending portal',
     transitionFromStatus: null,
+    sms: { customer: false, specialist: true, auroraManager: true },
   })
 
   if ('error' in finalized) {
@@ -210,6 +224,15 @@ export async function createDemand(prevState: CreateDemandState, formData: FormD
     .eq('id', profile.dealer_id)
     .single()
 
+  const portal = await issuePortalTokenForDemand(data.phone, demand.id, profile.id)
+  let smsSent = false
+  let smsError: string | undefined
+  if (portal?.url) {
+    const sms = await sendDealerHandoffLinkSms(data.phone, portal.url, demand.id)
+    smsSent = sms.success
+    smsError = sms.error
+  }
+
   return {
     success: true as const,
     demand: {
@@ -236,6 +259,9 @@ export async function createDemand(prevState: CreateDemandState, formData: FormD
     },
     timezoneName,
     role: profile.role as 'sales' | 'finance',
+    portalUrl: portal?.url ?? null,
+    smsSent,
+    smsError,
   }
 }
 
