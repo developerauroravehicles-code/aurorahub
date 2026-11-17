@@ -17,7 +17,6 @@ import { buildCustomerSmsMessage, buildSpecialistSmsMessage } from '@/lib/sms-me
 import { validateAppointmentSlot } from '@/app/dashboard/system-management/calendar/actions'
 import { getTimezoneFromDealer } from '@/lib/dealer-timezone'
 import { lookupCameraModelId } from '@/lib/camera-model-resolve'
-import { notifyAuroraManagersSmsFailed } from '@/lib/notify-sms-failed'
 import { notifyAuroraManagersIfDuplicateStock } from '@/lib/notify-duplicate-stock'
 import { finalizeDemandAsApproved } from '@/lib/demands/finalize-demand-approved'
 

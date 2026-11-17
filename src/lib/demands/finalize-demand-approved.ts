@@ -2,7 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { logDemandChange } from '@/lib/demand-logger'
 import { dispatchWebhooks } from '@/lib/webhook-dispatch'
-import { sendSMS } from '@/lib/twilio'
+import { isDemoSmsPhone, sendSMS } from '@/lib/twilio'
 import { logSmsSent } from '@/lib/sms-logger'
 import { getSmsSettings } from '@/lib/sms-resolver'
 import { buildCustomerSmsMessage, buildSpecialistSmsMessage } from '@/lib/sms-message-builder'
@@ -165,7 +165,9 @@ export async function finalizeDemandAsApproved(
     timezoneName,
   }
 
-  if (ac.enabled && ac.sendToCustomer && smsFlags.customer && input.demand.customer_phone) {
+  const customerIsDemo = isDemoSmsPhone(input.demand.customer_phone)
+
+  if (ac.enabled && ac.sendToCustomer && smsFlags.customer && input.demand.customer_phone && !customerIsDemo) {
     try {
       const message = buildCustomerSmsMessage('appointment_created', ac, input.demand, dealerCtx, {
         contactPhone: smsSettings.contactPhone,
@@ -183,17 +185,36 @@ export async function finalizeDemandAsApproved(
           messageContent: message,
         }).catch(() => {})
       } else {
-        notifyAuroraManagersSmsFailed(adminForSms, input.demandId, 'appointment_created', 'Send failed').catch(
-          () => {}
-        )
+        notifyAuroraManagersSmsFailed(
+          adminForSms,
+          input.demandId,
+          'appointment_created',
+          'Send failed',
+          input.demand.customer_phone
+        ).catch(() => {})
       }
     } catch {
-      notifyAuroraManagersSmsFailed(adminForSms, input.demandId, 'appointment_created', 'Send error').catch(() => {})
+      notifyAuroraManagersSmsFailed(
+        adminForSms,
+        input.demandId,
+        'appointment_created',
+        'Send error',
+        input.demand.customer_phone
+      ).catch(() => {})
     }
-  } else if (smsFlags.customer && input.demand.customer_phone && (!ac.enabled || !ac.sendToCustomer)) {
-    notifyAuroraManagersSmsFailed(adminForSms, input.demandId, 'appointment_created', 'Disabled in SMS settings').catch(
-      () => {}
-    )
+  } else if (
+    smsFlags.customer &&
+    input.demand.customer_phone &&
+    !customerIsDemo &&
+    (!ac.enabled || !ac.sendToCustomer)
+  ) {
+    notifyAuroraManagersSmsFailed(
+      adminForSms,
+      input.demandId,
+      'appointment_created',
+      'Disabled in SMS settings',
+      input.demand.customer_phone
+    ).catch(() => {})
   }
 
   const specialistIdToNotify = assignedSpecialistId ?? input.demand.assigned_specialist_id

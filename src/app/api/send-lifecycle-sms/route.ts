@@ -142,7 +142,7 @@ async function sendLifecycleSms(
     },
     supabase
   )
-  notifyAuroraManagersSmsFailed(supabase, demand.id, messageType, result.errorMessage).catch(() => {})
+  notifyAuroraManagersSmsFailed(supabase, demand.id, messageType, result.errorMessage, phone).catch(() => {})
   return 'failed'
 }
 

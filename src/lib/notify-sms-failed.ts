@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { isDemoSmsPhone } from '@/lib/twilio'
 
 /**
  * Insert a sms_pending comm_notification for all aurora_manager users.
@@ -13,8 +14,11 @@ export async function notifyAuroraManagersSmsFailed(
   supabase: SupabaseClient,
   demandId: string,
   messageType: string,
-  reason: string
+  reason: string,
+  recipientPhone?: string | null
 ): Promise<void> {
+  if (isDemoSmsPhone(recipientPhone)) return
+
   const { data: managers } = await supabase
     .from('profiles')
     .select('id')

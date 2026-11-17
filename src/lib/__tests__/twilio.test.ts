@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { formatPhoneNumberToE164 } from '../twilio'
+import { formatPhoneNumberToE164, isDemoSmsPhone } from '../twilio'
 
 describe('Phone number formatting', () => {
   describe('formatPhoneNumberToE164', () => {
@@ -20,6 +20,19 @@ describe('Phone number formatting', () => {
 
     it('returns empty string for empty input', () => {
       expect(formatPhoneNumberToE164('')).toBe('')
+    })
+  })
+
+  describe('isDemoSmsPhone', () => {
+    it('matches +11111111… demo numbers', () => {
+      expect(isDemoSmsPhone('+11111111')).toBe(true)
+      expect(isDemoSmsPhone('+11111111111')).toBe(true)
+      expect(isDemoSmsPhone('1111111111')).toBe(true)
+    })
+
+    it('does not match real numbers', () => {
+      expect(isDemoSmsPhone('+16048335801')).toBe(false)
+      expect(isDemoSmsPhone('6048335801')).toBe(false)
     })
   })
 })

@@ -152,11 +152,23 @@ export async function GET(request: Request) {
                 ).catch(() => {})
               } else {
                 errorCount++
-                notifyAuroraManagersSmsFailed(supabase, demand.id, 'twenty_four_hour_reminder', 'Send failed').catch(() => {})
+                notifyAuroraManagersSmsFailed(
+                  supabase,
+                  demand.id,
+                  'twenty_four_hour_reminder',
+                  'Send failed',
+                  demand.customer_phone
+                ).catch(() => {})
               }
             } catch {
               errorCount++
-              notifyAuroraManagersSmsFailed(supabase, demand.id, 'twenty_four_hour_reminder', 'Send error').catch(() => {})
+              notifyAuroraManagersSmsFailed(
+                supabase,
+                demand.id,
+                'twenty_four_hour_reminder',
+                'Send error',
+                demand.customer_phone
+              ).catch(() => {})
             }
           }
 
@@ -248,11 +260,23 @@ export async function GET(request: Request) {
                 }, supabase).catch(() => {})
               } else {
                 errorCount++
-                notifyAuroraManagersSmsFailed(supabase, demand.id, 'four_hour_reminder', 'Send failed').catch(() => {})
+                notifyAuroraManagersSmsFailed(
+                  supabase,
+                  demand.id,
+                  'four_hour_reminder',
+                  'Send failed',
+                  demand.customer_phone
+                ).catch(() => {})
               }
             } catch {
               errorCount++
-              notifyAuroraManagersSmsFailed(supabase, demand.id, 'four_hour_reminder', 'Send error').catch(() => {})
+              notifyAuroraManagersSmsFailed(
+                supabase,
+                demand.id,
+                'four_hour_reminder',
+                'Send error',
+                demand.customer_phone
+              ).catch(() => {})
             }
           }
 

@@ -45,7 +45,19 @@ export function formatPhoneNumberToE164(
   return '+' + cleaned
 }
 
+/** Demo / test customer numbers — do not send SMS or raise sms_pending notifications. */
+export function isDemoSmsPhone(phone: string | null | undefined): boolean {
+  if (!phone?.trim()) return false
+  const e164 = formatPhoneNumberToE164(phone.trim())
+  return e164.startsWith('+11111111')
+}
+
 export async function sendSMS(to: string, body: string): Promise<SendSmsResult> {
+  if (isDemoSmsPhone(to)) {
+    console.log('Demo phone — SMS skipped:', to)
+    return { success: true, mocked: true }
+  }
+
   if (!process.env.TWILIO_ACCOUNT_SID) {
     console.log('Twilio credentials missing. SMS would be:', body)
     return { success: true, mocked: true }
