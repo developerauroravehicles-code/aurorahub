@@ -15,6 +15,8 @@ export function usePortalTokenSession() {
   const [tokenLoading, setTokenLoading] = useState(false)
   const [phone, setPhone] = useState<string | null>(null)
   const [tokenError, setTokenError] = useState<string | null>(null)
+  const [activeToken, setActiveToken] = useState<string | null>(null)
+  const [linkedDemandId, setLinkedDemandId] = useState<string | null>(null)
 
   const clearSession = useCallback(() => {
     if (typeof window !== 'undefined') {
@@ -25,6 +27,8 @@ export function usePortalTokenSession() {
     setPhone(null)
     setTokenExpired(false)
     setTokenError(null)
+    setActiveToken(null)
+    setLinkedDemandId(null)
   }, [])
 
   const validateAndStore = useCallback(async (token: string): Promise<boolean> => {
@@ -47,12 +51,15 @@ export function usePortalTokenSession() {
         valid?: boolean
         expired?: boolean
         customer_phone?: string | null
+        demand_id?: string | null
       } | null
 
       if (result?.valid && result.customer_phone) {
         sessionStorage.setItem(SESSION_TOKEN_KEY, token.trim())
         sessionStorage.setItem(SESSION_PHONE_KEY, result.customer_phone)
         setPhone(result.customer_phone)
+        setActiveToken(token.trim())
+        setLinkedDemandId(result.demand_id ?? null)
         setAccessMode('token')
         setTokenExpired(false)
         return true
@@ -85,6 +92,8 @@ export function usePortalTokenSession() {
     tokenLoading,
     phone,
     tokenError,
+    activeToken,
+    linkedDemandId,
     validateAndStore,
     restoreSession,
     clearSession,

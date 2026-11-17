@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { Suspense, useCallback, useEffect } from 'react'
+import { Suspense, useCallback, useEffect, useState } from 'react'
 import { useParams, useSearchParams } from 'next/navigation'
 import { RefreshCw, RotateCcw, SearchX, X, Link2Off } from 'lucide-react'
 import { FixedThemeToggle } from '@/components/fixed-theme-toggle'
@@ -12,6 +12,7 @@ import { VinLookupForm } from './components/vin-lookup-form'
 import { InstallationList } from './components/installation-list'
 import { PortalFaq } from './components/portal-faq'
 import { PortalContactPanel } from './components/portal-contact-panel'
+import { HandoffCompletePanel } from './components/handoff-complete-panel'
 
 function ResultsSkeleton() {
   return (
@@ -30,6 +31,7 @@ function CustomerPortalInner() {
   const vinLookup = usePortalLookup()
   const phoneLookup = usePortalPhoneLookup()
   const portalContact = usePortalContact()
+  const [handoffDone, setHandoffDone] = useState(false)
 
   const isTokenMode = tokenSession.accessMode === 'token' && Boolean(tokenSession.phone)
   const lookup = isTokenMode ? phoneLookup : vinLookup
@@ -102,6 +104,18 @@ function CustomerPortalInner() {
       </header>
 
       <main className="mx-auto max-w-5xl px-4 py-8 sm:px-6 space-y-8">
+        {tokenSession.activeToken && tokenSession.linkedDemandId && !handoffDone ? (
+          <HandoffCompletePanel
+            token={tokenSession.activeToken}
+            onCompleted={() => {
+              setHandoffDone(true)
+              if (tokenSession.phone) {
+                void phoneLookup.lookupByPhone(tokenSession.phone)
+              }
+            }}
+          />
+        ) : null}
+
         {tokenSession.tokenExpired ? (
           <div
             className="flex items-start gap-3 rounded-xl border border-amber-300 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/30 px-4 py-3 text-sm text-amber-900 dark:text-amber-200"

@@ -88,13 +88,21 @@ export default async function FinanceDemandsPage() {
             to you.
           </p>
         </div>
-        <Link
-          href="/dashboard/finance/demands/new"
-          className="inline-flex items-center gap-2 bg-[#C27E00] text-white px-4 py-2 rounded-md hover:bg-[#a06900] transition-colors"
-        >
-          <Plus className="w-4 h-4" />
-          New Demand
-        </Link>
+        <div className="flex flex-wrap gap-2">
+          <Link
+            href="/dashboard/finance/demands/quick"
+            className="inline-flex items-center gap-2 border border-[#C27E00] text-[#C27E00] px-4 py-2 rounded-md hover:bg-[#C27E00]/10 transition-colors"
+          >
+            Quick appointment
+          </Link>
+          <Link
+            href="/dashboard/finance/demands/new"
+            className="inline-flex items-center gap-2 bg-[#C27E00] text-white px-4 py-2 rounded-md hover:bg-[#a06900] transition-colors"
+          >
+            <Plus className="w-4 h-4" />
+            New Demand
+          </Link>
+        </div>
       </div>
 
       <DemandPrintHost>
