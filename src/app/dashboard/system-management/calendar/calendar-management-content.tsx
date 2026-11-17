@@ -4,11 +4,12 @@ import { useState } from 'react'
 import { Trash2, CalendarX2, Clock } from 'lucide-react'
 import { getGlobalSlotMinutes, getSlotMinutesFromConfig, CALENDAR_DEFAULTS } from '@/lib/calendar-defaults'
 import { SchedulingPoolsPanel } from './scheduling-pools-panel'
-import { DealerDayHoursColumn, type DealerHoursSetting } from './dealer-day-hours-column'
+import type { DealerHoursSetting } from './dealer-day-hours-column'
+import { DealerWeekHoursRow } from './dealer-week-hours-row'
+import type { DealerWeekHourPayload } from './actions'
 import { DealerWeeklyClosedRow } from './dealer-weekly-closed-row'
 import {
   DEALER_CALENDAR_DAY_TYPES,
-  ISO_WEEKDAY_LABELS,
   resolveCalendarSettingForIsoDow,
   buildCalendarSettingsMap,
   type DealerCalendarDayType,
@@ -29,12 +30,6 @@ interface CalendarBlock {
 interface CalendarSetting extends DealerHoursSetting {
   dealers?: { name: string }
 }
-
-const HOUR_DAY_COLUMNS: { dayType: DealerCalendarDayType; label: string }[] =
-  DEALER_CALENDAR_DAY_TYPES.map((dayType, i) => ({
-    dayType,
-    label: ISO_WEEKDAY_LABELS[i]?.label ?? dayType,
-  }))
 
 interface Dealer {
   id: string
@@ -61,15 +56,16 @@ interface CalendarManagementContentProps {
   weeklyClosedDays: { dealer_id: string; iso_dow: number }[]
   schedulingPools: SchedulingPoolRow[]
   specialists: { id: string; full_name: string }[]
-  createCalendarSetting: (formData: FormData) => Promise<{ success: boolean; error?: string }>
-  updateCalendarSetting: (settingId: string, startHour: number, endHour: number, slotIntervalMinutes: number, appointmentDurationMinutes: number) => Promise<{ success: boolean; error?: string }>
-  deleteCalendarSetting: (settingId: string) => Promise<{ success: boolean; error?: string }>
   createCalendarBlock: (formData: FormData) => Promise<{ success: boolean; error?: string }>
   createCalendarBlocks: (dealerId: string, blockDate: string, blocks: { start_minutes: number; end_minutes: number }[]) => Promise<{ success: boolean; error?: string }>
   deleteCalendarBlock: (blockId: string) => Promise<{ success: boolean; error?: string }>
   saveDealerWeeklyClosedDays: (
     dealerId: string,
     closedIsoDays: number[]
+  ) => Promise<{ success: boolean; error?: string }>
+  saveDealerWeekHours: (
+    dealerId: string,
+    days: DealerWeekHourPayload[]
   ) => Promise<{ success: boolean; error?: string }>
   createSchedulingPool: (formData: FormData) => Promise<{ success: boolean; error?: string }>
   updateSchedulingPool: (
@@ -151,13 +147,11 @@ export function CalendarManagementContent({
   weeklyClosedDays = [],
   schedulingPools,
   specialists,
-  createCalendarSetting,
-  updateCalendarSetting,
-  deleteCalendarSetting,
   createCalendarBlock,
   createCalendarBlocks,
   deleteCalendarBlock,
   saveDealerWeeklyClosedDays,
+  saveDealerWeekHours,
   createSchedulingPool,
   updateSchedulingPool,
   deleteSchedulingPool,
@@ -165,60 +159,12 @@ export function CalendarManagementContent({
   assignSpecialistToSchedulingPool,
   removeSpecialistFromSchedulingPool,
 }: CalendarManagementContentProps) {
-  const [showAddHoursFor, setShowAddHoursFor] = useState<{ dealerId: string; dayType: DealerCalendarDayType } | null>(null)
-  const [editingId, setEditingId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
   const [blockError, setBlockError] = useState<string | null>(null)
   const [blockSuccess, setBlockSuccess] = useState<string | null>(null)
   const [blockDateByDealer, setBlockDateByDealer] = useState<Record<string, string>>({})
   const [selectedSlotsByDealer, setSelectedSlotsByDealer] = useState<Record<string, { start_minutes: number; end_minutes: number }[]>>({})
-
-  const handleCreate = async (formData: FormData) => {
-    setError(null)
-    setSuccess(null)
-    const result = await createCalendarSetting(formData)
-    if (result.success) {
-      setSuccess('Calendar setting created successfully!')
-      setShowAddHoursFor(null)
-      // Reset form by reloading
-      window.location.reload()
-    } else {
-      setError(result.error || 'Failed to create calendar setting')
-    }
-  }
-
-  const handleUpdate = async (settingId: string, formData: FormData) => {
-    setError(null)
-    setSuccess(null)
-    const startHour = parseInt(formData.get('startHour') as string)
-    const endHour = parseInt(formData.get('endHour') as string)
-    const slotIntervalMinutes = parseInt(formData.get('slotIntervalMinutes') as string)
-    const appointmentDurationMinutes = parseInt(formData.get('appointmentDurationMinutes') as string)
-
-    const result = await updateCalendarSetting(settingId, startHour, endHour, slotIntervalMinutes, appointmentDurationMinutes)
-    if (result.success) {
-      setSuccess('Calendar setting updated successfully!')
-      setEditingId(null)
-      window.location.reload()
-    } else {
-      setError(result.error || 'Failed to update calendar setting')
-    }
-  }
-
-  const handleDelete = async (settingId: string) => {
-    if (!confirm('Are you sure you want to delete this calendar setting?')) return
-
-    setError(null)
-    setSuccess(null)
-    const result = await deleteCalendarSetting(settingId)
-    if (result.success) {
-      setSuccess('Calendar setting deleted successfully!')
-      window.location.reload()
-    } else {
-      setError(result.error || 'Failed to delete calendar setting')
-    }
-  }
 
   const handleCloseEntireDay = async (dealerId: string, blockDate: string) => {
     setBlockError(null)
@@ -352,31 +298,18 @@ export function CalendarManagementContent({
           Dealer hours
         </h2>
         <p className="text-sm text-zinc-500 dark:text-gray-400 mb-4">
-          Set start and end times for each day. Use weekly closed days below to block appointments on specific weekdays. Default 09:00–16:30 applies when hours are not set.
+          Set start and end for all days, then click <strong>Save hours</strong> once. Use weekly closed days below to block appointments on specific weekdays. Default 09:00–16:30 applies when a day uses default hours.
         </p>
         {dealers.map(dealer => (
             <div key={dealer.id} className="bg-zinc-200/50 dark:bg-zinc-950/80 border border-zinc-200 dark:border-gray-800 rounded-lg p-6 mb-4">
               <h3 className="text-md font-semibold text-zinc-900 dark:text-white mb-4">{dealer.name}</h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-4">
-                {HOUR_DAY_COLUMNS.map(({ dayType, label }) => (
-                  <DealerDayHoursColumn
-                    key={dayType}
-                    dealerId={dealer.id}
-                    dayType={dayType}
-                    label={label}
-                    setting={getSetting(dealer.id, dayType)}
-                    editingId={editingId}
-                    showAddFor={showAddHoursFor}
-                    onEdit={setEditingId}
-                    onCancelEdit={() => setEditingId(null)}
-                    onDelete={handleDelete}
-                    onShowAdd={() => setShowAddHoursFor({ dealerId: dealer.id, dayType })}
-                    onCancelAdd={() => setShowAddHoursFor(null)}
-                    onCreate={handleCreate}
-                    onUpdate={handleUpdate}
-                  />
-                ))}
-              </div>
+              <DealerWeekHoursRow
+                dealerId={dealer.id}
+                daySettings={(settingsByDealer.get(dealer.id) || []) as DealerHoursSetting[]}
+                saveDealerWeekHours={saveDealerWeekHours}
+                onError={setError}
+                onSuccess={setSuccess}
+              />
               <DealerWeeklyClosedRow
                 dealerId={dealer.id}
                 initialClosedIsoDays={closedDaysByDealer.get(dealer.id) || []}

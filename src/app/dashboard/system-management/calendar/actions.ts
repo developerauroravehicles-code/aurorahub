@@ -167,6 +167,92 @@ export async function deleteCalendarSetting(settingId: string) {
   }
 
   revalidatePath('/dashboard/configuration/calendar')
+  revalidatePath('/dashboard/system-management/calendar')
+  return { success: true }
+}
+
+export type DealerWeekHourPayload = {
+  dayType: string
+  startHour: number
+  endHour: number
+  useDefault: boolean
+}
+
+/** Upsert or clear custom hours for all weekdays in one save (no per-day page reload). */
+export async function saveDealerWeekHours(
+  dealerId: string,
+  days: DealerWeekHourPayload[]
+): Promise<{ success: boolean; error?: string }> {
+  const supabase = await createClient()
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { success: false, error: 'Unauthorized' }
+
+  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+  if (!profile || !['aurora_manager', 'it'].includes(profile.role)) {
+    return { success: false, error: 'Only Aurora Managers or IT can manage calendar settings' }
+  }
+
+  if (!dealerId) return { success: false, error: 'Dealer is required' }
+
+  for (const day of days) {
+    if (!(DEALER_CALENDAR_DAY_TYPES as readonly string[]).includes(day.dayType)) {
+      return { success: false, error: `Invalid day type: ${day.dayType}` }
+    }
+  }
+
+  const { data: existingRows, error: fetchError } = await supabase
+    .from('dealer_calendar_settings')
+    .select('id, day_type')
+    .eq('dealer_id', dealerId)
+
+  if (fetchError) return { success: false, error: fetchError.message }
+
+  const existingByDay = new Map((existingRows ?? []).map(row => [row.day_type, row.id]))
+
+  for (const day of days) {
+    const existingId = existingByDay.get(day.dayType)
+
+    if (day.useDefault) {
+      if (existingId) {
+        const { error } = await supabase.from('dealer_calendar_settings').delete().eq('id', existingId)
+        if (error) return { success: false, error: error.message }
+      }
+      continue
+    }
+
+    if (day.startHour >= day.endHour) {
+      return { success: false, error: `${day.dayType}: start hour must be before end hour` }
+    }
+
+    if (existingId) {
+      const { error } = await supabase
+        .from('dealer_calendar_settings')
+        .update({
+          start_hour: day.startHour,
+          end_hour: day.endHour,
+          slot_interval_minutes: CALENDAR_DEFAULTS.slotIntervalMinutes,
+          appointment_duration_minutes: CALENDAR_DEFAULTS.appointmentDurationMinutes,
+        })
+        .eq('id', existingId)
+      if (error) return { success: false, error: error.message }
+    } else {
+      const { error } = await supabase.from('dealer_calendar_settings').insert({
+        dealer_id: dealerId,
+        day_type: day.dayType,
+        start_hour: day.startHour,
+        end_hour: day.endHour,
+        slot_interval_minutes: CALENDAR_DEFAULTS.slotIntervalMinutes,
+        appointment_duration_minutes: CALENDAR_DEFAULTS.appointmentDurationMinutes,
+      })
+      if (error) return { success: false, error: error.message }
+    }
+  }
+
+  revalidatePath('/dashboard/configuration/calendar')
+  revalidatePath('/dashboard/system-management/calendar')
   return { success: true }
 }
 

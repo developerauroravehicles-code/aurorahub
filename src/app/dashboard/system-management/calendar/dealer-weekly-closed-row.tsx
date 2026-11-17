@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { ISO_WEEKDAY_LABELS } from '@/lib/dealer-calendar-day-type'
 
 type Props = {
@@ -21,6 +22,7 @@ export function DealerWeeklyClosedRow({
   onError,
   onSuccess,
 }: Props) {
+  const router = useRouter()
   const [closed, setClosed] = useState<Set<number>>(() => new Set(initialClosedIsoDays))
   const [saving, setSaving] = useState(false)
 
@@ -41,7 +43,7 @@ export function DealerWeeklyClosedRow({
     setSaving(false)
     if (result.success) {
       onSuccess('Weekly closed days saved.')
-      window.location.reload()
+      router.refresh()
     } else {
       onError(result.error || 'Failed to save weekly closed days.')
     }

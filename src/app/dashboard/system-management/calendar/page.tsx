@@ -3,9 +3,6 @@ import { SystemManagementTabs } from '../system-management-tabs'
 import { SystemManagementTitle } from '../system-management-title'
 import { CalendarManagementContent } from './calendar-management-content'
 import {
-  createCalendarSetting,
-  updateCalendarSetting,
-  deleteCalendarSetting,
   getCalendarBlocksInRange,
   createCalendarBlock,
   createCalendarBlocks,
@@ -20,6 +17,7 @@ import {
   getPlatformSpecialists,
   getDealerWeeklyClosedDays,
   saveDealerWeeklyClosedDays,
+  saveDealerWeekHours,
 } from './actions'
 
 export const dynamic = 'force-dynamic'
@@ -65,13 +63,11 @@ export default async function CalendarManagementPage() {
             weeklyClosedDays={weeklyClosedDays}
             schedulingPools={schedulingPools}
             specialists={specialists}
-            createCalendarSetting={createCalendarSetting}
-            updateCalendarSetting={updateCalendarSetting}
-            deleteCalendarSetting={deleteCalendarSetting}
             createCalendarBlock={createCalendarBlock}
             createCalendarBlocks={createCalendarBlocks}
             deleteCalendarBlock={deleteCalendarBlock}
             saveDealerWeeklyClosedDays={saveDealerWeeklyClosedDays}
+            saveDealerWeekHours={saveDealerWeekHours}
             createSchedulingPool={createSchedulingPool}
             updateSchedulingPool={updateSchedulingPool}
             deleteSchedulingPool={deleteSchedulingPool}
