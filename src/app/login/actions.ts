@@ -1,7 +1,6 @@
 'use server'
 
 import { headers } from 'next/headers'
-import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { logIdentityEvent } from '@/lib/identity-audit'
 import { assertUserCanSignIn, formatLoginAuthError } from '@/lib/user-login-access'
@@ -15,7 +14,7 @@ const loginSchema = z.object({
   password: z.string().min(1, 'Password is required'),
 })
 
-type ActionState = { error?: string } | null
+type ActionState = { error?: string; success?: true } | null
 
 export async function login(prevState: ActionState, formData: FormData) {
   const data = Object.fromEntries(formData)
@@ -108,6 +107,6 @@ export async function login(prevState: ActionState, formData: FormData) {
     userAgent: h.get('user-agent') ?? null,
   })
 
-  redirect('/dashboard')
+  return { success: true }
 }
 

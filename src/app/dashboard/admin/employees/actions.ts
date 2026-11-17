@@ -3,6 +3,11 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { normalizeEmail } from '@/lib/email-normalize'
+import {
+  assertUserCredentialManager,
+  applyAdminUserPassword,
+  normalizeAdminPassword,
+} from '@/lib/identity/admin-user-access'
 
 type UserRole =
   | 'sales'
@@ -38,7 +43,12 @@ export async function createEmployee(prevState: ActionState, formData: FormData)
     }
 
     const email = normalizeEmail(formData.get('email') as string)
-    const password = formData.get('password') as string
+    const passwordRaw = String(formData.get('password') ?? '')
+    const passwordNorm = normalizeAdminPassword(passwordRaw)
+    if ('error' in passwordNorm) {
+      return { error: passwordNorm.error }
+    }
+    const password = passwordNorm.password
     const role = formData.get('role') as string
     const fullName = formData.get('fullName') as string
     const phone = formData.get('phone') as string
@@ -93,6 +103,13 @@ export async function createEmployee(prevState: ActionState, formData: FormData)
         return { error: 'Failed to create profile: ' + profileError.message }
     }
 
+    const passwordApply = await applyAdminUserPassword(supabaseAdmin, user.user.id, password)
+    if (passwordApply.error) {
+      await supabaseAdmin.from('profiles').delete().eq('id', user.user.id)
+      await supabaseAdmin.auth.admin.deleteUser(user.user.id)
+      return { error: 'User created but password could not be set: ' + passwordApply.error }
+    }
+
     revalidatePath('/dashboard/admin/employees')
     return { success: true }
   } catch (error) {
@@ -101,32 +118,12 @@ export async function createEmployee(prevState: ActionState, formData: FormData)
 }
 
 export async function resetEmployeePassword(userId: string, newPassword: string) {
+  const auth = await assertUserCredentialManager()
+  if (auth.error) return { error: auth.error }
+
   const supabaseAdmin = createAdminClient()
-
-  if (!newPassword || newPassword.length < 6) {
-    return { error: 'Password must be at least 6 characters long' }
-  }
-
-  const { error } = await supabaseAdmin.auth.admin.updateUserById(
-    userId,
-    { password: newPassword }
-  )
-
-  if (error) {
-    return { error: error.message }
-  }
-
-  const now = new Date().toISOString()
-  const { getNextPasswordPromptAtAfterChange } = await import('@/lib/password-change/prompt')
-  const nextPromptAt = await getNextPasswordPromptAtAfterChange()
-
-  await supabaseAdmin
-    .from('profiles')
-    .update({
-      password_last_changed_at: now,
-      next_password_prompt_at: nextPromptAt,
-    })
-    .eq('id', userId)
+  const result = await applyAdminUserPassword(supabaseAdmin, userId, newPassword)
+  if (result.error) return { error: result.error }
 
   revalidatePath('/dashboard/admin/employees')
   revalidatePath('/dashboard/identity/users')

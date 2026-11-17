@@ -24,8 +24,8 @@ export default async function IdentityLayout({
     .eq('id', user.id)
     .single()
 
-  // Only IT can access Identity (IT-only section)
-  if (profile?.role !== 'it') {
+  const identityRoles = ['it', 'aurora_manager', 'hr']
+  if (!identityRoles.includes(profile?.role ?? '')) {
     redirect('/dashboard')
   }
 

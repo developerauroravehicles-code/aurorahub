@@ -6,6 +6,11 @@ import type { SystemData, Profile } from '@/types/system-management'
 import { normalizeEmail } from '@/lib/email-normalize'
 import { parseWarrantyYearsFromForm } from '@/lib/warranty-period'
 import { parsePersonnelOrgFields } from '@/lib/hr-org-structure'
+import {
+  applyAdminUserPassword,
+  assertUserCredentialManager,
+  normalizeAdminPassword,
+} from '@/lib/identity/admin-user-access'
 
 // Helper to get a fresh admin client every time with explicit schema
 function getAdminClient() {
@@ -292,13 +297,15 @@ export async function createUser(prevState: ActionState, formData: FormData) {
   if (!formData) return { error: 'Invalid form data received.' }
 
   const email = normalizeEmail(formData.get('email') as string)
-  const password = formData.get('password') as string
+  const passwordNorm = normalizeAdminPassword(String(formData.get('password') ?? ''))
+  if ('error' in passwordNorm) return { error: passwordNorm.error }
+  const password = passwordNorm.password
   const fullName = formData.get('fullName') as string
   const role = formData.get('role') as string
   const dealerCode = formData.get('dealerCode') as string
   const phone = formData.get('phone') as string
 
-  if (!email || !password || !role) return { error: 'Missing required fields' }
+  if (!email || !role) return { error: 'Missing required fields' }
 
   // Resolve dealer before creating auth user
   let dealerId: string | null = null
@@ -362,6 +369,13 @@ export async function createUser(prevState: ActionState, formData: FormData) {
       return { error: 'User created but profile failed: ' + profileError.message }
   }
 
+  const passwordApply = await applyAdminUserPassword(supabaseAdmin, userData.user.id, password)
+  if (passwordApply.error) {
+    await supabaseAdmin.from('profiles').delete().eq('id', userData.user.id)
+    await supabaseAdmin.auth.admin.deleteUser(userData.user.id)
+    return { error: 'User created but password could not be set: ' + passwordApply.error }
+  }
+
   // Sync: Create personnel for platform users (dealer_id null)
   if (dealerId === null) {
     const { data: existing } = await supabaseAdmin
@@ -402,9 +416,9 @@ export async function createLoginForPersonnel(personnelId: string, email: string
   const supabaseAdmin = getAdminClient()
 
   const normalizedEmail = normalizeEmail(email)
-  if (!normalizedEmail || !password || password.length < 6) {
-    return { error: 'Email and password (min 6 characters) are required.' }
-  }
+  const passwordNorm = normalizeAdminPassword(password)
+  if (!normalizedEmail) return { error: 'Email is required.' }
+  if ('error' in passwordNorm) return { error: passwordNorm.error }
 
   const { data: personnel, error: personnelError } = await supabaseAdmin
     .from('personnel')
@@ -419,7 +433,7 @@ export async function createLoginForPersonnel(personnelId: string, email: string
 
   const { data: userData, error: authError } = await supabaseAdmin.auth.admin.createUser({
     email: normalizedEmail,
-    password,
+    password: passwordNorm.password,
     email_confirm: true,
     user_metadata: { full_name: personnel.full_name }
   })
@@ -459,6 +473,17 @@ export async function createLoginForPersonnel(personnelId: string, email: string
     await supabaseAdmin.from('profiles').delete().eq('id', userData.user.id)
     await supabaseAdmin.auth.admin.deleteUser(userData.user.id)
     return { error: 'Failed to link personnel: ' + updateError.message }
+  }
+
+  const passwordApply = await applyAdminUserPassword(supabaseAdmin, userData.user.id, passwordNorm.password)
+  if (passwordApply.error) {
+    await supabaseAdmin
+      .from('personnel')
+      .update({ profile_id: null })
+      .eq('id', personnelId)
+    await supabaseAdmin.from('profiles').delete().eq('id', userData.user.id)
+    await supabaseAdmin.auth.admin.deleteUser(userData.user.id)
+    return { error: 'Login created but password could not be set: ' + passwordApply.error }
   }
 
   revalidatePath('/dashboard/identity/users')
@@ -630,26 +655,11 @@ export async function deleteUser(userId: string) {
   return { success: 'User deleted successfully.' }
 }
 
-async function verifyItOnly() {
-  const { createClient } = await import('@/lib/supabase/server')
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) return { error: 'Unauthorized' as const, userId: null as string | null }
-
-  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
-  if (profile?.role !== 'it') {
-    return { error: 'Only IT can manage login access' as const, userId: null as string | null }
-  }
-  return { error: null, userId: user.id }
-}
-
 export async function setUserLoginAccess(
   userId: string,
   enabled: boolean
 ): Promise<{ error?: string; success?: string }> {
-  const auth = await verifyItOnly()
+  const auth = await assertUserCredentialManager()
   if (auth.error || !auth.userId) return { error: auth.error ?? 'Unauthorized' }
   if (userId === auth.userId && !enabled) {
     return { error: 'You cannot disable your own login.' }

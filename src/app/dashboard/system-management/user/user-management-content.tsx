@@ -12,6 +12,7 @@ import { normalizeEmail } from '@/lib/email-normalize'
 import { OrgStructureFields } from '@/app/dashboard/hr/personnel/org-structure-fields'
 import { orgRoleLabel, type OrgDepartmentTree } from '@/lib/hr-org-structure'
 import { formLabelClassName, formSelectClassName } from '@/lib/form-field-styles'
+import { isUserCredentialManager } from '@/lib/identity/admin-user-access'
 
 const selectClass = formSelectClassName
 const labelClass = formLabelClassName
@@ -457,7 +458,7 @@ function ToggleLoginAccessButton({
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  if (currentUserRole !== 'it') return null
+  if (!isUserCredentialManager(currentUserRole)) return null
 
   async function handleToggle() {
     const enabling = loginDisabled

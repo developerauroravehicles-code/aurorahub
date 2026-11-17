@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useActionState } from 'react'
 import { Eye, EyeOff } from 'lucide-react'
 import { login } from './actions'
@@ -9,6 +9,15 @@ import { EmailInput } from '@/components/email-input'
 export function LoginForm() {
   const [state, formAction, isPending] = useActionState(login, null)
   const [showPassword, setShowPassword] = useState(false)
+  const [redirecting, setRedirecting] = useState(false)
+
+  useEffect(() => {
+    if (state?.success) {
+      setRedirecting(true)
+      // Server Action redirect() with useActionState can leave the UI stuck on "Signing in..."
+      window.location.assign('/dashboard')
+    }
+  }, [state])
 
   return (
     <form action={formAction} className="space-y-5">
@@ -62,10 +71,10 @@ export function LoginForm() {
 
       <button
         type="submit"
-        disabled={isPending}
+        disabled={isPending || redirecting}
         className="mt-6 flex w-full justify-center rounded-md bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-zinc-800 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-900 dark:focus-visible:outline-zinc-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
       >
-        {isPending ? 'Signing in...' : 'Sign In'}
+        {isPending || redirecting ? 'Signing in...' : 'Sign In'}
       </button>
     </form>
   )
