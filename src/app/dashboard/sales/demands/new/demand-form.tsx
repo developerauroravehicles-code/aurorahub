@@ -5,7 +5,12 @@ import { useRouter } from 'next/navigation'
 import { CheckCircle, Printer } from 'lucide-react'
 import { createDemand, type CreateDemandState } from './actions'
 import { getDealerBlocksForDate, getPoolSlotContext } from '@/app/dashboard/system-management/calendar/actions'
-import { getGlobalSlotMinutes, getSlotMinutesFromConfig, CALENDAR_DEFAULTS } from '@/lib/calendar-defaults'
+import {
+  CALENDAR_DEFAULTS,
+  dealerCalendarRowToSlotConfig,
+  getGlobalSlotMinutes,
+  getSlotMinutesFromConfig,
+} from '@/lib/calendar-defaults'
 import { countOverlapsAtSlot } from '@/lib/scheduling-pool'
 import { formatInTimeZone, toDate } from 'date-fns-tz'
 import { SYSTEM_DEFAULT_TIMEZONE } from '@/lib/timezone-defaults'
@@ -127,12 +132,7 @@ export function DemandForm({
     }
     const setting = resolveCalendarSettingForIsoDow(calendarSettings, isoDow)
     const slotMinutes = setting
-      ? getSlotMinutesFromConfig({
-          startHour: setting.start_hour,
-          endHour: setting.end_hour,
-          slotIntervalMinutes: setting.slot_interval_minutes,
-          appointmentDurationMinutes: setting.appointment_duration_minutes,
-        })
+      ? getSlotMinutesFromConfig(dealerCalendarRowToSlotConfig(setting))
       : getGlobalSlotMinutes()
     const nowMs = systemNow.getTime()
     const slots: string[] = []

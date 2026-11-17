@@ -9,7 +9,12 @@ import {
   getDealerBlocksForDate,
   getPoolSlotContext,
 } from '@/app/dashboard/system-management/calendar/actions'
-import { CALENDAR_DEFAULTS, getGlobalSlotMinutes, getSlotMinutesFromConfig } from '@/lib/calendar-defaults'
+import {
+  CALENDAR_DEFAULTS,
+  dealerCalendarRowToSlotConfig,
+  getGlobalSlotMinutes,
+  getSlotMinutesFromConfig,
+} from '@/lib/calendar-defaults'
 import { countOverlapsAtSlot } from '@/lib/scheduling-pool'
 import { pad2 } from '@/lib/calendar-wall-date'
 import {
@@ -92,12 +97,7 @@ export function ServiceAppointmentScheduler({
     }
     const setting = resolveCalendarSettingForIsoDow(calendarSettings, isoDow)
     const slotMinutes = setting
-      ? getSlotMinutesFromConfig({
-          startHour: setting.start_hour,
-          endHour: setting.end_hour,
-          slotIntervalMinutes: setting.slot_interval_minutes,
-          appointmentDurationMinutes: setting.appointment_duration_minutes,
-        })
+      ? getSlotMinutesFromConfig(dealerCalendarRowToSlotConfig(setting))
       : getGlobalSlotMinutes()
     const nowMs = systemNow.getTime()
     const slots: string[] = []

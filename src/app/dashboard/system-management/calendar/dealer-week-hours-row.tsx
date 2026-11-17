@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { CALENDAR_DEFAULTS } from '@/lib/calendar-defaults'
+import { formatHm } from '@/lib/calendar-wall-time'
 import {
   DEALER_CALENDAR_DAY_TYPES,
   ISO_WEEKDAY_LABELS,
@@ -11,14 +12,18 @@ import {
 import type { DealerWeekHourPayload } from './actions'
 import type { DealerHoursSetting } from './dealer-day-hours-column'
 
-const DEFAULT_START = CALENDAR_DEFAULTS.startHour
-const DEFAULT_END = CALENDAR_DEFAULTS.endHour
+const DEFAULT_START_H = CALENDAR_DEFAULTS.startHour
+const DEFAULT_START_M = CALENDAR_DEFAULTS.startMinute
+const DEFAULT_END_H = CALENDAR_DEFAULTS.endHour
+const DEFAULT_END_M = CALENDAR_DEFAULTS.endMinute
 
 type DayDraft = {
   dayType: DealerCalendarDayType
   label: string
   startHour: number
+  startMinute: number
   endHour: number
+  endMinute: number
   useDefault: boolean
 }
 
@@ -41,8 +46,10 @@ function buildDrafts(daySettings: DealerHoursSetting[]): DayDraft[] {
     return {
       dayType,
       label: ISO_WEEKDAY_LABELS[i]?.label ?? dayType,
-      startHour: setting?.start_hour ?? DEFAULT_START,
-      endHour: setting?.end_hour ?? DEFAULT_END,
+      startHour: setting?.start_hour ?? DEFAULT_START_H,
+      startMinute: setting?.start_minute ?? DEFAULT_START_M,
+      endHour: setting?.end_hour ?? DEFAULT_END_H,
+      endMinute: setting?.end_minute ?? DEFAULT_END_M,
       useDefault: !setting,
     }
   })
@@ -68,7 +75,13 @@ export function DealerWeekHoursRow({
 }: Props) {
   const router = useRouter()
   const settingsSignature = useMemo(
-    () => daySettings.map(s => `${s.day_type}:${s.start_hour}-${s.end_hour}`).join('|'),
+    () =>
+      daySettings
+        .map(
+          s =>
+            `${s.day_type}:${s.start_hour}:${s.start_minute ?? 0}-${s.end_hour}:${s.end_minute ?? 0}`
+        )
+        .join('|'),
     [daySettings]
   )
   const [days, setDays] = useState<DayDraft[]>(() => buildDrafts(daySettings))
@@ -78,21 +91,41 @@ export function DealerWeekHoursRow({
     setDays(buildDrafts(daySettings))
   }, [dealerId, settingsSignature])
 
-  const updateDay = (index: number, patch: Partial<Pick<DayDraft, 'startHour' | 'endHour' | 'useDefault'>>) => {
+  const updateDay = (
+    index: number,
+    patch: Partial<Pick<DayDraft, 'startHour' | 'startMinute' | 'endHour' | 'endMinute' | 'useDefault'>>
+  ) => {
     setDays(prev =>
       prev.map((row, i) => {
         if (i !== index) return row
         const next = { ...row, ...patch }
-        if (patch.startHour !== undefined || patch.endHour !== undefined) {
+        if (
+          patch.startHour !== undefined ||
+          patch.startMinute !== undefined ||
+          patch.endHour !== undefined ||
+          patch.endMinute !== undefined
+        ) {
           next.useDefault = false
         }
         if (patch.useDefault === true) {
-          next.startHour = DEFAULT_START
-          next.endHour = DEFAULT_END
+          next.startHour = DEFAULT_START_H
+          next.startMinute = DEFAULT_START_M
+          next.endHour = DEFAULT_END_H
+          next.endMinute = DEFAULT_END_M
         }
         return next
       })
     )
+  }
+
+  const applyTime = (index: number, field: 'start' | 'end', value: string) => {
+    const [h, m] = value.split(':').map(Number)
+    if (!Number.isFinite(h) || !Number.isFinite(m)) return
+    if (field === 'start') {
+      updateDay(index, { startHour: h, startMinute: m })
+    } else {
+      updateDay(index, { endHour: h, endMinute: m })
+    }
   }
 
   const handleSave = async () => {
@@ -102,7 +135,9 @@ export function DealerWeekHoursRow({
     const payload: DealerWeekHourPayload[] = days.map(d => ({
       dayType: d.dayType,
       startHour: d.startHour,
+      startMinute: d.startMinute,
       endHour: d.endHour,
+      endMinute: d.endMinute,
       useDefault: d.useDefault,
     }))
     const result = await saveDealerWeekHours(dealerId, payload)
@@ -122,32 +157,34 @@ export function DealerWeekHoursRow({
           <div key={day.dayType} className="bg-zinc-100/90 dark:bg-black/30 rounded-lg p-4">
             <p className="text-sm font-medium text-zinc-600 dark:text-gray-300 mb-3">{day.label}</p>
             {day.useDefault ? (
-              <p className="text-zinc-500 dark:text-gray-500 text-xs mb-2">Default 09:00–16:30</p>
+              <p className="text-zinc-500 dark:text-gray-500 text-xs mb-2">
+                Default {formatHm(DEFAULT_START_H, DEFAULT_START_M)}–{formatHm(DEFAULT_END_H, DEFAULT_END_M)}
+              </p>
             ) : (
-              <p className="text-xs text-[#C27E00] mb-2">Custom hours</p>
+              <p className="text-xs text-[#C27E00] mb-2">
+                {formatHm(day.startHour, day.startMinute)} – {formatHm(day.endHour, day.endMinute)}
+              </p>
             )}
             <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <label className="text-xs text-zinc-500 dark:text-gray-400 shrink-0">Start</label>
+              <div>
+                <label className="block text-xs text-zinc-500 dark:text-gray-400 mb-1">Start</label>
                 <input
-                  type="number"
-                  min={0}
-                  max={23}
-                  value={day.startHour}
+                  type="time"
+                  step={60}
+                  value={formatHm(day.startHour, day.startMinute)}
                   disabled={day.useDefault}
-                  onChange={e => updateDay(index, { startHour: parseInt(e.target.value, 10) || 0 })}
+                  onChange={e => applyTime(index, 'start', e.target.value)}
                   className="w-full border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 text-zinc-900 dark:text-white rounded px-2 py-1.5 text-sm disabled:opacity-60"
                 />
               </div>
-              <div className="flex items-center gap-2">
-                <label className="text-xs text-zinc-500 dark:text-gray-400 shrink-0">End</label>
+              <div>
+                <label className="block text-xs text-zinc-500 dark:text-gray-400 mb-1">End</label>
                 <input
-                  type="number"
-                  min={0}
-                  max={23}
-                  value={day.endHour}
+                  type="time"
+                  step={60}
+                  value={formatHm(day.endHour, day.endMinute)}
                   disabled={day.useDefault}
-                  onChange={e => updateDay(index, { endHour: parseInt(e.target.value, 10) || 0 })}
+                  onChange={e => applyTime(index, 'end', e.target.value)}
                   className="w-full border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 text-zinc-900 dark:text-white rounded px-2 py-1.5 text-sm disabled:opacity-60"
                 />
               </div>

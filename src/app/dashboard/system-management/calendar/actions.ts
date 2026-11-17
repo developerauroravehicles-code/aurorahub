@@ -6,7 +6,8 @@ import { getISODay } from 'date-fns'
 import { formatInTimeZone, toDate } from 'date-fns-tz'
 import { SYSTEM_DEFAULT_TIMEZONE } from '@/lib/timezone-defaults'
 import { pad2 } from '@/lib/calendar-wall-date'
-import { getSlotMinutesFromConfig, CALENDAR_DEFAULTS } from '@/lib/calendar-defaults'
+import { dealerCalendarRowToSlotConfig, getSlotMinutesFromConfig, CALENDAR_DEFAULTS } from '@/lib/calendar-defaults'
+import { wallTimeToMinutes } from '@/lib/calendar-wall-time'
 import {
   countOverlapsAtSlot,
   getDemandsInPoolForDay,
@@ -79,7 +80,9 @@ export async function createCalendarSetting(formData: FormData) {
       dealer_id: dealerId,
       day_type: dayType,
       start_hour: startHour,
+      start_minute: 0,
       end_hour: endHour,
+      end_minute: 0,
       slot_interval_minutes: slotIntervalMinutes,
       appointment_duration_minutes: appointmentDurationMinutes
     })
@@ -124,7 +127,9 @@ export async function updateCalendarSetting(
     .from('dealer_calendar_settings')
     .update({
       start_hour: startHour,
+      start_minute: 0,
       end_hour: endHour,
+      end_minute: 0,
       slot_interval_minutes: slotIntervalMinutes,
       appointment_duration_minutes: appointmentDurationMinutes
     })
@@ -174,7 +179,9 @@ export async function deleteCalendarSetting(settingId: string) {
 export type DealerWeekHourPayload = {
   dayType: string
   startHour: number
+  startMinute: number
   endHour: number
+  endMinute: number
   useDefault: boolean
 }
 
@@ -223,8 +230,10 @@ export async function saveDealerWeekHours(
       continue
     }
 
-    if (day.startHour >= day.endHour) {
-      return { success: false, error: `${day.dayType}: start hour must be before end hour` }
+    const startTotal = wallTimeToMinutes(day.startHour, day.startMinute)
+    const endTotal = wallTimeToMinutes(day.endHour, day.endMinute)
+    if (startTotal >= endTotal) {
+      return { success: false, error: `${day.dayType}: start time must be before end time` }
     }
 
     if (existingId) {
@@ -232,7 +241,9 @@ export async function saveDealerWeekHours(
         .from('dealer_calendar_settings')
         .update({
           start_hour: day.startHour,
+          start_minute: day.startMinute,
           end_hour: day.endHour,
+          end_minute: day.endMinute,
           slot_interval_minutes: CALENDAR_DEFAULTS.slotIntervalMinutes,
           appointment_duration_minutes: CALENDAR_DEFAULTS.appointmentDurationMinutes,
         })
@@ -243,7 +254,9 @@ export async function saveDealerWeekHours(
         dealer_id: dealerId,
         day_type: day.dayType,
         start_hour: day.startHour,
+        start_minute: day.startMinute,
         end_hour: day.endHour,
+        end_minute: day.endMinute,
         slot_interval_minutes: CALENDAR_DEFAULTS.slotIntervalMinutes,
         appointment_duration_minutes: CALENDAR_DEFAULTS.appointmentDurationMinutes,
       })
@@ -347,7 +360,9 @@ export async function getDealerBlocksForDate(dealerId: string, dateStr: string):
 export type CalendarSetting = {
   day_type: string
   start_hour: number
+  start_minute?: number | null
   end_hour: number
+  end_minute?: number | null
   slot_interval_minutes: number
   appointment_duration_minutes: number
 }
@@ -359,7 +374,7 @@ export async function getCalendarSettingsForDealer(dealerId: string) {
   const [{ data: settingsRows }, { data: closedRows }] = await Promise.all([
     supabase
       .from('dealer_calendar_settings')
-      .select('day_type, start_hour, end_hour, slot_interval_minutes, appointment_duration_minutes')
+      .select('day_type, start_hour, start_minute, end_hour, end_minute, slot_interval_minutes, appointment_duration_minutes')
       .eq('dealer_id', dealerId),
     supabase.from('dealer_weekly_closed_days').select('iso_dow').eq('dealer_id', dealerId),
   ])
@@ -541,7 +556,7 @@ export async function validateAppointmentSlot(
 
   const { data: settingsRows } = await supabase
     .from('dealer_calendar_settings')
-    .select('day_type, start_hour, end_hour, slot_interval_minutes, appointment_duration_minutes')
+    .select('day_type, start_hour, start_minute, end_hour, end_minute, slot_interval_minutes, appointment_duration_minutes')
     .eq('dealer_id', dealerId)
   const settings = resolveCalendarSettingForIsoDow(
     buildCalendarSettingsMap((settingsRows || []) as CalendarSetting[]),
@@ -549,16 +564,11 @@ export async function validateAppointmentSlot(
   )
 
   const slotStarts = settings
-    ? getSlotMinutesFromConfig({
-        startHour: settings.start_hour,
-        endHour: settings.end_hour,
-        slotIntervalMinutes: settings.slot_interval_minutes,
-        appointmentDurationMinutes: settings.appointment_duration_minutes,
-      })
+    ? getSlotMinutesFromConfig(dealerCalendarRowToSlotConfig(settings))
     : getDefaultSlotMinutes()
   const durationUsed = settings?.appointment_duration_minutes ?? CALENDAR_DEFAULTS.appointmentDurationMinutes
   const lastAllowedEnd = settings
-    ? settings.end_hour * 60
+    ? wallTimeToMinutes(settings.end_hour, settings.end_minute ?? 0)
     : CALENDAR_DEFAULTS.endHour * 60 + CALENDAR_DEFAULTS.endMinute
 
   if (!slotStarts.includes(startMinutes)) {
@@ -640,7 +650,7 @@ export async function getAvailableSlotsForEdit(
 
   const { data: settingsRows } = await supabase
     .from('dealer_calendar_settings')
-    .select('day_type, start_hour, end_hour, slot_interval_minutes, appointment_duration_minutes')
+    .select('day_type, start_hour, start_minute, end_hour, end_minute, slot_interval_minutes, appointment_duration_minutes')
     .eq('dealer_id', dealerId)
   const settings = resolveCalendarSettingForIsoDow(
     buildCalendarSettingsMap((settingsRows || []) as CalendarSetting[]),
@@ -648,12 +658,7 @@ export async function getAvailableSlotsForEdit(
   )
 
   const slotMinutes = settings
-    ? getSlotMinutesFromConfig({
-        startHour: settings.start_hour,
-        endHour: settings.end_hour,
-        slotIntervalMinutes: settings.slot_interval_minutes,
-        appointmentDurationMinutes: settings.appointment_duration_minutes,
-      })
+    ? getSlotMinutesFromConfig(dealerCalendarRowToSlotConfig(settings))
     : getDefaultSlotMinutes()
   const duration = settings?.appointment_duration_minutes ?? CALENDAR_DEFAULTS.appointmentDurationMinutes
 

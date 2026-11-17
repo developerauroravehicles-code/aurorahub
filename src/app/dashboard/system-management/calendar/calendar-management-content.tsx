@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { Trash2, CalendarX2, Clock } from 'lucide-react'
-import { getGlobalSlotMinutes, getSlotMinutesFromConfig, CALENDAR_DEFAULTS } from '@/lib/calendar-defaults'
+import { dealerCalendarRowToSlotConfig, getGlobalSlotMinutes, getSlotMinutesFromConfig, CALENDAR_DEFAULTS } from '@/lib/calendar-defaults'
 import { SchedulingPoolsPanel } from './scheduling-pools-panel'
 import type { DealerHoursSetting } from './dealer-day-hours-column'
 import { DealerWeekHoursRow } from './dealer-week-hours-row'
@@ -112,12 +112,7 @@ function getSlotsForDealerDate(
   )
   const resolved = resolveCalendarSettingForIsoDow(settingsMap, isoDow)
   const slotMinutes = resolved
-    ? getSlotMinutesFromConfig({
-        startHour: resolved.start_hour,
-        endHour: resolved.end_hour,
-        slotIntervalMinutes: resolved.slot_interval_minutes,
-        appointmentDurationMinutes: resolved.appointment_duration_minutes,
-      })
+    ? getSlotMinutesFromConfig(dealerCalendarRowToSlotConfig(resolved))
     : getGlobalSlotMinutes()
   const duration = resolved?.appointment_duration_minutes ?? CALENDAR_DEFAULTS.appointmentDurationMinutes
   return slotMinutes.map(start_minutes => ({
@@ -298,7 +293,7 @@ export function CalendarManagementContent({
           Dealer hours
         </h2>
         <p className="text-sm text-zinc-500 dark:text-gray-400 mb-4">
-          Set start and end for all days, then click <strong>Save hours</strong> once. Use weekly closed days below to block appointments on specific weekdays. Default 09:00–16:30 applies when a day uses default hours.
+          Set start and end (hours and minutes) for all days, then click <strong>Save hours</strong> once — e.g. end at 19:30. Default 09:00–16:30 applies when a day uses default hours.
         </p>
         {dealers.map(dealer => (
             <div key={dealer.id} className="bg-zinc-200/50 dark:bg-zinc-950/80 border border-zinc-200 dark:border-gray-800 rounded-lg p-6 mb-4">

@@ -24,7 +24,9 @@ export type DealerCalendarDayType = (typeof DEALER_CALENDAR_DAY_TYPES)[number]
 export type DealerCalendarSettingRow = {
   day_type: string
   start_hour: number
+  start_minute?: number | null
   end_hour: number
+  end_minute?: number | null
   slot_interval_minutes: number
   appointment_duration_minutes: number
 }

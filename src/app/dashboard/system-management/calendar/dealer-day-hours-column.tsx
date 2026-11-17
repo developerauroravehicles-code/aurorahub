@@ -9,7 +9,9 @@ export type DealerHoursSetting = {
   dealer_id: string
   day_type: DealerCalendarDayType
   start_hour: number
+  start_minute?: number | null
   end_hour: number
+  end_minute?: number | null
   slot_interval_minutes: number
   appointment_duration_minutes: number
 }

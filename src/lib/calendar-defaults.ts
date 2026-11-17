@@ -43,10 +43,31 @@ export function getGlobalSlotMinutes(): number[] {
 
 export interface SlotConfig {
   startHour: number
+  startMinute?: number
   endHour: number
   endMinute?: number
   slotIntervalMinutes: number
   appointmentDurationMinutes: number
+}
+
+export type DealerCalendarHoursRow = {
+  start_hour: number
+  end_hour: number
+  start_minute?: number | null
+  end_minute?: number | null
+  slot_interval_minutes: number
+  appointment_duration_minutes: number
+}
+
+export function dealerCalendarRowToSlotConfig(row: DealerCalendarHoursRow): SlotConfig {
+  return {
+    startHour: row.start_hour,
+    startMinute: row.start_minute ?? 0,
+    endHour: row.end_hour,
+    endMinute: row.end_minute ?? 0,
+    slotIntervalMinutes: row.slot_interval_minutes,
+    appointmentDurationMinutes: row.appointment_duration_minutes,
+  }
 }
 
 /**
@@ -54,11 +75,12 @@ export interface SlotConfig {
  * Used when dealer has custom hours (dealer_calendar_settings).
  */
 export function getSlotMinutesFromConfig(config: SlotConfig): number[] {
+  const startMin = config.startMinute ?? 0
   const endMin = config.endMinute ?? 0
   const endMinutes = config.endHour * 60 + endMin
   const lastStartMinutes = endMinutes - config.appointmentDurationMinutes
   const slots: number[] = []
-  let current = config.startHour * 60
+  let current = config.startHour * 60 + startMin
   while (current <= lastStartMinutes) {
     slots.push(current)
     current += config.slotIntervalMinutes

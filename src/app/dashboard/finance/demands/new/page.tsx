@@ -37,7 +37,7 @@ export default async function FinanceNewDemandPage() {
       const [{ data: settings }, { data: closedDays }] = await Promise.all([
         supabase
           .from('dealer_calendar_settings')
-          .select('day_type, start_hour, end_hour, slot_interval_minutes, appointment_duration_minutes')
+          .select('day_type, start_hour, start_minute, end_hour, end_minute, slot_interval_minutes, appointment_duration_minutes')
           .eq('dealer_id', profile.dealer_id),
         supabase.from('dealer_weekly_closed_days').select('iso_dow').eq('dealer_id', profile.dealer_id),
       ])
