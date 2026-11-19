@@ -7,29 +7,33 @@ import { createClient } from '@/lib/supabase/server'
  */
 export async function getDuplicateStockNumbers(dealerId?: string | null): Promise<Set<string>> {
   const supabase = await createClient()
-  let query = supabase
-    .from('demands')
-    .select('stock_number')
-    .neq('status', 'cancelled')
-    .not('stock_number', 'is', null)
+  const { data, error } = await supabase.rpc('duplicate_stock_numbers', {
+    p_dealer_id: dealerId ?? null,
+  })
 
-  if (dealerId) {
-    query = query.eq('dealer_id', dealerId)
+  if (error) {
+    // Fallback if migration not applied yet
+    let query = supabase
+      .from('demands')
+      .select('stock_number')
+      .neq('status', 'cancelled')
+      .not('stock_number', 'is', null)
+    if (dealerId) query = query.eq('dealer_id', dealerId)
+    const { data: rows } = await query
+    const byStock = new Map<string, number>()
+    for (const row of rows ?? []) {
+      const sn = (row.stock_number as string)?.trim().toUpperCase()
+      if (!sn) continue
+      byStock.set(sn, (byStock.get(sn) ?? 0) + 1)
+    }
+    const duplicates = new Set<string>()
+    for (const [stock, count] of byStock) {
+      if (count >= 2) duplicates.add(stock)
+    }
+    return duplicates
   }
 
-  const { data } = await query
-
-  const byStock = new Map<string, number>()
-  for (const row of data ?? []) {
-    const sn = (row.stock_number as string)?.trim().toUpperCase()
-    if (!sn) continue
-    byStock.set(sn, (byStock.get(sn) ?? 0) + 1)
-  }
-  const duplicates = new Set<string>()
-  for (const [stock, count] of byStock) {
-    if (count >= 2) duplicates.add(stock)
-  }
-  return duplicates
+  return new Set((data ?? []).map((s: string) => s.trim().toUpperCase()).filter(Boolean))
 }
 
 /**

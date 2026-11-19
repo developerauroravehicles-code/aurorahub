@@ -7,23 +7,26 @@ export const dynamic = 'force-dynamic'
 export default async function MonitoringPage() {
   const supabase = await createClient()
   const admin = createAdminClient()
-  const [profilesRes, demandsRes, demandsByStatus, smsLogsRes, mailLogsRes, dealersRes] = await Promise.all([
+  const [profilesRes, demandsRes, statusCountsRow, smsLogsRes, mailLogsRes, dealersRes] = await Promise.all([
     admin.from('profiles').select('id', { count: 'exact', head: true }),
     admin.from('demands').select('id', { count: 'exact', head: true }),
-    admin.from('demands').select('status'),
+    admin.rpc('demand_status_counts'),
     admin.from('sms_logs').select('id', { count: 'exact', head: true }),
     admin.from('mail_logs').select('id', { count: 'exact', head: true }),
     admin.from('dealers').select('id', { count: 'exact', head: true }),
   ])
 
-  const demands = demandsByStatus.data ?? []
-  const statusCounts = demands.reduce(
-    (acc, d) => {
-      acc[d.status] = (acc[d.status] ?? 0) + 1
-      return acc
-    },
-    {} as Record<string, number>
-  )
+  let statusCounts = (statusCountsRow.data ?? {}) as Record<string, number>
+  if (statusCountsRow.error || Object.keys(statusCounts).length === 0) {
+    const { data: rows } = await admin.from('demands').select('status')
+    statusCounts = (rows ?? []).reduce(
+      (acc, d) => {
+        acc[d.status] = (acc[d.status] ?? 0) + 1
+        return acc
+      },
+      {} as Record<string, number>
+    )
+  }
 
   return (
     <div className="space-y-8">

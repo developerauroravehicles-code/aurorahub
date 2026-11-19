@@ -840,7 +840,6 @@ export default async function DashboardPage({
     const [
       dealersCountRes,
       specialistsCountRes,
-      cameraRowsRes,
       recentDemandsRes,
       overviewData,
       inventoryStock,
@@ -848,7 +847,6 @@ export default async function DashboardPage({
     ] = await Promise.all([
       supabase.from('dealers').select('*', { count: 'exact', head: true }),
       supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('role', 'specialist'),
-      supabase.from('demands').select('camera_model'),
       supabase
         .from('demands')
         .select(
@@ -919,7 +917,7 @@ export default async function DashboardPage({
           barcodeModeEnabled={barcodeModeEnabled}
         />
 
-        <CameraDistribution items={getCameraDistribution(cameraRowsRes.data ?? [])} />
+        <CameraDistribution items={overviewData.cameraDistribution} />
 
         {/* Demand Overview with Pie Chart */}
         <div id="demand-overview">

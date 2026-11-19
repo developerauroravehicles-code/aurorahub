@@ -92,6 +92,13 @@ export default async function InvoicesPage({
   ) {
     const { start, end } = getDateRangeInTimezone(startDateParam, endDateParam, SYSTEM_DEFAULT_TIMEZONE)
     query = query.gte('completed_at', start).lte('completed_at', end)
+  } else {
+    const now = new Date()
+    const y = now.getFullYear()
+    const m = now.getMonth()
+    const rangeStart = fromZonedTime(new Date(y, m - 2, 1, 0, 0, 0, 0), SYSTEM_DEFAULT_TIMEZONE).toISOString()
+    const rangeEnd = fromZonedTime(new Date(y, m + 1, 0, 23, 59, 59, 999), SYSTEM_DEFAULT_TIMEZONE).toISOString()
+    query = query.gte('completed_at', rangeStart).lte('completed_at', rangeEnd)
   }
 
   const searchParam = params.search?.trim()

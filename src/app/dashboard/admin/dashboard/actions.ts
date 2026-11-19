@@ -71,7 +71,7 @@ export async function createManagerNote(
     })
 
   if (error) return { error: error.message }
-  revalidatePath('/dashboard')
+  revalidatePath('/dashboard', 'page')
   return {}
 }
 
@@ -106,7 +106,7 @@ export async function updateManagerNote(
     .eq('id', id)
 
   if (error) return { error: error.message }
-  revalidatePath('/dashboard')
+  revalidatePath('/dashboard', 'page')
   return {}
 }
 
@@ -131,7 +131,7 @@ export async function deleteManagerNote(id: string): Promise<{ error?: string }>
     .eq('id', id)
 
   if (error) return { error: error.message }
-  revalidatePath('/dashboard')
+  revalidatePath('/dashboard', 'page')
   return {}
 }
 
@@ -258,6 +258,7 @@ export type EmployeeRoleCounts = {
 
 export type MonthlyDemandTrend = { month: string; demands: number; completed: number }[]
 export type DealerDemandCount = { dealerName: string; total: number; completed: number }[]
+export type CameraDistributionItem = { model: string; count: number }
 
 export type FinanceSummary = {
   totalInvoiced: number
@@ -275,6 +276,7 @@ export async function getDashboardOverviewData(financeMonth?: string | null): Pr
   monthlyTrend: MonthlyDemandTrend
   dealerDemands: DealerDemandCount
   financeSummary: FinanceSummary
+  cameraDistribution: CameraDistributionItem[]
   error?: string
 }> {
   const supabase = await createClient()
@@ -293,7 +295,8 @@ export async function getDashboardOverviewData(financeMonth?: string | null): Pr
     employeeRoleCounts: { sales: 0, finance: 0, specialist: 0, aurora_manager: 0 },
     monthlyTrend: [] as MonthlyDemandTrend,
     dealerDemands: [] as DealerDemandCount,
-    financeSummary: emptyFinance
+    financeSummary: emptyFinance,
+    cameraDistribution: [] as CameraDistributionItem[],
   }
   if (!user) return { ...empty, error: 'Unauthorized' }
 
@@ -307,112 +310,97 @@ export async function getDashboardOverviewData(financeMonth?: string | null): Pr
     return { ...empty, error: 'Unauthorized' }
   }
 
-  const thirtyDaysAgo = new Date()
-  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
-  const from30 = thirtyDaysAgo.toISOString()
+  type DashboardAgg = {
+    pending_finance?: number
+    approved?: number
+    completed?: number
+    cancelled?: number
+    invoice_waiting?: number
+    invoice_edited?: number
+    invoice_downloaded?: number
+    invoice_drive?: number
+    incomplete_invoices?: InvoiceSummary['incompleteList']
+    statement_30d_total?: number
+    statement_30d_dealers?: number
+    monthly_trend?: MonthlyDemandTrend
+    dealer_demands?: DealerDemandCount
+    camera_distribution?: CameraDistributionItem[]
+  }
 
-  const [{ data: demands }, { data: employees }] = await Promise.all([
-    supabase
-      .from('demands')
-      .select(
-        'id, status, demand_number, dealer_id, created_at, completed_at, updated_at, invoice_saved_at, invoice_downloaded_at, invoice_drive_uploaded_at, invoice_total_amount, invoice_financial_summary, invoice_extra_rows, dealers(name)'
-      ),
-    supabase.from('profiles').select('role').neq('role', 'general_manager'),
+  const [{ data: aggRow, error: aggError }, roleCounts] = await Promise.all([
+    supabase.rpc('aurora_manager_dashboard_aggregates'),
+    Promise.all(
+      (['sales', 'finance', 'specialist', 'aurora_manager'] as const).map(async (role) => {
+        const { count } = await supabase
+          .from('profiles')
+          .select('id', { count: 'exact', head: true })
+          .eq('role', role)
+        return [role, count ?? 0] as const
+      })
+    ),
   ])
-  const demandsList = demands ?? []
+
+  const agg = (aggRow ?? {}) as DashboardAgg
+
+  if (aggError) {
+    console.error('aurora_manager_dashboard_aggregates:', aggError.message)
+  }
 
   const demandCounts: DemandCounts = {
-    pending_finance: demandsList.filter(d => d.status === 'pending_finance').length,
-    approved: demandsList.filter(d => d.status === 'approved').length,
-    completed: demandsList.filter(d => d.status === 'completed').length,
-    cancelled: demandsList.filter(d => d.status === 'cancelled').length
+    pending_finance: agg.pending_finance ?? 0,
+    approved: agg.approved ?? 0,
+    completed: agg.completed ?? 0,
+    cancelled: agg.cancelled ?? 0,
   }
 
-  const completedDemands = demandsList.filter(d => d.status === 'completed')
-  let waiting = 0
-  let edited = 0
-  let downloaded = 0
-  let drive = 0
-  const incompleteList: InvoiceSummary['incompleteList'] = []
-
-  for (const d of completedDemands) {
-    const hasDrive = !!d.invoice_drive_uploaded_at
-    const hasDownloaded = !!d.invoice_downloaded_at
-    const hasSaved = !!(d.invoice_saved_at ?? d.invoice_total_amount)
-
-    if (hasDrive) drive++
-    else if (hasDownloaded) downloaded++
-    else if (hasSaved) edited++
-    else waiting++
-
-    if (!hasDrive) {
-      const dealer = d.dealers as { name?: string } | { name?: string }[] | null
-      const dealerName = (Array.isArray(dealer) ? dealer[0]?.name : dealer?.name) ?? 'Unknown'
-      incompleteList.push({
-        id: d.id,
-        demand_number: (d as { demand_number?: number }).demand_number?.toString() ?? null,
-        dealerName
-      })
-    }
-  }
-
-  const recentCompleted = completedDemands.filter(d => {
-    const completedAt = (d as { completed_at?: string }).completed_at ?? (d as { updated_at?: string }).updated_at
-    return completedAt && new Date(completedAt) >= thirtyDaysAgo
-  })
-  const dealerIds = new Set(recentCompleted.map(d => d.dealer_id))
+  const incompleteList = (agg.incomplete_invoices ?? []).map((row) => ({
+    id: row.id,
+    demand_number: row.demand_number != null ? String(row.demand_number) : null,
+    dealerName:
+      row.dealerName ??
+      (row as { dealer_name?: string }).dealer_name ??
+      'Unknown',
+  }))
 
   const employeeRoleCounts: EmployeeRoleCounts = {
-    sales: employees?.filter(e => e.role === 'sales').length ?? 0,
-    finance: employees?.filter(e => e.role === 'finance').length ?? 0,
-    specialist: employees?.filter(e => e.role === 'specialist').length ?? 0,
-    aurora_manager: employees?.filter(e => e.role === 'aurora_manager').length ?? 0
+    sales: roleCounts.find(([r]) => r === 'sales')?.[1] ?? 0,
+    finance: roleCounts.find(([r]) => r === 'finance')?.[1] ?? 0,
+    specialist: roleCounts.find(([r]) => r === 'specialist')?.[1] ?? 0,
+    aurora_manager: roleCounts.find(([r]) => r === 'aurora_manager')?.[1] ?? 0,
   }
 
-  // Monthly demand trend (last 6 months)
-  const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-  const now = new Date()
-  const monthlyTrend: MonthlyDemandTrend = []
-  for (let i = 5; i >= 0; i--) {
-    const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
-    const start = d.toISOString()
-    const end = new Date(d.getFullYear(), d.getMonth() + 1, 0, 23, 59, 59).toISOString()
-    const inMonth = demandsList.filter(dd => {
-      const created = (dd as { created_at?: string }).created_at
-      return created && created >= start && created <= end
-    })
-    const completedInMonth = inMonth.filter(dd => dd.status === 'completed')
-    monthlyTrend.push({
-      month: `${monthNames[d.getMonth()]} ${d.getFullYear()}`,
-      demands: inMonth.length,
-      completed: completedInMonth.length
-    })
-  }
+  const monthlyTrend: MonthlyDemandTrend = (agg.monthly_trend ?? []).map((m) => ({
+    month: m.month,
+    demands: m.demands,
+    completed: m.completed,
+  }))
 
-  // Dealer demand counts (top 8 dealers)
-  const dealerMap = new Map<string, { total: number; completed: number }>()
-  for (const d of demandsList) {
-    const dealer = d.dealers as { name?: string } | { name?: string }[] | null
-    const name = (Array.isArray(dealer) ? dealer[0]?.name : dealer?.name) ?? 'Unknown'
-    const cur = dealerMap.get(name) ?? { total: 0, completed: 0 }
-    cur.total++
-    if (d.status === 'completed') cur.completed++
-    dealerMap.set(name, cur)
-  }
-  const dealerDemands: DealerDemandCount = Array.from(dealerMap.entries())
-    .map(([dealerName, v]) => ({ dealerName, total: v.total, completed: v.completed }))
-    .sort((a, b) => b.total - a.total)
-    .slice(0, 8)
+  const dealerDemands: DealerDemandCount = (agg.dealer_demands ?? []).map((d) => ({
+    dealerName: d.dealerName,
+    total: d.total,
+    completed: d.completed,
+  }))
 
-  // Finance summary: completed demands with invoice amounts (optionally filtered by month)
-  let financeDemands = completedDemands
+  const cameraDistribution: CameraDistributionItem[] = (agg.camera_distribution ?? []).map((c) => ({
+    model: c.model,
+    count: c.count,
+  }))
+
+  let financeQuery = supabase
+    .from('demands')
+    .select(
+      'invoice_total_amount, invoice_financial_summary, invoice_extra_rows, completed_at, updated_at, dealers(name)'
+    )
+    .eq('status', 'completed')
+    .gt('invoice_total_amount', 0)
+
   if (financeMonth && /^\d{4}-\d{2}$/.test(financeMonth)) {
     const { start, end } = getMonthRangeInTimezone(financeMonth, SYSTEM_DEFAULT_TIMEZONE)
-    financeDemands = completedDemands.filter(d => {
-      const completedAt = (d as { completed_at?: string }).completed_at ?? (d as { updated_at?: string }).updated_at
-      return completedAt && completedAt >= start && completedAt <= end
-    })
+    financeQuery = financeQuery.gte('completed_at', start).lte('completed_at', end)
   }
+
+  const { data: financeRows } = await financeQuery
+  const financeDemands = financeRows ?? []
 
   const defaultFs = { gstEnabled: true, gstPercent: 5, pstEnabled: false, pstPercent: 7, salesTaxEnabled: false, salesTaxPercent: 0, otherEnabled: false, otherAmount: 0 }
   let totalInvoiced = 0
@@ -466,11 +454,21 @@ export async function getDashboardOverviewData(financeMonth?: string | null): Pr
 
   return {
     demandCounts,
-    invoiceSummary: { waiting, edited, downloaded, drive, incompleteList: incompleteList.slice(0, 10) },
-    statementSummary: { dealersWithRecentCompleted: dealerIds.size, totalCompletedLast30Days: recentCompleted.length },
+    invoiceSummary: {
+      waiting: agg.invoice_waiting ?? 0,
+      edited: agg.invoice_edited ?? 0,
+      downloaded: agg.invoice_downloaded ?? 0,
+      drive: agg.invoice_drive ?? 0,
+      incompleteList,
+    },
+    statementSummary: {
+      dealersWithRecentCompleted: agg.statement_30d_dealers ?? 0,
+      totalCompletedLast30Days: agg.statement_30d_total ?? 0,
+    },
     employeeRoleCounts,
     monthlyTrend,
     dealerDemands,
-    financeSummary
+    financeSummary,
+    cameraDistribution,
   }
 }

@@ -68,6 +68,10 @@ interface DemandsListProps {
   listBasePath?: string
   demandDetailReturn?: string
   filtersStorageKey?: string
+  serverTotalCount?: number
+  serverPage?: number
+  serverPageSize?: number
+  serverSearchQuery?: string
 }
 
 const DEFAULT_DEMANDS_LIST_BASE = '/dashboard/admin/demands'
@@ -110,7 +114,12 @@ export function DemandsList({
   listBasePath = DEFAULT_DEMANDS_LIST_BASE,
   demandDetailReturn,
   filtersStorageKey = ADMIN_DEMANDS_FILTERS_KEY,
+  serverTotalCount,
+  serverPage = 1,
+  serverPageSize = 100,
+  serverSearchQuery = '',
 }: DemandsListProps) {
+  const serverPaged = serverTotalCount !== undefined
   const [createModalOpen, setCreateModalOpen] = useState(false)
   const router = useRouter()
 
@@ -195,15 +204,14 @@ export function DemandsList({
     () => buildPersistQS(dateFilter, statusFilter, selectedDealerId, !!hideDealerFilter),
     [dateFilter, statusFilter, selectedDealerId, hideDealerFilter]
   )
-  const [searchValue, setSearchValue] = useState<string>('')
+  const [searchValue, setSearchValue] = useState<string>(serverSearchQuery)
   const [showFilters, setShowFilters] = useState(false)
   const dealerFilterActive = !hideDealerFilter && selectedDealerId !== 'all'
 
   const filteredDemands = useMemo(() => {
     let filtered = [...demands]
 
-    // Status filter
-    if (statusFilter !== 'all') {
+    if (!serverPaged && statusFilter !== 'all') {
       filtered = filtered.filter(d => d.status === statusFilter)
     }
 
@@ -228,14 +236,14 @@ export function DemandsList({
       }
     }
 
-    if (searchValue.trim()) {
+    if (!serverPaged && searchValue.trim()) {
       filtered = filtered.filter((d) =>
         demandMatchesSmartSearch(d, searchValue, barcodeCodesByDemandId)
       )
     }
 
     return filtered
-  }, [demands, statusFilter, dateFilter, searchValue, barcodeCodesByDemandId])
+  }, [demands, statusFilter, dateFilter, searchValue, barcodeCodesByDemandId, serverPaged])
 
   const hasActiveFilters = statusFilter !== 'all' || dateFilter !== 'all' || searchValue.trim() !== '' || dealerFilterActive
 
@@ -366,6 +374,16 @@ export function DemandsList({
                 type="search"
                 value={searchValue}
                 onChange={(e) => setSearchValue(e.target.value)}
+                onKeyDown={(e) => {
+                  if (!serverPaged || e.key !== 'Enter') return
+                  e.preventDefault()
+                  const p = new URLSearchParams(searchParams.toString())
+                  const q = searchValue.trim()
+                  if (q) p.set('q', q)
+                  else p.delete('q')
+                  p.set('page', '1')
+                  router.push(`${listBasePath}?${p.toString()}`)
+                }}
                 placeholder="Name, phone, VIN, stock, or demand # — auto-detected"
                 autoComplete="off"
                 className="w-full border border-zinc-300 dark:border-gray-700 bg-zinc-200/50 dark:bg-white/5 p-2 rounded text-zinc-900 dark:text-white text-sm placeholder:text-zinc-500 dark:placeholder:text-gray-500 focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]"
@@ -380,7 +398,17 @@ export function DemandsList({
               <label className="block text-xs font-medium text-zinc-500 dark:text-gray-400 mb-1">Status</label>
               <select
                 value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
+                onChange={(e) => {
+                  const next = e.target.value
+                  setStatusFilter(next)
+                  if (serverPaged) {
+                    const p = new URLSearchParams(searchParams.toString())
+                    if (next === 'all') p.delete('status')
+                    else p.set('status', next)
+                    p.set('page', '1')
+                    router.push(`${listBasePath}?${p.toString()}`)
+                  }
+                }}
                 className="w-full border border-zinc-300 dark:border-gray-700 bg-zinc-200/50 dark:bg-white/5 p-2 rounded text-zinc-900 dark:text-white text-sm focus:outline-none focus:ring-1 focus:ring-[#C27E00] focus:border-[#C27E00]"
               >
                 <option value="all" className="bg-zinc-50 dark:bg-black">All Status</option>
@@ -410,8 +438,37 @@ export function DemandsList({
       </div>
 
       {/* Results Count */}
-      <div className="text-sm text-zinc-500 dark:text-gray-400">
-        Showing {filteredDemands.length} of {demands.length} demands
+      <div className="flex flex-wrap items-center justify-between gap-2 text-sm text-zinc-500 dark:text-gray-400">
+        <span>
+          Showing {filteredDemands.length} of {serverPaged ? serverTotalCount : demands.length} demands
+          {serverPaged ? ` (page ${serverPage})` : ''}
+        </span>
+        {serverPaged && serverTotalCount != null && serverTotalCount > serverPageSize ? (
+          <span className="flex gap-2">
+            {serverPage > 1 ? (
+              <Link
+                href={`${listBasePath}?${new URLSearchParams({
+                  ...Object.fromEntries(searchParams.entries()),
+                  page: String(serverPage - 1),
+                }).toString()}`}
+                className="text-[#C27E00] hover:underline"
+              >
+                Previous
+              </Link>
+            ) : null}
+            {serverPage * serverPageSize < serverTotalCount ? (
+              <Link
+                href={`${listBasePath}?${new URLSearchParams({
+                  ...Object.fromEntries(searchParams.entries()),
+                  page: String(serverPage + 1),
+                }).toString()}`}
+                className="text-[#C27E00] hover:underline"
+              >
+                Next
+              </Link>
+            ) : null}
+          </span>
+        ) : null}
       </div>
 
       {/* Demands List */}

@@ -7,47 +7,12 @@ import { getInventoryManagerDealerId, isInventoryManager } from '@/lib/inventory
 import { isBarcodeModeEnabled } from '@/lib/inventory-barcodes'
 import { DemandsList } from './demands-list'
 import { DemandPrintHost } from '@/components/demand-print-host'
-
-const ADMIN_DEMANDS_SELECT =
-  '*, dealers(name, warranty_years, region_codes(timezone_id, timezones(name))), profiles!demands_created_by_fkey(full_name), assigned_specialist:profiles!demands_assigned_specialist_id_fkey(full_name), assigned_finance:profiles!demands_assigned_finance_id_fkey(full_name)'
-
-const DEMANDS_PAGE_SIZE = 1000
-
-async function fetchAllAdminDemands(
-  supabase: Awaited<ReturnType<typeof createClient>>,
-  dealerId: string | null
-) {
-  const rows = []
-  let from = 0
-
-  while (true) {
-    let query = supabase
-      .from('demands')
-      .select(ADMIN_DEMANDS_SELECT)
-      .or('is_individual.is.null,is_individual.eq.false')
-      .order('created_at', { ascending: false })
-      .range(from, from + DEMANDS_PAGE_SIZE - 1)
-
-    if (dealerId) {
-      query = query.eq('dealer_id', dealerId)
-    }
-
-    const { data, error } = await query
-    if (error) throw error
-    if (!data?.length) break
-
-    rows.push(...data)
-    if (data.length < DEMANDS_PAGE_SIZE) break
-    from += DEMANDS_PAGE_SIZE
-  }
-
-  return rows
-}
+import { ADMIN_DEMANDS_PAGE_SIZE, fetchAdminDemandsPage } from '@/lib/admin-demands-fetch'
 
 export default async function AdminDemandsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ dealer?: string }>
+  searchParams: Promise<{ dealer?: string; status?: string; q?: string; page?: string }>
 }) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -76,7 +41,13 @@ export default async function AdminDemandsPage({
 
   const { data: dealers } = await dealersQuery
 
-  const demands = await fetchAllAdminDemands(supabase, dealerId)
+  const pageNum = Math.max(1, parseInt(params.page ?? '1', 10) || 1)
+  const { data: demands, total: demandsTotal } = await fetchAdminDemandsPage(supabase, {
+    dealerId,
+    status: params.status ?? null,
+    q: params.q ?? null,
+    page: pageNum,
+  })
 
   const { data: specialists } = canCreateExternal
     ? await supabase.from('profiles').select('id, full_name').eq('role', 'specialist').order('full_name')
@@ -86,7 +57,7 @@ export default async function AdminDemandsPage({
   const duplicateStockNumbers = Array.from(duplicateStockNumbersSet)
   const barcodeModeEnabled = await isBarcodeModeEnabled(supabase)
 
-  const demandIds = (demands ?? []).map((d) => d.id).filter(Boolean)
+  const demandIds = (demands ?? []).map((d) => d.id as string).filter(Boolean)
   const barcodeCodesByDemandId =
     demandIds.length > 0
       ? await fetchBarcodeCodesByDemandIds(createAdminClient(), demandIds)
@@ -100,7 +71,7 @@ export default async function AdminDemandsPage({
         </h1>
         <DemandPrintHost>
           <DemandsList
-            demands={demands || []}
+            demands={(demands || []) as unknown as Parameters<typeof DemandsList>[0]['demands']}
             dealers={dealers || []}
             specialists={specialists || []}
             selectedDealerId={isDealerScopedAdmin ? (imDealerId ?? profile!.dealer_id!) : (params.dealer ?? 'all')}
@@ -109,6 +80,10 @@ export default async function AdminDemandsPage({
             duplicateStockNumbers={duplicateStockNumbers}
             barcodeModeEnabled={barcodeModeEnabled}
             barcodeCodesByDemandId={barcodeCodesByDemandId}
+            serverTotalCount={demandsTotal}
+            serverPage={pageNum}
+            serverPageSize={ADMIN_DEMANDS_PAGE_SIZE}
+            serverSearchQuery={params.q ?? ''}
           />
         </DemandPrintHost>
       </div>
