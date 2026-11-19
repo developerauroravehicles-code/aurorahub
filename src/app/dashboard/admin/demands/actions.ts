@@ -490,7 +490,7 @@ export async function updateDemandByAuroraManager(
 
   const { data: demand } = await supabase
     .from('demands')
-    .select('dealer_id, status, appointment_date, customer_phone, customer_firstname, customer_lastname, assigned_specialist_id, is_external, demand_number, customer_address, vehicle_year, vehicle_make, vehicle_model, vin_last6, stock_number, camera_model, dealers(region_codes(timezone_id, timezones(name)), name, address)')
+    .select('dealer_id, status, appointment_date, customer_phone, customer_firstname, customer_lastname, assigned_specialist_id, is_external, is_individual, demand_number, customer_address, vehicle_year, vehicle_make, vehicle_model, vin_last6, stock_number, camera_model, dealers(region_codes(timezone_id, timezones(name)), name, address)')
     .eq('id', demandId)
     .single()
 
@@ -519,6 +519,7 @@ export async function updateDemandByAuroraManager(
   if (isNaN(vehicleYear) || vehicleYear < 1900) return { error: 'Invalid vehicle year' }
 
   const isExternal = !!demand.is_external
+  const isIndividual = !!(demand as { is_individual?: boolean }).is_individual
 
   if (isExternal && formData.get('appointment_date_date')) {
     const dateStr = formData.get('appointment_date_date') as string
@@ -532,7 +533,16 @@ export async function updateDemandByAuroraManager(
 
   if (!appointmentDate) return { error: 'Appointment date is required' }
 
-  if (demand.dealer_id && !isExternal) {
+  if (isIndividual && formData.get('appointment_at_local')) {
+    const local = formData.get('appointment_at_local') as string
+    try {
+      appointmentDate = ptDatetimeLocalToISO(local.trim())
+    } catch {
+      return { error: 'Invalid appointment date and time' }
+    }
+  }
+
+  if (demand.dealer_id && !isExternal && !isIndividual) {
     const validation = await validateAppointmentSlot(demand.dealer_id, appointmentDate, {
       excludeDemandId: demandId,
     })

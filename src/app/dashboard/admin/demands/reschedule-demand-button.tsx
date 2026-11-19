@@ -9,6 +9,7 @@ interface Demand {
   demand_number?: number | string
   dealer_id?: string | null
   is_external?: boolean | null
+  is_individual?: boolean | null
   customer_firstname: string
   customer_lastname: string
   customer_phone: string

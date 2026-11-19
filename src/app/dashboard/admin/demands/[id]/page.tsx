@@ -33,6 +33,12 @@ import { DemandFieldLegend, DemandFieldWrap } from '@/components/demand-field-hi
 function demandsListHrefFromDetailSearch(
   sp: Record<string, string | string[] | undefined>
 ): string {
+  const returnRaw = sp.return
+  const returnPath = Array.isArray(returnRaw) ? returnRaw[0] : returnRaw
+  if (typeof returnPath === 'string' && returnPath.startsWith('/dashboard/admin/')) {
+    return returnPath
+  }
+
   const p = new URLSearchParams()
   for (const key of ['date', 'status', 'dealer'] as const) {
     const raw = sp[key]
@@ -227,9 +233,10 @@ export default async function DemandDetailsPage({
     : { data: [] }
 
   const customerName = `${demand.customer_firstname} ${demand.customer_lastname}`
-  const formattedAppointment = demand.is_external
-    ? formatExternalDemandDate(demand.appointment_date, displayTzForDemand)
-    : formatInTimeZone(new Date(demand.appointment_date), displayTzForDemand, 'PPP h:mm a')
+  const formattedAppointment =
+    demand.is_external && !(demand as { is_individual?: boolean }).is_individual
+      ? formatExternalDemandDate(demand.appointment_date, displayTzForDemand)
+      : formatInTimeZone(new Date(demand.appointment_date), displayTzForDemand, 'PPP h:mm a')
 
   return (
     <div className="space-y-8">
@@ -268,6 +275,11 @@ export default async function DemandDetailsPage({
           {demand.is_external ? (
             <span className="text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-gray-400">
               External demand
+            </span>
+          ) : null}
+          {(demand as { is_individual?: boolean }).is_individual ? (
+            <span className="text-xs font-medium uppercase tracking-wide text-[#C27E00]">
+              Individual sales
             </span>
           ) : null}
         </div>

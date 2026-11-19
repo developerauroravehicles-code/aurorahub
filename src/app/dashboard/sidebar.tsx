@@ -193,6 +193,7 @@ export function Sidebar({
     if (role === 'aurora_manager') {
       links.push({ name: 'Onaylar', href: '/dashboard/admin/approvals', icon: CheckSquare })
       links.push({ name: 'CRM', href: '/dashboard/admin/crm', icon: Contact })
+      links.push({ name: 'Individual Sales', href: '/dashboard/admin/individual-sales', icon: Briefcase })
       links.push({ name: 'Employees', href: '/dashboard/admin/employees', icon: Users })
       links.push(adminCustomersLink)
     }

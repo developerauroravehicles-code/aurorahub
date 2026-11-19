@@ -24,6 +24,7 @@ async function fetchAllAdminDemands(
     let query = supabase
       .from('demands')
       .select(ADMIN_DEMANDS_SELECT)
+      .or('is_individual.is.null,is_individual.eq.false')
       .order('created_at', { ascending: false })
       .range(from, from + DEMANDS_PAGE_SIZE - 1)
 

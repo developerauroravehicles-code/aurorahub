@@ -6,7 +6,7 @@ import { getAvailableSlotsForEdit } from '@/app/dashboard/system-management/cale
 import { useRouter } from 'next/navigation'
 import { formatInTimeZone } from 'date-fns-tz'
 import { AppointmentCalendar } from '@/components/appointment-calendar'
-import { SYSTEM_DEFAULT_TIMEZONE, getEffectiveTimezone } from '@/lib/timezone-defaults'
+import { SYSTEM_DEFAULT_TIMEZONE, getEffectiveTimezone, ptIsoToDatetimeLocalValue } from '@/lib/timezone-defaults'
 import { getTimezoneFromDealer } from '@/lib/dealer-timezone'
 import { appointmentIsoToWallDate } from '@/lib/external-demand-date'
 import { VEHICLE_MAKES_CA } from '@/lib/vehicle-makes'
@@ -23,6 +23,7 @@ interface Demand {
   demand_number?: number | string
   dealer_id?: string | null
   is_external?: boolean | null
+  is_individual?: boolean | null
   customer_firstname: string
   customer_lastname: string
   customer_phone: string
@@ -64,6 +65,11 @@ export function RescheduleDemandModal({ demand, isOpen, onClose }: RescheduleDem
   })
   const dealerTz = getEffectiveTimezone(getTimezoneFromDealer(demand.dealers ?? null))
   const isExternal = !!demand.is_external
+  const isIndividual = !!demand.is_individual
+  const skipCalendarSlots = isExternal || isIndividual
+  const [appointmentAtLocal, setAppointmentAtLocal] = useState(() =>
+    isIndividual ? ptIsoToDatetimeLocalValue(demand.appointment_date) : ''
+  )
   const [selectedDate, setSelectedDate] = useState(() =>
     isExternal
       ? appointmentIsoToWallDate(demand.appointment_date, dealerTz)
@@ -98,11 +104,11 @@ export function RescheduleDemandModal({ demand, isOpen, onClose }: RescheduleDem
       setShowSmsConfirm(false)
       setPendingFormData(null)
     }
-  }, [isOpen, demand, isExternal])
+  }, [isOpen, demand, isExternal, isIndividual])
 
   useEffect(() => {
-    if (!isOpen || !demand.dealer_id || isExternal) {
-      if (!demand.dealer_id || isExternal) setAvailableSlots([])
+    if (!isOpen || !demand.dealer_id || skipCalendarSlots) {
+      if (!demand.dealer_id || skipCalendarSlots) setAvailableSlots([])
       return
     }
     setSlotsLoading(true)
@@ -118,12 +124,14 @@ export function RescheduleDemandModal({ demand, isOpen, onClose }: RescheduleDem
         })
       })
       .finally(() => setSlotsLoading(false))
-  }, [isOpen, demand.dealer_id, demand.id, selectedDate, isExternal])
+  }, [isOpen, demand.dealer_id, demand.id, selectedDate, skipCalendarSlots])
 
   const buildFormData = (): FormData => {
     const form = new FormData()
     Object.entries(formData).forEach(([key, value]) => form.append(key, value.toString()))
-    if (isExternal) {
+    if (isIndividual) {
+      form.append('appointment_at_local', appointmentAtLocal)
+    } else if (isExternal) {
       form.append('appointment_date_date', selectedDate)
     } else {
       form.append('appointment_date', selectedSlot)
@@ -132,6 +140,9 @@ export function RescheduleDemandModal({ demand, isOpen, onClose }: RescheduleDem
   }
 
   const appointmentChanged = () => {
+    if (isIndividual) {
+      return ptIsoToDatetimeLocalValue(demand.appointment_date) !== appointmentAtLocal
+    }
     if (isExternal) {
       const oldCal = appointmentIsoToWallDate(demand.appointment_date, dealerTz)
       return oldCal !== selectedDate
@@ -262,7 +273,15 @@ export function RescheduleDemandModal({ demand, isOpen, onClose }: RescheduleDem
 
                 <div className="md:col-span-2">
                   <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300 mb-1">Appointment *</label>
-                  {isExternal ? (
+                  {isIndividual ? (
+                    <input
+                      type="datetime-local"
+                      value={appointmentAtLocal}
+                      onChange={(e) => setAppointmentAtLocal(e.target.value)}
+                      required
+                      className={`${inputClass} max-w-sm dark:[color-scheme:dark]`}
+                    />
+                  ) : isExternal ? (
                     <AppointmentCalendar
                       timezoneName={dealerTz}
                       allowPastDates
@@ -294,7 +313,7 @@ export function RescheduleDemandModal({ demand, isOpen, onClose }: RescheduleDem
 
               <div className="flex justify-end gap-3 pt-4 border-t border-zinc-200 dark:border-gray-800">
                 <button type="button" onClick={onClose} className="px-4 py-2 text-zinc-600 dark:text-gray-300 hover:text-zinc-900 dark:text-white">Cancel</button>
-                <button type="submit" disabled={loading || (!isExternal && !!demand.dealer_id && availableSlots.length > 0 && !availableSlots.includes(selectedSlot))}
+                <button type="submit" disabled={loading || (!skipCalendarSlots && !!demand.dealer_id && availableSlots.length > 0 && !availableSlots.includes(selectedSlot))}
                   className="px-4 py-2 bg-[#C27E00] hover:bg-[#a06900] text-white rounded disabled:opacity-50">
                   {loading ? 'Saving...' : 'Save Changes'}
                 </button>

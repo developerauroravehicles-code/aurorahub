@@ -65,8 +65,12 @@ interface DemandsListProps {
   canCreateExternal?: boolean
   hideDealerFilter?: boolean
   duplicateStockNumbers?: string[]
+  listBasePath?: string
+  demandDetailReturn?: string
+  filtersStorageKey?: string
 }
 
+const DEFAULT_DEMANDS_LIST_BASE = '/dashboard/admin/demands'
 const ADMIN_DEMANDS_FILTERS_KEY = 'aurora_admin_demands_filters_v1'
 
 function buildPersistQS(
@@ -103,6 +107,9 @@ export function DemandsList({
   duplicateStockNumbers = [],
   barcodeModeEnabled = false,
   barcodeCodesByDemandId = {},
+  listBasePath = DEFAULT_DEMANDS_LIST_BASE,
+  demandDetailReturn,
+  filtersStorageKey = ADMIN_DEMANDS_FILTERS_KEY,
 }: DemandsListProps) {
   const [createModalOpen, setCreateModalOpen] = useState(false)
   const router = useRouter()
@@ -115,7 +122,7 @@ export function DemandsList({
 
   const handleDealerChange = (dealerId: string) => {
     const qs = buildPersistQS(dateFilter, statusFilter, dealerId, !!hideDealerFilter)
-    router.push(qs ? `/dashboard/admin/demands?${qs}` : '/dashboard/admin/demands')
+    router.push(qs ? `${listBasePath}?${qs}` : listBasePath)
   }
 
   const [statusFilter, setStatusFilter] = useState<string>(() => searchParams.get('status') ?? 'all')
@@ -142,12 +149,12 @@ export function DemandsList({
         (!hideDealerFilter && searchParams.has('dealer'))
       if (!hasUrl) {
         try {
-          const raw = sessionStorage.getItem(ADMIN_DEMANDS_FILTERS_KEY)
+          const raw = sessionStorage.getItem(filtersStorageKey)
           if (raw) {
             const sp = new URLSearchParams(raw)
             setDateFilter(sp.get('date') ?? 'all')
             setStatusFilter(sp.get('status') ?? 'all')
-            router.replace(`/dashboard/admin/demands?${raw}`, { scroll: false })
+            router.replace(`${listBasePath}?${raw}`, { scroll: false })
             prevListSearchRef.current = cur
             return
           }
@@ -173,13 +180,13 @@ export function DemandsList({
 
     const qs = buildPersistQS(effectiveDate, effectiveStatus, selectedDealerId, !!hideDealerFilter)
     try {
-      if (qs) sessionStorage.setItem(ADMIN_DEMANDS_FILTERS_KEY, qs)
-      else sessionStorage.removeItem(ADMIN_DEMANDS_FILTERS_KEY)
+      if (qs) sessionStorage.setItem(filtersStorageKey, qs)
+      else sessionStorage.removeItem(filtersStorageKey)
     } catch {
       /* ignore */
     }
     if (!paramsEqual(qs, cur)) {
-      router.replace(qs ? `/dashboard/admin/demands?${qs}` : '/dashboard/admin/demands', { scroll: false })
+      router.replace(qs ? `${listBasePath}?${qs}` : listBasePath, { scroll: false })
     }
     prevListSearchRef.current = cur
   }, [dateFilter, statusFilter, selectedDealerId, hideDealerFilter, searchParams, router])
@@ -237,7 +244,7 @@ export function DemandsList({
     setDateFilter('all')
     setSearchValue('')
     try {
-      sessionStorage.removeItem(ADMIN_DEMANDS_FILTERS_KEY)
+      sessionStorage.removeItem(filtersStorageKey)
     } catch {
       /* ignore */
     }
@@ -248,7 +255,7 @@ export function DemandsList({
       p.delete('dealer')
     }
     const qs = p.toString()
-    router.replace(qs ? `/dashboard/admin/demands?${qs}` : '/dashboard/admin/demands', { scroll: false })
+    router.replace(qs ? `${listBasePath}?${qs}` : listBasePath, { scroll: false })
   }
 
   return (
@@ -422,9 +429,18 @@ export function DemandsList({
                 completed: 'bg-green-500/20 text-green-400',
                 cancelled: 'bg-red-500/20 text-red-400'
               }
+              const detailQs =
+                demandDetailReturn
+                  ? [
+                      `return=${encodeURIComponent(demandDetailReturn)}`,
+                      persistQueryString,
+                    ]
+                      .filter(Boolean)
+                      .join('&')
+                  : persistQueryString
               const detailHref =
-                persistQueryString !== ''
-                  ? `/dashboard/admin/demands/${demand.id}?${persistQueryString}`
+                detailQs !== ''
+                  ? `/dashboard/admin/demands/${demand.id}?${detailQs}`
                   : `/dashboard/admin/demands/${demand.id}`
 
               const dealerTz = getEffectiveTimezone(getTimezoneFromDealer(demand.dealers as Parameters<typeof getTimezoneFromDealer>[0]))

@@ -34,10 +34,12 @@ export function CustomersDirectoryList({
   rows,
   signaturePreview,
   canSendSms = true,
+  customerDetailBasePath = '/dashboard/admin/customers',
 }: {
   rows: CustomerDirectoryRow[]
   signaturePreview: string
   canSendSms?: boolean
+  customerDetailBasePath?: string
 }) {
   const [search, setSearch] = useState('')
   const [onlyLast90Days, setOnlyLast90Days] = useState(false)
@@ -316,7 +318,7 @@ export function CustomersDirectoryList({
                     )}
                     <div className="min-w-0 flex-1">
                       <Link
-                        href={`/dashboard/admin/customers/${routeKey}`}
+                        href={`${customerDetailBasePath}/${routeKey}`}
                         className="font-semibold text-zinc-900 hover:text-[#C27E00] dark:text-white dark:hover:text-[#C27E00]"
                       >
                         {name}

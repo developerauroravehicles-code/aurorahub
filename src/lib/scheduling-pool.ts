@@ -94,6 +94,7 @@ export async function getDemandsInPoolForDay(
     .lte('appointment_date', end)
     .neq('status', 'cancelled')
     .or('is_external.is.null,is_external.eq.false')
+    .or('is_individual.is.null,is_individual.eq.false')
 
   if (excludeDemandId) {
     query = query.neq('id', excludeDemandId)
