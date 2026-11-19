@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import type { MailSettings } from './mail-sender'
 import { normalizeEmail } from '@/lib/email-normalize'
 
@@ -39,19 +40,9 @@ export async function getMailSettings(): Promise<MailSettings | null> {
   }
 }
 
-/** Returns mail settings including password (for sending). Only use server-side. */
-export async function getMailSettingsWithPassword(): Promise<MailSettings | null> {
-  const supabase = await createClient()
-  const { data, error } = await supabase
-    .from('system_settings')
-    .select('value')
-    .eq('key', MAIL_SETTINGS_KEY)
-    .single()
-
-  if (error || !data?.value) return null
-
+function parseMailSettingsValue(raw: string): MailSettings | null {
   try {
-    const parsed = JSON.parse(data.value) as Partial<MailSettings>
+    const parsed = JSON.parse(raw) as Partial<MailSettings>
     const settings: MailSettings = {
       ...DEFAULT_MAIL_SETTINGS,
       ...parsed,
@@ -61,6 +52,24 @@ export async function getMailSettingsWithPassword(): Promise<MailSettings | null
   } catch {
     return null
   }
+}
+
+/** Returns mail settings including password (for sending). Only use server-side. */
+export async function getMailSettingsWithPassword(): Promise<MailSettings | null> {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  const db = user ? supabase : createAdminClient()
+
+  const { data, error } = await db
+    .from('system_settings')
+    .select('value')
+    .eq('key', MAIL_SETTINGS_KEY)
+    .single()
+
+  if (error || !data?.value) return null
+  return parseMailSettingsValue(data.value)
 }
 
 export async function saveMailSettings(settings: Partial<MailSettings>): Promise<{ error?: string }> {

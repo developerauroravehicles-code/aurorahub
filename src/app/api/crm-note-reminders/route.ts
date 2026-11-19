@@ -7,36 +7,71 @@ const APP_BASE =
   process.env.NEXT_PUBLIC_APP_URL ??
   (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000')
 
-export async function GET(request: Request) {
+const REMINDER_SELECT =
+  'id, dealer_id, prospect_id, note_id, recipient_email, subject, remind_at, follow_up_kind, dealer_crm_notes(body, meeting_at), dealers(name), crm_prospects(name)'
+
+function isCronAuthorized(request: Request): boolean {
+  const expectedSecret = process.env.CRON_SECRET
+  if (!expectedSecret) return true
+
   const authHeader = request.headers.get('authorization')
-  const cronSecret = process.env.CRON_SECRET
-  if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+  const querySecret = new URL(request.url).searchParams.get('secret')
+  return authHeader === `Bearer ${expectedSecret}` || querySecret === expectedSecret
+}
+
+async function fetchDueReminders(admin: ReturnType<typeof createAdminClient>, nowIso: string, today: string) {
+  const [byAt, byDate] = await Promise.all([
+    admin
+      .from('dealer_crm_note_reminders')
+      .select(REMINDER_SELECT)
+      .eq('status', 'pending')
+      .not('remind_at', 'is', null)
+      .lte('remind_at', nowIso)
+      .limit(50),
+    admin
+      .from('dealer_crm_note_reminders')
+      .select(REMINDER_SELECT)
+      .eq('status', 'pending')
+      .is('remind_at', null)
+      .lte('remind_on', today)
+      .limit(50),
+  ])
+
+  if (byAt.error) return { error: byAt.error }
+  if (byDate.error) return { error: byDate.error }
+
+  const seen = new Set<string>()
+  const rows = [...(byAt.data ?? []), ...(byDate.data ?? [])].filter((row) => {
+    if (seen.has(row.id)) return false
+    seen.add(row.id)
+    return true
+  })
+
+  return { data: rows.slice(0, 50) }
+}
+
+export async function GET(request: Request) {
+  if (!isCronAuthorized(request)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
   const admin = createAdminClient()
   const nowIso = new Date().toISOString()
+  const today = nowIso.slice(0, 10)
 
-  const { data: due, error } = await admin
-    .from('dealer_crm_note_reminders')
-    .select(
-      'id, dealer_id, prospect_id, note_id, recipient_email, subject, remind_at, follow_up_kind, dealer_crm_notes(body, meeting_at), dealers(name), crm_prospects(name)'
-    )
-    .eq('status', 'pending')
-    .or(`remind_at.lte.${nowIso},and(remind_at.is.null,remind_on.lte.${nowIso.slice(0, 10)})`)
-    .limit(50)
-
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
+  const dueResult = await fetchDueReminders(admin, nowIso, today)
+  if (dueResult.error) {
+    return NextResponse.json({ error: dueResult.error.message }, { status: 500 })
   }
 
-  if (!due?.length) {
+  const due = dueResult.data ?? []
+  if (!due.length) {
     return NextResponse.json({ ok: true, sent: 0 })
   }
 
   const mailSettings = await getMailSettingsWithPassword()
   if (!mailSettings?.enabled) {
-    return NextResponse.json({ ok: false, error: 'Mail disabled' }, { status: 503 })
+    return NextResponse.json({ ok: false, error: 'Mail disabled or not configured' }, { status: 503 })
   }
 
   let sent = 0
