@@ -249,7 +249,7 @@ export function DemandForm({
       )}
 
       <p className="text-sm text-zinc-600 dark:text-gray-400">
-        Enter <strong>stock</strong>, decode the full <strong>VIN</strong>, and the customer <strong>phone</strong>. Name and
+        Decode the full <strong>VIN</strong> and the customer <strong>phone</strong> (stock optional). Name and
         address are completed by the customer via the SMS link.
       </p>
 
@@ -298,13 +298,14 @@ export function DemandForm({
         )}
 
         <div>
-          <label className="block text-base font-medium text-zinc-600 dark:text-gray-300">Stock number</label>
+          <label className="block text-base font-medium text-zinc-600 dark:text-gray-300">
+            Stock number <span className="text-sm font-normal text-zinc-500 dark:text-gray-500">(optional)</span>
+          </label>
           <input
             name="stockNumber"
             value={stockNumber}
             onChange={e => setStockNumber(e.target.value.toUpperCase())}
             style={{ textTransform: 'uppercase' }}
-            required
             className="mt-1.5 block w-full rounded-md border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 py-2.5 px-3 shadow-sm focus:border-[#C27E00] focus:outline-none focus:ring-[#C27E00] text-base text-zinc-900 dark:text-white"
             placeholder="Enter stock number"
           />
@@ -472,7 +473,6 @@ export function DemandForm({
             disabled={
               isPending ||
               !vinDecodedReady ||
-              !stockNumber.trim() ||
               !phone.trim() ||
               !selectedSlot ||
               cameraModels.length === 0 ||

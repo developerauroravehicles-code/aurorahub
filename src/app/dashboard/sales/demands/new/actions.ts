@@ -37,7 +37,13 @@ const schema = z.object({
   vehicleMake: z.string().min(1, 'Decode the full VIN first'),
   vehicleModel: z.string().min(1, 'Decode the full VIN first'),
   vehicleYear: z.coerce.number().min(1900, 'Decode the full VIN first'),
-  stockNumber: z.string().min(1, 'Stock number is required').transform(v => (v || '').trim().toUpperCase()),
+  stockNumber: z
+    .string()
+    .optional()
+    .transform(v => {
+      const trimmed = (v ?? '').trim().toUpperCase()
+      return trimmed.length > 0 ? trimmed : null
+    }),
   vinLast6: z
     .string()
     .min(1, 'VIN is required')
@@ -58,7 +64,7 @@ export type DemandHandoffDemand = {
   vehicle_make: string
   vehicle_model: string
   vehicle_year: number
-  stock_number: string
+  stock_number: string | null
   vin_last6: string | null
   camera_model: string | null
   appointment_date: string
@@ -152,7 +158,7 @@ export async function createDemand(prevState: CreateDemandState, formData: FormD
     vehicle_make: data.vehicleMake,
     vehicle_model: data.vehicleModel,
     vehicle_year: data.vehicleYear,
-    stock_number: data.stockNumber,
+    stock_number: data.stockNumber ?? null,
     vin_last6: data.vinLast6,
     camera_model: cameraCheck.cameraModelName,
     camera_model_id: cameraCheck.cameraModelId,
@@ -212,11 +218,13 @@ export async function createDemand(prevState: CreateDemandState, formData: FormD
     dealer_id: demand.dealer_id,
   }).catch(() => {})
 
-  notifyAuroraManagersIfDuplicateStock({
-    demandId: demand.id,
-    demandNumber: demand.demand_number,
-    stockNumber: data.stockNumber,
-  }).catch(() => {})
+  if (data.stockNumber) {
+    notifyAuroraManagersIfDuplicateStock({
+      demandId: demand.id,
+      demandNumber: demand.demand_number,
+      stockNumber: data.stockNumber,
+    }).catch(() => {})
+  }
 
   const { data: dealerRow } = await supabase
     .from('dealers')

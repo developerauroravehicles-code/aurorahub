@@ -50,7 +50,7 @@ export default async function NewDemandPage() {
     <div>
       <h1 className="text-3xl font-semibold text-zinc-900 dark:text-white mb-2 tracking-tight">New appointment</h1>
       <p className="text-sm text-zinc-600 dark:text-gray-400 mb-6 max-w-2xl">
-        Stock, VIN, and customer phone. The customer completes their name on the link sent by SMS.
+        VIN and customer phone (stock optional). The customer completes their name on the link sent by SMS.
       </p>
       <DemandForm 
         cameraModels={cameraModels} 
