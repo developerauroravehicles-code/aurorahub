@@ -25,7 +25,6 @@ import {
   type DealerCalendarSettingsMap,
 } from '@/lib/dealer-calendar-day-type'
 import { CanadianPhoneInput } from '@/components/canadian-phone-input'
-import { DemandDocumentFillButton } from '@/components/demand-document-fill-button'
 import { VinDecodeField } from '@/components/vin-decode-field'
 import type { DemandVehicleFieldsFromVin } from '@/lib/vin-decode/map-to-demand-vehicle'
 import {
@@ -253,33 +252,6 @@ export function DemandForm({
         Enter <strong>stock</strong>, decode the full <strong>VIN</strong>, and the customer <strong>phone</strong>. Name and
         address are completed by the customer via the SMS link.
       </p>
-
-      <DemandDocumentFillButton
-        disabled={isPending}
-        currentValues={{
-          firstName: '',
-          lastName: '',
-          phone,
-          vehicleYear,
-          stockNumber,
-          vinLast6,
-          selectedMake,
-          selectedModel,
-          customModel,
-        }}
-        setters={{
-          setFirstName: () => {},
-          setLastName: () => {},
-          setPhone,
-          setVehicleYear,
-          setStockNumber,
-          setVinLast6,
-          setSelectedMake,
-          setSelectedModel,
-          setSelectedTrim,
-          setCustomModel,
-        }}
-      />
 
       <input type="hidden" name="address" value={defaultAddress} />
       <input type="hidden" name="vehicleMake" value={selectedMake} />
