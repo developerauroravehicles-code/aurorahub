@@ -26,6 +26,7 @@ import {
 } from '@/lib/dealer-calendar-day-type'
 import { CanadianPhoneInput } from '@/components/canadian-phone-input'
 import { VinDecodeField } from '@/components/vin-decode-field'
+import { VinManualVehicleFields } from '@/components/vin-manual-vehicle-fields'
 import type { DemandVehicleFieldsFromVin } from '@/lib/vin-decode/map-to-demand-vehicle'
 import {
   DemandCustomerHandoffPrint,
@@ -77,7 +78,8 @@ export function DemandForm({
   const [selectedCamera, setSelectedCamera] = useState<string>('')
   const [customCamera, setCustomCamera] = useState<string>('')
   const [phone, setPhone] = useState('')
-  const [vinDecodedReady, setVinDecodedReady] = useState(false)
+  const [vinDecodeWarning, setVinDecodeWarning] = useState(false)
+  const [vinDecodePending, setVinDecodePending] = useState(false)
   const [vehicleYear, setVehicleYear] = useState('')
   const [stockNumber, setStockNumber] = useState('')
   const [vinLast6, setVinLast6] = useState('')
@@ -146,6 +148,7 @@ export function DemandForm({
   }, [selectedDate, calendarSettings, weeklyClosedIsoDays, systemNow])
 
   function applyVinDecodeFields(fields: DemandVehicleFieldsFromVin) {
+    setVinDecodeWarning(false)
     setVinLast6(fields.vinLast6)
     if (fields.vehicleYear) setVehicleYear(fields.vehicleYear)
     if (fields.selectedMake) {
@@ -158,8 +161,19 @@ export function DemandForm({
         setSelectedModel(fields.selectedModel)
         setCustomModel('')
       }
+    } else if (fields.rawMake) {
+      setSelectedMake(fields.rawMake)
     }
-    setVinDecodedReady(Boolean(fields.vehicleYear && (fields.selectedMake || fields.rawMake)))
+  }
+
+  function onVinDecodeFailed(payload: { vinLast6: string }) {
+    setVinDecodeWarning(true)
+    setVinLast6(payload.vinLast6)
+    setVehicleYear('')
+    setSelectedMake('')
+    setSelectedModel('')
+    setSelectedTrim('')
+    setCustomModel('')
   }
 
   const vehicleModelForSubmit =
@@ -170,6 +184,12 @@ export function DemandForm({
           ? `${selectedModel} (${selectedTrim})`
           : selectedModel
         : customModel
+
+  const vehicleReady =
+    vinLast6.length >= 6 &&
+    !!vehicleYear.trim() &&
+    !!selectedMake.trim() &&
+    !!(vehicleModelForSubmit?.trim() || customModel.trim())
 
   if (state && 'success' in state && state.success) {
     const { demand, dealer, timezoneName: successTz, role } = state
@@ -249,8 +269,8 @@ export function DemandForm({
       )}
 
       <p className="text-sm text-zinc-600 dark:text-gray-400">
-        Decode the full <strong>VIN</strong> and the customer <strong>phone</strong> (stock optional). Name and
-        address are completed by the customer via the SMS link.
+        Enter the full <strong>VIN</strong> (auto-decodes) and the customer <strong>phone</strong> (stock optional).
+        Name and address are completed by the customer via the SMS link.
       </p>
 
       <input type="hidden" name="address" value={defaultAddress} />
@@ -258,6 +278,7 @@ export function DemandForm({
       <input type="hidden" name="vehicleModel" value={vehicleModelForSubmit} />
       <input type="hidden" name="vehicleYear" value={vehicleYear} />
       <input type="hidden" name="vinLast6" value={vinLast6} />
+      <input type="hidden" name="vinDecodeWarning" value={vinDecodeWarning ? '1' : '0'} />
 
       <div className="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-2">
         <h3 className="col-span-full text-xl font-semibold leading-7 text-zinc-900 dark:text-white border-b border-zinc-200 dark:border-gray-800 pb-2">
@@ -286,16 +307,32 @@ export function DemandForm({
           <VinDecodeField
             disabled={isPending}
             onDecoded={applyVinDecodeFields}
+            onDecodeFailed={onVinDecodeFailed}
+            onPendingChange={setVinDecodePending}
             inputClassName="mt-1.5 block w-full rounded-md border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 py-2.5 px-3 shadow-sm focus:border-[#C27E00] focus:outline-none focus:ring-[#C27E00] text-base text-zinc-900 dark:text-white"
           />
         </div>
 
-        {vinDecodedReady && (
+        {vinDecodeWarning ? (
+          <VinManualVehicleFields
+            vehicleYear={vehicleYear}
+            vehicleMake={selectedMake}
+            vehicleModel={customModel || vehicleModelForSubmit}
+            onVehicleYear={setVehicleYear}
+            onVehicleMake={setSelectedMake}
+            onVehicleModel={(v) => {
+              setCustomModel(v)
+              setSelectedModel('__custom__')
+            }}
+            inputClassName="mt-1.5 block w-full rounded-md border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 py-2.5 px-3 shadow-sm focus:border-[#C27E00] focus:outline-none focus:ring-[#C27E00] text-base text-zinc-900 dark:text-white"
+            disabled={isPending}
+          />
+        ) : vehicleReady ? (
           <p className="sm:col-span-2 text-sm text-zinc-600 dark:text-gray-400">
             {vehicleYear} {selectedMake} {vehicleModelForSubmit}
             {vinLast6 ? ` · VIN …${vinLast6}` : ''}
           </p>
-        )}
+        ) : null}
 
         <div>
           <label className="block text-base font-medium text-zinc-600 dark:text-gray-300">
@@ -472,7 +509,8 @@ export function DemandForm({
             type="submit"
             disabled={
               isPending ||
-              !vinDecodedReady ||
+              vinDecodePending ||
+              !vehicleReady ||
               !phone.trim() ||
               !selectedSlot ||
               cameraModels.length === 0 ||

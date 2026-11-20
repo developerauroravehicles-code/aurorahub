@@ -10,6 +10,7 @@ import { Filter, X, Plus } from 'lucide-react'
 import Link from 'next/link'
 import { demandMatchesSmartSearch } from '@/lib/demand-smart-search'
 import { DemandPrintButton } from '@/components/demand-print-button'
+import { VinDecodeWarningBadge } from '@/components/vin-decode-warning-badge'
 import { getDealerPrintMeta, toHandoffDemand } from '@/lib/demand-handoff-print-utils'
 import { CreateExternalDemandForm } from './create-external-demand-form'
 import {
@@ -42,6 +43,7 @@ interface Demand {
   appointment_date: string
   is_external?: boolean | null
   vin_last6?: string | null
+  vin_decode_warning?: boolean | null
   stock_number?: string | null
   camera_model?: string | null
   comment?: string | null
@@ -520,6 +522,7 @@ export function DemandsList({
                             {demand.stock_number && duplicateStockNumbers.includes((demand.stock_number as string).trim().toUpperCase()) && (
                               <span className="text-xs text-amber-400">(Duplicate Stock No)</span>
                             )}
+                            {demand.vin_decode_warning ? <VinDecodeWarningBadge /> : null}
                           </div>
                           <p className="text-sm text-zinc-500 dark:text-gray-400">
                             {demand.vehicle_year} {demand.vehicle_make} {demand.vehicle_model}

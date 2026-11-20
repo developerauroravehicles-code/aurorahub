@@ -10,6 +10,7 @@ import { notifyAuroraManagersIfDuplicateStock } from '@/lib/notify-duplicate-sto
 import { finalizeDemandAsApproved } from '@/lib/demands/finalize-demand-approved'
 import { getIndividualSalesDealerIdOrThrow } from '@/lib/individual-sales'
 import { INDIVIDUAL_SALES_DEMANDS } from '@/lib/individual-sales'
+import { parseVinDecodeWarningFromForm } from '@/lib/vin-decode/form-warning'
 
 const schema = z.object({
   firstName: z.string().min(1).transform((v) => (v || '').trim().toUpperCase()),
@@ -138,6 +139,7 @@ export async function createIndividualDemand(
     vehicle_year: data.vehicleYear,
     stock_number: data.stockNumber,
     vin_last6: data.vinLast6,
+    vin_decode_warning: parseVinDecodeWarningFromForm(formData),
     camera_model: cameraCheck.cameraModelName,
     camera_model_id: cameraCheck.cameraModelId,
     appointment_date: appointmentIso,

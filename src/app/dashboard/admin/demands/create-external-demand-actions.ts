@@ -33,6 +33,7 @@ import { resolveExternalDemandCameraAndPrice } from './create-external-demand-pr
 import { upsertInventoryPricingRule } from '@/app/dashboard/admin/inventory/actions'
 import { applyExternalDemandCompletion } from '@/lib/external-demand-completion'
 import { finalizeDemandAsApproved } from '@/lib/demands/finalize-demand-approved'
+import { parseVinDecodeWarningFromForm } from '@/lib/vin-decode/form-warning'
 
 const schema = z.object({
   dealerId: z.string().min(1, 'Dealer is required'),
@@ -382,6 +383,7 @@ export async function createExternalDemand(
     vehicle_year: data.vehicleYear,
     stock_number: data.stockNumber,
     vin_last6: data.vinLast6,
+    vin_decode_warning: parseVinDecodeWarningFromForm(formData),
     camera_model: resolvedCameraModelName,
     ...(cameraModelId && { camera_model_id: cameraModelId }),
     appointment_date: appointmentDateISO,

@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { logDemandChange } from '@/lib/demand-logger'
 import { dispatchWebhooks } from '@/lib/webhook-dispatch'
 import { z } from 'zod'
+import { parseVinDecodeWarningFromForm } from '@/lib/vin-decode/form-warning'
 import { validateAppointmentSlot, getPoolSlotContext } from '@/app/dashboard/system-management/calendar/actions'
 import { getTimezoneFromDealer } from '@/lib/dealer-timezone'
 import { SYSTEM_DEFAULT_TIMEZONE } from '@/lib/timezone-defaults'
@@ -34,9 +35,9 @@ async function getDealerTimezone(dealerId: string | null): Promise<string | null
 const schema = z.object({
   phone: z.string().min(1, 'Phone is required'),
   address: z.string().optional(),
-  vehicleMake: z.string().min(1, 'Decode the full VIN first'),
-  vehicleModel: z.string().min(1, 'Decode the full VIN first'),
-  vehicleYear: z.coerce.number().min(1900, 'Decode the full VIN first'),
+  vehicleMake: z.string().min(1, 'Vehicle make is required'),
+  vehicleModel: z.string().min(1, 'Vehicle model is required'),
+  vehicleYear: z.coerce.number().min(1900, 'Vehicle year is required'),
   stockNumber: z
     .string()
     .optional()
@@ -48,7 +49,7 @@ const schema = z.object({
     .string()
     .min(1, 'VIN is required')
     .transform(v => (v || '').trim().replace(/\s/g, '').slice(-6).toUpperCase())
-    .refine(v => v.length >= 6, 'Decode the full VIN first'),
+    .refine(v => v.length >= 6, 'VIN last 6 digits are required'),
   cameraModel: z.string().min(1),
   appointmentDate: z.string().min(1, 'Please select a time slot'),
   comment: z.string().optional(),
@@ -160,6 +161,7 @@ export async function createDemand(prevState: CreateDemandState, formData: FormD
     vehicle_year: data.vehicleYear,
     stock_number: data.stockNumber ?? null,
     vin_last6: data.vinLast6,
+    vin_decode_warning: parseVinDecodeWarningFromForm(formData),
     camera_model: cameraCheck.cameraModelName,
     camera_model_id: cameraCheck.cameraModelId,
     appointment_date: data.appointmentDate,

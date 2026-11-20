@@ -307,7 +307,7 @@ export async function updateVinLast6(
 
   const { error } = await supabase
     .from('demands')
-    .update({ vin_last6: normalized })
+    .update({ vin_last6: normalized, vin_decode_warning: false })
     .eq('id', demandId)
 
   if (error) return { success: false, error: error.message }

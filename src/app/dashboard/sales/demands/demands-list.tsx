@@ -6,6 +6,7 @@ import { getEffectiveTimezone, getTodayRangeInTimezone } from '@/lib/timezone-de
 import { Filter, X } from 'lucide-react'
 import { demandMatchesSmartSearch } from '@/lib/demand-smart-search'
 import { DemandPrintButton } from '@/components/demand-print-button'
+import { VinDecodeWarningBadge } from '@/components/vin-decode-warning-badge'
 import { toHandoffDemand } from '@/lib/demand-handoff-print-utils'
 
 interface Demand {
@@ -18,6 +19,7 @@ interface Demand {
   customer_phone?: string | null
   customer_address?: string | null
   vin_last6?: string | null
+  vin_decode_warning?: boolean | null
   vehicle_year: number
   vehicle_make: string
   vehicle_model: string
@@ -218,6 +220,7 @@ export function DemandsList({ demands, timezoneName = null, duplicateStockNumber
                         {demand.stock_number && duplicateStockNumbers.includes((demand.stock_number as string).trim().toUpperCase()) && (
                           <span className="text-xs text-amber-400">(Duplicate Stock No)</span>
                         )}
+                        {demand.vin_decode_warning ? <VinDecodeWarningBadge /> : null}
                       </div>
                       <div className="ml-2 flex-shrink-0 flex">
                         <p className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full border ${

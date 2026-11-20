@@ -109,6 +109,7 @@ export function CreateExternalDemandForm({
   const [vehicleYear, setVehicleYear] = useState('')
   const [stockNumber, setStockNumber] = useState('')
   const [vinLast6, setVinLast6] = useState('')
+  const [vinDecodeWarning, setVinDecodeWarning] = useState(false)
   const [selectedMake, setSelectedMake] = useState('')
   const [selectedModel, setSelectedModel] = useState('')
   const [selectedTrim, setSelectedTrim] = useState('')
@@ -428,6 +429,7 @@ export function CreateExternalDemandForm({
   }
 
   function applyVinDecodeFields(fields: DemandVehicleFieldsFromVin) {
+    setVinDecodeWarning(false)
     setVinLast6(fields.vinLast6)
     if (fields.vehicleYear) setVehicleYear(fields.vehicleYear)
     if (fields.selectedMake) {
@@ -992,7 +994,16 @@ export function CreateExternalDemandForm({
         </div>
 
         <h3 className="col-span-full text-sm font-medium text-zinc-900 dark:text-white border-t border-zinc-200 dark:border-gray-800 pt-4 mt-4">Vehicle</h3>
-        <VinDecodeField disabled={isPending} onDecoded={applyVinDecodeFields} inputClassName={inputClass} />
+        <VinDecodeField
+          disabled={isPending}
+          onDecoded={applyVinDecodeFields}
+          onDecodeFailed={({ vinLast6: last6 }) => {
+            setVinDecodeWarning(true)
+            setVinLast6(last6)
+          }}
+          inputClassName={inputClass}
+        />
+        <input type="hidden" name="vinDecodeWarning" value={vinDecodeWarning ? '1' : '0'} />
         <div>
           <label className="block text-sm font-medium text-zinc-600 dark:text-gray-300">Make *</label>
           <select

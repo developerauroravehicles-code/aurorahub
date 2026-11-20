@@ -28,6 +28,7 @@ import { SERVICE_TYPE_LABELS, DemandServiceType } from '@/lib/demand-pricing'
 import { isBarcodeModeEnabled } from '@/lib/inventory-barcodes'
 import { buildLatestFieldHighlights, fieldHighlightClass, bucketActorRole } from '@/lib/demand-field-updates'
 import { DemandFieldLegend, DemandFieldWrap } from '@/components/demand-field-highlight'
+import { VinDecodeWarningBadge } from '@/components/vin-decode-warning-badge'
 
 /** List filters (date, status, dealer) are passed on the detail URL so "Back" can restore them. */
 function demandsListHrefFromDetailSearch(
@@ -277,6 +278,7 @@ export default async function DemandDetailsPage({
               External demand
             </span>
           ) : null}
+          {(demand as { vin_decode_warning?: boolean }).vin_decode_warning ? <VinDecodeWarningBadge /> : null}
           {(demand as { is_individual?: boolean }).is_individual ? (
             <span className="text-xs font-medium uppercase tracking-wide text-[#C27E00]">
               Individual sales
@@ -367,7 +369,12 @@ export default async function DemandDetailsPage({
               />
             </div>
             <div>
-              <p className="text-sm text-zinc-500 dark:text-gray-400 mb-1">VIN Last 6 Digits</p>
+              <p className="text-sm text-zinc-500 dark:text-gray-400 mb-1 flex items-center gap-2">
+                VIN Last 6 Digits
+                {(demand as { vin_decode_warning?: boolean }).vin_decode_warning ? (
+                  <VinDecodeWarningBadge />
+                ) : null}
+              </p>
               <EditVinForm
                 demandId={id}
                 vinLast6={demand.vin_last6}
