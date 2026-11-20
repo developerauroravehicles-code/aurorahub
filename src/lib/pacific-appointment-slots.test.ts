@@ -17,7 +17,7 @@ describe('pacific-appointment-slots', () => {
 
   it('uses friday row for saturday when saturday not configured', () => {
     const settings: DealerCalendarSettingsMap = {
-      friday: {
+      fri: {
         day_type: 'fri',
         start_hour: 9,
         start_minute: 0,

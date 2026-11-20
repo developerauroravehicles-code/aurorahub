@@ -79,8 +79,8 @@ export function resolveCalendarSettingForIsoDow(
   const specific = settings[dayType]
   if (specific) return specific
   if (isoDow >= 1 && isoDow <= 5) return settings.weekday
-  if (isoDow === 6) return settings.saturday ?? settings.friday ?? settings.weekday
-  if (isoDow === 7) return settings.sunday ?? settings.friday ?? settings.weekday
+  if (isoDow === 6) return settings.saturday ?? settings.fri ?? settings.weekday
+  if (isoDow === 7) return settings.sunday ?? settings.fri ?? settings.weekday
   return undefined
 }
 
