@@ -22,8 +22,8 @@ export function VinManualVehicleFields({
   return (
     <div className="sm:col-span-2 grid grid-cols-1 gap-3 sm:grid-cols-3 rounded-lg border border-amber-400/40 bg-amber-50/80 p-3 dark:border-amber-800/50 dark:bg-amber-950/20">
       <p className="sm:col-span-3 text-xs text-amber-800 dark:text-amber-200">
-        VIN could not be decoded automatically. Enter year, make, and model below — the demand can still be
-        created.
+        Enter year, make, and model below if decode is still running or failed — booking does not wait for
+        NHTSA lookup.
       </p>
       <div>
         <label className="block text-sm font-medium text-zinc-700 dark:text-gray-300">Year *</label>

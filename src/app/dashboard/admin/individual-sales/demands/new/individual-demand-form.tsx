@@ -6,8 +6,6 @@ import Link from 'next/link'
 import { createIndividualDemand, type CreateIndividualDemandState } from './actions'
 import { CanadianPhoneInput } from '@/components/canadian-phone-input'
 import { VinDecodeField } from '@/components/vin-decode-field'
-import { VinManualVehicleFields } from '@/components/vin-manual-vehicle-fields'
-import type { DemandVehicleFieldsFromVin } from '@/lib/vin-decode/map-to-demand-vehicle'
 import { INDIVIDUAL_SALES_DEMANDS } from '@/lib/individual-sales'
 
 interface CameraModel {
@@ -24,14 +22,6 @@ interface Specialist {
 const inputClass =
   'mt-1 block w-full rounded-md border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 py-2 px-3 shadow-sm focus:border-[#C27E00] focus:outline-none focus:ring-[#C27E00] sm:text-sm text-zinc-900 dark:text-white'
 
-function displayVehicleModel(fields: DemandVehicleFieldsFromVin): string {
-  if (fields.selectedModel === '__custom__' && fields.customModel) {
-    return fields.customModel
-  }
-  const base = fields.selectedModel || fields.rawModel
-  return fields.selectedTrim ? `${base} (${fields.selectedTrim})` : base
-}
-
 export function IndividualDemandForm({
   cameraModels,
   specialists,
@@ -44,12 +34,8 @@ export function IndividualDemandForm({
   const router = useRouter()
   const [state, formAction, isPending] = useActionState(createIndividualDemand, null as CreateIndividualDemandState)
   const [phone, setPhone] = useState('')
-  const [vehicleMake, setVehicleMake] = useState('')
-  const [vehicleModel, setVehicleModel] = useState('')
-  const [vehicleYear, setVehicleYear] = useState('')
   const [vinLast6, setVinLast6] = useState('')
-  const [vinDecodeWarning, setVinDecodeWarning] = useState(false)
-  const [vinDecodePending, setVinDecodePending] = useState(false)
+  const [fullVin, setFullVin] = useState('')
 
   useEffect(() => {
     if (state?.success && state.demandId) {
@@ -58,24 +44,7 @@ export function IndividualDemandForm({
     }
   }, [state, router])
 
-  const onVinDecoded = (fields: DemandVehicleFieldsFromVin, _hint?: string, markWarning?: boolean) => {
-    setVinDecodeWarning(!!markWarning)
-    setVinLast6(fields.vinLast6)
-    setVehicleYear(fields.vehicleYear)
-    setVehicleMake(fields.selectedMake || fields.rawMake)
-    setVehicleModel(displayVehicleModel(fields))
-  }
-
-  const onVinDecodeFailed = (payload: { vinLast6: string }) => {
-    setVinDecodeWarning(true)
-    setVinLast6(payload.vinLast6)
-    setVehicleYear('')
-    setVehicleMake('')
-    setVehicleModel('')
-  }
-
-  const vehicleReady =
-    vinLast6.length >= 6 && !!vehicleMake.trim() && !!vehicleModel.trim() && !!vehicleYear.trim()
+  const vinReady = vinLast6.length >= 6
 
   return (
     <form action={formAction} className="max-w-2xl space-y-6">
@@ -107,33 +76,19 @@ export function IndividualDemandForm({
       </div>
 
       <VinDecodeField
+        mode="capture"
         disabled={isPending}
-        onDecoded={onVinDecoded}
-        onDecodeFailed={onVinDecodeFailed}
-        onPendingChange={setVinDecodePending}
+        onVinFull={({ vinLast6: last6, fullVin: vin }) => {
+          setVinLast6(last6)
+          setFullVin(vin)
+        }}
         inputClassName={inputClass}
       />
+      {fullVin.length === 17 ? <input type="hidden" name="fullVin" value={fullVin} /> : null}
 
-      <input type="hidden" name="vehicleMake" value={vehicleMake} />
-      <input type="hidden" name="vehicleModel" value={vehicleModel} />
-      <input type="hidden" name="vehicleYear" value={vehicleYear} />
-      <input type="hidden" name="vinLast6" value={vinLast6} />
-      <input type="hidden" name="vinDecodeWarning" value={vinDecodeWarning ? '1' : '0'} />
-
-      {vinDecodeWarning ? (
-        <VinManualVehicleFields
-          vehicleYear={vehicleYear}
-          vehicleMake={vehicleMake}
-          vehicleModel={vehicleModel}
-          onVehicleYear={setVehicleYear}
-          onVehicleMake={setVehicleMake}
-          onVehicleModel={setVehicleModel}
-          inputClassName={inputClass}
-          disabled={isPending}
-        />
-      ) : vehicleReady ? (
+      {vinReady ? (
         <p className="text-xs text-zinc-500 dark:text-gray-400">
-          {vehicleYear} {vehicleMake} {vehicleModel} · VIN …{vinLast6}
+          VIN …{vinLast6} — vehicle details decode in the background after you create.
         </p>
       ) : (
         <p className="text-xs text-zinc-500 dark:text-gray-400">Enter the full 17-character VIN to continue.</p>
@@ -186,7 +141,7 @@ export function IndividualDemandForm({
       <div className="flex flex-wrap items-center gap-3 pt-2">
         <button
           type="submit"
-          disabled={isPending || vinDecodePending || !vehicleReady}
+          disabled={isPending || !vinReady}
           className="rounded-md bg-[#C27E00] px-4 py-2 text-sm font-semibold text-white hover:bg-[#a06900] disabled:opacity-50"
         >
           {isPending ? 'Creating…' : 'Create appointment'}

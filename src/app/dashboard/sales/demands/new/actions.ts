@@ -1,10 +1,14 @@
 'use server'
 
+import { after } from 'next/server'
+import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { logDemandChange } from '@/lib/demand-logger'
 import { dispatchWebhooks } from '@/lib/webhook-dispatch'
 import { z } from 'zod'
-import { parseVinDecodeWarningFromForm } from '@/lib/vin-decode/form-warning'
+import { normalizeVinInput, validateVinFormat } from '@/lib/vin-decode/nhtsa-vpic'
+import { modelYearHintFromVin } from '@/lib/vin-decode/vin-model-year'
+import { applyVinDecodeToDemand } from '@/lib/vin-decode/apply-vin-decode-to-demand'
 import { validateAppointmentSlot, getPoolSlotContext } from '@/app/dashboard/system-management/calendar/actions'
 import { getTimezoneFromDealer } from '@/lib/dealer-timezone'
 import { SYSTEM_DEFAULT_TIMEZONE } from '@/lib/timezone-defaults'
@@ -32,12 +36,16 @@ async function getDealerTimezone(dealerId: string | null): Promise<string | null
   return getTimezoneFromDealer(data as Parameters<typeof getTimezoneFromDealer>[0]) ?? null
 }
 
+const PENDING_VEHICLE_LABEL = 'Pending VIN decode'
+
 const schema = z.object({
   phone: z.string().min(1, 'Phone is required'),
   address: z.string().optional(),
-  vehicleMake: z.string().min(1, 'Vehicle make is required'),
-  vehicleModel: z.string().min(1, 'Vehicle model is required'),
-  vehicleYear: z.coerce.number().min(1900, 'Vehicle year is required'),
+  fullVin: z
+    .string()
+    .min(1, 'Full VIN is required')
+    .transform((v) => normalizeVinInput(v))
+    .refine((v) => v.length === 17, 'Enter the full 17-character VIN'),
   stockNumber: z
     .string()
     .optional()
@@ -45,11 +53,6 @@ const schema = z.object({
       const trimmed = (v ?? '').trim().toUpperCase()
       return trimmed.length > 0 ? trimmed : null
     }),
-  vinLast6: z
-    .string()
-    .min(1, 'VIN is required')
-    .transform(v => (v || '').trim().replace(/\s/g, '').slice(-6).toUpperCase())
-    .refine(v => v.length >= 6, 'VIN last 6 digits are required'),
   cameraModel: z.string().min(1),
   appointmentDate: z.string().min(1, 'Please select a time slot'),
   comment: z.string().optional(),
@@ -84,6 +87,7 @@ export type CreateDemandState =
       role: 'sales' | 'finance'
       portalUrl: string | null
       smsSent: boolean
+      smsQueued?: boolean
       smsError?: string
     }
   | null
@@ -103,11 +107,8 @@ export async function createDemand(prevState: CreateDemandState, formData: FormD
   const rawData = {
     phone: formData.get('phone'),
     address: formData.get('address'),
-    vehicleMake: formData.get('vehicleMake'),
-    vehicleModel: formData.get('vehicleModel'),
-    vehicleYear: formData.get('vehicleYear'),
+    fullVin: formData.get('fullVin'),
     stockNumber: formData.get('stockNumber'),
-    vinLast6: formData.get('vinLast6'),
     cameraModel: formData.get('cameraModel'),
     appointmentDate: formData.get('appointmentDate'),
     comment: formData.get('comment'),
@@ -119,6 +120,13 @@ export async function createDemand(prevState: CreateDemandState, formData: FormD
   }
 
   const data = result.data
+  const fullVin = data.fullVin
+  const vinValidated = validateVinFormat(fullVin)
+  if ('error' in vinValidated) {
+    return { error: vinValidated.error }
+  }
+  const vinLast6 = vinValidated.vin.slice(-6)
+  const vehicleYear = modelYearHintFromVin(vinValidated.vin) ?? new Date().getFullYear()
 
   if (!profile.dealer_id) {
     return { error: 'Your account is not assigned to a dealer.' }
@@ -128,9 +136,10 @@ export async function createDemand(prevState: CreateDemandState, formData: FormD
   if (!validation.valid) {
     return { error: validation.error ?? 'This time slot is not available.' }
   }
+  const appointmentDate = validation.canonicalIso ?? data.appointmentDate
 
   const timezoneName = await getDealerTimezone(profile.dealer_id)
-  const slotTaken = !(await isSlotAvailableForDealer(supabase, profile.dealer_id, data.appointmentDate))
+  const slotTaken = !(await isSlotAvailableForDealer(supabase, profile.dealer_id, appointmentDate))
   if (slotTaken) {
       return { error: 'This time slot is fully booked for your service area. Please select another time.' }
   }
@@ -156,15 +165,15 @@ export async function createDemand(prevState: CreateDemandState, formData: FormD
     customer_phone: data.phone,
     customer_address: data.address || dealerAddressRow?.address || dealerAddressRow?.name || null,
     customer_details_pending: true,
-    vehicle_make: data.vehicleMake,
-    vehicle_model: data.vehicleModel,
-    vehicle_year: data.vehicleYear,
+    vehicle_make: PENDING_VEHICLE_LABEL,
+    vehicle_model: PENDING_VEHICLE_LABEL,
+    vehicle_year: vehicleYear,
     stock_number: data.stockNumber ?? null,
-    vin_last6: data.vinLast6,
-    vin_decode_warning: parseVinDecodeWarningFromForm(formData),
+    vin_last6: vinLast6,
+    vin_decode_warning: true,
     camera_model: cameraCheck.cameraModelName,
     camera_model_id: cameraCheck.cameraModelId,
-    appointment_date: data.appointmentDate,
+    appointment_date: appointmentDate,
     status: 'approved' as const,
     ...(profile.role === 'finance' && { assigned_finance_id: profile.id }),
     ...(data.comment && data.comment.trim() && { comment: data.comment.trim() }),
@@ -178,55 +187,19 @@ export async function createDemand(prevState: CreateDemandState, formData: FormD
       if (error.message && (error.message.includes('time slot is already booked') || error.message.includes('fully booked'))) {
           return { error: 'This time slot is fully booked for your service area. Please select another time.' }
       }
+      if (error.message?.includes('vin_decode_warning')) {
+        return {
+          error:
+            'Database is missing the vin_decode_warning column. Run the latest Supabase migration locally (20261121120000_demands_vin_decode_warning.sql), then try again.',
+        }
+      }
       return { error: error.message || 'Failed to create demand. Please check your permissions.' }
   }
 
-  const finalized = await finalizeDemandAsApproved(supabase, {
-    demandId: demand.id,
-    actorId: user.id,
-    demand: {
-      dealer_id: demand.dealer_id,
-      customer_phone: demand.customer_phone,
-      customer_firstname: demand.customer_firstname,
-      customer_lastname: demand.customer_lastname,
-      appointment_date: demand.appointment_date,
-      customer_address: demand.customer_address,
-      vehicle_year: demand.vehicle_year,
-      vehicle_make: demand.vehicle_make,
-      vehicle_model: demand.vehicle_model,
-      vin_last6: demand.vin_last6,
-      stock_number: demand.stock_number,
-      assigned_specialist_id: demand.assigned_specialist_id,
-    },
-    previousStatus: null,
-    logNote: 'Demand created and approved; customer details pending portal',
-    transitionFromStatus: null,
-    sms: { customer: false, specialist: true, auroraManager: true },
-  })
-
-  if ('error' in finalized) {
-    console.error('Auto-approve after create failed:', finalized.error)
-  }
-
-  dispatchWebhooks(supabase, 'demand_created', {
-    demand_id: demand.id,
-    demand_number: demand.demand_number,
-    status: demand.status,
-    customer_firstname: demand.customer_firstname,
-    customer_lastname: demand.customer_lastname,
-    vehicle_make: demand.vehicle_make,
-    vehicle_model: demand.vehicle_model,
-    appointment_date: demand.appointment_date,
-    dealer_id: demand.dealer_id,
-  }).catch(() => {})
-
-  if (data.stockNumber) {
-    notifyAuroraManagersIfDuplicateStock({
-      demandId: demand.id,
-      demandNumber: demand.demand_number,
-      stockNumber: data.stockNumber,
-    }).catch(() => {})
-  }
+  revalidatePath('/dashboard/sales/demands')
+  revalidatePath('/dashboard/finance/demands')
+  revalidatePath('/dashboard/admin/demands')
+  revalidatePath('/dashboard/specialist/work')
 
   const { data: dealerRow } = await supabase
     .from('dealers')
@@ -235,13 +208,83 @@ export async function createDemand(prevState: CreateDemandState, formData: FormD
     .single()
 
   const portal = await issuePortalTokenForDemand(data.phone, demand.id, profile.id)
-  let smsSent = false
-  let smsError: string | undefined
-  if (portal?.url) {
-    const sms = await sendDealerHandoffLinkSms(data.phone, portal.url, demand.id)
-    smsSent = sms.success
-    smsError = sms.error
-  }
+  const portalUrl = portal?.url ?? null
+
+  after(async () => {
+    const bg = await createClient()
+    const decoded = await applyVinDecodeToDemand(bg, demand.id, fullVin)
+    const vehicleForNotify =
+      'ok' in decoded && decoded.ok
+        ? {
+            vehicle_year: decoded.vehicle_year,
+            vehicle_make: decoded.vehicle_make,
+            vehicle_model: decoded.vehicle_model,
+            vin_last6: decoded.vin_last6,
+          }
+        : {
+            vehicle_year: demand.vehicle_year,
+            vehicle_make: demand.vehicle_make,
+            vehicle_model: demand.vehicle_model,
+            vin_last6: decoded.vin_last6,
+          }
+
+    const finalized = await finalizeDemandAsApproved(bg, {
+      demandId: demand.id,
+      actorId: user.id,
+      demand: {
+        dealer_id: demand.dealer_id,
+        customer_phone: demand.customer_phone,
+        customer_firstname: demand.customer_firstname,
+        customer_lastname: demand.customer_lastname,
+        appointment_date: demand.appointment_date,
+        customer_address: demand.customer_address,
+        vehicle_year: vehicleForNotify.vehicle_year,
+        vehicle_make: vehicleForNotify.vehicle_make,
+        vehicle_model: vehicleForNotify.vehicle_model,
+        vin_last6: vehicleForNotify.vin_last6,
+        stock_number: demand.stock_number,
+        assigned_specialist_id: demand.assigned_specialist_id,
+      },
+      previousStatus: null,
+      logNote: 'Demand created and approved; customer details pending portal',
+      transitionFromStatus: null,
+      sms: { customer: false, specialist: true, auroraManager: true },
+    })
+    if ('error' in finalized) {
+      console.error('Auto-approve after create failed:', finalized.error)
+    }
+
+    dispatchWebhooks(bg, 'demand_created', {
+      demand_id: demand.id,
+      demand_number: demand.demand_number,
+      status: demand.status,
+      customer_firstname: demand.customer_firstname,
+      customer_lastname: demand.customer_lastname,
+      vehicle_make: vehicleForNotify.vehicle_make,
+      vehicle_model: vehicleForNotify.vehicle_model,
+      appointment_date: demand.appointment_date,
+      dealer_id: demand.dealer_id,
+    }).catch(() => {})
+
+    if (data.stockNumber) {
+      notifyAuroraManagersIfDuplicateStock({
+        demandId: demand.id,
+        demandNumber: demand.demand_number,
+        stockNumber: data.stockNumber,
+      }).catch(() => {})
+    }
+
+    if (portalUrl) {
+      await sendDealerHandoffLinkSms(data.phone, portalUrl, demand.id).catch((e) => {
+        console.error('Background handoff SMS failed:', e)
+      })
+    }
+
+    revalidatePath('/dashboard/sales/demands')
+    revalidatePath('/dashboard/finance/demands')
+    revalidatePath('/dashboard/admin/demands')
+    revalidatePath('/dashboard/specialist/work')
+  })
 
   return {
     success: true as const,
@@ -269,9 +312,9 @@ export async function createDemand(prevState: CreateDemandState, formData: FormD
     },
     timezoneName,
     role: profile.role as 'sales' | 'finance',
-    portalUrl: portal?.url ?? null,
-    smsSent,
-    smsError,
+    portalUrl,
+    smsSent: false,
+    smsQueued: !!portalUrl,
   }
 }
 

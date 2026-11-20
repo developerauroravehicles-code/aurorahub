@@ -6,6 +6,8 @@ import { getTimezoneFromDealer } from '@/lib/dealer-timezone'
 import { FinanceDemandsList } from './finance-demands-list'
 import { DemandPrintHost } from '@/components/demand-print-host'
 
+export const dynamic = 'force-dynamic'
+
 const EMPTY_DEALER = '00000000-0000-0000-0000-000000000000'
 
 const demandSelect =

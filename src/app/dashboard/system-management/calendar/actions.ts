@@ -26,6 +26,12 @@ import {
   DEALER_CALENDAR_DAY_TYPES,
   resolveCalendarSettingForIsoDow,
 } from '@/lib/dealer-calendar-day-type'
+import {
+  appointmentDurationForPacificDay,
+  buildPacificSlotIsosForDay,
+  canonicalPacificSlotIso,
+  parseAppointmentDateInput,
+} from '@/lib/pacific-appointment-slots'
 
 export async function createCalendarSetting(formData: FormData) {
   const supabase = await createClient()
@@ -530,10 +536,10 @@ export async function validateAppointmentSlot(
     excludeDemandId?: string | null
     excludeServiceRecordId?: string | null
   }
-): Promise<{ valid: boolean; error?: string }> {
+): Promise<{ valid: boolean; error?: string; canonicalIso?: string }> {
   const supabase = await createClient()
-  const slotTime = new Date(appointmentDateISO)
-  if (isNaN(slotTime.getTime())) return { valid: false, error: 'Invalid appointment time' }
+  const parsedSlot = parseAppointmentDateInput(appointmentDateISO)
+  if (!parsedSlot) return { valid: false, error: 'Invalid appointment time' }
 
   const { data: dealer } = await supabase
     .from('dealers')
@@ -542,45 +548,43 @@ export async function validateAppointmentSlot(
     .single()
   if (!dealer) return { valid: false, error: 'Dealer not found' }
 
-  // Appointments stored as Pacific Time (PT)
+  const { data: settingsRows } = await supabase
+    .from('dealer_calendar_settings')
+    .select('day_type, start_hour, start_minute, end_hour, end_minute, slot_interval_minutes, appointment_duration_minutes')
+    .eq('dealer_id', dealerId)
+    .order('day_type')
+  const settingsMap = buildCalendarSettingsMap((settingsRows || []) as CalendarSetting[])
+
+  const canonicalIso =
+    canonicalPacificSlotIso(parsedSlot.toISOString(), settingsMap) ??
+    canonicalPacificSlotIso(appointmentDateISO.trim(), settingsMap)
+  if (!canonicalIso) {
+    return { valid: false, error: 'Selected time is not a valid slot for this dealer\'s calendar.' }
+  }
+
+  const slotTime = new Date(canonicalIso)
   const dateStr = formatInTimeZone(slotTime, SYSTEM_DEFAULT_TIMEZONE, 'yyyy-MM-dd')
   const startMinutes = parseInt(formatInTimeZone(slotTime, SYSTEM_DEFAULT_TIMEZONE, 'H'), 10) * 60 +
     parseInt(formatInTimeZone(slotTime, SYSTEM_DEFAULT_TIMEZONE, 'm'), 10)
-  const duration = CALENDAR_DEFAULTS.appointmentDurationMinutes
-  const endMinutes = startMinutes + duration
-
   const isoDow = getISODay(toDate(`${dateStr}T12:00:00`, { timeZone: SYSTEM_DEFAULT_TIMEZONE }))
   if (await isDealerClosedOnIsoDow(supabase, dealerId, isoDow)) {
     return { valid: false, error: 'This dealer is closed on this day of the week.' }
   }
 
-  const { data: settingsRows } = await supabase
-    .from('dealer_calendar_settings')
-    .select('day_type, start_hour, start_minute, end_hour, end_minute, slot_interval_minutes, appointment_duration_minutes')
-    .eq('dealer_id', dealerId)
-  const settings = resolveCalendarSettingForIsoDow(
-    buildCalendarSettingsMap((settingsRows || []) as CalendarSetting[]),
-    isoDow
-  )
+  const settings = resolveCalendarSettingForIsoDow(settingsMap, isoDow)
 
-  const slotStarts = settings
-    ? getSlotMinutesFromConfig(dealerCalendarRowToSlotConfig(settings))
-    : getDefaultSlotMinutes()
-  const durationUsed = settings?.appointment_duration_minutes ?? CALENDAR_DEFAULTS.appointmentDurationMinutes
+  const durationUsed = appointmentDurationForPacificDay(settingsMap, dateStr)
   const lastAllowedEnd = settings
     ? wallTimeToMinutes(settings.end_hour, settings.end_minute ?? 0)
     : CALENDAR_DEFAULTS.endHour * 60 + CALENDAR_DEFAULTS.endMinute
-
-  if (!slotStarts.includes(startMinutes)) {
-    return { valid: false, error: 'Selected time is not a valid slot for this dealer\'s calendar.' }
-  }
   if (startMinutes + durationUsed > lastAllowedEnd) {
     return { valid: false, error: 'Selected time is outside dealer working hours.' }
   }
 
   const blocks = await getDealerBlocksForDate(dealerId, dateStr)
+  const slotEndMinutes = startMinutes + durationUsed
   const inBlock = blocks.some(
-    b => startMinutes < b.end_minutes && endMinutes > b.start_minutes
+    b => startMinutes < b.end_minutes && slotEndMinutes > b.start_minutes
   )
   if (inBlock) {
     return { valid: false, error: 'Selected slot is closed for this dealer.' }
@@ -600,7 +604,7 @@ export async function validateAppointmentSlot(
     }
   }
 
-  const slotAvailable = await isSlotAvailableForDealer(supabase, dealerId, appointmentDateISO, {
+  const slotAvailable = await isSlotAvailableForDealer(supabase, dealerId, canonicalIso, {
     excludeDemandId: options?.excludeDemandId,
     excludeServiceRecordId: options?.excludeServiceRecordId,
   })
@@ -608,7 +612,7 @@ export async function validateAppointmentSlot(
     return { valid: false, error: 'This time slot is fully booked for your service area. Please select another time.' }
   }
 
-  return { valid: true }
+  return { valid: true, canonicalIso }
 }
 
 function getDefaultSlotMinutes(): number[] {
@@ -652,24 +656,12 @@ export async function getAvailableSlotsForEdit(
     .from('dealer_calendar_settings')
     .select('day_type, start_hour, start_minute, end_hour, end_minute, slot_interval_minutes, appointment_duration_minutes')
     .eq('dealer_id', dealerId)
-  const settings = resolveCalendarSettingForIsoDow(
-    buildCalendarSettingsMap((settingsRows || []) as CalendarSetting[]),
-    isoDow
-  )
+    .order('day_type')
+  const settingsMap = buildCalendarSettingsMap((settingsRows || []) as CalendarSetting[])
+  const duration = appointmentDurationForPacificDay(settingsMap, dateStr)
 
-  const slotMinutes = settings
-    ? getSlotMinutesFromConfig(dealerCalendarRowToSlotConfig(settings))
-    : getDefaultSlotMinutes()
-  const duration = settings?.appointment_duration_minutes ?? CALENDAR_DEFAULTS.appointmentDurationMinutes
-
-  const slots: string[] = []
   const isoDay = `${y}-${pad2(mo)}-${pad2(d)}`
-  for (const startMinutes of slotMinutes) {
-    const h = Math.floor(startMinutes / 60)
-    const mins = startMinutes % 60
-    const wall = `${isoDay}T${pad2(h)}:${pad2(mins)}:00`
-    slots.push(toDate(wall, { timeZone: ptTz }).toISOString())
-  }
+  const slots = buildPacificSlotIsosForDay(settingsMap, isoDay)
 
   const blocks = await getDealerBlocksForDate(dealerId, dateStr)
   let availableSlots = slots.filter(slot => {

@@ -995,12 +995,9 @@ export function CreateExternalDemandForm({
 
         <h3 className="col-span-full text-sm font-medium text-zinc-900 dark:text-white border-t border-zinc-200 dark:border-gray-800 pt-4 mt-4">Vehicle</h3>
         <VinDecodeField
+          mode="capture"
           disabled={isPending}
-          onDecoded={applyVinDecodeFields}
-          onDecodeFailed={({ vinLast6: last6 }) => {
-            setVinDecodeWarning(true)
-            setVinLast6(last6)
-          }}
+          onVinFull={({ vinLast6: last6 }) => setVinLast6(last6)}
           inputClassName={inputClass}
         />
         <input type="hidden" name="vinDecodeWarning" value={vinDecodeWarning ? '1' : '0'} />

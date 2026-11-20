@@ -10,16 +10,23 @@ import { notifyAuroraManagersIfDuplicateStock } from '@/lib/notify-duplicate-sto
 import { finalizeDemandAsApproved } from '@/lib/demands/finalize-demand-approved'
 import { getIndividualSalesDealerIdOrThrow } from '@/lib/individual-sales'
 import { INDIVIDUAL_SALES_DEMANDS } from '@/lib/individual-sales'
-import { parseVinDecodeWarningFromForm } from '@/lib/vin-decode/form-warning'
+import { after } from 'next/server'
+import { normalizeVinInput, validateVinFormat } from '@/lib/vin-decode/nhtsa-vpic'
+import { modelYearHintFromVin } from '@/lib/vin-decode/vin-model-year'
+import { applyVinDecodeToDemand } from '@/lib/vin-decode/apply-vin-decode-to-demand'
+
+const PENDING_VEHICLE_LABEL = 'Pending VIN decode'
 
 const schema = z.object({
   firstName: z.string().min(1).transform((v) => (v || '').trim().toUpperCase()),
   lastName: z.string().min(1).transform((v) => (v || '').trim().toUpperCase()),
   phone: z.string().min(1),
   address: z.string().optional(),
-  vehicleMake: z.string().min(1),
-  vehicleModel: z.string().min(1),
-  vehicleYear: z.coerce.number().min(1900),
+  fullVin: z
+    .string()
+    .min(1)
+    .transform((v) => normalizeVinInput(v))
+    .refine((v) => v.length === 17, 'Enter the full 17-character VIN'),
   stockNumber: z
     .string()
     .optional()
@@ -27,11 +34,6 @@ const schema = z.object({
       const trimmed = (v ?? '').trim().toUpperCase()
       return trimmed.length > 0 ? trimmed : null
     }),
-  vinLast6: z
-    .string()
-    .min(1)
-    .transform((v) => (v || '').trim().replace(/\s/g, '').slice(-6).toUpperCase())
-    .refine((v) => v.length >= 6, 'VIN last 6 digits required'),
   cameraModel: z.string().min(1),
   appointmentAtLocal: z.string().min(1, 'Choose appointment date and time'),
   comment: z.string().optional(),
@@ -74,11 +76,8 @@ export async function createIndividualDemand(
     lastName: formData.get('lastName'),
     phone: formData.get('phone'),
     address: formData.get('address'),
-    vehicleMake: formData.get('vehicleMake'),
-    vehicleModel: formData.get('vehicleModel'),
-    vehicleYear: formData.get('vehicleYear'),
+    fullVin: formData.get('fullVin'),
     stockNumber: formData.get('stockNumber'),
-    vinLast6: formData.get('vinLast6'),
     cameraModel: formData.get('cameraModel'),
     appointmentAtLocal: formData.get('appointmentAtLocal'),
     comment: formData.get('comment'),
@@ -91,6 +90,14 @@ export async function createIndividualDemand(
   }
 
   const data = parsed.data
+  const vinValidated = validateVinFormat(data.fullVin)
+  if ('error' in vinValidated) {
+    return { error: vinValidated.error }
+  }
+  const fullVin = vinValidated.vin
+  const vinLast6 = fullVin.slice(-6)
+  const vehicleYear = modelYearHintFromVin(fullVin) ?? new Date().getFullYear()
+
   let appointmentIso: string
   try {
     appointmentIso = ptDatetimeLocalToISO(data.appointmentAtLocal.trim())
@@ -134,12 +141,12 @@ export async function createIndividualDemand(
     customer_phone: data.phone,
     customer_address: data.address?.trim() || dealerRow?.address || dealerRow?.name || null,
     customer_details_pending: false,
-    vehicle_make: data.vehicleMake,
-    vehicle_model: data.vehicleModel,
-    vehicle_year: data.vehicleYear,
+    vehicle_make: PENDING_VEHICLE_LABEL,
+    vehicle_model: PENDING_VEHICLE_LABEL,
+    vehicle_year: vehicleYear,
     stock_number: data.stockNumber,
-    vin_last6: data.vinLast6,
-    vin_decode_warning: parseVinDecodeWarningFromForm(formData),
+    vin_last6: vinLast6,
+    vin_decode_warning: true,
     camera_model: cameraCheck.cameraModelName,
     camera_model_id: cameraCheck.cameraModelId,
     appointment_date: appointmentIso,
@@ -159,51 +166,74 @@ export async function createIndividualDemand(
     return { error: error.message || 'Failed to create appointment.' }
   }
 
-  const finalized = await finalizeDemandAsApproved(auth.supabase, {
-    demandId: demand.id,
-    actorId: auth.user.id,
-    demand: {
-      dealer_id: demand.dealer_id,
-      customer_phone: demand.customer_phone,
+  const actorId = auth.user.id
+
+  after(async () => {
+    const bg = await createClient()
+    const decoded = await applyVinDecodeToDemand(bg, demand.id, fullVin)
+    const vehicleForNotify =
+      'ok' in decoded && decoded.ok
+        ? {
+            vehicle_year: decoded.vehicle_year,
+            vehicle_make: decoded.vehicle_make,
+            vehicle_model: decoded.vehicle_model,
+            vin_last6: decoded.vin_last6,
+          }
+        : {
+            vehicle_year: demand.vehicle_year,
+            vehicle_make: demand.vehicle_make,
+            vehicle_model: demand.vehicle_model,
+            vin_last6: decoded.vin_last6,
+          }
+
+    const finalized = await finalizeDemandAsApproved(bg, {
+      demandId: demand.id,
+      actorId,
+      demand: {
+        dealer_id: demand.dealer_id,
+        customer_phone: demand.customer_phone,
+        customer_firstname: demand.customer_firstname,
+        customer_lastname: demand.customer_lastname,
+        appointment_date: demand.appointment_date,
+        customer_address: demand.customer_address,
+        vehicle_year: vehicleForNotify.vehicle_year,
+        vehicle_make: vehicleForNotify.vehicle_make,
+        vehicle_model: vehicleForNotify.vehicle_model,
+        vin_last6: vehicleForNotify.vin_last6,
+        stock_number: demand.stock_number,
+        assigned_specialist_id: demand.assigned_specialist_id,
+      },
+      previousStatus: null,
+      logNote: 'Individual sales appointment created',
+      transitionFromStatus: null,
+    })
+
+    if ('error' in finalized) {
+      console.error('Individual demand finalize failed:', finalized.error)
+    }
+
+    dispatchWebhooks(bg, 'demand_created', {
+      demand_id: demand.id,
+      demand_number: demand.demand_number,
+      status: demand.status,
       customer_firstname: demand.customer_firstname,
       customer_lastname: demand.customer_lastname,
+      vehicle_make: vehicleForNotify.vehicle_make,
+      vehicle_model: vehicleForNotify.vehicle_model,
       appointment_date: demand.appointment_date,
-      customer_address: demand.customer_address,
-      vehicle_year: demand.vehicle_year,
-      vehicle_make: demand.vehicle_make,
-      vehicle_model: demand.vehicle_model,
-      vin_last6: demand.vin_last6,
-      stock_number: demand.stock_number,
-      assigned_specialist_id: demand.assigned_specialist_id,
-    },
-    previousStatus: null,
-    logNote: 'Individual sales appointment created',
-    transitionFromStatus: null,
-  })
-
-  if ('error' in finalized) {
-    console.error('Individual demand finalize failed:', finalized.error)
-  }
-
-  dispatchWebhooks(auth.supabase, 'demand_created', {
-    demand_id: demand.id,
-    demand_number: demand.demand_number,
-    status: demand.status,
-    customer_firstname: demand.customer_firstname,
-    customer_lastname: demand.customer_lastname,
-    vehicle_make: demand.vehicle_make,
-    vehicle_model: demand.vehicle_model,
-    appointment_date: demand.appointment_date,
-    dealer_id: demand.dealer_id,
-  }).catch(() => {})
-
-  if (data.stockNumber) {
-    notifyAuroraManagersIfDuplicateStock({
-      demandId: demand.id,
-      demandNumber: demand.demand_number,
-      stockNumber: data.stockNumber,
+      dealer_id: demand.dealer_id,
     }).catch(() => {})
-  }
+
+    if (data.stockNumber) {
+      notifyAuroraManagersIfDuplicateStock({
+        demandId: demand.id,
+        demandNumber: demand.demand_number,
+        stockNumber: data.stockNumber,
+      }).catch(() => {})
+    }
+
+    revalidatePath(INDIVIDUAL_SALES_DEMANDS)
+  })
 
   revalidatePath(INDIVIDUAL_SALES_DEMANDS)
   return { success: true, demandId: demand.id }

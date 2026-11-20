@@ -98,10 +98,10 @@ export async function decodeVinFromNhtsa(vin: string): Promise<NhtsaVinDecode> {
   }
 
   const modelYearHint = modelYearHintFromVin(validated.vin)
-  const timeoutMs = 20000
+  const timeoutMs = 12000
   let lastError: Error | null = null
 
-  const attempts: Array<number | null> = [modelYearHint, modelYearHint, null]
+  const attempts: Array<number | null> = [modelYearHint, null]
 
   for (let attempt = 0; attempt < attempts.length; attempt++) {
     const modelYear = attempts[attempt]

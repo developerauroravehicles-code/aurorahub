@@ -1,8 +1,9 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
-import { decodeVinFromNhtsa, isNhtsaDecodeUncertain, type NhtsaVinDecode } from './nhtsa-vpic'
+import { decodeVinFromNhtsa, isNhtsaDecodeUncertain } from './nhtsa-vpic'
 import { mapVinDecodeToDemandFields, type DemandVehicleFieldsFromVin } from './map-to-demand-vehicle'
+import { shouldMarkVinDecodeWarningAfterDecode } from './apply-vin-decode-to-demand'
 
 const ALLOWED_ROLES = new Set([
   'aurora_manager',
@@ -22,15 +23,6 @@ export type DecodeVinForDemandResult =
       markVinDecodeWarning: boolean
     }
   | { error: string }
-
-function shouldMarkVinDecodeWarning(decode: NhtsaVinDecode, fields: DemandVehicleFieldsFromVin): boolean {
-  if (isNhtsaDecodeUncertain(decode)) return true
-  if (fields.makeUnmapped) return true
-  if (!fields.vehicleYear) return true
-  if (!fields.selectedMake && !fields.rawMake) return true
-  if (!fields.selectedModel && !fields.customModel && !fields.rawModel) return true
-  return false
-}
 
 export async function decodeVinForDemand(vin: string): Promise<DecodeVinForDemandResult> {
   const supabase = await createClient()
@@ -60,7 +52,7 @@ export async function decodeVinForDemand(vin: string): Promise<DecodeVinForDeman
     }
 
     const hint = hints.length > 0 ? hints.join(' ') : undefined
-    const markVinDecodeWarning = shouldMarkVinDecodeWarning(decode, fields)
+    const markVinDecodeWarning = shouldMarkVinDecodeWarningAfterDecode(decode, fields)
 
     return { ok: true, fields, hint, markVinDecodeWarning }
   } catch (e) {

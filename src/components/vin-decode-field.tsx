@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { decodeVinForDemand } from '@/lib/vin-decode/decode-vin-action'
 import type { DemandVehicleFieldsFromVin } from '@/lib/vin-decode/map-to-demand-vehicle'
 import { normalizeVinInput } from '@/lib/vin-decode/nhtsa-vpic'
@@ -8,124 +8,128 @@ import { vinLast6FromFullVin } from '@/lib/vin-decode/form-warning'
 
 type VinDecodeFieldProps = {
   disabled?: boolean
-  onDecoded: (
+  /** `capture` = store VIN only (decode after submit). `decode` = lookup while typing (admin re-decode). */
+  mode?: 'capture' | 'decode'
+  onDecoded?: (
     fields: DemandVehicleFieldsFromVin,
     hint?: string,
     markVinDecodeWarning?: boolean
   ) => void
   onDecodeFailed?: (payload: { vinLast6: string; error: string }) => void
+  onVinFull?: (payload: { vinLast6: string; fullVin: string }) => void
   onPendingChange?: (pending: boolean) => void
   inputClassName?: string
   buttonClassName?: string
-  /** @default true — decode runs automatically when 17 characters are entered */
-  autoDecode?: boolean
 }
 
 export function VinDecodeField({
   disabled = false,
+  mode = 'capture',
   onDecoded,
   onDecodeFailed,
+  onVinFull,
   onPendingChange,
   inputClassName = '',
   buttonClassName = '',
-  autoDecode = true,
 }: VinDecodeFieldProps) {
   const [fullVin, setFullVin] = useState('')
   const [pending, setPending] = useState(false)
   const [message, setMessage] = useState<{ type: 'error' | 'success' | 'warning'; text: string } | null>(
     null
   )
-  const lastSuccessVin = useRef('')
+  const lastDecodeVin = useRef('')
   const decodeGen = useRef(0)
 
-  const setPendingSafe = useCallback(
-    (next: boolean) => {
-      setPending(next)
-      onPendingChange?.(next)
-    },
-    [onPendingChange]
-  )
-
-  const runDecode = useCallback(
-    async (vin: string, generation: number) => {
-      setMessage(null)
-      const normalized = normalizeVinInput(vin)
-      if (normalized.length !== 17) return
-
-      setPendingSafe(true)
-      try {
-        const result = await decodeVinForDemand(vin)
-        if (generation !== decodeGen.current) return
-
-        if ('error' in result) {
-          onDecodeFailed?.({ vinLast6: vinLast6FromFullVin(vin), error: result.error })
-          setMessage({ type: 'error', text: result.error })
-          return
-        }
-
-        onDecoded(result.fields, result.hint, result.markVinDecodeWarning)
-        lastSuccessVin.current = normalized
-
-        const parts: string[] = ['Vehicle fields updated from VIN.']
-        if (result.hint) parts.push(result.hint)
-        const isWarning = result.markVinDecodeWarning || !!result.hint
-        setMessage({
-          type: isWarning ? 'warning' : 'success',
-          text: parts.join(' '),
-        })
-      } catch (e) {
-        if (generation !== decodeGen.current) return
-        const text = e instanceof Error ? e.message : 'VIN decode failed'
-        onDecodeFailed?.({ vinLast6: vinLast6FromFullVin(vin), error: text })
-        setMessage({ type: 'error', text })
-      } finally {
-        if (generation === decodeGen.current) {
-          setPendingSafe(false)
-        }
-      }
-    },
-    [onDecoded, onDecodeFailed, setPendingSafe]
-  )
+  useEffect(() => {
+    const normalized = normalizeVinInput(fullVin)
+    if (normalized.length === 17) {
+      onVinFull?.({ vinLast6: vinLast6FromFullVin(fullVin), fullVin: normalized })
+    }
+  }, [fullVin, onVinFull])
 
   useEffect(() => {
-    if (!autoDecode || disabled) return
+    if (mode !== 'decode' || disabled) return
 
     const normalized = normalizeVinInput(fullVin)
-    if (normalized.length !== 17) {
-      if (normalized.length < 17) lastSuccessVin.current = ''
-      return
-    }
-    if (normalized === lastSuccessVin.current) return
+    if (normalized.length !== 17) return
+    if (normalized === lastDecodeVin.current) return
 
     const generation = ++decodeGen.current
     const timer = window.setTimeout(() => {
-      void runDecode(fullVin, generation)
+      void (async () => {
+        setMessage(null)
+        setPending(true)
+        onPendingChange?.(true)
+        try {
+          const result = await decodeVinForDemand(fullVin)
+          if (generation !== decodeGen.current) return
+          if ('error' in result) {
+            onDecodeFailed?.({ vinLast6: vinLast6FromFullVin(fullVin), error: result.error })
+            setMessage({ type: 'error', text: result.error })
+            return
+          }
+          onDecoded?.(result.fields, result.hint, result.markVinDecodeWarning)
+          lastDecodeVin.current = normalized
+          const parts: string[] = ['Vehicle fields updated from VIN.']
+          if (result.hint) parts.push(result.hint)
+          setMessage({
+            type: result.markVinDecodeWarning || result.hint ? 'warning' : 'success',
+            text: parts.join(' '),
+          })
+        } finally {
+          setPending(false)
+          onPendingChange?.(false)
+        }
+      })()
     }, 600)
 
     return () => window.clearTimeout(timer)
-  }, [fullVin, autoDecode, disabled, runDecode])
+  }, [fullVin, mode, disabled, onDecoded, onDecodeFailed, onPendingChange])
 
   async function handleRetry() {
+    if (mode !== 'decode') return
     const generation = ++decodeGen.current
-    await runDecode(fullVin, generation)
+    setPending(true)
+    onPendingChange?.(true)
+    try {
+      const result = await decodeVinForDemand(fullVin)
+      if (generation !== decodeGen.current) return
+      if ('error' in result) {
+        onDecodeFailed?.({ vinLast6: vinLast6FromFullVin(fullVin), error: result.error })
+        setMessage({ type: 'error', text: result.error })
+      } else {
+        onDecoded?.(result.fields, result.hint, result.markVinDecodeWarning)
+        setMessage({ type: 'success', text: 'Vehicle fields updated from VIN.' })
+      }
+    } finally {
+      setPending(false)
+      onPendingChange?.(false)
+    }
   }
+
+  const captureHint =
+    'Vehicle details are decoded automatically after you create the appointment — nothing to wait for here.'
 
   return (
     <div className="sm:col-span-2 space-y-2 rounded-lg border border-zinc-300/80 dark:border-gray-700 bg-zinc-50/80 dark:bg-black/20 p-3">
       <label className="block text-sm font-medium text-zinc-700 dark:text-gray-300">
-        Full VIN <span className="font-normal text-zinc-500">(17 characters — decodes automatically)</span>
+        Full VIN{' '}
+        <span className="font-normal text-zinc-500">
+          ({mode === 'capture' ? '17 characters — saved on the demand' : '17 characters — decodes here'})
+        </span>
       </label>
       <div className="flex flex-wrap gap-2">
         <input
           type="text"
+          name={undefined}
           value={fullVin}
           onChange={(e) => setFullVin(normalizeVinInput(e.target.value).slice(0, 17))}
-          disabled={disabled || pending}
-          placeholder="e.g. 4S4BSACCXH3331708"
+          disabled={disabled}
+          placeholder="e.g. 2HGFC2F59KH501234"
           autoComplete="off"
           className={`flex-1 min-w-[12rem] font-mono uppercase rounded-md border border-zinc-300 dark:border-gray-700 bg-white dark:bg-black/50 px-3 py-2 text-sm text-zinc-900 dark:text-white focus:border-[#C27E00] focus:outline-none focus:ring-1 focus:ring-[#C27E00] disabled:opacity-50 ${inputClassName}`}
         />
-        {message?.type === 'error' ? (
+        {mode === 'decode' && message?.type === 'error' ? (
           <button
             type="button"
             disabled={disabled || pending || fullVin.length < 17}
@@ -137,10 +141,10 @@ export function VinDecodeField({
         ) : null}
       </div>
       <p className="text-xs text-zinc-500 dark:text-gray-500">
-        NHTSA vPIC via server (model year from VIN). Only the last 6 digits are saved on the demand.
-        {pending ? ' Decoding…' : null}
+        {mode === 'capture' ? captureHint : 'NHTSA lookup via server.'}
+        {mode === 'decode' && pending ? ' (lookup in progress…)' : null}
       </p>
-      {message && (
+      {mode === 'decode' && message ? (
         <p
           className={`text-xs ${
             message.type === 'error'
@@ -152,7 +156,7 @@ export function VinDecodeField({
         >
           {message.text}
         </p>
-      )}
+      ) : null}
     </div>
   )
 }

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { formatInTimeZone, toDate } from 'date-fns-tz'
 import { ChevronLeft, ChevronRight, Lock } from 'lucide-react'
 import { useTimezone } from '@/contexts/timezone-context'
@@ -49,7 +49,8 @@ export function AppointmentCalendar({
 
   const gridDays = useMemo(() => gregorianMondayFirstGrid(viewYm.y, viewYm.m), [viewYm.y, viewYm.m])
 
-  const displayYmds = useMemo(() => gridDays.map((c) => c.ymd), [gridDays])
+  const getTakenSlotsRef = useRef(getTakenSlots)
+  getTakenSlotsRef.current = getTakenSlots
 
   // When parent supplies a selected wall date, keep the visible month in sync
   useEffect(() => {
@@ -61,32 +62,38 @@ export function AppointmentCalendar({
   }, [selectedPacificYmd])
 
   useEffect(() => {
-    const loadTakenSlots = async () => {
-      setLoadingDates(new Set())
-      const newTakenDates = new Set<string>()
-
-      for (const ymd of displayYmds) {
-        setLoadingDates((prev) => new Set(prev).add(ymd))
-        try {
-          const takenSlots = await getTakenSlots(ymd)
-          if (takenSlots.length > 0) {
-            newTakenDates.add(ymd)
-          }
-        } catch (error) {
-          console.error('Error loading taken slots:', error)
-        }
-        setLoadingDates((prev) => {
-          const next = new Set(prev)
-          next.delete(ymd)
-          return next
-        })
-      }
-
-      setTakenDates(newTakenDates)
+    const ymdsInMonth = gridDays.filter((d) => d.inMonth).map((d) => d.ymd)
+    if (ymdsInMonth.length === 0) {
+      setTakenDates(new Set())
+      return
     }
 
-    void loadTakenSlots()
-  }, [viewYm.y, viewYm.m, systemTz, displayYmds])
+    let cancelled = false
+    setLoadingDates(new Set(ymdsInMonth))
+
+    void (async () => {
+      const results = await Promise.all(
+        ymdsInMonth.map(async (ymd) => {
+          try {
+            const takenSlots = await getTakenSlotsRef.current(ymd)
+            return takenSlots.length > 0 ? ymd : null
+          } catch (error) {
+            console.error('Error loading taken slots:', error)
+            return null
+          }
+        })
+      )
+      if (cancelled) return
+      setTakenDates(new Set(results.filter((v): v is string => v != null)))
+      setLoadingDates(new Set())
+    })()
+
+    return () => {
+      cancelled = true
+    }
+    // getTakenSlots identity is stabilized by callers (useCallback); month grid drives reloads
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: avoid refetch loop on inline handlers
+  }, [viewYm.y, viewYm.m, gridDays])
 
   const getTodayInTz = useCallback(() => formatInTimeZone(now, systemTz, 'yyyy-MM-dd'), [systemTz, now])
 

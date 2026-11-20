@@ -90,7 +90,12 @@ export function EditVinDecodeVehicleForm({
       ) : null}
 
       <div className="mb-4">
-        <VinDecodeField disabled={saving} onDecoded={onVinDecoded} inputClassName={inputClass} />
+        <VinDecodeField
+          mode="decode"
+          disabled={saving}
+          onDecoded={onVinDecoded}
+          inputClassName={inputClass}
+        />
       </div>
 
       <div className="grid gap-3 sm:grid-cols-3">
