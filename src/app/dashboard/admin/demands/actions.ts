@@ -307,7 +307,7 @@ export async function updateVinLast6(
 
   const { error } = await supabase
     .from('demands')
-    .update({ vin_last6: normalized, vin_decode_warning: false })
+    .update({ vin_last6: normalized })
     .eq('id', demandId)
 
   if (error) return { success: false, error: error.message }
@@ -330,6 +330,91 @@ export async function updateVinLast6(
 
   revalidatePath('/dashboard/admin/demands')
   revalidatePath(`/dashboard/admin/demands/${demandId}`)
+  revalidatePath('/dashboard/specialist/work')
+  return { success: true }
+}
+
+export async function updateDemandVehicleFromVinWarning(
+  demandId: string,
+  data: { vehicleYear: number; vehicleMake: string; vehicleModel: string }
+): Promise<{ success: boolean; error?: string }> {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { success: false, error: 'Unauthorized' }
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role, dealer_id, full_name')
+    .eq('id', user.id)
+    .single()
+
+  const vehicleMake = (data.vehicleMake || '').trim().toUpperCase()
+  const vehicleModel = (data.vehicleModel || '').trim()
+  const vehicleYear = data.vehicleYear
+
+  if (!vehicleMake || !vehicleModel || !Number.isFinite(vehicleYear) || vehicleYear < 1900) {
+    return { success: false, error: 'Year, make, and model are required.' }
+  }
+
+  const { data: demand } = await supabase
+    .from('demands')
+    .select(
+      'status, dealer_id, demand_number, assigned_specialist_id, customer_firstname, customer_lastname, vehicle_year, vehicle_make, vehicle_model, vin_decode_warning'
+    )
+    .eq('id', demandId)
+    .single()
+
+  if (!demand) return { success: false, error: 'Demand not found' }
+
+  const authError = authorizeCoreDemandEdit(profile, demand.dealer_id)
+  if (authError) return { success: false, error: authError.error }
+
+  if (!(demand as { vin_decode_warning?: boolean }).vin_decode_warning) {
+    return { success: false, error: 'This demand has no VIN decode warning to correct.' }
+  }
+
+  const { error } = await supabase
+    .from('demands')
+    .update({
+      vehicle_make: vehicleMake,
+      vehicle_model: vehicleModel,
+      vehicle_year: vehicleYear,
+      vin_decode_warning: false,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', demandId)
+
+  if (error) return { success: false, error: error.message }
+
+  const status: DemandStatus = (demand?.status ?? 'pending_finance') as DemandStatus
+  await persistDemandFieldChanges({
+    demandId,
+    userId: user.id,
+    actorRole: profile!.role,
+    actorName: profile!.full_name,
+    status,
+    demandNumber: demand.demand_number,
+    assignedSpecialistId: demand.assigned_specialist_id,
+    customerLabel: `${demand?.customer_firstname ?? ''} ${demand?.customer_lastname ?? ''}`.trim(),
+    before: {
+      vehicle_make: demand.vehicle_make,
+      vehicle_model: demand.vehicle_model,
+      vehicle_year: demand.vehicle_year,
+    },
+    after: {
+      vehicle_make: vehicleMake,
+      vehicle_model: vehicleModel,
+      vehicle_year: vehicleYear,
+    },
+    fields: ['vehicle_make', 'vehicle_model', 'vehicle_year'],
+    notes: 'Vehicle corrected after VIN decode warning',
+  })
+
+  revalidatePath('/dashboard/admin/demands')
+  revalidatePath(`/dashboard/admin/demands/${demandId}`)
+  revalidatePath('/dashboard/sales/demands')
   revalidatePath('/dashboard/specialist/work')
   return { success: true }
 }

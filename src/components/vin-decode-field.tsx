@@ -3,33 +3,16 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { decodeVinForDemand } from '@/lib/vin-decode/decode-vin-action'
 import type { DemandVehicleFieldsFromVin } from '@/lib/vin-decode/map-to-demand-vehicle'
-import { mapVinDecodeToDemandFields } from '@/lib/vin-decode/map-to-demand-vehicle'
-import { decodeVinFromNhtsa, normalizeVinInput } from '@/lib/vin-decode/nhtsa-vpic'
+import { normalizeVinInput } from '@/lib/vin-decode/nhtsa-vpic'
 import { vinLast6FromFullVin } from '@/lib/vin-decode/form-warning'
-
-function isLikelyBrowserFetchFailure(e: unknown): boolean {
-  if (!(e instanceof Error)) return false
-  const msg = e.message.toLowerCase()
-  return (
-    msg.includes('failed to fetch') ||
-    msg.includes('network') ||
-    msg.includes('cors') ||
-    e.name === 'TypeError'
-  )
-}
-
-export type VinDecodeApplyHandlers = {
-  setVinLast6: (value: string) => void
-  setVehicleYear: (value: string) => void
-  setSelectedMake: (value: string) => void
-  setSelectedModel: (value: string) => void
-  setSelectedTrim: (value: string) => void
-  setCustomModel: (value: string) => void
-}
 
 type VinDecodeFieldProps = {
   disabled?: boolean
-  onDecoded: (fields: DemandVehicleFieldsFromVin, hint?: string) => void
+  onDecoded: (
+    fields: DemandVehicleFieldsFromVin,
+    hint?: string,
+    markVinDecodeWarning?: boolean
+  ) => void
   onDecodeFailed?: (payload: { vinLast6: string; error: string }) => void
   onPendingChange?: (pending: boolean) => void
   inputClassName?: string
@@ -71,52 +54,30 @@ export function VinDecodeField({
 
       setPendingSafe(true)
       try {
-        const decode = await decodeVinFromNhtsa(vin)
+        const result = await decodeVinForDemand(vin)
         if (generation !== decodeGen.current) return
 
-        const fields = mapVinDecodeToDemandFields(vin, decode)
-        let hint: string | undefined
-        if (fields.makeUnmapped) {
-          hint = `Make "${fields.rawMake}" is not in the dropdown — select make manually.`
-        } else if (!fields.selectedModel && fields.rawModel) {
-          hint = `Model "${fields.rawModel}" could not be matched — use Other or pick from the list.`
+        if ('error' in result) {
+          onDecodeFailed?.({ vinLast6: vinLast6FromFullVin(vin), error: result.error })
+          setMessage({ type: 'error', text: result.error })
+          return
         }
 
-        onDecoded(fields, hint)
+        onDecoded(result.fields, result.hint, result.markVinDecodeWarning)
         lastSuccessVin.current = normalized
 
         const parts: string[] = ['Vehicle fields updated from VIN.']
-        if (hint) parts.push(hint)
+        if (result.hint) parts.push(result.hint)
+        const isWarning = result.markVinDecodeWarning || !!result.hint
         setMessage({
-          type: hint ? 'warning' : 'success',
+          type: isWarning ? 'warning' : 'success',
           text: parts.join(' '),
         })
       } catch (e) {
         if (generation !== decodeGen.current) return
-
-        if (isLikelyBrowserFetchFailure(e)) {
-          const result = await decodeVinForDemand(vin)
-          if (generation !== decodeGen.current) return
-
-          if ('error' in result) {
-            const err = result.error
-            onDecodeFailed?.({ vinLast6: vinLast6FromFullVin(vin), error: err })
-            setMessage({ type: 'error', text: err })
-          } else {
-            onDecoded(result.fields, result.hint)
-            lastSuccessVin.current = normalized
-            const parts: string[] = ['Vehicle fields updated from VIN.']
-            if (result.hint) parts.push(result.hint)
-            setMessage({
-              type: result.hint ? 'warning' : 'success',
-              text: parts.join(' '),
-            })
-          }
-        } else {
-          const text = e instanceof Error ? e.message : 'VIN decode failed'
-          onDecodeFailed?.({ vinLast6: vinLast6FromFullVin(vin), error: text })
-          setMessage({ type: 'error', text })
-        }
+        const text = e instanceof Error ? e.message : 'VIN decode failed'
+        onDecodeFailed?.({ vinLast6: vinLast6FromFullVin(vin), error: text })
+        setMessage({ type: 'error', text })
       } finally {
         if (generation === decodeGen.current) {
           setPendingSafe(false)
@@ -139,7 +100,7 @@ export function VinDecodeField({
     const generation = ++decodeGen.current
     const timer = window.setTimeout(() => {
       void runDecode(fullVin, generation)
-    }, 450)
+    }, 600)
 
     return () => window.clearTimeout(timer)
   }, [fullVin, autoDecode, disabled, runDecode])
@@ -176,7 +137,7 @@ export function VinDecodeField({
         ) : null}
       </div>
       <p className="text-xs text-zinc-500 dark:text-gray-500">
-        Uses US NHTSA vPIC (works for most Canadian VINs). Only the last 6 digits are saved on the demand.
+        NHTSA vPIC via server (model year from VIN). Only the last 6 digits are saved on the demand.
         {pending ? ' Decoding…' : null}
       </p>
       {message && (

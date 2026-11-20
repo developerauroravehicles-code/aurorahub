@@ -428,8 +428,8 @@ export function CreateExternalDemandForm({
     setClientError(null)
   }
 
-  function applyVinDecodeFields(fields: DemandVehicleFieldsFromVin) {
-    setVinDecodeWarning(false)
+  function applyVinDecodeFields(fields: DemandVehicleFieldsFromVin, _hint?: string, markWarning?: boolean) {
+    setVinDecodeWarning(!!markWarning)
     setVinLast6(fields.vinLast6)
     if (fields.vehicleYear) setVehicleYear(fields.vehicleYear)
     if (fields.selectedMake) {

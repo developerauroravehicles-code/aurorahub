@@ -11,6 +11,8 @@ describe('mapVinDecodeToDemandFields', () => {
       modelYear: '2017',
       trim: 'Touring',
       series: '',
+      errorCode: '0',
+      errorText: '',
     })
 
     expect(fields.vinLast6).toBe('331708')
@@ -27,6 +29,8 @@ describe('mapVinDecodeToDemandFields', () => {
       modelYear: '2024',
       trim: '',
       series: '',
+      errorCode: '0',
+      errorText: '',
     })
 
     expect(fields.selectedMake).toBe('Subaru')
@@ -41,6 +45,8 @@ describe('mapVinDecodeToDemandFields', () => {
       modelYear: '2020',
       trim: '',
       series: '',
+      errorCode: '0',
+      errorText: '',
     })
 
     expect(fields.makeUnmapped).toBe(true)

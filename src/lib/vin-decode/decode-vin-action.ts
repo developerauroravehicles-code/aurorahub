@@ -1,7 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
-import { decodeVinFromNhtsa } from './nhtsa-vpic'
+import { decodeVinFromNhtsa, isNhtsaDecodeUncertain, type NhtsaVinDecode } from './nhtsa-vpic'
 import { mapVinDecodeToDemandFields, type DemandVehicleFieldsFromVin } from './map-to-demand-vehicle'
 
 const ALLOWED_ROLES = new Set([
@@ -18,8 +18,19 @@ export type DecodeVinForDemandResult =
       ok: true
       fields: DemandVehicleFieldsFromVin
       hint?: string
+      /** Persist `vin_decode_warning` on the demand when true */
+      markVinDecodeWarning: boolean
     }
   | { error: string }
+
+function shouldMarkVinDecodeWarning(decode: NhtsaVinDecode, fields: DemandVehicleFieldsFromVin): boolean {
+  if (isNhtsaDecodeUncertain(decode)) return true
+  if (fields.makeUnmapped) return true
+  if (!fields.vehicleYear) return true
+  if (!fields.selectedMake && !fields.rawMake) return true
+  if (!fields.selectedModel && !fields.customModel && !fields.rawModel) return true
+  return false
+}
 
 export async function decodeVinForDemand(vin: string): Promise<DecodeVinForDemandResult> {
   const supabase = await createClient()
@@ -37,14 +48,21 @@ export async function decodeVinForDemand(vin: string): Promise<DecodeVinForDeman
     const decode = await decodeVinFromNhtsa(vin)
     const fields = mapVinDecodeToDemandFields(vin, decode)
 
-    let hint: string | undefined
+    const hints: string[] = []
+    if (isNhtsaDecodeUncertain(decode)) {
+      const caveat = decode.errorText || 'NHTSA reported a VIN validation issue — verify vehicle details.'
+      hints.push(caveat)
+    }
     if (fields.makeUnmapped) {
-      hint = `Make "${fields.rawMake}" is not in the dropdown — select make manually.`
+      hints.push(`Make "${fields.rawMake}" is not in the dropdown — select make manually.`)
     } else if (!fields.selectedModel && fields.rawModel) {
-      hint = `Model "${fields.rawModel}" could not be matched — use Other or pick from the list.`
+      hints.push(`Model "${fields.rawModel}" could not be matched — use Other or pick from the list.`)
     }
 
-    return { ok: true, fields, hint }
+    const hint = hints.length > 0 ? hints.join(' ') : undefined
+    const markVinDecodeWarning = shouldMarkVinDecodeWarning(decode, fields)
+
+    return { ok: true, fields, hint, markVinDecodeWarning }
   } catch (e) {
     const message = e instanceof Error ? e.message : 'VIN decode failed'
     return { error: message }

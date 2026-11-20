@@ -147,8 +147,8 @@ export function DemandForm({
     setAvailableSlots(slots)
   }, [selectedDate, calendarSettings, weeklyClosedIsoDays, systemNow])
 
-  function applyVinDecodeFields(fields: DemandVehicleFieldsFromVin) {
-    setVinDecodeWarning(false)
+  function applyVinDecodeFields(fields: DemandVehicleFieldsFromVin, _hint?: string, markWarning?: boolean) {
+    setVinDecodeWarning(!!markWarning)
     setVinLast6(fields.vinLast6)
     if (fields.vehicleYear) setVehicleYear(fields.vehicleYear)
     if (fields.selectedMake) {

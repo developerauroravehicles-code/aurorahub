@@ -14,6 +14,7 @@ import { ChangeSpecialistForm } from '../change-specialist-form'
 import { ChangeFinanceForm } from '../change-finance-form'
 import { EditCustomerForm } from '../edit-customer-form'
 import { EditVinForm } from '../edit-vin-form'
+import { EditVinDecodeVehicleForm } from '../edit-vin-decode-vehicle-form'
 import { EditStockNumberForm } from '../edit-stock-number-form'
 import { EditCameraModelForm } from '../edit-camera-model-form'
 import { EditCompletedAtForm } from '../edit-completed-at-form'
@@ -349,6 +350,16 @@ export default async function DemandDetailsPage({
                 </p>
               </div>
             </DemandFieldWrap>
+            {(demand as { vin_decode_warning?: boolean }).vin_decode_warning ? (
+              <EditVinDecodeVehicleForm
+                demandId={id}
+                vehicleYear={demand.vehicle_year}
+                vehicleMake={demand.vehicle_make}
+                vehicleModel={demand.vehicle_model}
+                vinLast6={demand.vin_last6}
+                canEdit={canEditCoreFields}
+              />
+            ) : null}
             <div>
               <p className="text-sm text-zinc-500 dark:text-gray-400 mb-1">Camera Model</p>
               <EditCameraModelForm

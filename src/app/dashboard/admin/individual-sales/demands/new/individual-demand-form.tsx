@@ -58,8 +58,8 @@ export function IndividualDemandForm({
     }
   }, [state, router])
 
-  const onVinDecoded = (fields: DemandVehicleFieldsFromVin) => {
-    setVinDecodeWarning(false)
+  const onVinDecoded = (fields: DemandVehicleFieldsFromVin, _hint?: string, markWarning?: boolean) => {
+    setVinDecodeWarning(!!markWarning)
     setVinLast6(fields.vinLast6)
     setVehicleYear(fields.vehicleYear)
     setVehicleMake(fields.selectedMake || fields.rawMake)
